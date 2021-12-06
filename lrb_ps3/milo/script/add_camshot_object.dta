@@ -1,0 +1,200 @@
+{milo
+   dialog
+   "Add Camshot Object"
+   (editor
+      (cameras
+         (array
+            object
+            (class BandCamShot))
+         (help
+            "Cameras to apply the action"))
+      (action
+         symbol
+         (list
+            (add remove))
+         (help
+            "Action to take on the BandCamShot list (add/remove)."))
+      (object
+         object
+         (list
+            {$this list_objects})
+         (help
+            "Drawable object to take the action on."))
+      (list
+         symbol
+         (list
+            (show_list hide_list draw_overrides postproc_overrides triggers))
+         (help
+            "Which list to add or remove.")
+         (post_sync
+            {set
+               [object]
+               ""})
+         (refresh object))
+      (Ok
+         script
+         (script
+            {$this Ok})))
+   (modal FALSE)
+   (action add)
+   (object
+      "")
+   (list hide_list)
+   (cameras
+      ())
+   (enter
+      {resize
+         [cameras]
+         0}
+      {milo
+         iterate_lister_highlit
+         $highlit
+         {push_back
+            [cameras]
+            $highlit}})
+   (list_objects
+      {if_else
+         {milo cur_dir}
+         {switch
+            [list]
+            (show_list
+               {{milo cur_dir}
+                  list_objs
+                  Draw})
+            (hide_list
+               {{milo cur_dir}
+                  list_objs
+                  Draw})
+            (draw_overrides
+               {{milo cur_dir}
+                  list_objs
+                  Draw})
+            (postproc_overrides
+               {{milo cur_dir}
+                  list_objs
+                  Draw})
+            (triggers
+               {{milo cur_dir}
+                  list_objs
+                  EventTrigger})}
+         ()})
+   (Ok
+      {if
+         {!=
+            [object]
+            ""}
+         {foreach
+            $highlit
+            [cameras]
+            {if
+               {==
+                  {$highlit class_name}
+                  BandCamShot}
+               {if_else
+                  {==
+                     [list]
+                     triggers}
+                  {do
+                     ($trigger_index
+                        {$this
+                           find_trigger_in_list
+                           $highlit
+                           [object]})
+                     {switch
+                        [action]
+                        (add
+                           {if
+                              {< $trigger_index 0}
+                              {$highlit
+                                 insert
+                                 ([list]
+                                    0)
+                                 ((frame 0)
+                                    (trigger
+                                       ""))}
+                              {$highlit
+                                 set
+                                 ([list]
+                                    0
+                                    trigger)
+                                 [object]}})
+                        (remove
+                           {while
+                              {!= $trigger_index -1}
+                              {$highlit
+                                 remove
+                                 ([list]
+                                    $trigger_index)}
+                              {set
+                                 $trigger_index
+                                 {$this
+                                    find_trigger_in_list
+                                    $highlit
+                                    [object]}}})}}
+                  {switch
+                     [action]
+                     (add
+                        {do
+                           ($duplicate FALSE)
+                           ($objs
+                              {$highlit
+                                 get_array
+                                 [list]})
+                           {foreach
+                              $elem
+                              $objs
+                              {if
+                                 {==
+                                    [object]
+                                    $elem}
+                                 {set $duplicate TRUE}}}
+                           {if
+                              {! $duplicate}
+                              {$highlit
+                                 insert
+                                 ([list]
+                                    {size $objs})
+                                 [object]}}})
+                     (remove
+                        {do
+                           ($index -1)
+                           ($objs
+                              {$highlit
+                                 get_array
+                                 [list]})
+                           {foreach_int
+                              $i
+                              0
+                              {size $objs}
+                              {if
+                                 {==
+                                    [object]
+                                    {elem $objs $i}}
+                                 {set $index $i}}}
+                           {if
+                              {>= $index 0}
+                              {$highlit
+                                 remove
+                                 ([list]
+                                    $index)}}})}}}}
+         {milo update_objects}})
+   (find_trigger_in_list
+      ($cam_shot $trigger)
+      {do
+         ($trigger_list
+            {$cam_shot get_array triggers})
+         ($index -1)
+         {foreach_int
+            $i
+            0
+            {size $trigger_list}
+            {if
+               {&&
+                  {== $index -1}
+                  {==
+                     {$cam_shot
+                        get
+                        (triggers $i trigger)}
+                     $trigger}}
+               {set $index $i}}}
+         $index})}

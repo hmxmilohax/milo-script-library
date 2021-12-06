@@ -1,0 +1,103 @@
+{func
+   get_sfx
+   ($seq)
+   {if_else
+      {$seq
+         size
+         (children)}
+      {$seq
+         get
+         (children 0)}
+      0}}
+{foreach
+   $top
+   (".")
+   {milo_recurse
+      $dir
+      $top
+      {set $dirty FALSE}
+      {$dir
+         iterate_self
+         SfxSeq
+         $seq
+         {set $toplev TRUE}
+         {$seq
+            iterate_refs
+            $ref
+            {set $toplev FALSE}}
+         {if
+            $toplev
+            {notify
+               $seq
+               " is top-level"}}}
+      {$dir
+         iterate_self
+         GroupSeq
+         $seq
+         {set
+            $i
+            {-
+               {$seq
+                  size
+                  (children)}
+               1}}
+         {while
+            {>= $i 0}
+            {set
+               $child
+               {$seq
+                  get
+                  (children $i)}}
+            {if
+               {$child is_a SfxSeq}
+               {print
+                  "fixing up "
+                  $seq
+                  " -> "
+                  {get_sfx $child}
+                  "\n"}
+               {set $dirty TRUE}
+               {if_else
+                  {get_sfx $child}
+                  {$seq
+                     set
+                     (children $i)
+                     {get_sfx $child}}
+                  {$seq
+                     remove
+                     (children $i)}}}
+            {set
+               $i
+               {- $i 1}}}}
+      {$dir
+         iterate_self
+         SfxSeq
+         $seq
+         {set
+            $sfx
+            {get_sfx $seq}}
+         {if
+            $sfx
+            {foreach
+               $prop
+               (avg_volume volume_spread avg_transpose transpose_spread avg_pan pan_spread)
+               {$sfx
+                  set
+                  $prop
+                  {$seq get $prop}}}}
+         {$seq
+            iterate_refs
+            $ref
+            {notify
+               $seq
+               " still has ref "
+               $ref}}
+         {set $dirty TRUE}
+         {delete $seq}}
+      {if
+         $dirty
+         {print
+            "saving "
+            {path_name $dir}
+            "\n"}
+         {milo_resave $dir}}}}

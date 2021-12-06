@@ -1,0 +1,291 @@
+{new
+   UIPanel
+   our_band_panel
+   (file
+      "our_band.milo")
+   (keyboard_mode kKeyboardModeName)
+   (focus 1EditBandName.btn)
+   (enter
+      {$this update_labels}
+      {if
+         {!
+            {{tour band}
+               has_album_index
+               0}}
+         {$this disable 4Album.btn}})
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (SELECT_MSG
+      {switch
+         $component
+         (1EditBandName.btn
+            #ifndef HX_OG
+            {$this set keyboard_mode kKeyboardModeName}
+            {virtual_keyboard
+               show_keyboard
+               $player_num
+               {get_band_name_length}
+               {localize create_band_vk_title}
+               {localize create_band_vk_desc}
+               {{tour band}
+                  band_name}
+               $this}
+            #else
+            {input_mgr set_limit kLimitNone}
+            {input_mgr
+               set_user
+               {user_mgr get_band_user $player_num}}
+            {ui push_screen band_renaming_office_screen}
+            #endif
+            {synth play button_select})
+         (2EditMotto.btn
+            #ifndef HX_OG
+            {$this set keyboard_mode kKeyboardModeMotto}
+            {virtual_keyboard
+               show_keyboard
+               $player_num
+               {get_motto_length}
+               {localize band_profile_vk_motto_title}
+               {localize band_profile_vk_motto_desc}
+               {{tour band}
+                  band_motto}
+               $this}
+            #else
+            {input_mgr set_limit kLimitNone}
+            {input_mgr
+               set_user
+               {user_mgr get_band_user $player_num}}
+            {ui push_screen motto_renaming_office_screen}
+            #endif
+            {synth play button_select})
+         (3EditLogo.btn
+            {ui goto_screen band_logo_screen}
+            {synth play button_select})
+         (4Album.btn
+            {ui goto_screen album_select_screen}
+            {synth play button_select})})
+   #ifndef HX_OG
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {==
+               {ui focus_panel}
+               $this}}
+         {switch
+            {$this get keyboard_mode}
+            (kKeyboardModeName
+               {if
+                  {&&
+                     {!=
+                        $text
+                        ""}
+                     {!=
+                        $text
+                        {{tour band}
+                           band_name}}}
+                  {if_else
+                     {!
+                        {{{tour band}
+                              get_owner}
+                           is_band_name_unique
+                           $text}}
+                     {ui push_screen tour_band_create_name_not_unique_screen}
+                     {do
+                        {if_else
+                           {ui is_valid_name $text}
+                           {do
+                              {{tour band}
+                                 set_band_name
+                                 $text}
+                              {$this update_labels}}
+                           {ui push_screen tour_band_create_illegal_name_screen}}}}})
+            (kKeyboardModeMotto
+               {if_else
+                  {ui is_valid_name $text}
+                  {do
+                     {{tour band}
+                        set_band_motto
+                        $text}
+                     {$this update_labels}}
+                  {ui push_screen tour_band_create_illegal_name_screen}})}})
+   #endif
+   (update_labels
+      {BandName.lbl
+         set_localized
+         {{tour band}
+            band_name}}
+      {MOTTO.lbl
+         set_localized
+         {{tour band}
+            band_motto}})}
+{new
+   UIPanel
+   band_logo_panel
+   (file
+      "band_logo.milo")
+   (focus logo.lst)
+   (enter
+      {logo.tex
+         set_bitmap
+         {{tour band}
+            get_band_logo}}
+      {logo.lst set_provider logo_provider}
+      {$this refresh})
+   (SCROLL_MSG
+      {synth play select_forward_nofader.cue})
+   (refresh
+      {logo.lst
+         set_selected
+         {{tour band}
+            get_band_logo_pos}})
+   (SELECT_MSG
+      {{tour band}
+         set_band_logo
+         {logo_provider
+            get_logo_name
+            {logo.lst selected_pos}}}
+      {{tour band}
+         set_band_logo_pos
+         {logo.lst selected_pos}}
+      {synth play button_select}
+      {ui goto_screen our_band_screen})}
+{new
+   MainScreen
+   our_band_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      our_band_panel
+      tour_profile_panel)
+   (focus our_band_panel)
+   (back
+      {do
+         {synth play button_back}
+         office_screen})
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+{new
+   MainScreen
+   band_logo_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      band_logo_panel
+      tour_profile_panel)
+   (focus band_logo_panel)
+   (back
+      {do
+         {synth play button_back}
+         our_band_screen})
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+#ifdef HX_OG
+{new
+   BandCreatePanel
+   band_renaming_office_panel
+   (file
+      "../../../ui/naming_dialog_band.milo")
+   (focus name.lbl)
+   (name_label name.lbl)
+   (name_active TRUE)
+   (back_button_exits TRUE)
+   NAMING_PANEL_HANDLERS
+   (enter
+      {shit2.tnm set_frame 0}
+      {set
+         [for_band]
+         TRUE}
+      {$this init_name})
+   (accept_name
+      {$this stop_naming}
+      {cond
+         ({==
+               {$this get_name}
+               {{tour band}
+                  band_name}}
+            {$this leave_screen})
+         ({==
+               {$this get_name}
+               ""}
+            {input_mgr set_user ''}
+            {input_mgr set_limit kLimitUILeader}
+            {ui goto_screen tour_band_name_error_screen})
+         ({!
+               {ui
+                  is_valid_name
+                  {$this get_name}}}
+            {input_mgr set_user ''}
+            {input_mgr set_limit kLimitUILeader}
+            {ui goto_screen tour_band_create_illegal_name_screen})
+         ({!
+               {{{tour band}
+                     get_owner}
+                  is_band_name_unique
+                  {$this get_name}}}
+            {input_mgr set_user ''}
+            {input_mgr set_limit kLimitUILeader}
+            {ui goto_screen tour_band_create_name_not_unique_screen})
+         (TRUE
+            {{tour band}
+               set_band_name
+               {$this get_name}}
+            {our_band_panel update_labels}
+            {$this leave_screen})})
+   (cancel_name
+      {$this leave_screen})
+   (leave_screen
+      {input_mgr set_user ''}
+      {input_mgr set_limit kLimitUILeader}
+      {ui pop_screen})
+   (on_exit)}
+{new
+   BandScreen
+   band_renaming_office_screen
+   (panels band_renaming_office_panel)
+   (focus band_renaming_office_panel)}
+{new
+   BandCreatePanel
+   motto_renaming_office_panel
+   (file
+      "../../../ui/naming_dialog_quote.milo")
+   (focus name.lbl)
+   (name_label name.lbl)
+   (name_active TRUE)
+   (back_button_exits TRUE)
+   NAMING_PANEL_HANDLERS
+   (enter
+      {shit2.tnm set_frame 0}
+      {set
+         [for_quote]
+         TRUE}
+      {$this init_name})
+   (accept_name
+      {$this stop_naming}
+      {{tour band}
+         set_band_motto
+         {$this get_name}}
+      {our_band_panel update_labels}
+      {$this leave_screen})
+   (cancel_name
+      {$this leave_screen})
+   (leave_screen
+      {input_mgr set_user ''}
+      {input_mgr set_limit kLimitUILeader}
+      {ui pop_screen})
+   (on_exit)}
+{new
+   BandScreen
+   motto_renaming_office_screen
+   (panels motto_renaming_office_panel)
+   (focus motto_renaming_office_panel)}
+#endif

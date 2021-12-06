@@ -1,0 +1,75 @@
+{new
+   UIPanel
+   main_options_panel
+   (file
+      "main_menu_options.milo")
+   (enter
+      {user_mgr clear_users}
+      {gamecfg reset_config}
+      #ifdef HX_PS3
+      {$this disable language.btn}
+      {language.btn set_showing FALSE}
+      #endif
+      #ifndef HX_XBOX
+      {$this disable gameplay.btn}
+      {gameplay.btn set_showing FALSE}
+      #endif
+      #ifndef HX_OG
+      {$this disable download.btn}
+      {download.btn set_showing FALSE}
+      #endif)
+   (SELECT_MSG
+      {synth play button_select}
+      {switch
+         $component
+         #ifdef HX_XBOX
+         (gameplay.btn
+            {warn_no_signin_goto_screen options_gameplay_screen $player_num})
+         #endif
+         (console.btn
+            #ifdef HX_WII
+            {ui goto_screen options_audio_screen}
+            #else
+            {ui goto_screen options_console_screen}
+            #endif)
+         (calibrate_av.btn
+            {ui goto_screen cal_welcome_screen}
+            {do
+               ($user
+                  {user_mgr get_band_user $player_num})
+               {$user
+                  set_controller_type
+                  {$user connected_controller_type}}
+               {input_mgr set_user $user}})
+         (characterdata.btn
+            {if_else
+               {&&
+                  {platform_mgr is_player_signed_in $player_num}
+                  {!
+                     {platform_mgr is_player_a_guest $player_num}}}
+               {do
+                  {ui goto_screen options_savedata_screen $player_num}
+                  {input_mgr
+                     set_user
+                     {user_mgr get_band_user $player_num}}}
+               {do
+                  {options_screen register_user_confirm $player}
+                  {ui push_screen options_savedata_signin_screen}
+                  {input_mgr
+                     set_user
+                     {user_mgr get_band_user $player_num}}}})
+         #ifndef HX_OG
+         (download.btn
+            {ui goto_screen options_export_screen})
+         #endif
+         #ifndef HX_PS3
+         (language.btn
+            {ui goto_screen options_language_screen})
+         #endif})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {synth play button_back})}
+      kDataUnhandled)
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)}

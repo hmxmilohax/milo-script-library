@@ -1,0 +1,419 @@
+#define VENUE_HELPERS
+((current_mesh FALSE)
+   (normal_exit_screen)
+   (challenge_exit_screen)
+   (tour_back_screen garage_vehiclescreen)
+   (qp_tour_back_screen)
+   (qp_back_screen)
+   (last_selected '')
+   (set_challenge
+      {game
+         set_venue
+         {challenge_mgr get_venue}}
+      {meta_performer
+         set_song
+         {challenge_mgr get_song}}
+      {gamemode set is_challenge TRUE}
+      {gamemode set lego_mode FALSE}
+      {gamemode set max_stars 5}
+      {gamemode set can_fail_individually FALSE}
+      {gamemode set allow_overdrive_phrases FALSE})
+   (challenge_map
+      ((challenge_wrecknroll
+            "fusion/ui/loading_screens/load_chal_demolition.milo"
+            construction_site)
+         (challenge_castle
+            "fusion/ui/loading_screens/load_chal_castlebattle.milo"
+            castle_garden)
+         (challenge_dinochase
+            "fusion/ui/loading_screens/load_chal_dinochase.milo"
+            dino_chase)
+         (challenge_icebreaker
+            "fusion/ui/loading_screens/load_chal_icebreaker.milo"
+            ice_breaker)
+         (challenge_rocktopus
+            "fusion/ui/loading_screens/load_chal_octopusattack.milo"
+            octopus_attack)
+         (challenge_ghostbusters
+            "fusion/ui/loading_screens/load_chal_ghostbusters.milo"
+            ghostbusters)
+         (challenge_farmrain
+            "fusion/ui/loading_screens/load_chal_farmrain.milo"
+            farm_rain)
+         (challenge_ufobreakdown
+            "fusion/ui/loading_screens/load_chal_ufobreakdown.milo"
+            ufo_breakdown)
+         (challenge_asteroid
+            "fusion/ui/loading_screens/load_gen_01.milo"
+            asteroid)
+         (challenge_ovalrace
+            "fusion/ui/loading_screens/load_chal_demolition.milo"
+            ghostbusters)))
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {synth play button_back}
+            {$this go_back})
+         ((kAction_Up kAction_Down)
+            kDataUnhandled)
+         (TRUE kDataUnhandled)}))
+{new
+   UIPanel
+   garage_venuepanel
+   VENUE_HELPERS
+   (file
+      "../tour_world/tour_world_venue.milo")
+   (current_venue '')
+   (focus_on_enter
+      "campervan")
+   (changed FALSE)
+   (enter
+      {do
+         {venue.lst
+            set_provider
+            {tour venue_provider}}
+         {if
+            {!=
+               [last_selected]
+               ''}
+            {venue.lst
+               set_selected
+               [last_selected]
+               FALSE}}
+         {$this set changed FALSE}
+         {$this refresh}
+         {$this set normal_exit_screen garage_gigscreen}
+         {$this set challenge_exit_screen difficulty_screen}
+         {difficulty_screen set cancel_screen garage_venuescreen}
+         {$this set_focus venue.lst}
+         {garage_venuescreen start_camera}
+         {garage_venuescreen
+            goto_camera
+            [focus_on_enter]}
+         {garage_vehiclepanel set_vehicles_showing}
+         {input_mgr set_limit kLimitUILeader}})
+   (exit
+      {input_mgr set_limit kLimitUILeaderNoSwap})
+   #ifdef HX_XBOX
+   (is_loaded
+      {content_mgr refresh_done})
+   #endif
+   (refresh
+      {do
+         ($band
+            {tour band})
+         ($venue_name
+            {venue.lst selected_sym})
+         ($venue
+            {tour get_venue $venue_name})
+         {if_else
+            {$venue is_unlocked}
+            {do
+               {summary_require.grp set_showing FALSE}
+               {summary_unlocked.grp set_showing TRUE}
+               {$this
+                  set_num_new
+                  {$venue get_num_new_gigs}
+                  venue_new_events.lbl}
+               {fans_count.lbl
+                  set_localized
+                  {sprintf
+                     "%i"
+                     {$band get_stars_at_venue $venue_name}}}
+               {fans_total.lbl
+                  set_localized
+                  {sprintf
+                     "/%i "
+                     {$venue get_total_stars}}}}
+            {do
+               {$this
+                  set_requirments
+                  {venue.lst selected_sym}}
+               {summary_require.grp set_showing TRUE}
+               {summary_unlocked.grp set_showing FALSE}}}})
+   (SELECT_MSG
+      {do
+         ($selected
+            {venue.lst selected_sym})
+         ($venue
+            {tour get_venue $selected})
+         {if_else
+            {'||'
+               {gamemode get is_tour_quickplay}
+               {$venue is_unlocked}}
+            {do
+               {$this set_venue $selected}
+               {ui goto_screen garage_gigscreen}
+               {garage_gigmenu set trigger_anims FALSE}
+               kDataUnhandled}
+            {do
+               {requirements.lst animate_elements FALSE}
+               {synth play button_error}
+               TRUE}}})
+   (SCROLL_MSG
+      {synth play button_focus}
+      {$this
+         set
+         last_selected
+         {venue.lst selected_sym}}
+      {$this refresh}
+      kDataUnhandled)
+   (set_venue
+      ($venue_name)
+      {challenge_mgr clear_current_challenge}
+      {synth play button_select}
+      {do
+         ($venue
+            {tour get_venue $venue_name})
+         {{tour band}
+            set_venue
+            $venue}})
+   (go_back
+      {{tour band}
+         clear_venue}
+      {challenge_mgr clear_current_challenge}
+      {$this
+         set
+         last_selected
+         {venue.lst selected_sym}}
+      {ui goto_screen garage_vehiclescreen})
+   (set_num_new
+      ($num $label)
+      {$label set_showing $num}
+      {$label
+         set_localized
+         {sprintf
+            {localize
+               {if_else
+                  {== $num 1}
+                  tour_gigguide_new_event
+                  tour_gigguide_new_events}}
+            $num}})
+   (set_requirments
+      ($venue)
+      {{tour requirements_provider}
+         set_venue
+         $venue}
+      {if_else
+         {{tour requirements_provider}
+            has_requirments}
+         {summary_require.grp set_showing TRUE}
+         {summary_require.grp set_showing FALSE}}
+      {requirements.lst
+         set_provider
+         {tour requirements_provider}})}
+{new
+   UIPanel
+   quickplay_venuepanel
+   VENUE_HELPERS
+   (file
+      "../quickplay/quickplay_venue.milo")
+   (quickplay_exit_screen)
+   (selection_memory 0)
+   (current_grp ven_lego_city_central.grp)
+   (load
+      {content_mgr start_refresh}
+      {content_loading_panel allowed_to_show TRUE})
+   (finish_load
+      {content_loading_panel allowed_to_show FALSE})
+   (is_loaded
+      {content_mgr refresh_done})
+   (set_venue_image
+      {do
+         {if
+            [current_grp]
+            {[current_grp]
+               set_showing
+               FALSE}}
+         {do
+            ($provider
+               #ifndef _SHIP
+               {if_else
+                  {tour is_all_unlocked}
+                  {tour qp_dbg_venue_provider}
+                  {tour qp_venue_provider}}
+               #else
+               {tour qp_venue_provider}
+               #endif)
+            ($newgrp
+               {if_else
+                  {&&
+                     {>
+                        {$provider num_data}
+                        1}
+                     {==
+                        {venue.lst selected_pos}
+                        0}}
+                  ven_random.grp
+                  {sprint
+                     {venue.lst selected_sym}
+                     .grp}})
+            {if_else
+               {$this exists $newgrp}
+               {do
+                  ($newgrp_obj
+                     {$this find $newgrp})
+                  {$newgrp_obj set_showing TRUE}
+                  {$this set current_grp $newgrp_obj}}
+               {$this set current_grp FALSE}}}})
+   (enter
+      {input_mgr set_limit kLimitSession}
+      {do
+         {venue.lst
+            set_provider
+            #ifndef _SHIP
+            {if_else
+               {tour is_all_unlocked}
+               {tour qp_dbg_venue_provider}
+               {tour qp_venue_provider}}
+            #else
+            {tour qp_venue_provider}
+            #endif}
+         {$this set_focus venue.lst}
+         {venue.lst
+            set_selected
+            [selection_memory]}
+         {$this
+            set
+            quickplay_exit_screen
+            {if_else
+               {gamemode get is_tour_quickplay}
+               loading_hub_screen
+               matchmaking_screen}}
+         {$this set_venue_image}
+         {$this set normal_exit_screen song_select_screen}
+         {qp_difficulty_screen set cancel_screen song_select_screen}
+         {$this set_venue_image}})
+   (SELECT_MSG
+      {do
+         ($selected
+            {venue.lst selected_sym})
+         {if_else
+            {!=
+               {find_exists
+                  [challenge_map]
+                  $selected}
+               kDataUnhandled}
+            {do
+               {challenge_mgr set_current_challenge $selected}
+               {$this set_challenge}
+               {qp_difficulty_screen set cancel_screen quickplay_venuescreen}
+               {ui goto_screen qp_difficulty_screen}}
+            {do
+               ($venue
+                  {tour get_venue $selected})
+               {if_else
+                  {'||'
+                     {!
+                        {gamemode get is_tour}}
+                     {gamemode get is_tour_quickplay}
+                     {$venue is_unlocked}}
+                  {do
+                     {$this set_venue $selected}
+                     {if
+                        {gamemode get is_tour_quickplay}
+                        {do
+                           ($band
+                              {tour band})
+                           {if
+                              {$band is_venue_new $selected}
+                              {$band set_venue_age $selected FALSE}}}}
+                     {ui
+                        goto_screen
+                        [normal_exit_screen]}
+                     kDataUnhandled}
+                  {do
+                     {synth play button_error}
+                     TRUE}}}}})
+   (SCROLL_MSG
+      {synth play button_focus}
+      {$this set_venue_image}
+      {$this
+         set
+         selection_memory
+         {venue.lst selected_pos}})
+   (set_venue
+      ($venue)
+      {challenge_mgr clear_current_challenge}
+      {synth play button_select}
+      {tour
+         set_qp_venue
+         {switch
+            $venue
+            (ven_crystal_mine big_club/powerminer/powerminer.milo)
+            (ven_lego_city_central small_club/train_station/train_station.milo)
+            (ven_bill_ditt_construction_co big_club/constructionsite/construction_site01.milo)
+            (ven_blockton_manor big_club/haunted/haunted.milo)
+            (ven_the_jolly_rocker big_club/pirateship/pirate_ship.milo)
+            (ven_the_parrot_n_pegleg big_club/piratetavern/piratetavern.milo)
+            (ven_lego_city_rooftop
+               {symbol
+                  "small_club/rooftop/roof_top 01.milo"})
+            (ven_the_cavern big_club/bonecave/bonecave.milo)
+            (ven_stud_farm big_club/barnyard/barnyard.milo)
+            (ven_sub_zero_research_facility big_club/dome/dome.milo)
+            (ven_the_abyss big_club/abyssclub/abyss_club.milo)
+            (ven_blockingham_castle big_club/castlegardens/castlegardens.milo)
+            (ven_wembrick_stadium big_club/stadium/stadium.milo)
+            (ven_the_moon big_club/moon/moon.milo)
+            (ven_lego_city_zoo big_club/zoo/zoo.milo)
+            (ven_volcanic_rock big_club/volcano/volcano.milo)
+            (ven_wreck_n_roll_bowl big_club/carsmash/carsmash.milo)
+            (ven_space_rock_festival big_club/alienplanet/alienplanet.milo)
+            (ven_ufo big_club/alienship/alienship.milo)}}
+      {tour set_venue $venue})
+   (go_back
+      {if
+         {gamemode get is_tour_quickplay}
+         {{tour band}
+            clear_venue}}
+      {ui
+         goto_screen
+         [quickplay_exit_screen]}
+      {$this set selection_memory 0})}
+{new
+   MainScreen
+   garage_venuescreen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      garage_venuepanel
+      tour_lower3rd_panel
+      tour_profile_panel)
+   (helpbar
+      {if_else
+         {>
+            {user_mgr get_num_participants}
+            1}
+         ((cancel helpbar_back)
+            (confirm helpbar_confirm)
+            (state_confirm helpbar_take_control))
+         ((cancel helpbar_back)
+            (confirm helpbar_confirm))})
+   (enter
+      {do
+         {$this set_focus_panel garage_venuepanel}})}
+{new
+   MainScreen
+   quickplay_venuescreen
+   (panels meta movie_panel quickplay_venuepanel tour_lower3rd_panel)
+   (helpbar
+      {if_else
+         {>
+            {user_mgr get_num_participants}
+            1}
+         ((cancel helpbar_back)
+            (confirm helpbar_confirm)
+            (state_confirm helpbar_take_control))
+         ((cancel helpbar_back)
+            (confirm helpbar_confirm))})
+   (enter
+      {$this set_focus_panel quickplay_venuepanel}
+      {meta music_start}
+      {input_mgr set_limit kLimitUILeader})
+   (exit
+      {meta music_stop})}

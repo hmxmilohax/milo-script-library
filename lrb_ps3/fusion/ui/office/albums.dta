@@ -1,0 +1,965 @@
+#define kMaxAlbums
+(6)
+{new
+   UIPanel
+   album_select_panel
+   (file
+      "Album_Select.milo")
+   (focus Select_Album.btn)
+   (current_album 0)
+   (enter
+      {do
+         ($index 0)
+         {while
+            {< $index kMaxAlbums}
+            {do
+               {setup_album_look $this $index}
+               {'++' $index}}}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Up
+            {$this
+               focus_off
+               [current_album]}
+            {if_else
+               {==
+                  [current_album]
+                  0}
+               {$this
+                  set
+                  current_album
+                  {- kMaxAlbums 1}}
+               {--
+                  [current_album]}}
+            {$this
+               focus_on
+               [current_album]}
+            {synth play button_focus})
+         (kAction_Down
+            {$this
+               focus_off
+               [current_album]}
+            {if_else
+               {==
+                  [current_album]
+                  {- kMaxAlbums 1}}
+               {$this set current_album 0}
+               {'++'
+                  [current_album]}}
+            {$this
+               focus_on
+               [current_album]}
+            {synth play button_focus})
+         (kAction_Confirm
+            {if_else
+               {{tour band}
+                  has_album_index
+                  [current_album]}
+               {do
+                  {cond
+                     ({==
+                           {ui current_screen}
+                           garage_album_select_screen}
+                        {do
+                           {difficulty_screen set cancel_screen garage_album_select_screen}
+                           {{tour band}
+                              set_promo
+                              {{tour band}
+                                 get_album_from_index
+                                 [current_album]}}
+                           {ui goto_screen difficulty_screen}})
+                     ({==
+                           {ui current_screen}
+                           special_event_album_select_screen}
+                        {do
+                           {difficulty_screen set cancel_screen special_event_album_select_screen}
+                           {{tour band}
+                              set_promo
+                              {{tour band}
+                                 get_album_from_index
+                                 [current_album]}}
+                           {ui goto_screen qp_difficulty_screen}})
+                     (TRUE
+                        {do
+                           {album_edit_panel
+                              set
+                              current_album
+                              [current_album]}
+                           {album_edit_menu_panel set is_recordable FALSE}
+                           {ui goto_screen album_edit_screen}})}}
+               FALSE})}
+      kDataUnhandled)
+   (focus_off
+      ($index)
+      {{$this
+            find
+            {sprintf
+               "AlbumHighlightOff_%02d.trig"
+               {'+' $index 1}}}
+         trigger})
+   (focus_on
+      ($index)
+      {if_else
+         {{tour band}
+            has_album_index
+            $index}
+         {if_else
+            {&&
+               {==
+                  {ui current_screen}
+                  album_select_screen}
+               {>
+                  {user_mgr get_num_participants}
+                  1}}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_confirm)
+                  (state_confirm helpbar_take_control))}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_confirm))}}
+         {if_else
+            {&&
+               {==
+                  {ui current_screen}
+                  album_select_screen}
+               {>
+                  {user_mgr get_num_participants}
+                  1}}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (state_confirm helpbar_take_control))}
+            {helpbar
+               set_config
+               ((cancel helpbar_back))}}}
+      {{$this
+            find
+            {sprintf
+               "AlbumHighlightOn_%02d.trig"
+               {'+' $index 1}}}
+         trigger})
+   (TRANSITION_COMPLETE_MSG
+      {$this
+         focus_on
+         [current_album]})}
+{func
+   setup_album_look
+   ($panel $index)
+   {do
+      {{$panel
+            find
+            {sprintf
+               "Album%02d.lst"
+               {'+' $index 1}}}
+         set_provider
+         {tour album_provider $index}}
+      {if_else
+         {'||'
+            {==
+               {ui current_screen}
+               garage_album_edit_screen}
+            {==
+               {ui current_screen}
+               special_event_album_edit_screen}
+            {==
+               {ui current_screen}
+               album_renaming_office_screen}
+            {{tour band}
+               has_album_index
+               $index}}
+         {do
+            ($album
+               {{tour band}
+                  get_album_from_index
+                  $index})
+            ($album_name
+               {{tour band}
+                  get_album_name
+                  $album})
+            ($album_cover
+               {{tour band}
+                  get_album_cover
+                  $album})
+            {{$panel
+                  find
+                  {sprintf
+                     "bandname%02d.lbl"
+                     {'+' $index 1}}}
+               set
+               text_token
+               {{tour band}
+                  band_name}}
+            {{$panel
+                  find
+                  {sprintf
+                     "albumname%02d.lbl"
+                     {'+' $index 1}}}
+               set
+               text_token
+               $album_name}
+            {{$panel
+                  find
+                  {sprintf
+                     "Album%02d.lst"
+                     {'+' $index 1}}}
+               set_selected
+               {{tour album_provider $index}
+                  get_album_art_index
+                  {symbol $album_cover}}}
+            {{$panel
+                  find
+                  {sprintf
+                     "AlbumLocked%02d.mesh"
+                     {'+' $index 1}}}
+               set_showing
+               FALSE}
+            {{$panel
+                  find
+                  {sprintf
+                     "Album%02d.mesh"
+                     {'+' $index 1}}}
+               set_showing
+               TRUE}}
+         {do
+            {{$panel
+                  find
+                  {sprintf
+                     "Album%02d.mesh"
+                     {'+' $index 1}}}
+               set_showing
+               FALSE}
+            {{$panel
+                  find
+                  {sprintf
+                     "AlbumLocked%02d.mesh"
+                     {'+' $index 1}}}
+               set_showing
+               TRUE}}}}}
+{new
+   MainScreen
+   album_select_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      album_select_panel)
+   (focus album_select_panel)
+   (back our_band_screen)}
+{new
+   MainScreen
+   garage_album_select_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      album_select_panel)
+   (focus album_select_panel)
+   (back garage_gigscreen)}
+{new
+   MainScreen
+   special_event_album_select_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      movie_panel
+      #endif
+      album_select_panel)
+   (focus album_select_panel)
+   (back special_event_loop_screen)}
+{new
+   BandScreen
+   album_locked_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize album_not_unlocked}})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   UIPanel
+   album_edit_panel
+   (file
+      "Album_Edit.milo")
+   (focus Album_Title.btn)
+   (reset_focus TRUE)
+   (current_album 0)
+   (enter
+      {do
+         ($index 0)
+         ($song_index 0)
+         ($album
+            {{tour band}
+               get_album_from_index
+               [current_album]})
+         ($is_finalised
+            {{tour band}
+               is_album_finalised
+               $album})
+         {while
+            {< $index kMaxAlbums}
+            {if_else
+               {!=
+                  $index
+                  [current_album]}
+               {{$this
+                     find
+                     {sprintf
+                        "Album%02d.grp"
+                        {'+' $index 1}}}
+                  set_showing
+                  FALSE}
+               {do
+                  {{$this
+                        find
+                        {sprintf
+                           "Album%02d.grp"
+                           {'+' $index 1}}}
+                     set_showing
+                     TRUE}
+                  {{$this
+                        find
+                        {sprintf
+                           "AlbumHighlightOn_%02d.trig"
+                           {'+' $index 1}}}
+                     trigger}}}
+            {'++' $index}}
+         {if_else
+            {>
+               {{tour band}
+                  get_num_album_songs
+                  $album}
+               3}
+            {do
+               {Setlist_3.grp set_showing FALSE}
+               {Setlist_6.grp set_showing TRUE}
+               {while
+                  {< $song_index 6}
+                  {if_else
+                     {'||'
+                        $is_finalised
+                        {album_edit_menu_panel get is_recordable}}
+                     {{$this
+                           find
+                           {sprintf
+                              "Setlistsong_6_%02d.lbl"
+                              {'+' $song_index 1}}}
+                        set_localized
+                        {song_mgr
+                           song_name
+                           {{tour band}
+                              get_album_song
+                              $album
+                              $song_index}}}
+                     {{$this
+                           find
+                           {sprintf
+                              "Setlistsong_6_%02d.lbl"
+                              {'+' $song_index 1}}}
+                        set_localized
+                        ""}}
+                  {'++' $song_index}}}
+            {do
+               {Setlist_3.grp set_showing TRUE}
+               {Setlist_6.grp set_showing FALSE}
+               {while
+                  {< $song_index 3}
+                  {if_else
+                     {'||'
+                        $is_finalised
+                        {album_edit_menu_panel get is_recordable}}
+                     {{$this
+                           find
+                           {sprintf
+                              "Setlistsong_3_%02d.lbl"
+                              {'+' $song_index 1}}}
+                        set_localized
+                        {song_mgr
+                           song_name
+                           {{tour band}
+                              get_album_song
+                              $album
+                              $song_index}}}
+                     {{$this
+                           find
+                           {sprintf
+                              "Setlistsong_3_%02d.lbl"
+                              {'+' $song_index 1}}}
+                        set_localized
+                        ""}}
+                  {'++' $song_index}}}}
+         {setup_album_look
+            $this
+            [current_album]}})
+   (show_cover
+      {EditPos_On.trig trigger}
+      {$this
+         set_focus
+         {$this
+            find
+            {sprintf
+               "Album%02d.lst"
+               {'+'
+                  [current_album]
+                  1}}}}
+      {Album_Title.btn set text_token change_album_cover})
+   (hide_cover
+      {EditPos_Off.trig trigger}
+      {$this set_focus Album_Title.btn}
+      {Album_Title.btn set text_token edit_album})
+   (SELECT_MSG
+      {do
+         ($album
+            {{tour band}
+               get_album_from_index
+               [current_album]})
+         ($current_list
+            {$this
+               find
+               {sprintf
+                  "Album%02d.lst"
+                  {'+'
+                     [current_album]
+                     1}}})
+         {switch
+            $component
+            ((Album01.lst Album02.lst Album03.lst Album04.lst Album05.lst Album06.lst)
+               {do
+                  ($album
+                     {{tour band}
+                        get_album_from_index
+                        [current_album]})
+                  {{tour band}
+                     set_album_cover
+                     $album
+                     {{tour
+                           album_provider
+                           [current_album]}
+                        get_album_art_name
+                        {$current_list selected_pos}}}
+                  {cond
+                     ({==
+                           {ui current_screen}
+                           garage_album_cover_edit_screen}
+                        {ui goto_screen garage_album_edit_screen})
+                     ({==
+                           {ui current_screen}
+                           special_event_album_cover_edit_screen}
+                        {ui goto_screen special_event_album_edit_screen})
+                     (TRUE
+                        {ui goto_screen album_edit_screen})}
+                  {$this hide_cover}
+                  {synth play button_select}})}})}
+{new
+   UIPanel
+   album_edit_menu_panel
+   (file
+      "Album_Edit_Menu.milo")
+   (focus 1EditArtwork.btn)
+   (is_recordable FALSE)
+   (enter
+      {if_else
+         [is_recordable]
+         {$this enable 4RecordAlbum.btn}
+         {$this disable 4RecordAlbum.btn}})
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (SELECT_MSG
+      {switch
+         $component
+         (1EditArtwork.btn
+            {cond
+               ({==
+                     {ui current_screen}
+                     garage_album_edit_screen}
+                  {ui goto_screen garage_album_cover_edit_screen})
+               ({==
+                     {ui current_screen}
+                     special_event_album_edit_screen}
+                  {ui goto_screen special_event_album_cover_edit_screen})
+               (TRUE
+                  {ui goto_screen album_cover_edit_screen})}
+            {album_edit_panel show_cover})
+         (2AlbumName.btn
+            {do
+               #ifndef HX_OG
+               ($album
+                  {{tour band}
+                     get_album_from_index
+                     {album_edit_panel get current_album}})
+               {virtual_keyboard
+                  show_keyboard
+                  $player_num
+                  {get_band_name_length}
+                  {localize edit_album_title_vk_title}
+                  {localize edit_album_title_vk_desc}
+                  {{tour band}
+                     get_album_name
+                     $album}
+                  $this}
+               #else
+               {if
+                  {{tour band}
+                     has_album_index
+                     {album_edit_panel get current_album}}
+                  {input_mgr set_limit kLimitNone}
+                  {input_mgr
+                     set_user
+                     {user_mgr get_band_user $player_num}}}
+               {ui push_screen album_renaming_office_screen}
+               #endif
+               {{album_edit_panel find Album_Title.btn}
+                  set
+                  text_token
+                  change_album_title}
+               {synth play button_select}})
+         (3ChangeSetlist.btn
+            {do
+               ($album
+                  {{tour band}
+                     get_album_from_index
+                     {album_edit_panel get current_album}})
+               {song_offer_provider set_setlist_mode TRUE}
+               {{tour band}
+                  reset_album_setlist
+                  $album}
+               {cond
+                  ({==
+                        {ui current_screen}
+                        garage_album_edit_screen}
+                     {do
+                        {garage_album_setlist_edit_screen
+                           set
+                           current_album
+                           {album_edit_panel get current_album}}
+                        {ui goto_screen garage_album_setlist_edit_screen}})
+                  ({==
+                        {ui current_screen}
+                        special_event_album_edit_screen}
+                     {do
+                        {special_event_album_setlist_edit_screen
+                           set
+                           current_album
+                           {album_edit_panel get current_album}}
+                        {ui goto_screen special_event_album_setlist_edit_screen}})
+                  (TRUE
+                     {do
+                        {album_setlist_edit_screen
+                           set
+                           current_album
+                           {album_edit_panel get current_album}}
+                        {ui goto_screen album_setlist_edit_screen}})}})
+         (4RecordAlbum.btn
+            {cond
+               ({==
+                     {ui current_screen}
+                     garage_album_edit_screen}
+                  {do
+                     {difficulty_screen set cancel_screen garage_album_edit_screen}
+                     {ui goto_screen difficulty_screen}})
+               ({==
+                     {ui current_screen}
+                     special_event_album_edit_screen}
+                  {do
+                     {qp_difficulty_screen set cancel_screen special_event_album_edit_screen}
+                     {ui goto_screen qp_difficulty_screen}})
+               (TRUE)})})
+   #ifndef HX_OG
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {==
+               {ui focus_panel}
+               $this}}
+         {do
+            ($album
+               {{tour band}
+                  get_album_from_index
+                  {album_edit_panel get current_album}})
+            {if_else
+               {&&
+                  {!=
+                     $text
+                     ""}
+                  {'||'
+                     {==
+                        {{tour band}
+                           band_name}
+                        $text}
+                     {==
+                        {{tour band}
+                           get_album_name
+                           $album}
+                        $text}
+                     {ui is_valid_name $text}}}
+               {do
+                  {{tour band}
+                     set_album_name
+                     $album
+                     $text}
+                  {setup_album_look
+                     album_edit_panel
+                     {album_edit_panel get current_album}}}
+               {ui push_screen tour_band_create_illegal_name_screen}}
+            {{album_edit_panel find Album_Title.btn}
+               set
+               text_token
+               edit_album}}})
+   #endif}
+{new
+   MainScreen
+   album_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      album_edit_panel
+      album_edit_menu_panel)
+   (focus album_edit_menu_panel)
+   (back album_select_screen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))
+   (enter
+      {{album_edit_panel find Album_Title.btn}
+         set
+         text_token
+         edit_album}
+      {album_edit_menu_panel set is_recordable FALSE})}
+{new
+   MainScreen
+   garage_album_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      album_edit_panel
+      album_edit_menu_panel)
+   (focus album_edit_menu_panel)
+   (back garage_gigscreen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))
+   (enter
+      {{album_edit_panel find Album_Title.btn}
+         set
+         text_token
+         edit_album})}
+{new
+   MainScreen
+   special_event_album_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      movie_panel
+      #endif
+      album_edit_panel
+      album_edit_menu_panel)
+   (focus album_edit_menu_panel)
+   (back special_event_loop_screen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))
+   (enter
+      {{album_edit_panel find Album_Title.btn}
+         set
+         text_token
+         edit_album})}
+{new
+   MainScreen
+   album_cover_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      album_edit_panel)
+   (focus album_edit_panel)
+   (back
+      {do
+         {album_edit_panel hide_cover}
+         album_edit_screen})
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+{new
+   MainScreen
+   garage_album_cover_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      album_edit_panel)
+   (focus album_edit_panel)
+   (back
+      {do
+         {album_edit_panel hide_cover}
+         garage_album_edit_screen})
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+{new
+   MainScreen
+   special_event_album_cover_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      movie_panel
+      #endif
+      album_edit_panel)
+   (focus album_edit_panel)
+   (back
+      {do
+         {album_edit_panel hide_cover}
+         special_event_album_edit_screen})
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+{new
+   BandScreen
+   album_setlist_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      postsong_sfx_panel
+      song_select_details_panel
+      song_select_panel
+      song_sync_panel)
+   (current_album 0)
+   (focus song_select_panel)
+   (back album_edit_screen)
+   (net_sync_scroll FALSE)
+   (enter
+      {input_mgr set_user ''}
+      {input_mgr set_limit kLimitNone}
+      {gamemode set_practice FALSE}
+      {gamemode set_editing_album TRUE})
+   (exit
+      {input_mgr set_user ''}
+      {input_mgr set_limit kLimitUILeader}
+      {gamemode set_editing_album FALSE})
+   (update_album_setlist
+      {do
+         ($album
+            {{tour band}
+               get_album_from_index
+               [current_album]})
+         {while
+            {<
+               {{tour band}
+                  num_completed}
+               {{tour band}
+                  num_songs}}
+            {{tour band}
+               set_album_song
+               $album
+               {{tour band}
+                  num_completed}
+               {{tour band}
+                  song}}
+            {{tour band}
+               advance_song
+               0}}
+         {ui goto_screen album_edit_screen}})}
+{new
+   BandScreen
+   garage_album_setlist_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      postsong_sfx_panel
+      song_select_details_panel
+      song_select_panel
+      song_sync_panel)
+   (current_album 0)
+   (focus song_select_panel)
+   (back
+      {do
+         {album_edit_menu_panel set is_recordable FALSE}
+         garage_album_edit_screen})
+   (net_sync_scroll FALSE)
+   (enter
+      {gamemode set_practice FALSE}
+      {gamemode set_editing_album TRUE})
+   (exit
+      {gamemode set_editing_album FALSE})
+   (update_album_setlist
+      {do
+         ($album
+            {{tour band}
+               get_album_from_index
+               [current_album]})
+         {while
+            {<
+               {{tour band}
+                  num_completed}
+               {{tour band}
+                  num_songs}}
+            {{tour band}
+               set_album_song
+               $album
+               {{tour band}
+                  num_completed}
+               {{tour band}
+                  song}}
+            {{tour band}
+               advance_song
+               0}}
+         {{tour band}
+            restart}
+         {album_edit_menu_panel set is_recordable TRUE}
+         {ui goto_screen garage_album_edit_screen}})}
+{new
+   BandScreen
+   special_event_album_setlist_edit_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      movie_panel
+      #endif
+      postsong_sfx_panel
+      song_select_details_panel
+      song_select_panel
+      song_sync_panel)
+   (current_album 0)
+   (focus song_select_panel)
+   (back
+      {do
+         {album_edit_menu_panel set is_recordable FALSE}
+         special_event_album_edit_screen})
+   (net_sync_scroll FALSE)
+   (enter
+      {gamemode set_practice FALSE}
+      {gamemode set_editing_album TRUE})
+   (exit
+      {gamemode set_editing_album FALSE})
+   (update_album_setlist
+      {do
+         ($album
+            {{tour band}
+               get_album_from_index
+               [current_album]})
+         {while
+            {<
+               {{tour band}
+                  num_completed}
+               {{tour band}
+                  num_songs}}
+            {{tour band}
+               set_album_song
+               $album
+               {{tour band}
+                  num_completed}
+               {{tour band}
+                  song}}
+            {{tour band}
+               advance_song
+               0}}
+         {{tour band}
+            restart}
+         {album_edit_menu_panel set is_recordable TRUE}
+         {ui goto_screen special_event_album_edit_screen}})}
+#ifdef HX_OG
+{new
+   BandCreatePanel
+   album_renaming_office_panel
+   (file
+      "../../../ui/naming_dialog_band.milo")
+   (focus name.lbl)
+   (name_label name.lbl)
+   (name_active TRUE)
+   (back_button_exits TRUE)
+   NAMING_PANEL_HANDLERS
+   (enter
+      {shit2.tnm set_frame 0}
+      {set
+         [for_band]
+         TRUE}
+      {$this init_name})
+   (accept_name
+      {do
+         ($album
+            {{tour band}
+               get_album_from_index
+               {album_edit_panel get current_album}})
+         {$this stop_naming}
+         {if_else
+            {&&
+               {!=
+                  {$this get_name}
+                  ""}
+               {'||'
+                  {==
+                     {{tour band}
+                        band_name}
+                     {$this get_name}}
+                  {==
+                     {{tour band}
+                        get_album_name
+                        $album}
+                     {$this get_name}}
+                  {ui
+                     is_valid_name
+                     {$this get_name}}}}
+            {do
+               {{tour band}
+                  set_album_name
+                  $album
+                  {$this get_name}}
+               {setup_album_look
+                  album_edit_panel
+                  {album_edit_panel get current_album}}
+               {$this leave_screen}}
+            {do
+               {if
+                  {{tour band}
+                     has_album_index
+                     {album_edit_panel get current_album}}
+                  {input_mgr set_user ''}
+                  {input_mgr set_limit kLimitUILeader}}
+               {ui goto_screen tour_band_create_illegal_name_screen}}}})
+   (cancel_name
+      {$this leave_screen})
+   (leave_screen
+      {{album_edit_panel find Album_Title.btn}
+         set
+         text_token
+         edit_album}
+      {if
+         {{tour band}
+            has_album_index
+            {album_edit_panel get current_album}}
+         {input_mgr set_user ''}
+         {input_mgr set_limit kLimitUILeader}}
+      {ui pop_screen})
+   (on_exit)}
+{new
+   BandScreen
+   album_renaming_office_screen
+   (panels album_renaming_office_panel)
+   (focus album_renaming_office_panel)}
+#endif

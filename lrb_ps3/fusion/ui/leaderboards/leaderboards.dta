@@ -1,0 +1,219 @@
+#ifndef NOWIINETWORKING
+#ifndef HX_EE
+{new
+   HeldButtonPanel
+   leaderboards_panel
+   (file
+      "leaderboards.milo")
+   (focus leaderboard.lst)}
+#define LEADERBOARDS_SCREEN_HANDLERS
+((focus leaderboards_panel)
+   (back
+      {gamemode get community_screen})
+   (update_filter
+      ($type)
+      {leaderboards_panel update_filter $type})
+   (TRANSITION_COMPLETE_MSG
+      {leaderboards_panel update_helpbar})
+   (BUTTON_DOWN_MSG
+      {do
+         ($list
+            {leaderboards_panel find leaderboard.lst})
+         {if_else
+            {&&
+               {$list is_scrolling}
+               {'||'
+                  {== $action kAction_Down}
+                  {== $action kAction_Up}}}
+            TRUE
+            kDataUnhandled}}))
+{new
+   BandScreen
+   leaderboards_screen
+   (panels meta postsong_sfx_panel movie_panel leaderboards_panel tour_lower3rd_panel)
+   LEADERBOARDS_SCREEN_HANDLERS}
+{new
+   BandScreen
+   tour_leaderboards_screen
+   (panels meta practice_space_panel leaderboards_panel tour_lower3rd_panel)
+   LEADERBOARDS_SCREEN_HANDLERS}
+{new
+   BandScreen
+   lb_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (error_msg '')
+   (enter
+      {dialog_panel
+         set_ok
+         {localize
+            [error_msg]}})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   lb_song_select_screen
+   (panels meta lb_song_select_content_loading_panel postsong_sfx_panel movie_panel song_select_details_panel song_select_panel tour_lower3rd_panel)
+   COMMON_SONG_SELECT_SCREEN}
+{new
+   BandScreen
+   tour_lb_song_select_screen
+   (panels meta practice_space_panel song_select_details_panel song_select_panel tour_lower3rd_panel)
+   COMMON_SONG_SELECT_SCREEN}
+{new
+   UIPanel
+   leaderboards_seltrack_panel
+   (file
+      "leaderboards_seltrack.milo")
+   (focus guitar.btn)
+   (SELECT_MSG)}
+#define LEADERBOARDS_SELTRACK_HANDLERS
+((focus leaderboards_seltrack_panel)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))
+   (back
+      {gamemode get community_screen}))
+{new
+   BandScreen
+   leaderboards_seltrack_screen
+   (panels meta postsong_sfx_panel movie_panel leaderboards_seltrack_panel tour_lower3rd_panel)
+   LEADERBOARDS_SELTRACK_HANDLERS}
+{new
+   BandScreen
+   tour_leaderboards_seltrack_screen
+   (panels meta practice_space_panel leaderboards_seltrack_panel tour_lower3rd_panel)
+   LEADERBOARDS_SELTRACK_HANDLERS}
+{new
+   UIPanel
+   community_leaderboard_panel
+   (file
+      "leaderboard_menu.milo")
+   (focus solo.btn)
+   (enter)
+   (SELECT_MSG
+      {switch
+         $component
+         (solo.btn
+            {ui
+               goto_screen
+               {gamemode get leaderboards_seltrack_screen}})
+         (band_fans.btn
+            {ui
+               goto_screen
+               {gamemode get leaderboards_screen}})
+         (band_song.btn)})}
+{new
+   BandScreen
+   community_leaderboard_screen
+   (panels meta community_leaderboard_panel)
+   (focus community_leaderboard_panel)
+   (back main_community_screen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))}
+{new
+   UIPanel
+   main_leaderboard_panel
+   (enter
+      {leaderboards clear_type})
+   (SELECT_MSG
+      {leaderboards set_player_num $player_num}
+      {switch
+         $component
+         (lb_solo.btn
+            {leaderboards set_type kPlayerSong}
+            {ui
+               goto_screen
+               {gamemode get leaderboards_seltrack_screen}})
+         (lb_fans.btn
+            {leaderboards set_type kBandFans}
+            {leaderboards set_band_from_tour}
+            {ui
+               goto_screen
+               {gamemode get leaderboards_screen}})
+         (lb_songs.btn
+            {leaderboards set_type kBandSong}
+            {leaderboards set_band_from_tour}
+            {song_offer_provider set is_leaderboards TRUE}
+            {ui
+               goto_screen
+               {gamemode get lb_song_select_screen}})
+         (lb_tow.btn
+            {leaderboards set_type kTugOfWar}
+            {ui
+               goto_screen
+               {gamemode get leaderboards_seltrack_screen}})
+         (lb_scoreduel.btn
+            {leaderboards set_type kScoreDuel}
+            {ui
+               goto_screen
+               {gamemode get leaderboards_seltrack_screen}})})}
+{new
+   BandScreen
+   main_leaderboard_screen
+   (panels meta main_leaderboard_panel)
+   (focus main_leaderboard_panel)
+   (back main_community_screen)
+   MAIN_SCREEN_HANDLERS}
+{new
+   BandScreen
+   tour_hub_community_screen
+   (panels meta practice_space_panel community_leaderboard_panel tour_lower3rd_panel)
+   (show_char
+      ($player_num)
+      FALSE)
+   (focus community_leaderboard_panel)
+   (back my_career_screen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))
+   (enter
+      {practice_space_panel
+         select_cam
+         "leaderboards"})
+   (exit
+      {if
+         {gamemode get is_tour}
+         {tour_profile_panel
+            set_band_data
+            {tour band}}})}
+{new
+   BandScreen
+   tour_leaderboard_offline_screen
+   (panels dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {cond
+            ({platform_mgr is_connected}
+               {localize leaderboards_not_available_rock_central})
+            (TRUE
+               {localize leaderboards_not_available_connection})}})
+   (SELECT_MSG
+      {ui pop_screen tour_hub_community_screen})}
+#define LEADERBOARDS_BAND_PROFILE_HANDLERS
+((focus tour_profile_panel)
+   (back
+      {gamemode get leaderboards_screen})
+   (enter
+      {with
+         tour_profile_panel
+         {enter.grp
+            set_frame
+            {enter.grp end_frame}}}
+      {leaderboards_panel set_showing FALSE})
+   (exit
+      {leaderboards_panel set_showing TRUE}))
+{new
+   BandScreen
+   leaderboards_band_profile_screen
+   (panels meta postsong_sfx_panel movie_panel leaderboards_panel tour_profile_panel tour_lower3rd_panel)
+   LEADERBOARDS_BAND_PROFILE_HANDLERS}
+{new
+   BandScreen
+   tour_leaderboards_band_profile_screen
+   (panels meta practice_space_panel leaderboards_panel tour_profile_panel tour_lower3rd_panel)
+   LEADERBOARDS_BAND_PROFILE_HANDLERS}
+#endif
+#endif
