@@ -1,0 +1,122 @@
+{new
+   UIPanel
+   tutorials_pause_mic_panel
+   (file
+      "tutorial_pause_mic.milo")
+   (enter
+      {$this set_focus pause_resume.btn}
+      {talk01.mnm set_frame 1}
+      {$this enable mics_player_name01.lbl}
+      {mics_player_name01.lbl
+         set_localized
+         {localize tutorial_pause_mic_name}}
+      {$this on_mics_change})
+   (poll
+      {talk01.mnm
+         set_frame
+         {if_else
+            {tutorials_state_panel is_mic_talking}
+            1
+            0}})
+   (on_mics_change
+      {if_else
+         {tutorials_state_panel is_mic_disconnected}
+         {do
+            {$this disable pause_resume.btn}
+            {$this set_focus pause_quit.btn}}
+         {do
+            {$this enable pause_resume.btn}
+            {$this set_focus pause_resume.btn}}})}
+{new
+   UIScreen
+   tutorials_pause_mic_screen
+   (panels tutorials_pause_mic_panel helpbar)
+   (focus tutorials_pause_mic_panel)
+   (helpbar
+      ('' helpbar_select))
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (microphones_changed
+      ($vocalists_mic_changed)
+      {tutorials_pause_mic_panel on_mics_change})
+   (pre_enter
+      {set
+         [is_quitting]
+         FALSE}
+      {tutorials_state_panel pause})
+   (enter
+      {set
+         [is_quitting]
+         FALSE}
+      {set
+         [is_done]
+         FALSE})
+   (exit
+      {if
+         {!
+            [is_quitting]}
+         {tutorials_state_panel unpause}})
+   (resume_tutorial
+      {ui pop_screen})
+   (quit_tutorial
+      {set
+         [is_quitting]
+         TRUE}
+      {tutorials_state_panel reset_tutorial}
+      {gamemode set main_screen main_screen}
+      {ui
+         reset_screen
+         {gamemode get quit_screen}})
+   (SELECT_MSG
+      {if_else
+         {&&
+            {==
+               $player_num
+               {{gamemode get main_panel}
+                  get_tutorial_player}}
+            {!
+               [is_done]}}
+         {do
+            {set
+               [is_done]
+               TRUE}
+            {switch
+               $component
+               (pause_resume.btn
+                  {script_task
+                     kTaskUISeconds
+                     (delay 1.25)
+                     (script
+                        {$this resume_tutorial})})
+               (pause_quit.btn
+                  {script_task
+                     kTaskUISeconds
+                     (delay 1.25)
+                     (script
+                        {$this quit_tutorial})})}
+            kDataUnhandled}
+         TRUE})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               $player_num
+               {{gamemode get main_panel}
+                  get_tutorial_player}}
+            {!
+               [is_done]}}
+         {do kDataUnhandled}
+         TRUE})
+   (BUTTON_UP_MSG
+      {if_else
+         {&&
+            {==
+               $player_num
+               {{gamemode get main_panel}
+                  get_tutorial_player}}
+            {!
+               [is_done]}}
+         {do kDataUnhandled}
+         TRUE})
+   (is_quitting FALSE)
+   (is_done FALSE)}
