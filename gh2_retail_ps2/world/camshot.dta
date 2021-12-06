@@ -1,0 +1,119 @@
+(hide_crowd FALSE)
+(force_char_lod -1)
+(bad_waypoints
+   ())
+(distance null)
+(facing null)
+(special FALSE)
+(solo ok)
+(walk_ok TRUE)
+(starpower_ok FALSE)
+(jump_ok TRUE)
+(low_excitement_ok TRUE)
+(crowd_face_camera FALSE)
+(next_shot
+   "")
+(shot_started
+   {handle
+      (world post_switch_cam)})
+(start_shot
+   {rnd
+      reflect
+      camera
+      {print
+         "Shot Name:"
+         {$this name}
+         "\n"}
+      {print
+         "distance:"
+         [distance]
+         " facing:"
+         [facing]
+         " solo:"
+         [solo]
+         "\n"}
+      {print
+         "low_excitement_ok:"
+         [low_excitement_ok]
+         " starpower_ok:"
+         [starpower_ok]
+         " walk_ok:"
+         [walk_ok]
+         "\n"}}
+   {if
+      {&&
+         {==
+            [category]
+            LOSE}}
+      {handle
+         (guitarist0 lose_teleport)}}
+   {handle
+      (world
+         set_min_lod
+         [force_char_lod])}
+   {if_else
+      {! $camshot_skip_next_update}
+      {if
+         [crowd]
+         {[crowd]
+            crowd_update}
+         {if_else
+            [crowd_face_camera]
+            {[crowd]
+               set
+               rotate
+               TRUE}
+            {[crowd]
+               set
+               rotate
+               FALSE}}}
+      {set $camshot_skip_next_update FALSE}})
+(check_shot
+   {if_else
+      {&&
+         {!
+            [starpower_ok]}
+         {guitarist0 playing_starpower}}
+      FALSE
+      {if_else
+         {==
+            {$this
+               size
+               (bad_waypoints)}
+            0}
+         TRUE
+         {do
+            ($nearest
+               {waypoint_nearest
+                  guitarist0
+                  {'|' kWalkSpot kSoloWalkSpot}})
+            ($ok TRUE)
+            {foreach
+               $spot
+               [bad_waypoints]
+               {if
+                  {== $spot $nearest}
+                  {set $ok FALSE}}}
+            $ok}}})
+(shot_ok
+   ($prev_shot)
+   {switch
+      [category]
+      ((WIN WIN_ENCORE LOSE LIGHTER INTRO INTRO_ENCORE)
+         TRUE)
+      {if_else
+         [special]
+         "shot is special"
+         {if_else
+            {$this check_shot}
+            TRUE
+            "bad waypoint"}}})
+(shot_over
+   {if
+      {!=
+         [next_shot]
+         ""}
+      {set $camshot_skip_next_update TRUE}
+      {world
+         do_force_shot
+         [next_shot]}})
