@@ -1,0 +1,133 @@
+{arena
+   load_script
+   {arena venue_name}}
+{arena
+   load_section
+   venue
+   {arena venue_name}}
+{arena load_script camera}
+{arena load_section '' campaths}
+{func
+   set_lights_per_excitement
+   ($excitement)
+   {switch
+      $excitement
+      (kExcitementBoot
+         {arena set_lights_bad})
+      (kExcitementBad
+         {arena set_lights_bad})
+      (kExcitementOkay
+         {switch
+            $song_pos
+            (verse
+               {arena set_lights_okay_verse})
+            (chorus
+               {arena set_lights_okay_chorus})
+            (solo
+               {arena set_lights_okay_solo})})
+      (kExcitementGreat
+         {switch
+            $song_pos
+            (verse
+               {arena set_lights_great_verse})
+            (chorus
+               {arena set_lights_great_chorus})
+            (solo
+               {arena set_lights_great_solo})})
+      (kExcitementPeak
+         {switch
+            $song_pos
+            (verse
+               {arena set_lights_great_verse})
+            (chorus
+               {arena set_lights_great_chorus})
+            (solo
+               {arena set_lights_great_solo})})}}
+{arena
+   add_handlers
+   (init)
+   (terminate
+      {delete set_lights_per_excitement})
+   (intro_start
+      {set $arena.last_excitement $arena.excitement}
+      {arena set_lights_bad})
+   (click_start)
+   (music_start
+      {arena set_lights_okay_verse})
+   (verse
+      {set $song_pos verse}
+      {set $lights_need_update TRUE})
+   (chorus
+      {set $song_pos chorus}
+      {set $lights_need_update TRUE})
+   (solo
+      {set $song_pos solo}
+      {set $lights_need_update TRUE})
+   (downbeat
+      {if
+         $lights_need_update
+         {set $lights_need_update FALSE}
+         {if_else
+            {'||'
+               {!
+                  {exists game}}
+               {game multiplayer}}
+            {set_lights_per_excitement kExcitementGreat}
+            {set_lights_per_excitement $arena.excitement}}})
+   (excitement
+      {switch
+         $arena.excitement
+         (kExcitementBoot
+            {arena excitement_boot})
+         (kExcitementBad
+            {arena excitement_bad}
+            {if_else
+               {== $arena.last_excitement kExcitementBoot}
+               {arena excitement_bad_rising}
+               {arena excitement_bad_falling}})
+         (kExcitementOkay
+            {arena excitement_okay}
+            {if
+               {!= $arena.last_excitement kExcitementOkay}
+               {if_else
+                  {== $arena.last_excitement kExcitementBad}
+                  {arena excitement_okay_rising}
+                  {arena excitement_okay_falling}}})
+         (kExcitementGreat
+            {arena excitement_great})
+         (kExcitementPeak
+            {arena excitement_peak})}
+      {set $arena.last_excitement $arena.excitement}
+      {set $lights_need_update TRUE})
+   (game_won
+      {arena set_lights_great_verse})
+   (game_lost
+      {arena set_lights_bad})
+   (game_over
+      {if_else
+         $arena.game_won
+         {arena game_won}
+         {arena game_lost}})
+   #ifndef _SHIP
+   (set_lights_bad
+      {lights_debug
+         "bad"})
+   (set_lights_okay_verse
+      {lights_debug
+         "okay_verse"})
+   (set_lights_okay_chorus
+      {lights_debug
+         "okay_chorus"})
+   (set_lights_okay_solo
+      {lights_debug
+         "okay_solo"})
+   (set_lights_great_verse
+      {lights_debug
+         "great_verse"})
+   (set_lights_great_chorus
+      {lights_debug
+         "great_chorus"})
+   (set_lights_great_solo
+      {lights_debug
+         "great_solo"})
+   #endif}

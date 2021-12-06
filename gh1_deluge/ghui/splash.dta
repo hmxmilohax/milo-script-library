@@ -1,0 +1,448 @@
+{new_helpbar_panel
+   helpbar
+   (object_name helpbar)
+   (max_labels 4)
+   (max_buttons 4)
+   (button_spacing 40)
+   (strumbar_spacing 80)
+   (text_spacing 25)}
+{new_metagame_panel
+   meta
+   (object_name meta)
+   (rnd_file
+      "")
+   (set_defaults
+      {set $first_screen bootup_load}
+      {set $autosave FALSE}
+      {$this setup_quickplay})
+   (setup_multiplayer
+      {$this set main_screen main}
+      {$this set continue_screen multi_selsong}
+      {$this set win_screen multi_compete}
+      {$this set lose_screen lose}
+      {$this set mode multiplayer}
+      {game set_venue small_club_multi}
+      {game set_multiplayer TRUE}
+      {nameprof set can_go_back FALSE})
+   (setup_quickplay
+      {$this set main_screen main}
+      {$this set continue_screen qp_selsong}
+      {$this set win_screen endgame}
+      {$this set lose_screen lose}
+      {$this set mode quickplay}
+      {nameprof set can_go_back FALSE})
+   (setup_career
+      {$this set main_screen career}
+      {$this set continue_screen sel_song}
+      {$this set win_screen endgame}
+      {$this set lose_screen lose}
+      {$this set mode career}
+      {nameprof set can_go_back FALSE})}
+{new_panel pub_splash}
+{new_gh_screen
+   pub_splash
+   (panels pub_splash)
+   (focus pub_splash)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (enter
+      {ui
+         delay_task
+         3000
+         {ui goto_screen harmonix_splash}})}
+{new_panel harmonix_splash}
+{new_gh_screen
+   harmonix_splash
+   (panels harmonix_splash)
+   (focus harmonix_splash)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (enter
+      {ui
+         delay_task
+         3000
+         {ui goto_screen mtv_splash}})}
+{new_panel mtv_splash}
+{new_gh_screen
+   mtv_splash
+   (panels mtv_splash)
+   (focus mtv_splash)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (enter
+      {ui
+         delay_task
+         3000
+         {ui goto_screen cut_scene}})}
+#define CUT_SCENE_VIDEO
+(ghintro.pss)
+{new_gh_screen
+   cut_scene
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (TRANSITION_COMPLETE_MSG
+      {meta play_movie CUT_SCENE_VIDEO}
+      {ui goto_screen splash})}
+#define DELAY_BEFORE_ATTRACT_MS
+(30000)
+{new_panel
+   splash
+   (player_num 0)
+   (finish_load
+      {'ui::splash.view' set_frame 0})
+   (enter
+      {$this anim_task 'ui::splash.view' 3333 0 100}
+      {set
+         $enter_time
+         {ui frame}}
+      {set $attract_mode FALSE})
+   (poll
+      {do
+         (($now
+               {-
+                  {ui frame}
+                  $enter_time}))
+         {if
+            {> $now DELAY_BEFORE_ATTRACT_MS}
+            {meta setup_quickplay}
+            {game
+               set_song
+               {campaign get_random_song}}
+            {game set_difficulty kDifficultyExpert}
+            {game set_quickplay}
+            {set $attract_mode TRUE}
+            {ui goto_screen loading}}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {>
+            {campaign num_profiles}
+            0}
+         {ui goto_screen chooseprof}
+         {ui goto_screen guitar_help}})}
+{new_gh_screen
+   splash
+   (panels meta splash)
+   (focus splash)
+   (allow_back FALSE)
+   (animate_transition FALSE)}
+#define ATTRACT_VIDEOS
+((IWannaBeSedatedNails.pss Thunderkiss65Hazzard.pss MoreThanAFeelingNapalm.pss CUT_SCENE_VIDEO))
+{new_gh_screen
+   attract
+   (panels meta)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (init
+      {$this set attract_idx 0})
+   (TRANSITION_COMPLETE_MSG
+      {meta
+         play_movie
+         {$this next_attract_video}}
+      {ui goto_screen splash})
+   (next_attract_video
+      {do
+         ($video)
+         {set
+            $video
+            {elem
+               ATTRACT_VIDEOS
+               {$this get attract_idx}}}
+         {$this
+            set
+            attract_idx
+            {'+'
+               1
+               {$this get attract_idx}}}
+         {if
+            {==
+               {$this get attract_idx}
+               {size ATTRACT_VIDEOS}}
+            {$this set attract_idx 0}}
+         $video})}
+{new_panel
+   guitar_help
+   (player_num 0)
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {nameprof set can_go_back FALSE}
+         {nameprof set is_editing FALSE}
+         {ui goto_screen nameprof}})}
+{new_gh_screen
+   guitar_help
+   (panels meta guitar_help helpbar)
+   (focus guitar_help)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_continue))))}
+#define MAX_NUM_PROFILES
+(8)
+#define PROFILE_PANEL_COMMON
+((navigator
+      (vertical cp_band0.btn cp_band1.btn cp_band2.btn cp_band3.btn cp_band4.btn cp_band5.btn cp_band6.btn cp_band7.btn))
+   (set_up_bands
+      {do
+         (($idx 0))
+         {while
+            {< $idx MAX_NUM_PROFILES}
+            {do
+               (($btn
+                     {sprintf
+                        "cp_band%d.btn"
+                        $idx}))
+               {if_else
+                  {<
+                     $idx
+                     {campaign num_profiles}}
+                  {$btn
+                     set_localized_text
+                     {campaign profile_name $idx}}
+                  {$this set_up_new_profile $btn}}}
+            {'++' $idx}}})
+   (FOCUS_MSG
+      {$this
+         set
+         button_idx
+         {switch
+            $new_focus
+            (cp_band0.btn 0)
+            (cp_band1.btn 1)
+            (cp_band2.btn 2)
+            (cp_band3.btn 3)
+            (cp_band4.btn 4)
+            (cp_band5.btn 5)
+            (cp_band6.btn 6)
+            (cp_band7.btn 7)}})
+   (focus cp_band0.btn))
+{new_panel
+   chooseprof
+   PROFILE_PANEL_COMMON
+   (finish_load
+      {'ui::chooseprof.view' set_frame 0})
+   (set_up_new_profile
+      ($btn)
+      {$btn set_text new_band})
+   (enter
+      {$this anim_task 'ui::chooseprof.view' 1000 0 100}
+      {$this set_up_bands})
+   (SELECT_MSG
+      {do
+         (($index
+               {$this get button_idx}))
+         {campaign set_profile_slot $index}
+         {if_else
+            {<
+               $index
+               {campaign num_profiles}}
+            {ui goto_screen main}
+            {do
+               {nameprof
+                  set
+                  back_screen
+                  {ui screen chooseprof}}
+               {nameprof set can_go_back TRUE}
+               {nameprof set is_editing FALSE}
+               {ui goto_screen nameprof}}}}
+      kDataUnhandled)}
+{new_gh_screen
+   chooseprof
+   (panels meta chooseprof helpbar)
+   (focus chooseprof)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_select)
+            (strum help_updown))))}
+{func
+   get_text_entry_help_text
+   ($array $ten $back)
+   {resize $array 0}
+   {push_back
+      $array
+      (fret1 help_nextletter)}
+   {if_else
+      {!
+         {$ten no_text_entered}}
+      {push_back
+         $array
+         (fret2 help_deleteletter)}
+      {if
+         $back
+         {push_back
+            $array
+            (fret2 help_back)}}}
+   {push_back
+      $array
+      (start help_accept)}
+   {if
+      {$ten user_can_scroll}
+      {push_back
+         $array
+         (strum help_updown)}}
+   {eval $array}}
+{new_panel
+   nameprof
+   (focus profile.ten)}
+{new_gh_screen
+   nameprof
+   (object_name nameprof)
+   (panels meta nameprof helpbar)
+   (focus nameprof)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (finish_load
+      {'ui::nameprof.view' set_frame 0})
+   (init
+      {$this set save_slot -1}
+      {$this set initial_text 0})
+   (enter
+      {reset_ambient}
+      {$this anim_task 'ui::nameprof.view' 1000 0 100}
+      {if
+         {$this get initial_text}
+         {profile.ten
+            set_text
+            {$this get initial_text}}
+         {$this set initial_text 0}})
+   (get_help_text
+      ($array)
+      {get_text_entry_help_text
+         $array
+         profile.ten
+         {$this get can_go_back}})
+   (TEXT_ENTRY_MSG
+      {do
+         (($profile
+               {profile.ten get_text}))
+         {cond
+            ({==
+                  $profile
+                  ""}
+               {ui push_screen error_no_profile})
+            ({campaign
+                  has_profile_name
+                  $profile
+                  {$this get is_editing}}
+               {ui push_screen error_duplicate_profile})
+            (TRUE
+               {if
+                  {!=
+                     {$this get save_slot}
+                     -1}
+                  {campaign
+                     save_to_slot
+                     {$this get save_slot}}
+                  {$this set save_slot -1}}
+               {campaign set_profile_name $profile}
+               {autosave_goto main})}}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {meta is_back_button $button $player_num}
+            {profile.ten no_text_entered}
+            {$this get can_go_back}}
+         {$this backwards_anim}
+         {ui
+            goto_screen
+            {$this get back_screen}}}
+      kDataUnhandled)
+   (TRANSITION_COMPLETE_MSG
+      {profile.ten resume_input}
+      {helpbar
+         set_display
+         {$this
+            get_help_text
+            ()}})
+   (SELECT_MSG
+      {helpbar
+         set_display
+         {$this
+            get_help_text
+            ()}}
+      kDataUnhandled)
+   (SCREEN_BACK_MSG
+      {helpbar
+         set_display
+         {$this
+            get_help_text
+            ()}}
+      kDataUnhandled)}
+{new_panel
+   loadprof
+   PROFILE_PANEL_COMMON
+   (finish_load
+      {'ui::loadprof.view' set_frame 0})
+   (set_up_new_profile
+      ($btn)
+      {$btn set_state kDisabled}
+      {$btn
+         set_localized_text
+         ""})
+   (enter
+      {reset_ambient}
+      {$this anim_task 'ui::loadprof.view' 1000 0 100}
+      {$this set_up_bands})
+   (SELECT_MSG
+      {do
+         (($index
+               {$this get button_idx}))
+         {campaign set_profile_slot $index}
+         {ui goto_screen main}}
+      kDataUnhandled)}
+{new_gh_screen
+   loadprof
+   (panels meta loadprof helpbar)
+   (focus loadprof)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_select)
+            (fret2 help_back)
+            (strum help_updown))))}
+{new_panel
+   saveprof
+   PROFILE_PANEL_COMMON
+   (finish_load
+      {'ui::saveprof.view' set_frame 0})
+   (set_up_new_profile
+      ($btn)
+      {$btn set_text new_band})
+   (enter
+      {reset_ambient}
+      {$this anim_task 'ui::saveprof.view' 1000 0 100}
+      {$this set_up_bands})
+   (SELECT_MSG
+      {do
+         (($index
+               {$this get button_idx}))
+         {if_else
+            {==
+               $index
+               {campaign profile_slot}}
+            {do
+               {campaign mark_needs_save}
+               {autosave_goto main}}
+            {do
+               {nameprof
+                  set
+                  back_screen
+                  {ui screen saveprof}}
+               {nameprof set can_go_back TRUE}
+               {nameprof set save_slot $index}
+               {nameprof set is_editing FALSE}
+               {ui goto_screen nameprof}}}}
+      kDataUnhandled)}
+{new_gh_screen
+   saveprof
+   (panels meta saveprof helpbar)
+   (focus saveprof)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_select)
+            (fret2 help_back)
+            (strum help_updown))))}

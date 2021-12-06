@@ -28,7 +28,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
 | **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
 | **Rock Band Country Track Pack 2** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
-| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available<br>Available |
+| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
 | **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
 | **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
 | **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |

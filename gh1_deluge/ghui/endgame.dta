@@ -1,0 +1,471 @@
+#define ADJS
+(((adj_f_1 adj_f_2 adj_f_3)
+      (adj_d_1 adj_d_2)
+      (adj_c_1 adj_c_2 adj_c_3)
+      (adj_b_1 adj_b_2 adj_b_3)
+      (adj_a_1 adj_a_2 adj_a_3 adj_a_4)))
+#define VERBS
+(((verb_f_1 verb_f_2 verb_f_3)
+      (verb_d_1 verb_d_2)
+      (verb_c_1 verb_c_2 verb_c_3)
+      (verb_b_1 verb_b_2)
+      (verb_a_1 verb_a_2 verb_a_3 verb_a_4)))
+#define NOUNS
+((set show))
+{new_gh_panel
+   endgame
+   (clear_vram TRUE)
+   (gen_headline_1
+      {do
+         (($index
+               {-
+                  {'player0::player' num_stars}
+                  1}))
+         {sprintf
+            "%s %s %s %s %s %s"
+            {localize
+               {random_elem
+                  {elem ADJS $index}}}
+            {localize
+               {random_elem NOUNS}}
+            {localize
+               "from"}
+            {campaign
+               profile_name
+               {campaign profile_slot}}
+            {localize
+               "at"}
+            {localize
+               {game get_venue}}}})
+   (gen_headline_2
+      {do
+         (($index
+               {-
+                  {'player0::player' num_stars}
+                  1}))
+         {sprintf
+            "%s %s %s %s %s %s"
+            {campaign
+               profile_name
+               {campaign profile_slot}}
+            {localize
+               {random_elem
+                  {elem VERBS $index}}}
+            {localize
+               {game get_venue}}
+            {localize
+               "with"}
+            {localize
+               {random_elem
+                  {elem ADJS $index}}}
+            {localize
+               {random_elem NOUNS}}}})
+   (gen_basement_headline
+      {localize
+         {sprintf
+            "headline_basement_star%i"
+            {'player0::player' num_stars}}})
+   (set_headline
+      ($label)
+      {$label
+         set_localized_text
+         {$this
+            {if_else
+               {==
+                  {game get_venue}
+                  basement}
+               gen_basement_headline
+               {random_elem
+                  (gen_headline_1 gen_headline_2)}}}})
+   (hide_char_pix
+      {endgame_win_alterna.mesh set_showing FALSE}
+      {endgame_win_classic.mesh set_showing FALSE}
+      {endgame_win_punk.mesh set_showing FALSE})
+   (enter
+      {crowd_audio turn_off}
+      {$this
+         delay_task
+         300
+         {play_sfx camera_flash}
+         {play_sfx postshow_loop}}
+      {endgame_song_data.lbl
+         set_localized_text
+         {game get_song_text}}
+      {endgame_diff_data.lbl
+         set_text
+         {game get_difficulty_sym}}
+      {do
+         (($player 'player0::player'))
+         {endgame_score_data.lbl
+            set_localized_text
+            {sprint
+               {$player score}}}
+         {endgame_percent_data.lbl
+            set_localized_text
+            {sprintf
+               {localize eg_percent_format}
+               {$player percent_hit}}}
+         {endgame_streak_data.lbl
+            set_localized_text
+            {sprint
+               {$player longest_streak}}}
+         {endgame_review_data.lbl
+            set_text
+            {$player star_rating}}}
+      {$this set_headline endgame_headline.lbl}
+      {set
+         $new_venue
+         ""}
+      {set $new_status 0}
+      {set $new_cash 0}
+      {if
+         {==
+            career
+            {meta get mode}}
+         {do
+            (($score
+                  {'player0::player' score}))
+            {campaign finish_song $score $new_venue $new_status}
+            {if
+               {!=
+                  $new_venue
+                  ""}
+               {meta set continue_screen career}}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {synth play_sequence button_select}
+         {if_else
+            {==
+               career
+               {meta get mode}}
+            {if_else
+               $new_status
+               {ui goto_screen status}
+               {if_else
+                  {campaign has_cash_award}
+                  {ui goto_screen cashaward}
+                  {ui goto_screen complete}}}
+            {ui goto_screen highscore}}}
+      kDataUnhandled)}
+{new_gh_screen
+   endgame
+   (panels GAME_PANELS endgame helpbar)
+   (focus endgame)
+   (in_game TRUE)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_continue))))
+   (enter
+      {game set_paused TRUE})}
+{new_panel status}
+{new_gh_screen
+   status
+   (panels GAME_PANELS status helpbar)
+   (focus status)
+   (in_game TRUE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_continue))))
+   (enter
+      {st_status.pic
+         set_tex_file
+         {sprint
+            "status"
+            {campaign status}
+            ".png"}})
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {if_else
+            {!=
+               $new_venue
+               ""}
+            {do
+               {ui goto_screen venue_unlock}}
+            {if_else
+               {campaign has_cash_award}
+               {ui goto_screen cashaward}
+               {ui goto_screen complete}}}})}
+{new_panel venue_unlock}
+{new_gh_screen
+   venue_unlock
+   (panels GAME_PANELS venue_unlock helpbar)
+   (focus venue_unlock)
+   (in_game TRUE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_continue))))
+   (enter
+      {vu_venue.pic
+         set_tex_file
+         {sprint
+            "venue_unlock_"
+            $new_venue
+            ".png"}})
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {if_else
+            {campaign has_cash_award}
+            {ui goto_screen cashaward}
+            {ui goto_screen complete}}})}
+{new_panel cashaward}
+{new_gh_screen
+   cashaward
+   (panels GAME_PANELS cashaward helpbar)
+   (focus cashaward)
+   (in_game TRUE)
+   (animate_transition FALSE)
+   (force_exit TRUE)
+   (helpbar
+      (default
+         ((fret1 help_continue))))
+   (enter
+      {ca_bandname.lbl
+         set_localized_text
+         {campaign
+            profile_name
+            {campaign profile_slot}}}
+      {$this show_next_award})
+   (show_next_award
+      {do
+         (($amount 0)
+            ($reason 0)
+            $gross)
+         {campaign next_cash_award $amount $reason}
+         {ca_reason.lbl set_text $reason}
+         {ca_amount.lbl
+            set_localized_text
+            {sprintf
+               "$%d"
+               $amount}}
+         {set
+            $gross
+            {int
+               {/ $amount 5.0e-2}}}
+         {ca_grossnum.lbl
+            set_localized_text
+            {sprintf
+               "$%d"
+               $gross}}
+         {$this show_fee ca_num1.lbl $gross 0.25}
+         {$this show_fee ca_num2.lbl $gross 0.2}
+         {$this show_fee ca_num3.lbl $gross 9.0e-2}
+         {$this show_fee ca_num4.lbl $gross 0.12}
+         {$this show_fee ca_num5.lbl $gross 0.15}
+         {$this show_fee ca_num6.lbl $gross 4.0e-2}
+         {$this show_fee ca_num7.lbl $gross 6.0e-2}
+         {$this show_fee ca_num8.lbl $gross 4.0e-2}})
+   (show_fee
+      ($lbl $gross $pct)
+      {do
+         (($fee
+               {int
+                  {'*' $pct $gross}}))
+         {$lbl
+            set_localized_text
+            {sprintf
+               "-$%d"
+               $fee}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {if_else
+            {campaign has_cash_award}
+            {$this show_next_award}
+            {ui goto_screen complete}}})}
+{new_panel highscore}
+{new_gh_screen
+   highscore
+   (panels GAME_PANELS highscore helpbar)
+   (focus highscore)
+   (in_game TRUE)
+   (animate_transition FALSE)
+   (enter
+      {do
+         (($score
+               {'player0::player' score})
+            ($index
+               {'+'
+                  {highscores check_highscore $score}
+                  1}))
+         {$this fill_scores $index $score}
+         {if_else
+            {== $index 0}
+            {$this view_scores}
+            {$this enter_score $index}}}
+      {$this update_help_bar})
+   (fill_scores
+      ($new_index $new_score)
+      {do
+         (($slot 0))
+         {foreach_int
+            $i
+            1
+            6
+            {do
+               (($name 0)
+                  ($score 0))
+               {if_else
+                  {== $i $new_index}
+                  {$this
+                     set_entry
+                     $i
+                     ""
+                     $new_score}
+                  {do
+                     {highscores get_highscore $slot $name $score}
+                     {$this set_entry $i $name $score}
+                     {'++' $slot}}}}}})
+   (set_entry
+      ($index $name $score)
+      {do
+         (($name_lbl
+               {sprintf
+                  "hs_name%d.lbl"
+                  $index})
+            ($score_lbl
+               {sprintf
+                  "hs_score%d.lbl"
+                  $index}))
+         {$name_lbl set_localized_text $name}
+         {$score_lbl
+            set_text
+            {sprintf
+               "%d"
+               $score}}})
+   (get_text_entry
+      ($index)
+      {sprintf
+         "hs_entry%d.ten"
+         $index})
+   (get_name_label
+      ($index)
+      {sprintf
+         "hs_name%d.lbl"
+         $index})
+   (enter_score
+      ($index)
+      {do
+         (($ten
+               {$this get_text_entry $index}))
+         {$this set active_ten $ten}
+         {$this set_focus $ten}
+         {hs_zoom.view set_frame 0}
+         {$this set zoomed_in TRUE}
+         {$this set_text_entry $index}})
+   (view_scores
+      {$this set active_ten 0}
+      {$this set zoomed_in FALSE}
+      {$this set_text_entry -1})
+   (set_text_entry
+      ($index)
+      {foreach_int
+         $i
+         1
+         6
+         {{$this get_text_entry $i}
+            set_showing
+            {== $i $index}}
+         {{$this get_name_label $i}
+            set_showing
+            {!= $i $index}}})
+   (poll
+      {if
+         {&&
+            {$this get zoomed_in}
+            {{$this get active_ten}
+               is_done}}
+         {$this set zoomed_in FALSE}
+         {$this anim_task hs_zoom.view 1000 0 30}
+         {$this update_help_bar}})
+   (update_help_bar
+      {do
+         (($ten
+               {$this get active_ten}))
+         {helpbar
+            set_display
+            {if_else
+               {&&
+                  $ten
+                  {!
+                     {$ten is_done}}}
+               {get_text_entry_help_text
+                  ()
+                  $ten
+                  FALSE}
+               ((fret1 help_continue))}}})
+   (SELECT_MSG
+      {$this update_help_bar}
+      kDataUnhandled)
+   (SCREEN_BACK_MSG
+      {$this update_help_bar}
+      kDataUnhandled)
+   (TEXT_ENTRY_MSG
+      {do
+         (($name
+               {{$this get active_ten}
+                  get_text}))
+         {highscores
+            add
+            $name
+            {'player0::player' score}}}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {do
+            (($ten
+                  {$this get active_ten}))
+            {if
+               {'||'
+                  {! $ten}
+                  {$ten is_done}}
+               {ui goto_screen complete}}}}
+      kDataUnhandled)}
+{new_gh_panel
+   complete
+   (clear_vram TRUE)
+   (navigator
+      (vertical comp_selsong.btn comp_restart.btn comp_quit.btn))
+   (enter
+      {$this set_focus comp_selsong.btn}
+      {if
+         {==
+            career
+            {meta get mode}}
+         {comp_selsong.btn set_text CONTINUE}})
+   (SELECT_MSG
+      {switch
+         $component
+         (comp_restart.btn
+            {game restart}
+            {ui goto_screen game})
+         (comp_selsong.btn
+            {meta_loading_goto
+               {meta get continue_screen}})
+         (comp_quit.btn
+            {meta_loading_goto
+               {meta get main_screen}})}
+      {stop_sfx postshow_loop}
+      {if
+         {==
+            career
+            {meta get mode}}
+         {meta setup_career}})}
+{new_gh_screen
+   complete
+   (panels GAME_PANELS complete helpbar)
+   (focus complete)
+   (in_game TRUE)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (strum help_updown))))}

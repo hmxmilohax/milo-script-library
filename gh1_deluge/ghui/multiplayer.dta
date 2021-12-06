@@ -1,0 +1,372 @@
+{new_multi_char_sel_panel
+   multi_sel_character
+   (char_navigator
+      (vertical metal classic alterna hair_metal punk nu_metal hiphop grim))}
+#define CHARACTERS
+((metal classic alterna hair_metal punk nu_metal hiphop grim))
+{new_charsys_panel
+   multi_charsys
+   (rnd_file ghui/charsys.gh)
+   (char_config multiplayer)
+   (exit_complete
+      {$this delete_chars})}
+{new_gh_screen
+   multi_sel_character
+   (panels meta multi_sel_character multi_charsys helpbar)
+   (focus multi_sel_character)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (sel_char_highlight_off
+      ($playerNum)
+      {do
+         (($idx 0)
+            ($config
+               {game get_player_config $playerNum}))
+         {while
+            {<
+               $idx
+               {size CHARACTERS}}
+            {do
+               (($char
+                     {elem CHARACTERS $idx}))
+               {{sprintf
+                     "sc_char_%s_focus_p%d.view"
+                     $char
+                     {'+' $playerNum 1}}
+                  set_showing
+                  FALSE}}
+            {'++' $idx}}})
+   (scroll_char_sel
+      ($playerNum)
+      {do
+         (($config
+               {game get_player_config $playerNum}))
+         {{sprintf
+               "sc%d_char_nm.lbl"
+               {'+' $playerNum 1}}
+            set_text
+            {$config get_character}}
+         {{sprintf
+               "sc_char_%s_focus_p%d.view"
+               {$config get_character}
+               {'+' $playerNum 1}}
+            set_showing
+            TRUE}
+         {{ui panel multi_charsys}
+            show_char
+            $playerNum
+            {$config get_character}}})
+   (enter
+      {animate_forever_30fps $this multi_sel_character.view}
+      {set $player_zero_done FALSE}
+      {set $player_one_done FALSE}
+      {msc_waiting.lbl set_showing FALSE}
+      {$this sel_char_highlight_off 0}
+      {$this sel_char_highlight_off 1}
+      {$this scroll_char_sel 0}
+      {$this scroll_char_sel 1})
+   (poll
+      {msc_loading.lbl
+         set_showing
+         {!
+            {{ui panel multi_charsys}
+               are_chars_loaded}}}
+      {msc_waiting.lbl
+         set_showing
+         {'||'
+            {$this is_player_done 0}
+            {$this is_player_done 1}}})
+   (SCROLL_MSG
+      {$this sel_char_highlight_off $player_num}
+      {if_else
+         {== $player_num 0}
+         {$this scroll_char_sel 0}
+         {$this scroll_char_sel 1}})
+   (GH_SELECT_MSG
+      {synth play_sequence button_select})
+   (chars_selected
+      {ui goto_screen multi_sel_guitar})
+   (deselect_char
+      {synth play_sequence button_back})}
+{new_panel multi_sel_guitar}
+{new_guitar_display_panel
+   multi_guitar_display
+   (rnd_file ghui/guitar_display.gh)
+   (rnd_name guitar_display)
+   (object_name multi_guitar_display)
+   (force_exit TRUE)
+   (config multiplayer)
+   (enter
+      {animate_forever_30fps $this guitar_display.view})}
+{new_guitar_select_panel
+   multi_input_guitar
+   (object_name multi_input_guitar)
+   (rnd_name input_guitar)
+   (rnd_file
+      "")
+   (multiplayer TRUE)}
+{new_gh_screen
+   multi_sel_guitar
+   (panels meta multi_sel_guitar multi_input_guitar multi_guitar_display helpbar)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (focus multi_input_guitar)
+   (enter
+      {$this set player0_done FALSE}
+      {$this set player1_done FALSE}
+      {multi_input_guitar set_skin_select 0 FALSE}
+      {multi_input_guitar set_skin_select 1 FALSE}
+      {$this update_display})
+   (poll
+      {msg_waiting.lbl
+         set_showing
+         {'||'
+            {$this get player0_done}
+            {$this get player1_done}}}
+      {sg1_arrows.view
+         set_showing
+         {!
+            {$this get player0_done}}}
+      {sg2_arrows.view
+         set_showing
+         {!
+            {$this get player1_done}}})
+   (update_display
+      {$this update_player_display 0}
+      {$this update_player_display 1})
+   (update_player_display
+      ($player)
+      {do
+         (($config
+               {game get_player_config $player}))
+         {$this
+            set_guitar_label
+            $player
+            {if_else
+               {multi_input_guitar is_skin_select $player}
+               {$config get_guitar_skin}
+               {$config get_guitar}}}
+         {multi_guitar_display
+            show_guitar
+            $player
+            {$config get_guitar}
+            {$config get_guitar_skin}}})
+   (set_guitar_label
+      ($player $text)
+      {if_else
+         $player
+         {sg2_guitar_nm.lbl set_text $text}
+         {sg1_guitar_nm.lbl set_text $text}})
+   (anim_scroll_arrow
+      ($matanim)
+      {$this anim_task $matanim SCROLL_ARROW_TIME 0 250})
+   (get_num_guitar_skins
+      ($playerNum)
+      {multi_input_guitar
+         get_num_skins
+         $playerNum
+         {{game get_player_config $playerNum}
+            get_guitar}})
+   (SCROLL_MSG
+      {$this update_player_display $player_num}
+      {if_else
+         {> $direction 0}
+         {$this
+            anim_scroll_arrow
+            {sprintf
+               "ui::sg%d_arrow_down.mnm"
+               {'+' $player_num 1}}}
+         {$this
+            anim_scroll_arrow
+            {sprintf
+               "ui::sg%d_arrow_up.mnm"
+               {'+' $player_num 1}}}})
+   (GH_SELECT_MSG
+      {$this handle_select $player_num}
+      {if
+         {&&
+            {$this get player0_done}
+            {$this get player1_done}}
+         {ui goto_screen multi_selsong}}
+      kDataUnhandled)
+   (handle_select
+      ($player)
+      {if_else
+         {multi_input_guitar is_skin_select $player}
+         {if
+            {!
+               {$this is_done $player}}
+            {synth play_sequence button_select}
+            {$this set_done $player TRUE}
+            {$this update_player_display $player}}
+         {do
+            {synth play_sequence button_select}
+            {multi_input_guitar set_skin_select $player TRUE}
+            {if
+               {==
+                  {$this get_num_guitar_skins $player}
+                  1}
+               {$this set_done $player TRUE}}
+            {$this update_player_display $player}}}
+      TRUE)
+   (is_done
+      ($player)
+      {if_else
+         $player
+         {$this get player1_done}
+         {$this get player0_done}})
+   (set_done
+      ($player $status)
+      {if_else
+         $player
+         {$this set player1_done $status}
+         {$this set player0_done $status}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {meta is_back_button $button $player_num}
+            {multi_input_guitar is_skin_select $player_num}}
+         {do
+            {synth play_sequence button_back}
+            {multi_input_guitar set_skin_select $player_num FALSE}
+            {$this set_done $player_num FALSE}
+            {$this update_player_display $player_num}}
+         {if_else
+            {$this is_done $player_num}
+            'TRUE;'
+            kDataUnhandled}})}
+{new_gh_screen
+   multi_seldiff
+   (panels meta sel_difficulty helpbar)
+   (focus sel_difficulty)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (SELECT_MSG
+      {meta setup_multiplayer}
+      {ui goto_screen loading}
+      kDataUnhandled)}
+{new_gh_screen
+   multi_selsong
+   (panels meta sel_song helpbar)
+   (focus sel_song)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (enter
+      {{ui panel sel_song}
+         set_quickplay}
+      {{ui panel sel_song}
+         update_song_info})
+   (SELECT_MSG
+      {ui goto_screen multi_seldiff}
+      kDataUnhandled)
+   (get_num_guitar_skins
+      ($playerNum)
+      {multi_input_guitar
+         get_num_skins
+         $playerNum
+         {{game get_player_config $playerNum}
+            get_guitar}})
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_back_button $button $player_num}
+         {synth play_sequence button_back}
+         {$this backwards_anim}
+         {ui goto_screen multi_sel_guitar}}
+      kDataUnhandled)}
+{new_gh_panel
+   multi_compete
+   (clear_vram TRUE)
+   (enter
+      {crowd_audio turn_off}
+      {$this
+         delay_task
+         300
+         {play_sfx postshow_loop}}
+      {do
+         (($player0 'player0::player')
+            ($player1 'player1::player'))
+         {me_winner.lbl
+            set_text
+            {cond
+               ({>
+                     {$player0 score}
+                     {$player1 score}}
+                  PLAYER_1_WINS)
+               ({<
+                     {$player0 score}
+                     {$player1 score}}
+                  PLAYER_2_WINS)
+               ({==
+                     {$player0 score}
+                     {$player1 score}}
+                  DRAW)}}
+         {me_song_data.lbl
+            set_localized_text
+            {game get_song_text}}
+         {me_artist_data.lbl
+            set_localized_text
+            {game get_song_artist_text}}
+         {me_diff_data.lbl
+            set_text
+            {game get_difficulty_sym}}
+         {me_score_data1.lbl
+            set_localized_text
+            {sprint
+               {$player0 score}}}
+         {me_percent_data1.lbl
+            set_localized_text
+            {sprintf
+               {localize me_percent_format}
+               {$player0 percent_hit}}}
+         {me_streak_data1.lbl
+            set_localized_text
+            {sprint
+               {$player0 longest_streak}}}
+         {me_stars1.lbl
+            set_text
+            {$player0 star_rating}}
+         {me_score_data2.lbl
+            set_localized_text
+            {sprint
+               {$player1 score}}}
+         {me_percent_data2.lbl
+            set_localized_text
+            {sprintf
+               {localize me_percent_format}
+               {$player1 percent_hit}}}
+         {me_streak_data2.lbl
+            set_localized_text
+            {sprint
+               {$player1 longest_streak}}}
+         {me_stars2.lbl
+            set_text
+            {$player1 star_rating}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_select_button $button $player_num}
+         {synth play_sequence button_select}
+         {ui goto_screen complete}}
+      kDataUnhandled)}
+{new_gh_screen
+   multi_compete
+   (panels GAME_PANELS multi_compete helpbar)
+   (focus multi_compete)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (helpbar
+      (default
+         ((fret1 help_continue))))
+   (enter
+      {game set_paused TRUE})}

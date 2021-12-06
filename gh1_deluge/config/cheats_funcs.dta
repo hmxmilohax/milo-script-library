@@ -1,0 +1,518 @@
+{func
+   cheat_msg
+   ($msg)
+   {rnd show_overlay cheats TRUE}
+   {rnd
+      reflect
+      cheats
+      {print
+         $msg
+         "\n"}}
+   {set
+      $cheat.clear_time
+      {'+'
+         {ui frame}
+         CHEAT_DISPLAY_MS}}
+   {ui
+      delay_task
+      CHEAT_DISPLAY_MS
+      {if
+         {>=
+            {ui frame}
+            $cheat.clear_time}
+         {rnd show_overlay cheats FALSE}}}}
+{func
+   cheat_msg_bool
+   ($label $val)
+   {cheat_msg
+      {sprint
+         $label
+         ": "
+         {if_else
+            $val
+            "ON"
+            "OFF"}}}}
+{func
+   audio_array
+   {find $syscfg beatmatch audio}}
+{func
+   get_audio
+   {elem
+      {elem
+         {audio_array}
+         1}
+      0}}
+{func
+   set_audio
+   ($val)
+   {set
+      {elem_var
+         {elem
+            {audio_array}
+            1}
+         0}
+      $val}
+   {cheat_msg
+      {sprint
+         "New audio mode: "
+         $val}}}
+{func
+   toggle_audio_mode
+   {if
+      {meta is_up}
+      {cond
+         ({==
+               {get_audio}
+               slipstream}
+            {set_audio unmute})
+         ({==
+               {get_audio}
+               unmute}
+            {set_audio slipstream})}}}
+{func
+   a_cheat
+   {if_else
+      {meta is_up}
+      {toggle_audio_mode}
+      {arena
+         set_showing
+         {!
+            {arena showing}}}}}
+{func
+   A_cheat
+   {if_else
+      {meta is_up}
+      {do
+         (($new
+               {!
+                  {campaign all_access}}))
+         {campaign set_all_access $new}
+         {cheat_msg_bool
+            "All Access"
+            $new}
+         {if
+            {==
+               {ui current_screen}
+               {ui screen main}}
+            {{ui screen main}
+               access_all}}}
+      {toggle_crowd_audio}}}
+{func
+   b_cheat
+   {if_else
+      {meta is_up}
+      {{ui panel sel_song}
+         beat_song}
+      {set
+         $debug.beep
+         {! $debug.beep}}}}
+{func
+   hide_2d_crowd
+   {set
+      $show
+      {!
+         {'arena::Crowd01.mm' showing}}}
+   {foreach_int
+      $i
+      1
+      6
+      {set
+         $name
+         {sprintf
+            "arena::Crowd0%d.mm"
+            $i}}
+      {if
+         {exists $name}
+         {$name set_showing $show}}}}
+{func
+   cycle_free_camera
+   {with_namespace
+      player0
+      {if_else
+         {track free_camera_active}
+         {do
+            {track free_camera FALSE}
+            {cheat_msg
+               "Free camera: off"}}
+         {if_else
+            {arena free_camera_active}
+            {do
+               {arena free_camera FALSE}
+               {track free_camera TRUE $cheat.controller}
+               {cheat_msg
+                  "Free camera: Fretboard"}}
+            {do
+               {arena free_camera TRUE $cheat.controller}
+               {cheat_msg
+                  "Free camera: Arena"}}}}}}
+{func
+   toggle_crowd_meter
+   {with_namespace
+      player0
+      {do
+         (($new
+               {!
+                  {player crowd_rating_active}}))
+         {player set_crowd_rating_active $new}
+         {cheat_msg_bool
+            "Crowd meter"
+            $new}}}}
+{func
+   start_shuttle
+   {if_else
+      {rnd overlay_showing time}
+      {set $cheat.show_time FALSE}
+      {do
+         {rnd show_overlay time TRUE}
+         {set $cheat.show_time TRUE}}}
+   {game set_time_paused TRUE}
+   {arena_panel set_paused TRUE}
+   {'player0::player' set_crowd_rating_active FALSE}
+   {beatmatch set_shuttle TRUE $cheat.controller}}
+{func
+   stop_shuttle
+   {beatmatch set_shuttle FALSE}
+   {game set_time_paused FALSE}
+   {arena_panel set_paused FALSE}
+   {if
+      $cheat.show_time
+      {rnd show_overlay time FALSE}}}
+{func
+   toggle_shuttle
+   {if_else
+      {beatmatch shuttle_active}
+      {stop_shuttle}
+      {start_shuttle}}}
+{func
+   toggle_mute_global
+   {if_else
+      {mixer mute}
+      {do
+         {mixer set_mute FALSE}
+         {cheat_msg
+            "Mute all: FALSE"}}
+      {do
+         {mixer set_mute TRUE}
+         {cheat_msg
+            "Mute all: TRUE"}}}}
+{func
+   next_tutorial_lesson
+   {if
+      {tutorial is_up}
+      {tutorial tutorial_inc 1}}}
+{func
+   prev_tutorial_lesson
+   {if
+      {tutorial is_up}
+      {tutorial tutorial_inc -1}}}
+{func
+   toggle_crowd_audio
+   {do
+      (($new
+            {!
+               {crowd_audio enabled}}))
+      {crowd_audio set_enabled $new}
+      {cheat_msg_bool
+         "CrowdAudio"
+         $new}}}
+{func
+   toggle_walks
+   {do
+      (($new
+            {!
+               {guitarist0 walks_enabled}}))
+      {guitarist0 set_walks_enabled $new}
+      {cheat_msg_bool
+         "Walks"
+         $new}}}
+{func
+   toggle_auto_solo
+   {with_namespace
+      player0
+      {do
+         (($new
+               {!
+                  {player_matcher auto_solo}}))
+         {player_matcher set_auto_solo $new}
+         {cheat_msg_bool
+            "Auto freestyle"
+            $new}}}}
+{func
+   toggle_solo_quantize
+   {with_namespace
+      player0
+      {player_matcher toggle_solo_quantize}}}
+{func
+   toggle_auto_play
+   {if_else
+      {game multiplayer}
+      {cycle_multiplayer_auto_play}
+      {with_namespace
+         player0
+         {do
+            (($new
+                  {!
+                     {player_matcher auto_play}}))
+            {player_matcher set_auto_play $new}
+            {cheat_msg_bool
+               "Autoplay"
+               $new}}}}}
+#define MULTI_AUTO_STATES
+(((FALSE
+         FALSE
+         "off")
+      (TRUE
+         FALSE
+         "player1")
+      (FALSE
+         TRUE
+         "player2")
+      (TRUE
+         TRUE
+         "both")))
+{set $multi_auto_index 0}
+{func
+   cycle_multiplayer_auto_play
+   {do
+      (($new_index
+            {mod
+               {'+' $multi_auto_index 1}
+               4})
+         ($state
+            {elem MULTI_AUTO_STATES $new_index}))
+      {'player0::player_matcher'
+         set_auto_play
+         {elem $state 0}}
+      {'player1::player_matcher'
+         set_auto_play
+         {elem $state 1}}
+      {cheat_msg
+         {sprint
+            "Autoplay: "
+            {elem $state 2}}}
+      {set $multi_auto_index $new_index}}}
+{func
+   fill_star_meter
+   {if
+      {!
+         {meta is_up}}
+      {if_else
+         {game multiplayer}
+         {switch
+            $multi_auto_index
+            (1
+               {'player0::player' fill_star_power})
+            (2
+               {'player1::player' fill_star_power})
+            (3
+               {'player0::player' fill_star_power}
+               {'player1::player' fill_star_power})}
+         {'player0::player' fill_star_power}}}}
+{func
+   adjust_crowd_rating
+   ($delta)
+   {with_namespace
+      player0
+      {player
+         set_crowd_rating
+         {'+'
+            {player crowd_rating}
+            $delta}}}}
+{func
+   toggle_lipsync_test
+   {toggle_camera_lipsync}}
+{func
+   toggle_fake_player1_cheat
+   {if_else
+      {toggle_fake_player1}
+      {cheat_msg
+         "Faking Player 2"}
+      {cheat_msg
+         "Normal Player 1"}}}
+{func
+   toggle_dual_perspective
+   {do
+      (($new
+            {!
+               {track_panel dual_perspective}}))
+      {track_panel set_dual_perspective $new}
+      {cheat_msg_bool
+         "Dual-perspective"
+         $new}}}
+{func
+   reload_song
+   {game
+      thread_task
+      (preserve $ms $auto0 $auto1)
+      {game set_time_paused TRUE}
+      {arena_panel set_paused TRUE}
+      {set
+         $ms
+         {game ms}}
+      {set
+         $auto0
+         {'player0::player_matcher' auto_play}}
+      {if
+         {game multiplayer}
+         {set
+            $auto1
+            {'player1::player_matcher' auto_play}}}
+      {game
+         load_song
+         {game get_song}}
+      {$task
+         wait
+         {!
+            {game loaded}}}
+      {cheat_msg
+         {sprint
+            "Reloaded song: "
+            {game get_song}}}
+      {arena_panel set_paused FALSE}
+      {game set_skip_intro TRUE}
+      {game set_start_paused TRUE}
+      {game start_song_now}
+      {track_panel set_track_out}
+      {beatmatch jump $ms}
+      {game set_skip_intro FALSE}
+      {game set_start_paused TRUE}
+      {'player0::player_matcher' set_auto_play $auto0}
+      {if
+         {game multiplayer}
+         {'player1::player_matcher' set_auto_play $auto1}}}}
+{func
+   toggle_time_paused
+   {do
+      (($new
+            {!
+               {game time_paused}}))
+      {game set_time_paused $new}
+      {crowd_audio set_paused $new}}}
+{func
+   toggle_fretboard
+   {if
+      {!
+         {meta is_up}}
+      {track_panel
+         set_showing
+         {!
+            {track_panel showing}}}}}
+{func
+   reload_track_hud
+   {game
+      thread_task
+      (preserve $ms)
+      {game set_time_paused TRUE}
+      {set
+         $ms
+         {game ms}}
+      {ui goto_screen reload_hud_track}
+      {$task
+         wait
+         {!
+            {track_panel is_up}}}
+      {$task
+         wait
+         {!
+            {hud is_up}}}
+      {track_panel intro_skip}
+      {track_panel set_track_out}
+      {hud intro_skip}
+      {beatmatch jump $ms}}}
+{func
+   s_cheat
+   {if_else
+      {meta is_up}
+      {set $autosave_cheat TRUE}
+      {rnd toggle_overlay score}}}
+#define MUSIC_SPEEDS
+((1.0 0.5 0.25 0.1))
+{set $speed_index 0}
+{func
+   cycle_music_speed
+   {if
+      {!
+         {meta is_up}}
+      {do
+         (($new_index
+               {mod
+                  {'+' $speed_index 1}
+                  {size MUSIC_SPEEDS}})
+            ($speed
+               {elem MUSIC_SPEEDS $new_index}))
+         {beatmatch set_music_speed $speed}
+         {cheat_msg
+            {sprint
+               "Track speed: "
+               $speed}}
+         {set $speed_index $new_index}}}}
+#define DEBUG_TASK
+((init
+      {$this set active FALSE})
+   (start
+      {$this set active TRUE}
+      {$this on_start}
+      {$this poll})
+   (is_active
+      {$this get active})
+   (stop
+      {$this on_stop}
+      {$this set active FALSE})
+   (poll
+      {$this on_poll}
+      {if
+         {$this get active}
+         {game
+            delay_task
+            15
+            (preserve $this)
+            {$this poll}}}))
+{class
+   CrowdMeterDebug
+   DEBUG_TASK
+   (on_start
+      {rnd show_overlay crowd_meter TRUE})
+   (on_stop
+      {rnd show_overlay crowd_meter FALSE})
+   (on_poll
+      {rnd
+         reflect
+         crowd_meter
+         {with_namespace
+            player0
+            {printf
+               "Crowd: %.2f - %.2f\n"
+               {player raw_crowd_rating}
+               {player crowd_rating}}}})}
+{new CrowdMeterDebug crowd_meter_debug}
+{func
+   toggle_crowd_meter_debug
+   {if_else
+      {crowd_meter_debug is_active}
+      {crowd_meter_debug stop}
+      {crowd_meter_debug start}}}
+{func
+   toggle_lights_debug
+   {do
+      (($new_state
+            {!
+               {rnd overlay_showing lights}}))
+      {rnd show_overlay lights $new_state}}}
+{func
+   lights_debug
+   ($msg)
+   {rnd
+      reflect
+      lights
+      {print
+         "Lights: "
+         $msg
+         "\n"}}}
+{func
+   toggle_cam
+   {if
+      {exists cam}
+      {cam toggle_enabled}
+      {cheat_msg_bool
+         "camera logic"
+         {cam get_enabled}}}}

@@ -1,0 +1,372 @@
+{new_panel
+   options
+   (navigator
+      (vertical op_game.btn op_data.btn op_bonus.btn op_credit.btn))
+   (focus op_game.btn)
+   (SELECT_MSG
+      {switch
+         $component
+         (op_game.btn
+            {ui goto_screen game_settings})
+         (op_data.btn
+            {ui goto_screen data_settings})
+         (op_bonus.btn
+            {ui goto_screen bonus_material})
+         (op_credit.btn
+            {ui goto_screen credits})}
+      kDataUnhandled)}
+{new_gh_screen
+   options
+   (panels meta options helpbar)
+   (focus options)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))}
+#define SLIDER_LEVELS
+(12)
+#define SETTINGS_PANEL_HANDLERS
+((focus gs_band.sld)
+   (finish_load
+      {gs_band.sld set_num_steps SLIDER_LEVELS}
+      {gs_guitar.sld set_num_steps SLIDER_LEVELS}
+      {gs_sfx.sld set_num_steps SLIDER_LEVELS})
+   (calc_slider_pos
+      ($volume)
+      {int
+         {'+'
+            0.5
+            {'*'
+               $volume
+               {- SLIDER_LEVELS 1}}}})
+   (reset_slider_pos
+      ($slider $volume)
+      {$slider
+         set_selected_pos
+         {$this calc_slider_pos $volume}})
+   (enter
+      {$this
+         reset_slider_pos
+         gs_band.sld
+         {options get_band_volume}}
+      {$this
+         reset_slider_pos
+         gs_guitar.sld
+         {options get_guitar_volume}}
+      {$this
+         reset_slider_pos
+         gs_sfx.sld
+         {options get_fx_volume}}
+      {gs_stereo.tog
+         set_state
+         {options get_stereo}}
+      {if
+         {$this has_lefty}
+         {gs_left_p1.tog
+            set_state
+            {options get_lefty 0}}
+         {gs_left_p2.tog
+            set_state
+            {options get_lefty 1}}})
+   (exit
+      {options
+         set_band_volume
+         {$this get_slider_volume gs_band.sld}}
+      {options
+         set_guitar_volume
+         {$this get_slider_volume gs_guitar.sld}}
+      {options
+         set_fx_volume
+         {$this get_slider_volume gs_sfx.sld}})
+   (GH_CANCEL_MSG
+      {switch
+         $component
+         (gs_band.sld
+            {$this
+               reset_slider_pos
+               gs_band.sld
+               {$this get orig_vol}})
+         (gs_guitar.sld
+            {$this
+               reset_slider_pos
+               gs_guitar.sld
+               {$this get orig_vol}})
+         (gs_sfx.sld
+            {$this
+               reset_slider_pos
+               gs_sfx.sld
+               {$this get orig_vol}})})
+   (get_slider_volume
+      ($slider)
+      {/
+         {$slider selected_pos}
+         {- SLIDER_LEVELS 1}})
+   (FOCUS_MSG
+      {$this set focus_component $new_focus})
+   (poll
+      {if_else
+         {$this slider_selected}
+         {helpbar
+            set_display
+            ((fret1 help_confirm)
+               (fret2 help_cancel)
+               (strum help_adjvol))}
+         {do
+            {if_else
+               {'||'
+                  {==
+                     {$this get focus_component}
+                     gs_stereo.btn}
+                  {==
+                     {$this get focus_component}
+                     gs_left_p1.btn}
+                  {==
+                     {$this get focus_component}
+                     gs_left_p2.btn}}
+               {helpbar
+                  set_display
+                  ((fret1 help_onoff)
+                     (fret2 help_back)
+                     (strum help_updown))}
+               {helpbar
+                  set_display
+                  ((fret1 help_select)
+                     (fret2 help_back)
+                     (strum help_updown))}}}})
+   (SCROLL_START_MSG
+      {do
+         (($vol
+               {/
+                  {$component selected_pos}
+                  {- SLIDER_LEVELS 1}}))
+         {switch
+            $component
+            (gs_band.sld
+               {play_sfx
+                  slider_band
+                  (volume $vol)})
+            (gs_guitar.sld
+               {play_sfx
+                  slider_gtr
+                  (volume $vol)})
+            (gs_sfx.sld
+               {play_sfx
+                  slider_sfx
+                  (volume $vol)})}})
+   (SELECT_MSG
+      {switch
+         $component
+         (gs_band.sld
+            {$this
+               set
+               orig_vol
+               {$this get_slider_volume gs_band.sld}})
+         (gs_guitar.sld
+            {$this
+               set
+               orig_vol
+               {$this get_slider_volume gs_guitar.sld}})
+         (gs_sfx.sld
+            {$this
+               set
+               orig_vol
+               {$this get_slider_volume gs_sfx.sld}})
+         (gs_stereo.btn
+            {gs_stereo.tog toggle}
+            {options
+               set_stereo
+               {gs_stereo.tog get_state}})
+         (gs_left_p1.btn
+            {gs_left_p1.tog toggle}
+            {options
+               set_lefty
+               0
+               {gs_left_p1.tog get_state}})
+         (gs_left_p2.btn
+            {gs_left_p2.tog toggle}
+            {options
+               set_lefty
+               1
+               {gs_left_p2.tog get_state}})}
+      kDataUnhandled))
+{new_slider_panel
+   game_settings
+   (navigator
+      (vertical gs_band.sld gs_guitar.sld gs_sfx.sld gs_stereo.btn gs_left_p1.btn gs_left_p2.btn))
+   (has_lefty TRUE)
+   SETTINGS_PANEL_HANDLERS}
+{new_gh_screen
+   game_settings
+   (panels meta game_settings helpbar)
+   (focus game_settings)
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_back_button $button $player_num}
+         {autosave_goto options}})}
+{new_slider_panel
+   pause_settings
+   (navigator
+      (vertical gs_band.sld gs_guitar.sld gs_sfx.sld gs_stereo.btn))
+   (has_lefty FALSE)
+   SETTINGS_PANEL_HANDLERS}
+{new_gh_screen
+   pause_settings
+   (panels GAME_PANELS pause_settings helpbar)
+   (focus pause_settings)
+   (in_game TRUE)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (BUTTON_DOWN_MSG
+      {if
+         {meta is_back_button $button $player_num}
+         {ui goto_screen pause}})}
+{new_panel
+   data_settings
+   (navigator
+      (vertical ds_rename.btn ds_autosave.btn ds_newprof.btn ds_saveprof.btn ds_loadprof.btn))
+   (focus ds_rename.btn)}
+{new_gh_screen
+   data_settings
+   (panels meta data_settings helpbar)
+   (focus data_settings)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown)))
+      (ds_autosave.btn
+         ((fret1 help_onoff)
+            (fret2 help_back)
+            (strum help_updown))))
+   (enter
+      {autosave.tog set_state $autosave})
+   (SELECT_MSG
+      {switch
+         $component
+         (ds_rename.btn
+            {nameprof
+               set
+               back_screen
+               {ui screen data_settings}}
+            {nameprof set can_go_back TRUE}
+            {nameprof
+               set
+               initial_text
+               {campaign
+                  profile_name
+                  {campaign profile_slot}}}
+            {nameprof
+               set
+               save_slot
+               {campaign profile_slot}}
+            {nameprof set is_editing TRUE}
+            {ui goto_screen nameprof})
+         (ds_autosave.btn
+            {autosave.tog toggle}
+            {set
+               $autosave
+               {autosave.tog get_state}})
+         (ds_newprof.btn
+            {if_else
+               {<
+                  {campaign num_profiles}
+                  {campaign max_num_profiles}}
+               {do
+                  {nameprof
+                     set
+                     back_screen
+                     {ui screen data_settings}}
+                  {nameprof set can_go_back TRUE}
+                  {nameprof set is_editing FALSE}
+                  {nameprof
+                     set
+                     save_slot
+                     {campaign num_profiles}}
+                  {ui goto_screen nameprof}}
+               {ui push_screen error_max_profile}})
+         (ds_saveprof.btn
+            {ui goto_screen saveprof})
+         (ds_loadprof.btn
+            {ui goto_screen loadprof})}
+      kDataUnhandled)}
+{new_gh_panel
+   bonus_material
+   (navigator
+      (vertical bm_video1.btn bm_video2.btn bm_video3.btn bm_hidden.btn))
+   (focus bm_video1.btn)}
+{new_gh_screen
+   bonus_material
+   (panels meta bonus_material helpbar)
+   (focus bonus_material)
+   (helpbar
+      (default
+         ((fret1 help_select)
+            (fret2 help_back)
+            (strum help_updown)))
+      (bm_hidden.btn
+         ((fret2 help_back))))
+   (enter
+      {$this set_button_state bm_video1.btn}
+      {$this set_button_state bm_video2.btn}
+      {$this set_button_state bm_video3.btn})
+   (set_button_state
+      ($btn)
+      {if_else
+         {campaign
+            is_unlocked
+            {$this get_movie $btn}}
+         {do
+            {$this disable_component bm_hidden.btn}
+            {$this enable_component $btn}}
+         {$this disable_component $btn}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               {$this focus_name}
+               bm_hidden.btn}
+            {meta is_select_button $button $player_num}}
+         TRUE
+         kDataUnhandled})
+   (SELECT_MSG
+      {play_bonus_video
+         set
+         video
+         {{game video_provider}
+            get_video_file
+            {$this get_movie $component}}}
+      {ui goto_screen play_bonus_video})
+   (get_movie
+      ($btn)
+      {switch
+         $btn
+         (bm_video1.btn video1)
+         (bm_video2.btn video2)
+         (bm_video3.btn video3)
+         {fail
+            "unknown button: "
+            $btn}})}
+{new_gh_screen
+   play_bonus_video
+   (object_name play_bonus_video)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (TRANSITION_COMPLETE_MSG
+      {meta
+         play_movie
+         {$this get video}}
+      {ui goto_screen bonus_material})}
+{new_credits_panel
+   credits
+   (focus credits.lst)}
+{new_gh_screen
+   credits
+   (panels meta credits helpbar)
+   (focus credits)
+   (helpbar
+      (default
+         ((fret2 help_back))))
+   (go_back
+      {$this backwards_anim}
+      {ui goto_screen options})}
