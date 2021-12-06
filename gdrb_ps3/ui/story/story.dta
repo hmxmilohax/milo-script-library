@@ -1,0 +1,115 @@
+{new
+   UIPanel
+   story_retry_panel
+   (file
+      "story_retry.milo")
+   (focus retry.btn)
+   (reset_focus TRUE)
+   (enter
+      {song.lbl
+         set_song_name
+         {meta_performer song}}
+      {if_else
+         {{story performer}
+            in_chapter_challenge}
+         {do
+            {quit.btn set text_token pausecommand_new_challenge}
+            {title.lbl set text_token story_challenge_failed}
+            {remove_change_diff.tnm set frame 1}
+            {$this disable change_diff.btn}
+            {change_diff.btn set_showing FALSE}}
+         {do
+            {quit.btn set text_token pausecommand_new_song}
+            {title.lbl set text_token story_song_failed}
+            {remove_change_diff.tnm set frame 0}
+            {$this enable change_diff.btn}
+            {change_diff.btn set_showing TRUE}}}
+      {if_else
+         {meta_performer is_possible_to_fail}
+         {normal_mode.trg trigger}
+         {tech_diff_mode.trg trigger}}
+      {do
+         ($mp
+            {beatmatch main_performer})
+         {song_progress.lbl
+            set_token_fmt
+            percent_complete_format
+            {$mp percent_complete}}
+         {song_section.lbl
+            set
+            text_token
+            {beatmatch
+               get_section_at_ms
+               {$mp progress_ms}}}}
+      {if_else
+         {==
+            {session num_users}
+            1}
+         {do
+            {practice.btn set_showing TRUE}
+            {$this enable practice.btn}}
+         {do
+            {practice.btn set_showing FALSE}
+            {$this disable practice.btn}}})
+   (SELECT_MSG
+      {switch
+         $component
+         (retry.btn
+            {game send_restart_game_net_msg}
+            {game_restart})
+         (quit.btn
+            {story_lose_confirm_quit_screen set quitting FALSE}
+            {story_lose_confirm_quit_screen
+               set
+               return_screen
+               {ui current_screen}}
+            {story_lose_confirm_quit_screen set confirm_screen meta_loading_continue_screen}
+            {ui goto_screen story_lose_confirm_quit_screen})
+         (practice.btn
+            {practice_panel
+               set
+               uses_harmony
+               {meta_performer is_now_using_vocal_harmony}}
+            {story_lose_confirm_quit_screen set quitting TRUE}
+            {story_lose_confirm_quit_screen
+               set
+               return_screen
+               {ui current_screen}}
+            {story_lose_confirm_quit_screen set confirm_screen meta_loading_practice_screen}
+            {practice_sel_section_panel
+               set_initial_section
+               {beatmatch
+                  get_section_at_ms
+                  {{beatmatch main_performer}
+                     progress_ms}}}
+            {ui goto_screen story_lose_confirm_quit_screen})
+         (change_diff.btn
+            {story_lose_confirm_quit_screen set quitting FALSE}
+            {story_lose_confirm_quit_screen
+               set
+               return_screen
+               {ui current_screen}}
+            {story_lose_confirm_quit_screen set confirm_screen meta_loading_ready_screen}
+            {ui goto_screen story_lose_confirm_quit_screen})})}
+{new
+   BandScreen
+   story_retry_screen
+   (panels story_retry_panel)
+   (focus story_retry_panel)
+   (enter
+      {input_mgr set_limit kLimitSessionLeader}
+      {$this update_helpbar})
+   (update_helpbar
+      {if_else
+         {is_leader_local}
+         {helpbar
+            set_config
+            ((confirm helpbar_select))}
+         {helpbar
+            set_config
+            ()}})}
+{new
+   BandScreen
+   story_lose_confirm_quit_screen
+   (panels story_retry_panel dialog_panel)
+   COMMON_LOSE_QUIT_CONFIRM}
