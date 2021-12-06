@@ -1,0 +1,184 @@
+#include track_panel.dta
+#include hud_panel.dta
+{new_gh_panel
+   mtv_overlay
+   (object_name mtv_overlay)
+   (enter
+      {if_else
+         {tutorial is_tutorial_running}
+         {$this show_overlay FALSE}
+         {$this setup_text}})
+   (setup_text
+      {do
+         (($song_text
+               {game get_song_text})
+            ($artist_text
+               {game get_song_artist_text}))
+         {if_else
+            {campaign
+               is_store_song
+               {game get_song}}
+            {do
+               (($prefix
+                     "mtv_unlock_line"))
+               {mtv_campaign_song_id.view set_showing FALSE}
+               {mtv_unlock_song_id.view set_showing TRUE}
+               {$this set_line $prefix 1 $song_text}
+               {$this set_line $prefix 2 $artist_text}}
+            {do
+               (($prefix
+                     "mtv_campaign_line"))
+               {mtv_campaign_song_id.view set_showing TRUE}
+               {mtv_unlock_song_id.view set_showing FALSE}
+               {$this set_line $prefix 1 $song_text}
+               {$this
+                  set_line
+                  $prefix
+                  2
+                  {localize mtv_made_famous}}
+               {$this set_line $prefix 3 $artist_text}}}})
+   (set_line
+      ($prefix $i $text)
+      {{sprint
+            $prefix
+            $i
+            ".lbl"}
+         set_localized_text
+         $text}
+      {{sprint
+            $prefix
+            $i
+            "_shadow.lbl"}
+         set_localized_text
+         $text})
+   (show_overlay
+      ($show)
+      {$this set_showing $show}
+      {$this
+         set_paused
+         {! $show}})}
+{new_game_panel
+   game
+   (object_name game)
+   (rnd_file
+      "")
+   (track_extend_ms -2000)
+   (intro_start
+      {arena_panel start}
+      {arena intro_start}
+      {track_panel intro_start}
+      {hud intro_start}
+      {mtv_overlay show_overlay FALSE}
+      {game
+         delay_task
+         1000
+         {mtv_overlay show_overlay TRUE}})
+   (intro_skip
+      {arena_panel start}
+      {arena intro_skip}
+      {track_panel intro_skip}
+      {hud intro_skip})
+   (click_start
+      {arena click_start})
+   (on_set_paused
+      ($paused)
+      {arena_panel set_paused $paused}
+      {hud set_paused $paused})}
+{new_arena_panel
+   arena
+   (object_name arena_panel)
+   (rnd_file
+      "")}
+#define ATTRACT_LENGTH_MS
+(120000)
+#define FADE_LENGTH_MS
+(2000)
+{new_fade_panel
+   fade
+   (object_name fade)
+   (enter
+      {press_any_button.lbl set_showing $attract_mode})}
+#define GAME_PANELS
+(game arena track hud mtv_overlay)
+{new_gh_screen
+   game
+   (panels GAME_PANELS fade)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (in_game TRUE)
+   (BUTTON_DOWN_MSG
+      {if_else
+         $attract_mode
+         {if
+            {meta is_any_button $button $player_num}
+            {set
+               $leaving
+               {-
+                  {ui frame}
+                  $enter_time}}}
+         {do
+            {if
+               {&&
+                  {== $button kPad_Start}
+                  {! $arena.game_over}}
+               {ui goto_screen pause}}}})
+   (poll
+      {if_else
+         $attract_mode
+         {do
+            (($now
+                  {-
+                     {ui frame}
+                     $enter_time}))
+            {if
+               {! $leaving}
+               {if
+                  {> $now ATTRACT_LENGTH_MS}
+                  {set $leaving $now}}}
+            {if
+               $leaving
+               {if
+                  {! $started_fade}
+                  {fade start_fade FADE_LENGTH_MS}
+                  {set $started_fade TRUE}}
+               {if
+                  {>
+                     $now
+                     {'+' $leaving FADE_LENGTH_MS}}
+                  {synth stop_all_sfx}
+                  {game set_paused TRUE}
+                  {ui goto_screen finish_fade}}}}
+         {if
+            {game is_missing_controller}
+            {ui goto_screen pause_controller}}})
+   (enter
+      {if
+         $attract_mode
+         {set
+            $enter_time
+            {ui frame}}
+         {set $leaving FALSE}
+         {set $started_fade FALSE}
+         {track_panel set_showing FALSE}
+         {with_namespace
+            player0
+            {player_matcher set_auto_play TRUE}}})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         $game_unpause_on_enter
+         {game set_paused FALSE}
+         {set $game_unpause_on_enter FALSE}})}
+{new_gh_screen
+   finish_fade
+   (panels fade)
+   (enter
+      {meta_loading_goto splash})}
+{new_gh_screen
+   reload_hud_track
+   (panels game arena)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (enter
+      {cheat_msg
+         "Reloading track and hud..."}
+      {ui goto_screen game})}

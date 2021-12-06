@@ -1,0 +1,198 @@
+#define GUITAR_WAIL_MS
+(1000)
+{tut_part.lbl set_text tut2_4_part}
+{size_left_box TUT2_4_BOX}
+{tut_info.lbl set_wrap_width 500}
+{size_right_box TUT2_4_TASK}
+{tut_banner.lbl set_showing FALSE}
+{tut_task.lbl set_showing FALSE}
+{tut_info.lbl set_showing FALSE}
+{tut_header.lbl set_showing FALSE}
+{tut_box_right.view set_showing FALSE}
+{tut_top_text.view set_showing TRUE}
+{game load_song tutorial204}
+{sleep_seconds $task 1}
+WAIT_FOR_SONG_LOAD
+{'player0::player' set_crowd_rating_active FALSE}
+{game set_time_paused TRUE}
+{sleep_seconds $task 0.1}
+{score_meter_0.view set_showing FALSE}
+{hud set_showing TRUE}
+{track_panel animate_track_out_fast}
+{game set_time_paused FALSE}
+{sleep_seconds $task 3}
+{game set_time_paused TRUE}
+{$this play_vo wail_1}
+{'player0::player' fill_star_power}
+{$this
+   set
+   current_info
+   {localize tut2_4_1}}
+{tut_info.lbl
+   set_localized_text
+   {$this get current_info}}
+{tut_info.lbl set_showing TRUE}
+{tut_star_highlight.view set_showing TRUE}
+WAIT_FOR_VO
+SHORT_VO_GAP
+{tut_star_highlight.view set_showing FALSE}
+{$this play_vo wail_2}
+{$this
+   set
+   current_info
+   {sprint
+      {$this get current_info}
+      {localize tut2_4_2}}}
+{tut_info.lbl
+   set_localized_text
+   {$this get current_info}}
+{t2_guitar.view set_showing TRUE}
+{sleep_seconds $task 4}
+{$this anim_task t2_wail.tnm GUITAR_WAIL_MS 0 100}
+WAIT_FOR_VO
+{sleep_seconds $task 0.2}
+{$this play_vo wail_3}
+{$this
+   set
+   current_info
+   {sprint
+      {$this get current_info}
+      {localize tut2_4_3}}}
+{tut_info.lbl
+   set_localized_text
+   {$this get current_info}}
+WAIT_FOR_VO
+{sleep_seconds $task 0.2}
+{$this play_vo wail_4}
+WAIT_FOR_VO
+{sleep_seconds $task 0.2}
+{stop_sfx bkgd_music}
+{$this play_vo wail_6}
+WAIT_FOR_VO
+{tut_box_right.view set_showing TRUE}
+{tut_header.lbl set_showing TRUE}
+{tut_task.lbl set_text tut2_4_task}
+{tut_task.lbl set_showing TRUE}
+{$this anim_task t2_wail.tnm GUITAR_WAIL_MS 0 100}
+#define STAR_GEMS_TO_HIT
+(8)
+{set $star_gems_hit 0}
+{set $num_gems_missed 0}
+{set $wailed FALSE}
+{set $feedback_1_played FALSE}
+{set $feedback_2_played FALSE}
+{'player0::player' set_star_power_deploy_rate 1.0e-2}
+{update_tut_score
+   {localize tut2_4_score}
+   $star_gems_hit
+   STAR_GEMS_TO_HIT}
+{tut_score.lbl set_showing TRUE}
+{with_namespace
+   main
+   {func
+      gem_hit_callback
+      ($slot $hopoable $hopoed)
+      {cond
+         ({'player0::player' in_star_mode}
+            {'++' $star_gems_hit}
+            {if
+               {<= $star_gems_hit STAR_GEMS_TO_HIT}
+               {update_tut_score
+                  {localize tut2_4_score}
+                  $star_gems_hit
+                  STAR_GEMS_TO_HIT}
+               {tutorial anim_task 'ui::tut_score.tnm' 150 0 2}}
+            {tutorial play_vo great_hit_vo})
+         (TRUE
+            {tutorial play_vo wail_no_wail_1}
+            {play_sfx button_error}
+            {'++' $num_gems_missed}
+            {check_wail_warning})}}
+   {func
+      star_use_begin_callback
+      {if_else
+         {! $wailed}
+         {tutorial play_vo wail_first}
+         {if
+            {! $feedback_1_played}
+            {set $feedback_1_played TRUE}}}
+      {'ui::t2_guitar.view' set_showing FALSE}
+      {set $wailed TRUE}}
+   {func
+      star_use_end_callback
+      {if
+         {&&
+            {! $feedback_2_played}
+            {'ui::lesson4_running'}}
+         {tutorial anim_task 'ui::t2_wail.tnm' GUITAR_WAIL_MS 0 100}
+         {'ui::t2_guitar.view' set_showing TRUE}
+         {set $feedback_2_played TRUE}}}
+   {func
+      gem_miss_callback
+      {'++' $num_gems_missed}
+      {check_wail_warning}}
+   {func
+      gem_pass_callback
+      {'++' $num_gems_missed}
+      {check_wail_warning}}
+   {func
+      check_wail_warning
+      {if
+         {! $wailed}
+         {switch
+            $num_gems_missed
+            (8
+               {tutorial play_vo wail_no_wail_1})
+            (16
+               {tutorial play_vo wail_no_wail_2})}}}}
+{func
+   lesson4_running
+   {&&
+      {< $star_gems_hit STAR_GEMS_TO_HIT}
+      {<
+         {'player0::player' percent_complete}
+         END_OF_SONG_PERCENT}}}
+WAIT_FOR_VO
+{game set_time_paused FALSE}
+{$task
+   wait
+   {lesson4_running}}
+{track_panel animate_track_in_fast}
+{if
+   {>= $star_gems_hit STAR_GEMS_TO_HIT}
+   {sleep_seconds $task 1.5}}
+{game set_time_paused TRUE}
+{tut_top_text.view set_showing FALSE}
+{t2_guitar.view set_showing FALSE}
+{hud set_showing FALSE}
+{score_meter_0.view set_showing TRUE}
+{cond
+   ({< $star_gems_hit STAR_GEMS_TO_HIT}
+      {tut_banner.lbl set_text tut_timeout}
+      {tut_banner.lbl set_showing TRUE}
+      {$this play_vo timeout_vo})
+   (TRUE
+      {tut_banner.lbl set_text tut2_4_done}
+      {play_sfx s19901}
+      {tut_banner.lbl set_showing TRUE}
+      {$this play_vo wail_done})}
+{lightning_track.view set_showing FALSE}
+{play_sfx bkgd_music}
+WAIT_FOR_VO
+LONG_VO_GAP
+{$this play_vo wrapup1_2}
+{tut_top_text.view set_showing FALSE}
+{hud set_showing FALSE}
+{sleep_seconds $task 15}
+{t1_stamps.view set_showing TRUE}
+{t1_lets_rock.view set_showing TRUE}
+{tut_banner.lbl set_showing FALSE}
+{play_sfx s19902}
+{sleep_seconds $task 5}
+{tut_banner.lbl set_showing FALSE}
+{t1_stamps.view set_showing FALSE}
+{t1_lets_rock.view set_showing FALSE}
+{reset_all_callbacks}
+{tut_banner.lbl set_showing FALSE}
+{ui goto_screen tutorial_quit}
+{$task exit}
