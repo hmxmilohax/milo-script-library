@@ -1,0 +1,164 @@
+{new
+   GHPanel
+   pause_panel
+   (file pause.milo)
+   (clear_vram TRUE)
+   (enter
+      {$this set_focus resume.btn}
+      {$this update_buttons_demo})
+   (update_buttons_demo
+      {$this disable audio_options.btn}
+      {$this disable video_options.btn})}
+#define PAUSE_SCREEN_HANDLERS
+((allow_back FALSE)
+   (animate_transition FALSE)
+   (enter
+      {game set_paused TRUE})
+   (resume
+      {set $game_unpause_on_enter TRUE}
+      {ui
+         goto_screen
+         {gamecfg get game_screen}})
+   (SELECT_MSG
+      {switch
+         $component
+         (resume.btn
+            {$this resume})
+         (restart.btn
+            {synth stop_all_sfx}
+            {synth play_sequence button_play}
+            {game_restart_fast})
+         (audio_options.btn
+            {ui goto_screen pause_audio_settings_screen})
+         (video_options.btn
+            {ui goto_screen pause_video_settings_screen})
+         (quit.btn
+            {meta_loading_goto
+               {gamecfg get main_screen}})
+         (section.btn
+            {meta_loading_goto practice_sel_section_screen})
+         (reset.btn
+            {switch
+               [lefty_switch]
+               (0
+                  {options
+                     set_lefty
+                     0
+                     {!
+                        {options get_lefty 0}}})
+               (1
+                  {options
+                     set_lefty
+                     1
+                     {!
+                        {options get_lefty 1}}})
+               (TRUE
+                  {options
+                     set_lefty
+                     0
+                     {!
+                        {options get_lefty 0}}}
+                  {options
+                     set_lefty
+                     1
+                     {!
+                        {options get_lefty 1}}})}
+            {$this resume})}))
+{new
+   GHScreen
+   pause_screen
+   (panels GAME_PANELS pause_panel)
+   (focus pause_panel)
+   (in_game TRUE)
+   PAUSE_SCREEN_HANDLERS
+   (BUTTON_DOWN_MSG
+      {if
+         {== $button kPad_Start}
+         {$this resume}}
+      kDataUnhandled)}
+{new
+   GHPanel
+   pract_pause_panel
+   (file pract_pause.milo)
+   (clear_vram TRUE)
+   (enter
+      {$this set_focus resume.btn})}
+{new
+   GHScreen
+   pract_pause_screen
+   (panels PRACTICE_PANELS pract_pause_panel)
+   (focus pract_pause_panel)
+   (in_game TRUE)
+   PAUSE_SCREEN_HANDLERS
+   (BUTTON_DOWN_MSG
+      {if
+         {== $button kPad_Start}
+         {$this resume}}
+      kDataUnhandled)}
+{func
+   meta_loading_goto
+   ($next_screen)
+   {meta_loading_screen set next_screen $next_screen}
+   {ui goto_screen meta_loading_screen}}
+{new
+   UIPanel
+   meta_loading_panel
+   (file meta_loading.milo)
+   (enter
+      {animate_forever_30fps $this meta_loading.view})}
+{new
+   GHScreen
+   meta_loading_screen
+   (panels meta_loading_panel)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (next_screen main_screen)
+   (TRANSITION_COMPLETE_MSG
+      {{game get_bank_loader}
+         reset}
+      {ui
+         goto_screen
+         {$this get next_screen}})}
+{new
+   GHPanel
+   pause_controller_panel
+   (file pause_controller.milo)
+   (clear_vram TRUE)
+   (focus resume.btn)
+   (enter
+      {pause_controller_msg.lbl
+         set_text
+         {if_else
+            {game multiplayer}
+            controller_loss_msg_multi
+            controller_loss_msg}})
+   (poll
+      {if_else
+         {game is_missing_controller}
+         {resume.btn set_state kDisabled}
+         {resume.btn set_state kFocused}})}
+{new
+   GHScreen
+   pause_controller_screen
+   (panels GAME_PANELS pause_controller_panel)
+   (focus pause_controller_panel)
+   (in_game TRUE)
+   PAUSE_SCREEN_HANDLERS
+   (BUTTON_DOWN_MSG
+      {if_else
+         {game is_missing_controller}
+         TRUE
+         kDataUnhandled})}
+{new
+   GHPanel
+   lefty_restart_panel
+   (file lefty_restart.milo)
+   (focus reset.btn)}
+{new
+   GHScreen
+   lefty_restart_screen
+   (panels GAME_PANELS lefty_restart_panel)
+   (focus lefty_restart_panel)
+   (in_game TRUE)
+   (lefty_switch 0)
+   PAUSE_SCREEN_HANDLERS}

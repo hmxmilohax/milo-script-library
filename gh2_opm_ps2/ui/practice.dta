@@ -1,0 +1,201 @@
+{new
+   GHScreen
+   practice_selsong_screen
+   (panels meta sel_song_panel helpbar)
+   (focus sel_song_panel)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (sel_song_career FALSE)
+   (SELECT_MSG
+      {gamecfg set mode practice}
+      {ui goto_screen practice_diff_screen}
+      kDataUnhandled)}
+{new
+   GHScreen
+   practice_diff_screen
+   (panels meta sel_difficulty_panel helpbar)
+   (focus sel_difficulty_panel)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (SELECT_MSG
+      {ui goto_screen practice_sel_section_screen}
+      kDataUnhandled)}
+{new
+   GHPanel
+   practice_sel_section_panel
+   (file practice_sel_section.milo)
+   (focus sel_section.lst)
+   (enter
+      {sel_section.lst
+         set_provider
+         {game practice_section_provider}}
+      {title.lbl set_text select_start_section}
+      {set
+         [section]
+         0})
+   (SELECT_MSG
+      {do
+         ($idx
+            {sel_section.lst selected_pos})
+         {if_else
+            [section]
+            {if_else
+               {<
+                  $idx
+                  {gamecfg
+                     get
+                     (practice_sections 0)}}
+               {handle
+                  (ui BAD_SELECT_MSG)}
+               {do
+                  {gamecfg
+                     set
+                     (practice_sections 1)
+                     $idx}
+                  {ui goto_screen practice_sel_speed_screen}
+                  kDataUnhandled}}
+            {do
+               {gamecfg
+                  set
+                  (practice_sections 0)
+                  $idx}
+               {title.lbl set_text select_end_section}
+               {set
+                  [section]
+                  1}
+               kDataUnhandled}}})
+   (section 0)}
+{new
+   GHScreen
+   practice_sel_section_screen
+   (panels meta practice_sel_section_panel)
+   (focus practice_sel_section_panel)}
+{new
+   GHPanel
+   sel_speed_panel
+   (file sel_speed.milo)
+   (enter
+      {sel_speed.lst set_provider speed_provider})
+   (SELECT_MSG
+      {do
+         ($idx
+            {sel_speed.lst selected_pos})
+         {gamecfg
+            set
+            practice_speed
+            {speed_provider get_speed $idx}}}
+      kDataUnhandled)}
+{new
+   GHScreen
+   practice_sel_speed_screen
+   (panels meta sel_speed_panel)
+   (focus sel_speed_panel)
+   (SELECT_MSG
+      {ui goto_screen practice_loading_screen}
+      kDataUnhandled)}
+{new
+   GHPanel
+   practice_panel
+   (file practice_panel.milo)
+   (enter
+      {$this update_click})
+   (update_click
+      {click_parser remove_sink $this}
+      {if
+         {!=
+            {gamecfg get practice_speed}
+            1.0}
+         {click_parser add_sink $this}})
+   (exit
+      {click_parser remove_sink $this})
+   (midi_parser
+      ($msg)
+      {$this $msg})
+   (click_snare
+      {practice_snare play})
+   (click_kick
+      {practice_kick play})
+   (click_hat
+      {practice_hat play})}
+#define PRACTICE_PANELS
+(practice_panel game hud track_panel mtv_overlay_panel)
+{new
+   GHScreen
+   practice_game_screen
+   (panels PRACTICE_PANELS)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (in_game TRUE)
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {== $button kPad_Start}
+            {!
+               {game get game_over}}}
+         {ui goto_screen pract_pause_screen}})
+   (enter
+      {practice_panel update_click})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         $game_unpause_on_enter
+         {game set_paused FALSE}
+         {set $game_unpause_on_enter FALSE}})}
+{new
+   GHPanel
+   practice_end_panel
+   (file practice_end.milo)
+   (clear_vram TRUE)
+   (enter
+      {$this set_focus restart.btn}
+      {do
+         ($pat
+            {localize gems_hit_pattern})
+         ($hits
+            {player0 gems_hit})
+         ($tot
+            {'+'
+               $hits
+               {player0 gems_passed}})
+         ($perc
+            {int
+               {'*'
+                  100
+                  {/ $hits $tot}}})
+         {stats.lbl
+            set_localized_text
+            {sprintf $pat $perc $hits $tot}}})
+   (SELECT_MSG
+      {switch
+         $component
+         (restart.btn
+            {game_restart})
+         (change_speed.btn
+            {ui goto_screen practice_change_speed_screen})
+         (new_sec.btn
+            {meta_loading_goto practice_sel_section_screen})
+         (quit.btn
+            {meta_loading_goto practice_selsong_screen})})}
+{new
+   GHScreen
+   practice_end_screen
+   (panels PRACTICE_PANELS practice_end_panel)
+   (focus practice_end_panel)
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (in_game TRUE)}
+{new
+   GHScreen
+   practice_change_speed_screen
+   (panels PRACTICE_PANELS sel_speed_panel)
+   (focus sel_speed_panel)
+   (animate_transition FALSE)
+   (in_game TRUE)
+   (SELECT_MSG
+      {game_restart}
+      kDataUnhandled)}

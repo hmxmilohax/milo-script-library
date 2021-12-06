@@ -1,0 +1,144 @@
+{new
+   GHPanel
+   sel_character_demo_panel
+   (file sel_character_e3.milo)
+   (char_focus rockabill)
+   (old_scroll_pos 0)
+   (focus character.lst)
+   (enter
+      {character.lst set_provider character_provider}
+      {animate_forever_30fps $this sel_character.view}
+      {do
+         ($character
+            {game get_character})
+         {char_single show_char 0 $character}
+         {sc_char_nm.lbl set_text $character}
+         {sc_char_blurb.lbl
+            set_localized_text
+            {localize
+               {sprint
+                  $character
+                  "_blurb"}}}
+         {$this set char_focus $character}
+         {character.lst
+            set_selected
+            {character_provider get_index $character}}
+         {$this
+            set
+            old_scroll_pos
+            {character.lst selected_pos}}})
+   (exit)
+   (open_door
+      {new
+         AnimTask
+         (units kTaskUISeconds)
+         (anim cs_door.tnm kTaskRange)
+         (period 3)
+         (start 0)
+         (end 15)})
+   (SCROLL_MSG
+      {do
+         ($new_scroll_pos
+            {character.lst selected_pos})
+         {if
+            {!=
+               $new_scroll_pos
+               [old_scroll_pos]}
+            {$this
+               set
+               char_focus
+               {character_provider get_symbol $new_scroll_pos}}
+            {if
+               [char_focus]
+               {sc_char_nm.lbl
+                  set_text
+                  [char_focus]}
+               {sc_char_blurb.lbl
+                  set_localized_text
+                  {localize
+                     {sprint
+                        [char_focus]
+                        "_blurb"}}}
+               {char_single
+                  show_char
+                  0
+                  [char_focus]}
+               {$this set old_scroll_pos $new_scroll_pos}}}}
+      kDataUnhandled)}
+{new
+   GHScreen
+   demo_sel_character_screen
+   (panels meta sel_character_demo_panel char_single sel_character_loading_panel helpbar)
+   (focus sel_character_demo_panel)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (TRANSITION_COMPLETE_MSG
+      {char_single hide FALSE})
+   (exit
+      {char_single hide TRUE})
+   (SELECT_MSG
+      {synth play_sequence button_select}
+      {do
+         ($sel_char
+            {sel_character_demo_panel get char_focus})
+         {if
+            {&&
+               $sel_char
+               {!=
+                  {game get_character}
+                  $sel_char}}
+            {game set_character $sel_char}}
+         {ui goto_screen demo_guitar_screen}}
+      kDataUnhandled)}
+{new
+   GHScreen
+   demo_guitar_screen
+   SEL_GUITAR_COMMON
+   (auto_back TRUE)}
+{new
+   GHScreen
+   demo_selsong_screen
+   (panels meta sel_song_panel helpbar)
+   (focus sel_song_panel)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (sel_song_career FALSE)
+   (SELECT_MSG
+      {ui goto_screen demo_diff_screen}
+      kDataUnhandled)}
+{new
+   GHScreen
+   demo_diff_screen
+   (panels meta sel_difficulty_panel helpbar)
+   (focus sel_difficulty_panel)
+   (helpbar
+      (default
+         ((fret1 help_continue)
+            (fret2 help_back)
+            (strum help_updown))))
+   (SELECT_MSG
+      {if
+         {!=
+            {game get_controller 0}
+            guitar}
+         {{game get_player_config 0}
+            set
+            autoplay
+            TRUE}}
+      {ui goto_screen loading_screen}
+      kDataUnhandled)}
+{new
+   GHScreen
+   demo_multi_coop_selsong_screen
+   MULTI_SELSONG_SCREEN_HANDLERS
+   (SELECT_MSG
+      {gamecfg set_track 0 0}
+      {gamecfg set_track 1 1}
+      {ui goto_screen multi_sel_guitar_screen}
+      kDataUnhandled)}
