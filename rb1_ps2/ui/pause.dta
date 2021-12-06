@@ -1,0 +1,1197 @@
+#define PAUSE_SCREEN_HANDLERS
+(
+   (pause_if_local
+      {{$this find pause_title.lbl} set_showing FALSE}
+      {if {== {session mode} kNetLocal}
+         {game set_paused TRUE}
+         {{$this find pause_title.lbl} set_showing TRUE}
+      }
+   )
+
+   (resume
+      {if {== {session mode} kNetLocal}
+         {set $game_unpause_on_enter TRUE}
+      }
+      {ui pop_screen}
+   )
+	
+	(hide
+		{set $game_pause_on_enter TRUE}
+		{ui pop_screen}
+	)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; the pause panel
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+{new UIPanel pause_panel
+	#ifdef HX_XBOX
+   		(file pause.milo)
+   	#else
+   		(file pause_og.milo)
+   	#endif
+
+   (button_count 0)           ; how many buttons are shown?
+   (original_flip FALSE)      ; to track if Flip changes
+   (original_hud kVocalStyleScrolling)
+
+   (resync_on_exit TRUE)      ; do we hook up to band_ui_sink again?
+   (exit_destination exit_quit); can be one of:
+                                 ;exit_quit - goto main menu
+                                 ;exit_forfeit - go to matchmaking without band
+                                 ;exit_new_section - (practice) goes to sel_section
+                                 ;exit_new_song - go to Song Select Screen
+                                 ;exit_change_band - to to matchmaking wtih band
+                                 ;exit_restart - restart the current song
+
+   ; array of actual buttons on the panel
+   (pause_buttons (0.btn 1.btn 2.btn 3.btn 4.btn 5.btn 6.btn))
+   (check_icons ( check00.mesh  
+                  check01.mesh 
+                  check02.mesh 
+                  check03.mesh 
+                  check04.mesh 
+                  check05.mesh
+				  check06.mesh
+               ))
+   (check_boxes ( check_bg.mesh
+                  check_bg01.mesh
+                  check_bg02.mesh
+                  check_bg03.mesh
+                  check_bg04.mesh
+                  check_bg05.mesh
+				  check_bg06.mesh
+               ))
+
+   (flip_check_index 0) ;TODO we could use a trans animation for this
+   (hud_check_index 0)
+   
+   ; array of potential commands for those buttons
+   (pause_commands ( pause_resume 
+                     pause_restart 
+                     lefty_flip 
+					 vocal_hud
+                     vocal_options
+                     practice_new_section
+					 new_song 
+                     gig_guide
+                     band_members
+                     forfeit
+					 #ifndef HX_XBOX
+					 practice_change_speed
+					 #endif
+                     pause_quit
+					 ))
+   (active_commands ())
+	(cancel_pause FALSE)
+	(leaving_pause FALSE)
+
+   PAUSE_SCREEN_HANDLERS
+
+   (enter
+		{set [leaving_pause] FALSE} ; REA
+		
+      {set [exit_destination] exit_new_song}
+      {set [resync_on_exit] TRUE}
+      {if {! {game is_game_over}}
+         {$this pause_if_local}
+      }
+
+      ;disable swings so player isn't penalized for navigating the menu
+      {{game get_player [player_number]} enable_swings FALSE} 
+      {beatmatch never_allow_input TRUE}
+
+      ;set up the gamer tag and instrument icon
+      {do ($player {beatmatch player [player_number]})
+         {gamertag.lbl set_localized {get_player_name $player}}
+         {instrument.lbl set_localized {get_player_icon $player}}
+      }
+      {helpbar set limit_to_player_num [player_number]}
+
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+      {stagekit_pause TRUE}
+
+      kDataUnhandled ; allow the screen to handle this too
+   )
+   
+   (TRANSITION_COMPLETE_MSG
+      {session add_sink $this end_game_msg}
+		{if [cancel_pause] 
+			{$this hide} ; REA - cancel el pauso
+		}
+      
+      {if {!= {session state} kNetInGame}
+         {ui pop_screen} ; the game ended while transitioning here, leave the pause screen
+      }
+   )
+   
+   (END_GAME_MSG
+      ; pop the screen immediately once the band has failed or won
+      {ui pop_screen}
+   )
+
+   (exit
+		{set [cancel_pause] FALSE}
+      {session remove_sink $this remote_player_left_msg}
+      {{game get_player [player_number]} enable_swings TRUE}
+      {beatmatch never_allow_input FALSE}
+      {if   {&&  
+               {!= [player_number] -1}
+               {!= [original_flip] ; if lefty flip changes, update Player
+                  {{profile_mgr get_char_options_from_player [player_number]} get_lefty}
+               }
+            }
+         {{game get_player [player_number]} update_lefty_flip}
+      }
+
+      {if   {&&  
+               {!= [player_number] -1}
+               {!= [original_hud] ; if vocal style changed, update Player
+                  {{profile_mgr get_char_options_from_player [player_number]} 
+                     get_vocal_style}
+               }
+            }
+        {{game get_player [player_number]} update_vocal_style}
+      }
+      {session remove_sink $this end_game_msg}
+      {if [resync_on_exit] 
+         {band_ui_sink set_net_sync TRUE}
+      }
+      {stagekit_pause FALSE}
+   )
+
+   (BUTTON_DOWN_MSG
+      {if_else {== [player_number] $player_num}
+         {do
+            {if {|| {== $button kPad_Start}
+                    {== $button kPad_Tri}
+                }
+               {set [exit_destination] exit_new_song} ; make sure exit state is reset
+               {$this resume}
+            }
+            kDataUnhandled
+         }
+         ;; else
+         TRUE ; eat messages that didn't come from the start button-presser
+      }
+   )
+
+   (BUTTON_UP_MSG
+      {if_else {== [player_number] $player_num}
+         kDataUnhandled
+         TRUE ; eat messages that didn't come from the start button-presser
+      }
+   )
+
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+   
+    (FOCUS_MSG
+		{$this update_pause_helpbar {$new_focus name}}
+	)
+	
+	(update_pause_helpbar ($button)
+	 {find_elem [pause_buttons] $button $ix_button} 
+		{switch {elem [active_commands] $ix_button}
+			(lefty_flip
+				;{do
+				;  ($options {profile_mgr get_char_options_from_player [player_number]})
+                ;  ($lefty_flipped {$options get_lefty})
+				;	{helpbar set_config (Back Select)}
+				 ;{if_else {== $lefty_flipped TRUE}
+				;	   {helpbar set_config (Back Uncheck)}
+				;		{helpbar set_config (Back Check)}
+				 ; }
+					
+				;}
+			 )
+			(vocal_hud
+				   ;{do
+					 ; ($options {profile_mgr get_char_options_from_player [player_number]})
+					 ; ($hud_style {$options get_vocal_style})
+					  ;{helpbar set_config (Back Select)}
+					  ;{if_else {== $hud_style FALSE}
+						;	{helpbar set_config (Back Uncheck)}
+						;	{helpbar set_config (Back Check)}
+						;}
+					
+				 ;  }
+			)
+			   
+			 {helpbar set_config (Back helpbar_select)}
+		 }
+	
+	)
+
+   (SELECT_MSG
+      {set [exit_destination] exit_new_song} ; set to something that re-syncs ui
+      {find_elem [pause_buttons] $component $ix_button} ;get index of selection
+      {switch {elem [active_commands] $ix_button}
+         (pause_resume
+            {$this resume}
+         )
+
+         (pause_restart
+            {set [exit_destination] exit_restart}
+
+            ; restart confirm does not happen in every mode 
+            {if_else {== {gamemode get confirm_restart_screen} ''}
+               {$this on_restart}
+               {ui goto_screen {gamemode get confirm_restart_screen}}
+            }
+         )
+
+         (lefty_flip
+            {if_else {!= vocals {{game get_player_config [player_number]} get_track_sym}}
+               {do
+                  ($options {profile_mgr get_char_options_from_player [player_number]})
+                  ($lefty_flipped {$options get_lefty})
+                  {$options set_lefty {! $lefty_flipped}}
+                  {$this update_lefty_check}
+				  ;{helpbar set_config (Back Select)}
+				  ;{if_else {== $lefty_flipped FALSE}
+				  ;	   {helpbar set_config (Back Uncheck)}
+				  ;		{helpbar set_config (Back Check)}
+				  ; }
+               }
+               kDataUnhandled
+            }
+         )
+
+         (vocal_hud
+            {if_else {== vocals {{game get_player_config [player_number]} get_track_sym}}
+               {do
+                  ($options {profile_mgr get_char_options_from_player [player_number]})
+                  ($hud_style {$options get_vocal_style})
+                  {$options set_vocal_style {! $hud_style}}
+                  {$this update_vocal_style}
+				  ;{helpbar set_config (Back Select)}
+				   ;{if_else {== $hud_style TRUE}
+					;		{helpbar set_config (Back Uncheck)}
+					;		{helpbar set_config (Back Check)}
+					;	}
+               }
+               kDataUnhandled
+            }
+         )
+
+         (vocal_options
+            {if_else {== vocals {{game get_player_config [player_number]} get_track_sym}}
+               {do
+                  {set [resync_on_exit] FALSE}
+                  {vocal_options_panel set player_num [player_number]}
+                  {ui goto_screen pause_vocal_options_screen}
+               }
+               kDataUnhandled
+            }
+         )
+
+		#ifndef HX_XBOX
+		( practice_change_speed
+            {set [exit_destination] exit_change_speed}
+            {$this on_quit} ;skip the confirmation screen for practice mode
+        )
+		#endif
+         (practice_new_section
+            {set [exit_destination] exit_new_section}
+            {$this on_quit} ;skip the confirmation screen for practice mode
+         )
+
+         ((new_song gig_guide)
+            {set [exit_destination] exit_new_song}
+            {if_else {gamemode get is_practice}
+               {$this on_quit} ;skip the confirmation screen for practice mode
+               {ui goto_screen {gamemode get confirm_quit_screen}}
+            }
+         )
+
+         (band_members
+			
+            {set [exit_destination] exit_change_band}
+            {ui goto_screen {gamemode get confirm_quit_screen}}
+         )
+
+         (forfeit
+            {set [exit_destination] exit_forfeit}
+            ; if we're quitting and leaving everyone else behind then don't re-hookup sync
+            {set [resync_on_exit] FALSE}
+            {ui goto_screen {gamemode get confirm_quit_screen}}
+         )
+
+         (pause_quit
+            {set [exit_destination] exit_quit}
+            ; if we're quitting and leaving everyone else behind then don't re-hookup sync
+            {set [resync_on_exit] FALSE}
+            {if_else {gamemode get is_practice}
+               {$this on_quit} ;skip the confirmation screen for practice mode
+               {ui goto_screen {gamemode get confirm_quit_screen}}
+            }         )
+         kDataUnhandled
+      }
+   )
+
+   (set_up_buttons
+      {set [button_count] 0}
+      {resize [active_commands] 0}
+
+      ;hide all buttons and reset nav order
+      {do ($previous "")
+         {foreach $button [pause_buttons]
+            {$button set_showing FALSE}
+            {if {!= $previous ""}
+               {$previous set nav_down $button}
+            }
+            {set $previous $button}
+         }
+      }
+
+      ;hide the check marks
+      {foreach $check [check_icons]
+         {$check set_showing FALSE}
+      }
+      ;and the boxes
+      {foreach $check [check_boxes]
+         {$check set_showing FALSE}
+      }
+
+   
+      ; enable commands and set button labels
+      {do ($added)
+         {foreach $command [pause_commands]
+            {set $added FALSE}
+            {switch $command
+               (pause_resume
+                  {set $added TRUE}
+               )
+
+               (pause_restart                
+                  {if   {|| 
+                           {gamemode get local_network}
+                           {&&   {is_leader_local}
+                                 {== {gamemode get player_arrangement} kArrangeBand}
+                           }
+                        }
+                     {set $added TRUE}
+
+                     ; prohibit if there aren't enough players for this mode
+                     {if {< {session num_players} {gamemode get min_players}}
+                        {$this disable {elem [pause_buttons] [button_count]}}
+                     }
+                  }
+               )
+
+               (lefty_flip  ;for non-vocalists, init lefty flip
+                  {if {!= vocals {{game get_player_config [player_number]}  get_track_sym}}
+                     {set $added TRUE}
+                     {set [flip_check_index] [button_count]} ; remember which check is active
+                     {set [original_flip] 
+                        {{profile_mgr get_char_options_from_player [player_number]} get_lefty}}
+                     {$this update_lefty_check}
+					  {helpbar set_config (helpbar_back helpbar_select)}
+					 ;;{helpbar set_config (Back helpbar_toggleoption)}
+                  }
+               )
+
+               (vocal_hud
+                  {if {== vocals {{game get_player_config [player_number]} get_track_sym}}
+                     {set $added TRUE}
+                     {set [hud_check_index] [button_count]} ; remember which check is active
+                     {set [original_hud] 
+                        {{profile_mgr get_char_options_from_player [player_number]} get_vocal_style}}
+                     {$this update_vocal_style}
+                  }
+               )
+
+               (vocal_options
+                  {if   {== vocals {{game get_player_config [player_number]} 
+                           get_track_sym}
+                        }
+                     {set $added TRUE}
+                  }
+               )
+
+              (practice_new_section
+                 {if   {&&
+                          {gamemode get is_practice}
+                          {!= vocals 
+                             {{game get_player_config [player_number]} 
+                                get_track_sym}
+                          }
+						  {!= {gamecfg get practice_speed} 0}
+                       }
+                    {set $added TRUE}
+				}
+              )
+			  
+			   #ifndef HX_XBOX
+			     ( practice_change_speed
+                  {if  {&& {gamemode get is_practice} {!={game get_instrument_from_controller {game get leader_num}} 'vocals'}}
+                       {set $added TRUE}
+                  }
+               )
+			   #endif
+			   
+
+               (new_song
+                  {if   {&&
+                           {!= {gamemode get pause_new_song_screen} ''}
+                           {! {gamemode is_bwt}}
+                           {! {gamemode is_solo_tour}}
+                           {|| {gamemode get local_network} {is_leader_local}}
+                        }
+                     {set $added TRUE}
+
+                     ; prohibit if there aren't enough players for this mode
+                     {if {< {session num_players} {gamemode get min_players}}
+                        {$this disable {elem [pause_buttons] [button_count]}}
+                     }
+                  }
+               )
+
+               (gig_guide ;same as new_song but in tour modes
+                  {if   {&&                            
+                           {|| {gamemode get local_network} {is_leader_local}}
+                           {||
+                              {gamemode is_bwt}
+                              {gamemode is_solo_tour}
+                           }
+                        }
+                     {set $added TRUE}
+
+                     ; prohibit if there aren't enough players for this mode
+                     {if {< {session num_players} {gamemode get min_players}}
+                        {$this disable {elem [pause_buttons] [button_count]}}
+                     }
+                  }
+               )
+
+               (band_members
+                  {if {&&
+                        {! {gamemode is_solo}} 
+                        {== {gamemode get player_arrangement} kArrangeBand}
+                        {|| {gamemode get local_network} {is_leader_local}}
+                      }
+                     {set $added TRUE}
+                  }
+               )
+
+               ; forfeit is available for unranked, network head to head modes
+               (forfeit
+                  {if {&&                      
+                        {gamemode get ranked}
+                        {== {gamemode get player_arrangement} kArrangeHth}
+                        {! {gamemode get local_network}}
+                      }
+                     {set $added TRUE}
+                  }
+               )
+
+               (pause_quit
+                  {if {gamemode get show_pause_quit}
+                     {set $added TRUE}
+                  }
+               )
+            }
+            {if $added
+               {{elem [pause_buttons] [button_count]} set_showing TRUE}
+               {{elem [pause_buttons] [button_count]} set text_token $command}
+               {push_back [active_commands] $command}
+               {++ [button_count]}
+            }
+         }
+      }
+
+      ; set the last button so it won't navigate anywhere
+      {{elem [pause_buttons] {- [button_count] 1}} set nav_down ''}
+      {$this set_focus 0.btn}
+   )
+
+   (update_lefty_check
+      {{elem [check_icons] [flip_check_index]} set_showing
+         {{profile_mgr get_char_options_from_player [player_number]} get_lefty}
+      }
+      {{elem [check_boxes] [flip_check_index]} set_showing TRUE}
+   )
+   
+   ;updates the check mark on the pause screen
+   (update_vocal_style
+      {{elem [check_icons] [hud_check_index]} set_showing
+         {!{{profile_mgr get_char_options_from_player [player_number]} get_vocal_style}}
+      }
+      {{elem [check_boxes] [hud_check_index]} set_showing TRUE}
+   )
+
+   (on_restart
+	   {set [leaving_pause] TRUE}
+      ; TODO stop sfx on remote machines??
+	   ;;{synth stop_all_sfx}
+		;;{gamemode on_pause_restart}
+		{ui goto_screen restart_loading_screen}
+   )
+
+   (on_quit
+	   {set [leaving_pause] TRUE}
+      {switch [exit_destination]
+         (exit_change_band
+            {if {!{is_leader_local}}
+               {notify "WARNING: change band triggered by non-leader"}
+            }
+			{game set leader_num -1}
+            {session end_game kQuit}
+            {band_ui_sink sync_screen meta_loading_changemembers_screen 1}
+         )
+         (exit_forfeit
+            {ui goto_screen meta_loading_matchmaking_forfeit_screen}
+         )
+		 #ifndef HX_XBOX
+		  (exit_change_speed
+            {session end_game kQuit}
+            {band_ui_sink sync_screen meta_loading_pause_change_speed_screen 1}
+         )
+		 #endif
+         (exit_new_section
+            {session end_game kQuit}
+            {band_ui_sink sync_screen meta_loading_pause_new_section_screen 1}
+         )
+         (exit_new_song
+            {session end_game kQuit}
+            {band_ui_sink sync_screen meta_loading_pause_new_song_screen 1} 
+         )
+         (exit_quit
+            {ui goto_screen meta_loading_quit_early_screen}
+         )
+         (exit_restart
+            {$this on_restart}
+         )
+      }
+   )
+	
+	(JOYPAD_CONNECT_MSG
+		{if {&& {! $connected} {== $player_num [player_number]} {! [leaving_pause]} }
+			{$this hide} ; REA - leave pause so game can catch the missing controller and repause
+		}
+	)
+}
+
+{new UIScreen restart_loading_screen
+	(panels meta_loading)
+	
+	(restart_song
+				 {synth stop_all_sfx}
+				{gamemode on_pause_restart}
+	)
+	(TRANSITION_COMPLETE_MSG
+		{script_task kTaskUISeconds (delay 2)
+			(script
+				{$this restart_song}
+			)
+		}
+	)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Pause Screen
+{new UIScreen pause_screen
+   (panels pause_panel helpbar)
+   (focus pause_panel)
+   (helpbar (helpbar_back helpbar_select))
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; The Quit Confirmation screen
+#define CONFIRM_QUIT_HANDLERS
+(
+   ; we have the pause_panel rather than getting pushed... 
+   ; to avoid having more than 1 layer of pushed screens
+   (panels pause_panel dialog_panel helpbar_dialog)
+   (focus dialog_panel)
+   (helpbar ('' helpbar_select))
+)
+
+#define QUIT_DIALOG_SET_UP_BUTTONS
+(
+   (set_up_buttons
+      ; prohibit restarting if there aren't enough players for this mode
+      {if {< {session num_players} {gamemode get min_players}}
+         {{dialog_panel find no.btn} set_state kDisabled}
+         {dialog_panel set_focus {dialog_panel find yes.btn}}
+      }
+   )
+)
+
+{new UIScreen confirm_quit_screen
+   CONFIRM_QUIT_HANDLERS
+     
+	(is_finished FALSE)
+	
+   (enter
+	  {set [is_finished] FALSE}
+	 {helpbar_dialog set_limit_to_player_num {pause_panel get player_number}}
+	  {helpbar_dialog set_config ('' helpbar_select)}
+      {dialog_panel set_yesno 
+         {localize confirm_quit} ;TODO get string from mode
+         no.btn
+      }
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+   )
+
+   (exit
+      {session remove_sink $this remote_player_left_msg}
+   )
+   
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (SELECT_MSG
+      {if {== $player_num {pause_panel get player_number}}
+			{set [is_finished] TRUE}
+         {switch $component
+            (yes.btn
+               {pause_panel on_quit} 
+            )
+            (no.btn
+               {ui goto_screen pause_screen}
+            )
+         }
+      }
+   )
+	
+	(JOYPAD_CONNECT_MSG
+		{if {&& {! [is_finished]} {== $player_num {pause_panel get player_number}}}
+		   {pause_panel set cancel_pause TRUE}
+		   {ui goto_screen pause_screen} ; REA - cancel dialog
+		}
+	)
+
+	; REA stolen from pause panel
+   (BUTTON_DOWN_MSG
+      {if_else {== $player_num {pause_panel get player_number}}
+			{do
+				{set [is_finished] TRUE}
+            kDataUnhandled
+			}
+         TRUE ; eat messages that didn't come from the start button-presser
+      }
+   )
+
+   (BUTTON_UP_MSG
+      {if_else {== $player_num {pause_panel get player_number}}
+			{do
+				{set [is_finished] FALSE}
+            kDataUnhandled
+			}
+         TRUE ; eat messages that didn't come from the start button-presser
+      }
+   )
+
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; BWT Quit Confirmation Screen
+#define TOUR_BAND_CONFIRM_DIALOG
+(
+   {dialog_panel set_yesno
+      {if_else {{tour performer} fans_lost_on_fail}
+         {sprintf
+            {localize tour_band_lose_fans_warning}
+            {localize_separated_int 
+               {{tour performer} fans_lost_on_fail}
+            }
+         }
+         ; if no fans, show the standard "progress will be lost" message
+         {localize_token confirm_quit}
+      }
+      no.btn
+   }
+)
+
+{new UIScreen tour_band_quit_screen
+   CONFIRM_QUIT_HANDLERS
+   
+   (enter
+      TOUR_BAND_CONFIRM_DIALOG
+	  {helpbar_dialog set_limit_to_player_num {pause_panel get player_number}}
+     {helpbar_dialog reset_icons}
+	  {helpbar_dialog set_config ('' helpbar_select)}
+	  
+      {dialog_panel set_title
+         {localize_token tour_abandon_gig}
+      }
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+   )
+
+   (exit
+      {session remove_sink $this remote_player_left_msg}
+   )
+
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (SELECT_MSG
+      {if {== $player_num {pause_panel get player_number}}
+         {switch $component
+            (yes.btn
+               {{tour performer} lose_song}
+               {pause_panel on_quit}
+            )
+            (no.btn
+               {ui goto_screen pause_screen}
+            )
+         }
+      }
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; BWT Restart Confirmation Screen
+{new UIScreen tour_band_restart_screen
+   (panels pause_panel dialog_panel helpbar)
+   (focus dialog_panel)
+   (helpbar ('' helpbar_select))
+
+   (enter
+      TOUR_BAND_CONFIRM_DIALOG
+      {dialog_panel set_title
+         {localize_token tour_restart_song}
+      }
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+   )
+
+   (exit
+      {session remove_sink $this remote_player_left_msg}
+   )
+
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (SELECT_MSG
+      {if {== $player_num {pause_panel get player_number}}
+         {switch $component
+            (yes.btn
+               {{tour performer} lose_song}
+               {pause_panel on_restart}
+            )
+            (no.btn
+               {ui goto_screen pause_screen}
+            )
+         }
+      }
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Solo Tour Restart Confirmation Screen
+{new UIScreen solo_tour_restart_screen
+   (panels pause_panel dialog_panel helpbar_dialog)
+   (focus dialog_panel)
+   (helpbar ('' helpbar_select))
+
+   (enter
+   
+		{helpbar_dialog set_config ('' helpbar_select)}
+		{helpbar_dialog set_limit_to_player_num {pause_panel get player_number}}
+		
+      {dialog_panel set_yesno 
+         {localize tour_solo_lose_progress_warning}
+         no.btn
+      }
+      {dialog_panel set_title
+         {localize_token tour_solo_restart_song}
+      }
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+   )
+
+   (exit
+      {session remove_sink $this remote_player_left_msg}
+   )
+
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (SELECT_MSG
+      {if {== $player_num {pause_panel get player_number}}
+         {switch $component
+            (yes.btn
+               {pause_panel on_restart}
+            )
+            (no.btn
+               {ui goto_screen pause_screen}
+            )
+         }
+      }
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; pause panel for controller loss
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+{new UIPanel pause_controller_panel
+   #ifdef HX_XBOX
+   (file pause_controller.milo)
+   #else
+   (file pause_discon_og.milo)
+   #endif
+   PAUSE_SCREEN_HANDLERS
+
+   (enter
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this pause_if_local}
+      {do
+         {$this update_labels}
+         {$this disable {$this find pause_resume.btn}}
+      }
+      {stagekit_pause TRUE} 
+   )
+
+   (exit
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+      {band_ui_sink set_net_sync TRUE}
+      {stagekit_pause FALSE}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (BUTTON_DOWN_MSG
+		{do
+			{if   {&&   {! {game missing_controllers}}
+							{||   {== $button kPad_Start}
+									{== $button kPad_Tri}
+							}
+					}
+					{$this resume}
+         }
+         kDataUnhandled
+      }
+   )
+
+   (SELECT_MSG
+		{switch $component
+			(pause_resume.btn
+				{$this resume}
+			)
+			(pause_quit.btn
+				{ui goto_screen confirm_quit_controllers_screen}
+			)
+		}
+   )
+
+   (JOYPAD_CONNECT_MSG
+		{$this on_joypad_change}
+		{helpbar reset_icons}
+		{helpbar refresh_display}
+   )
+	
+	(on_joypad_change
+	   {if_else {game missing_controllers}
+         {do
+            {$this update_labels}
+            {$this disable {$this find pause_resume.btn}}
+         }
+         ;else
+         {do
+            {$this set_focus {$this find pause_resume.btn}}
+         }
+      }
+	)
+	
+
+   (update_labels
+      {do
+         ($missing_controllers {game missing_controllers})
+         ($who "") ;who's controller(s) are we missing?
+         ($i 0)
+			($total 0)
+         {foreach $j (1 2 4 8 16 32 64 128) ; REA - check up to player 8 for PS2
+            {if {& $j $missing_controllers}
+               ;TODO if the string isn't empty, then add an " And " in there.
+               {set $who 
+                  {if_else {== "" $who}
+                     {set $who {{game get_player_config $i} get player_name}}
+                     {sprintf {localize controller_who} $who 
+                        {{game get_player_config $i} get player_name}
+                     }
+                  }
+               }
+					{++ $total}
+            }
+            {++ $i}
+         }
+			{if {== $total 1} ; REA add possessive for one player
+				{set $who {sprintf {localize controller_possessive} $who}}
+			}
+
+			{{$this find pause_controller_title.lbl} set text_token no_controller}
+         {{$this find pause_controller_msg.lbl} set_localized
+            {sprintf {localize controller_loss_msg} $who}
+         }
+      }
+   )
+	
+   (on_quit
+      {ui goto_screen meta_loading_quit_early_screen}
+   )
+}
+
+
+{new UIScreen pause_controller_screen
+   (panels pause_controller_panel helpbar)
+   (focus pause_controller_panel)
+   (helpbar ('' helpbar_continue))
+   
+   (enter
+		{helpbar set_limit_to_player_num -1}
+		{helpbar set_use_all_controllers TRUE}
+		{helpbar reset_icons}
+		{helpbar set_config ('' helpbar_continue)}
+		
+   )
+   
+   (exit
+		{helpbar set_use_all_controllers FALSE}
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; pause panel for microphone changes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+{new UIPanel pause_mics_panel
+#ifdef HX_XBOX
+   (file pause_mics.milo)
+#else
+   (file pause_discon_og.milo)
+#endif
+   (resync_on_exit TRUE)
+   
+   PAUSE_SCREEN_HANDLERS
+
+   (enter
+      {set [resync_on_exit] TRUE}
+      {$this pause_if_local}
+
+		
+		{{$this find pause_controller_title.lbl} set text_token mics_changed_test}
+		{{$this find pause_controller_msg.lbl} set text_token mics_changed_desc}
+      {$this check_mics}
+      {stagekit_pause TRUE} 
+		
+   )
+
+   (TRANSITION_COMPLETE_MSG
+      {session add_sink $this end_game_msg}
+
+      {if {!= {session state} kNetInGame}
+         {ui pop_screen}   ; game ended while coming here, leave now
+      }
+		
+		; REA clean up focus
+		{$this check_mics}
+   )
+
+   (END_GAME_MSG
+      {ui pop_screen}      ; game ended while sitting here, leave now
+   )
+
+   (exit
+      {session remove_sink $this end_game_msg}
+      {synth reset_mics_changed}
+      {if [resync_on_exit]
+         {band_ui_sink set_net_sync TRUE}
+      }
+      {stagekit_pause FALSE}
+   )
+	
+  (allow_player ($player_num)
+       {game is_player_participating $player_num} 
+   )
+   
+   (check_mics
+      {do ($enable_resume TRUE)
+			($who "")
+         {game foreach_local_player $p
+            {do ($player_num {$p player_num})
+               ; a participating vocalist?
+               {if {&& {!= $player_num -1}
+                       {game is_player_participating $player_num}
+                       {== {{gamecfg get_player_config $player_num} get_track_sym}
+                          vocals}
+                   }
+                  ; check if assigned mic is connected
+                  {do ($mic_num {joypad_get_players_padnum $player_num})
+                     {if {&& {!= $mic_num -1} 
+                             {! {synth is_mic_connected $mic_num}}}
+                        {set $enable_resume FALSE}
+                     }
+                  }
+               }
+					
+            }
+         }
+
+			{$this disable {$this find pause_resume.btn}}
+			{$this disable {$this find pause_quit.btn}}
+         {if_else $enable_resume
+            {do
+               {$this enable {$this find pause_resume.btn}}
+               {$this set_focus {$this find pause_resume.btn}}
+            }
+            ; else
+            {do
+               {$this disable {$this find pause_resume.btn}}
+               {$this set_focus {$this find pause_quit.btn}}
+            }
+         }
+			{$this enable {$this find pause_quit.btn}}
+      }
+   )
+
+   (microphones_changed ($vocalists_mic_changed)
+      {$this check_mics}
+   )
+
+#ifdef HX_XBOX ; REA - second thought lets just not do this
+   (poll
+      {foreach_int $i 0 4
+	     {if {game is_player_participating $i}
+			 {{sprintf "talk%02d.mnm" $i} set_frame
+				{if_else {synth is_mic_user_talking $i} 1 0}
+			 }
+	     }
+      }
+   )
+#endif
+
+   (SELECT_MSG
+      {if {game is_player_participating $player_num}
+         {switch $component
+            (pause_resume.btn
+               {$this resume}
+            )
+            (pause_quit.btn
+               {set [resync_on_exit] FALSE}
+               {ui goto_screen confirm_quit_mics_screen}
+            )
+            kDataUnhandled
+         }
+      }
+   )
+
+   (on_quit
+      {ui goto_screen meta_loading_quit_early_screen}
+   )
+}
+
+{new UIScreen pause_mics_screen
+   (panels pause_mics_panel helpbar_dialog)
+   (focus  pause_mics_panel)
+   (helpbar ('' helpbar_select))
+   
+   (enter
+		{helpbar_dialog set_config  ('' helpbar_select)}
+   )
+}
+
+{new UIScreen confirm_quit_mics_screen
+   ; Reuse the pause_mics_panel rather than getting pushed...
+   (panels pause_mics_panel dialog_panel helpbar_dialog)
+   (focus dialog_panel)
+   (helpbar ('' helpbar_select))
+
+   (enter
+		{helpbar_dialog set_config ('' helpbar_select)}
+      {dialog_panel set_yesno 
+         {localize confirm_quit} ;TODO get string from mode
+         no.btn
+      }
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+   )
+
+   (exit
+      {session remove_sink $this remote_player_left_msg}
+   )
+
+   ; pass on to the panel that cares
+   (microphones_changed ($vocalists_mic_changed)
+      {pause_mics_panel microphones_changed $vocalists_mic_changed}
+   )
+   
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {pause_mics_panel on_quit}
+         )
+         (no.btn
+            {ui goto_screen pause_mics_screen}
+         )
+      }
+   )
+}
+
+{new UIScreen confirm_quit_controllers_screen
+   (panels pause_controller_panel dialog_panel helpbar_dialog)
+   (focus dialog_panel)
+   (helpbar ('' helpbar_select))
+
+   (enter
+		{helpbar_dialog set_limit_to_player_num -1}
+		{helpbar_dialog set_use_all_controllers TRUE}
+		{helpbar_dialog set_config ('' helpbar_select)}
+        {dialog_panel set_yesno 
+         {localize confirm_quit} ;TODO get string from mode
+         no.btn
+      }
+      {$this set_up_buttons}
+      {session add_sink $this remote_player_left_msg}
+   )
+
+   (exit
+		{helpbar_dialog set_use_all_controllers FALSE}
+      {session remove_sink $this remote_player_left_msg}
+   )
+   
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
+
+   QUIT_DIALOG_SET_UP_BUTTONS
+
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {pause_controller_panel on_quit}
+         )
+         (no.btn
+            {ui goto_screen pause_controller_screen}
+         )
+      }
+   )
+	
+   (JOYPAD_CONNECT_MSG
+		{pause_controller_panel on_joypad_change}
+   )
+}

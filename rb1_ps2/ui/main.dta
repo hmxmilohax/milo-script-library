@@ -1,0 +1,1476 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; main menu flare overlay (loaded during splashes and kept in memory)
+
+{new UIPanel fx
+   (file 
+      {if_else {== {rnd aspect} kRegularAspect}
+         "fx_standard_og.milo"
+         "fx_widescreen_og.milo"
+      }
+   )
+
+   (fx_enter
+      {movie_09.mnm animate}
+      {movie_15.mnm animate}
+   )
+   (fx_exit
+      {movie_17.mnm animate}
+      {movie_09.mnm animate}
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; splash screens
+
+{new UIPanel pi_splash_panel
+   (file "startup_pi.milo")
+}
+
+{new UIScreen pi_splash_screen
+   (panels pi_splash_panel)
+   
+   (TRANSITION_COMPLETE_MSG
+      {script_task kTaskUISeconds (delay 2)
+         (script
+            {ui goto_screen ea_splash_screen}
+         )
+      }
+   )
+}
+
+{new UIPanel ea_splash_panel
+   (file "startup_ea.milo")
+}
+
+{new UIScreen ea_splash_screen
+   (panels meta fx ea_splash_panel)
+   
+   (enter
+      {meta music_stop}
+   )
+   
+   (TRANSITION_COMPLETE_MSG
+      {script_task kTaskUISeconds (delay 4)
+         (script
+#ifdef HX_EE
+            {ui goto_screen auto_load_intro_screen}
+#else
+
+#ifdef HX_WII
+            {ui goto_screen auto_load_intro_screen}
+#else
+            {ui goto_screen $first_screen}
+#endif
+
+#endif
+         )
+      }
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; intro cutscene
+{new UIPanel intro_movie_panel
+   #ifdef HX_WII
+      (file "static_meta.milo")
+   #else    ;; PGM -- HX_EE version
+      (file "world/intro_video.milo")
+   #endif  
+   (moviefinished FALSE)
+   (enter
+      {{meta meta_music} stop}
+      
+   #ifdef HX_EE      
+      ; Show the movie in the proper aspect ratio for the screen shape
+      {if_else {== {rnd aspect} kRegularAspect}
+         {do
+            ; 4:3 Mode 
+            {16x9zoom.mesh set_showing FALSE}
+            {4x3std.mesh set_showing FALSE}
+            {16x9.mesh set_showing FALSE}
+            {4x3.mesh set_showing TRUE}
+         }
+         {do
+            ; 16:9 Mode 
+            {16x9zoom.mesh set_showing FALSE}
+            {4x3std.mesh set_showing FALSE}
+            {16x9.mesh set_showing TRUE}
+            {4x3.mesh set_showing FALSE}
+         }
+      }
+         
+      ; Animate the movie
+      {intro_video.mov set movie_file {sprintf "videos/intro"}};
+      {intro_video.mov animate}
+   #endif           
+   )
+   
+   (exit
+      {{meta meta_music} start}
+   )
+   
+   #ifdef HX_EE
+   (poll
+      {if {&& {! $moviefinished} {intro_video.mov is_movie_done} }
+         {do
+            {set $moviefinished TRUE}
+            {ui goto_screen intro_to_splash_screen}
+         }
+      }
+   )
+   #endif
+   
+   (BUTTON_DOWN_MSG
+      {if {&& {|| {== $button kPad_Start}
+              {== $button kPad_X}} {! $moviefinished} }
+           {set $moviefinished TRUE}
+          {ui goto_screen intro_to_splash_screen}
+      }
+   )
+}
+
+{new UIScreen intro_movie_screen
+   (panels meta fx intro_movie_panel)
+   (focus intro_movie_panel)
+}
+
+; exists just so we unload streaming movie before loading movie_panel
+{new UIScreen intro_to_splash_screen
+   (panels meta fx)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen splash_screen}   
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; movie panel background
+
+#ifdef HX_WII
+{new UIPanel movie_panel
+   (file "static_meta.milo")
+}
+#else          ; PGM - HX_EE version
+{new UIPanel movie_panel
+   (file video_main_menu.milo)
+   (enter
+      {video_file.mov animate}
+   )
+}
+#endif
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; splash screen
+
+#define ATTRACT_TIMEOUT
+(
+   (enter_time 0.0)
+   (attract_timeout_done FALSE)
+
+   (enter
+      {set [enter_time] {taskmgr ui_seconds}}
+      {set [attract_timeout_done] FALSE}
+   )
+
+   (poll
+      {if
+         {&&
+            {! [attract_timeout_done]}
+            {>
+               {- {taskmgr ui_seconds} [enter_time]}
+               [attract_mode_timeout]
+            }
+         }
+         ; then
+         ; DMS - don't allow attract screen if we have a pop up screen on top
+         {if_else
+         	{==
+         		{ui current_screen} 'splash_screen'
+         	}
+         ; then
+         	{ do
+         		{set [attract_timeout_done] TRUE} 
+         		{ui goto_screen [attract_goto_screen]}
+         	}
+         ; else
+         	{ do
+         		{set [enter_time] {taskmgr ui_seconds}}
+      			{set [attract_timeout_done] FALSE}
+         	}	
+         }
+         
+      }
+   )
+)
+
+; first interactive screen, waits for ContentMgr to be fully loaded
+{new UIPanel splash_panel
+   (file "splash.milo")
+   (focus start.btn)
+   (player_num -1)
+   (last_player_num -1) ;the main menu will use this....
+   
+   (is_loaded
+      {content_mgr refresh_done}
+   )
+
+   ;; constants
+   (attract_mode_timeout {elem {find $syscfg attract time_to_enter} 1})
+   (attract_goto_screen splash_to_attract_screen)
+
+   ATTRACT_TIMEOUT
+
+   (BUTTON_DOWN_MSG
+      ; start and X can advance
+      {if_else {== $button kPad_Start}
+         {$this button_down kPad_X $player_num}
+         kDataUnhandled
+      }
+   )
+   
+   (SELECT_START_MSG
+      {set [attract_timeout_done] TRUE}
+      {set [last_player_num] $player_num}
+      {ui goto_screen main_screen}
+      kDataUnhandled
+   )
+}
+
+{new UIScreen splash_screen
+   (panels meta movie_panel splash_panel fx)
+   (focus splash_panel)
+   
+   (enter
+      {if {attract_screen is_loaded}
+         {attract_screen unload}
+      }
+      {if {attract_movie_panel is_loaded}
+         {attract_movie_panel unload}
+      }
+   )
+}
+
+;; shows a notification when the unlock all cheat is activated
+{new UIScreen unlock_all_screen
+   (panels dialog_panel helpbar)
+   (focus dialog_panel) 
+   (player_num -1)
+   (helpbar ('' helpbar_continue))
+   (enter
+      {dialog_panel set_ok {localize_token unlock_all_msg}}
+   )
+   (SELECT_MSG
+      {ui pop_screen}
+   )
+}
+
+
+#define COMMON_FIRST_TIME_STUFF
+(
+   ;check if we need to show "first time" screen(s)
+   {if {! {ui in_transition}}
+      {do 
+         ($dest_screen {get_intro_screen})
+         {if_else {!= '' $dest_screen}
+            {if_else {== main_screen {ui current_screen}}
+               {ui push_screen $dest_screen}
+               {ui goto_screen $dest_screen}
+            }
+            ; else
+            {if {find_elem (  auto_load_screen
+                                    first_time_screen 
+                                    first_time_vocals_screen 
+                                    first_time_guitar_screen 
+                                    first_time_drum_screen) {ui current_screen}}
+               {ui pop_screen}
+            }
+         }
+      }
+   }
+)
+
+;;this function chooses the next intro screen to show
+{func get_intro_screen
+   {do
+      ($result '')
+      {if_else {!{main_panel is_up}}
+         ''
+         ;else - main panel IS up
+         {do
+            ($controllers (drum guitar vocals))
+            ($screens ( first_time_drum_screen 
+                        first_time_guitar_screen 
+                        first_time_vocals_screen))
+
+            ;consider each of the controller navigation screens...
+            {foreach_int $i 0 3
+               {if {&& 
+                     {==   {gamecfg get_instrument_from_controller {splash_panel get last_player_num}}
+                           {elem $controllers $i}
+                     }
+                     {!{{elem $screens $i} get considered}} ; in case noone signed in
+                     {profile_mgr first_timer {elem $controllers $i}}
+                   }
+                  {set $result {elem $screens $i}}
+               }
+               ;regardless of result above, show that we've considered it
+               {{elem $screens $i} set considered TRUE}
+
+               {if {!= $result ''}
+                  {set $i 3} ; break out of loop
+               }
+            }
+
+            ;if we haven't found a screen to show, consider the generic one
+            {if {== $result ''} 
+               {if {&& 
+                     {! {first_time_screen get considered}}
+                     {profile_mgr first_timer}
+                   }
+                  {set $result first_time_screen}
+               }
+               {first_time_screen set considered TRUE}
+            }
+         }
+      }
+      $result ; the name of a screen or ''
+   }
+}
+
+#define FIRST_TIME_SCREEN_HANDLERS
+(
+   ;An attribute to track if the screen has been considered yet this execution.
+   ;We only want to look at each screen once at startup.
+   (considered FALSE) 
+
+
+   (exit
+      ; Note that each screen has a different enter, that's where the sink is added
+      {platform_mgr remove_sink $this signin_changed}
+   )
+   
+   ; If someone signs in or out, we get rid of the first time screens
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen}
+   )   
+
+   (SELECT_MSG
+      COMMON_FIRST_TIME_STUFF
+   )
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; How-to screen for drum
+{new UIPanel first_time_drum_panel
+#ifdef HX_EE
+   (file "first_time_drum_ps2.milo")
+#else
+   (file "first_time_drum.milo")
+#endif
+   (focus ok.btn)
+}
+
+{new UIScreen first_time_drum_screen
+   (panels first_time_drum_panel helpbar)
+   (focus first_time_drum_panel)
+   (helpbar ('' helpbar_continue))
+   
+   FIRST_TIME_SCREEN_HANDLERS
+
+   (enter
+      {profile_mgr set_not_first_timers drum}
+      {platform_mgr add_sink $this signin_changed}
+   )   
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; How-to screen for guitar
+{new UIPanel first_time_guitar_panel
+#ifdef HX_EE
+   (file "first_time_guitar_ps2.milo")
+#else
+   (file "first_time_guitar.milo")
+#endif
+   (focus ok.btn)
+}
+
+{new UIScreen first_time_guitar_screen
+   (panels first_time_guitar_panel helpbar)
+   (focus first_time_guitar_panel)
+   (helpbar ('' helpbar_continue))
+
+   FIRST_TIME_SCREEN_HANDLERS
+
+   (enter
+      {profile_mgr set_not_first_timers guitar}
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; How-to screen for vocals
+{new UIPanel first_time_vocals_panel
+#ifdef HX_EE
+   (file "first_time_vocals_ps2.milo")
+#else
+   (file "first_time_vocals.milo")
+#endif
+   (focus ok.btn)
+}
+
+{new UIScreen first_time_vocals_screen
+   (panels first_time_vocals_panel helpbar)
+   (focus first_time_vocals_panel)
+   (helpbar ('' helpbar_continue))
+   
+   FIRST_TIME_SCREEN_HANDLERS
+
+   (enter
+      {profile_mgr set_not_first_timers vocals}
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; this is the calibration notification screen
+{new UIScreen first_time_screen
+   (panels dialog_panel helpbar)
+   (focus dialog_panel)
+   (helpbar ('' helpbar_continue))
+
+   
+   FIRST_TIME_SCREEN_HANDLERS
+
+   (enter
+      {dialog_panel set_ok {localize_token calibration_notice}}
+      {profile_mgr set_not_first_timers}
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; NOTE: All screens that use main_panel as a panel need this!
+;;
+#define MAIN_SCREEN_TRANSITION_HANDLER
+(
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+	  kDataUnhandled
+   )
+)
+
+{new UIPanel main_panel
+#ifndef HX_XBOX   ; BMB changing for old gen
+   (file "main_og.milo") 
+#else
+   (file "main.milo")
+#endif
+   (mode_focus solo.btn)
+   (msg_last_frame 0)
+   (finished_loading FALSE)
+
+   (enter
+      {$this set_focus [mode_focus]}
+
+      {session add_sink $this signin_changed}
+      {profile_mgr add_sink $this profile_activated_msg}
+
+      ;for first-time screens
+      {memcardmgr add_sink $this save_load_all_complete_msg}
+
+      ;; clean up any previous game state
+
+      ; note that clearing the session removes
+      ; all players, thus resetting their data
+      {session clear}
+
+      ; clear out any lingering band or character
+      {tour clear_performer}
+
+      {gamemode set_mode init}
+
+      {set [msg_last_frame] 0}
+
+      {game reset_config}
+		
+		; REA - reset some session vars
+		{band_ui_sink set post_matchmaking FALSE}
+		{synth release_mics} ; REA - clear all assigned mics when we enter
+		{ui hide_error_dialog} ; REA - hide the error dialog if its up, since nothing it says is valid if we are on this panel
+		{game set leader_num -1} ; clear leader
+   )
+
+   (TRANSITION_COMPLETE_MSG
+		{band_ui_sink set post_matchmaking FALSE}
+      {if {options_panel get options_dirty}
+         {options_panel set options_dirty FALSE}
+         {autosave}
+      }
+   )
+
+   (exit
+      {session remove_sink $this signin_changed}
+      {profile_mgr remove_sink $this profile_activated_msg}
+	   #ifndef HX_XBOX ;HOJ if we are leaving from the main_screen (back Button) flames!
+		{if {== {ui current_screen} 'main_screen'}
+			{fx fx_exit}
+		}
+	  #endif
+   )
+
+#ifdef HX_EE
+   (poll
+;; DMS : Commented out to correctly precache
+;;#ifdef HX_XBOX  ; DMS TODO: when the memory card stuff is working, we can go back to this....
+;;      {if   {&&
+;;               [finished_loading]
+;;               {== {ui current_screen} main_screen}
+;;            }
+;;#else
+      {if {== {ui current_screen} main_screen}
+;;#endif
+         COMMON_FIRST_TIME_STUFF
+         {set [finished_loading] FALSE}
+      }
+   ) 
+#endif
+
+#ifdef HX_PC
+   (poll
+      {if   {&&
+               [finished_loading]
+               {== {ui current_screen} main_screen}
+            }
+            
+         COMMON_FIRST_TIME_STUFF
+         {set [finished_loading] FALSE}
+      }
+   ) 
+#endif
+  
+
+   (signin_changed
+      {$this attempt_to_autoload}
+   )
+
+   (profile_activated_msg
+      {$this attempt_to_autoload}
+   )
+
+; BMB: Disabling because we shouldn't be saving or loading on the main menu anymore
+   (attempt_to_autoload
+;	
+;      {if
+;         {&&
+;            {! {band_ui_sink is_forced_transition_active}}
+;            {{ui current_screen} has_panel main_panel}
+;         }
+;         {autoload_deferred_save}
+;      }
+   )
+
+   (save_load_all_complete_msg
+      {memcardmgr remove_sink $this save_load_all_complete_msg} ;we only want to hear once
+      {set [finished_loading] TRUE}
+      kDataUnhandled
+   )
+
+   (BUTTON_DOWN_MSG
+      ; for now, just catch input if we're loading our content
+      {if_else {content_mgr refresh_done}
+         kDataUnhandled
+         TRUE
+      }
+   )
+   
+   (FOCUS_MSG
+      ; save stored focus if we're changing focus
+      {if $new_focus
+         {set [mode_focus] {$new_focus name}}
+      }
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (solo.btn
+            {ui goto_screen main_solomode_screen}
+         )
+         (multi.btn
+            {ui goto_screen main_multimode_screen}
+         )
+         (tutorial.btn
+            {synth reset_mics_changed}
+			{ui goto_screen training_menu_screen}
+         )
+         (options.btn
+            {ui goto_screen options_screen}
+         )
+         (community.btn
+			{ui goto_screen community_specialfeatures_screen};{ui goto_screen main_community_screen}
+         )
+
+      }
+      kDataUnhandled
+   )
+}
+
+{new UIPanel main_lower3rd_panel
+   (file "pat_rock_3_og.milo")
+}
+
+{new UIScreen main_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel fx)
+   (focus main_panel)
+   (back splash_screen)
+   (access_all
+      {$this enable {main_panel find solo.btn}}
+      {$this enable {main_panel find multi.btn}}
+      {$this enable {main_panel find tutorial.btn}}
+   )
+ 
+   MAIN_SCREEN_TRANSITION_HANDLER
+	(enter
+		{if {== {ui previous_screen} splash_screen}
+				{fx fx_enter}
+		}
+		{helpbar set_limit_to_player_num -1} 
+	)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; solo mode select helper popups
+{new UIScreen main_solo_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+
+   (enter
+      {dialog_panel set_custom
+         {localize_token main_solo_tour_need_to_signin}
+         {localize main_solo_tour_signin_button}
+         {localize main_solo_tour_cancel_button}
+         opt1.btn
+      }
+      
+      {platform_mgr add_sink $this signin_changed}
+   )
+
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (opt1.btn
+            {platform_mgr signin 1}
+         )
+         (opt2.btn
+            {ui pop_screen}
+         )
+      }
+   )
+
+   (signin_changed
+      {ui pop_screen}
+   )
+}
+
+{new UIScreen main_solo_qp_signin_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+
+   (enter
+      {dialog_panel set_custom
+         {localize_token main_solo_qp_signin_not_guest}
+         {localize main_solo_tour_signin_button}
+         {localize main_solo_tour_cancel_button}
+         opt1.btn
+      }
+      
+      {platform_mgr add_sink $this signin_changed}
+   )
+
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (opt1.btn
+            {platform_mgr signin 1}
+         )
+         (opt2.btn
+            {ui pop_screen}
+         )
+      }
+   )
+
+   (signin_changed
+      {ui pop_screen}
+   )
+}
+
+{new UIScreen main_solo_signin_not_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+
+   (enter
+      {dialog_panel set_custom
+         {localize_token main_solo_tour_signin_not_guest}
+         {localize main_solo_tour_signin_button}
+         {localize main_solo_tour_cancel_button}
+         opt1.btn
+      }
+      
+      {platform_mgr add_sink $this signin_changed}
+   )
+
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (opt1.btn
+            {platform_mgr signin 1}
+         )
+         (opt2.btn
+            {ui pop_screen}
+         )
+      }
+   )
+
+   (signin_changed
+      {ui pop_screen}
+   )
+}
+
+; solo mode select
+{new SessionPanel main_solomode_panel
+	#ifdef HX_XBOX
+   		(file "main_solomode.milo")
+   	#else
+   		(file "main_solomode_og.milo")
+   	#endif
+   (focus quickplay.btn)
+
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus solo.btn}
+   )
+
+   (enter
+      {session clear}
+      {song_mgr set mPlayer FALSE}
+   )
+
+   (exit
+      {synth reset_mics_changed}
+   )
+
+   (SELECT_START_MSG
+      {if_else {gamecfg is_missing_mic $player_num FALSE}
+         ; then
+         {do
+            {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+            {ui push_screen vocalist_must_have_mic_screen}
+         }
+         ; else
+         {do
+			
+            {switch $component
+               (quickplay.btn
+#ifndef HX_XBOX
+                  {band_ui_sink set post_matchmaking TRUE} ; REA - set monitoring here to catch transition bugs
+                  {gamemode set_mode qp_solo $player_num}
+                  {$this wait_for_session_ready}
+                  {game set leader_num $player_num}
+				  {session_mgr add_local_player
+                     $player_num
+                     {gamecfg
+                        get_controller_type_from_controller
+                        $player_num
+                     }
+                  }
+#else
+                  {cond
+                     (;; Guest by him/herself not allowed
+                        {&&
+                           {platform_mgr is_player_signed_in $player_num}
+                           {platform_mgr is_player_a_guest $player_num}
+                        }
+                        ; then
+                        {main_solo_qp_signin_guest_screen set player_num
+                           $player_num
+                        }
+                        {ui push_screen main_solo_qp_signin_guest_screen}
+                     )
+                     ; default
+                     (TRUE
+                        {gamemode set_mode qp_solo $player_num}
+                        {$this wait_for_session_ready}
+                        {session_mgr add_local_player
+                           $player_num
+                           {gamecfg
+                              get_controller_type_from_controller
+                              $player_num
+                           }
+                        }
+                     )
+                  }
+#endif
+               )
+      		 #ifdef HX_XBOX
+               (tour.btn
+                  {cond
+                     ;; if not signed in
+                     ({! {platform_mgr is_player_signed_in $player_num}}
+                        {main_solo_signin_screen set player_num $player_num}
+                        {ui push_screen main_solo_signin_screen}
+                     )
+                     ;; if guest
+                     (
+                        {&&
+                           {platform_mgr is_player_signed_in $player_num}
+                           {platform_mgr is_player_a_guest $player_num}
+                        }
+                        ; then
+                        {main_solo_signin_not_guest_screen set player_num
+                           $player_num
+                        }
+                        {ui push_screen main_solo_signin_not_guest_screen}
+                     )
+                     ; default
+                     (TRUE
+                        {gamemode set_mode tour_solo $player_num}
+                        {$this wait_for_session_ready}
+                        {session_mgr add_local_player
+                           $player_num
+                           {gamecfg
+                              get_controller_type_from_controller
+                              $player_num
+                           }
+                        }
+                     )
+                  }
+               )
+            #else
+      		 (tour.btn
+               {band_ui_sink set post_matchmaking TRUE} ; REA - set monitoring here to catch transition bugs
+      			{gamemode set_mode tour_solo $player_num}
+      			{$this wait_for_session_ready}
+      			{game set leader_num $player_num}
+				{session_mgr add_local_player
+      				$player_num
+      				{gamecfg
+      					get_controller_type_from_controller
+      					$player_num
+      				}
+      			}
+             )
+      		#endif
+            }
+         }
+      }
+   )
+
+   (session_ready
+      {gamecfg auto_assign_missing_slots}
+      {do ($player_num {gamemode get player_num})
+		{helpbar set_limit_to_player_num $player_num}
+         {if_else {gamemode get auto_choose_char}
+            ; solo quickplay
+            {do
+               {set_char_from_controller $player_num}
+               {ui goto_screen qp_selsong_screen FALSE}
+            }
+            ; solo tour
+            {ui goto_screen {gamemode get matchmaking_screen} FALSE}
+         }
+      }
+   )
+}
+
+{new UIScreen main_solomode_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_solomode_panel fx)
+   (focus main_solomode_panel)
+   (back main_screen)
+ 
+   #ifndef HX_XBOX
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+	  
+		{set $last {ui previous_screen}}
+		
+		
+	  kDataUnhandled
+   )
+   #else
+		MAIN_SCREEN_TRANSITION_HANDLER
+   #endif
+}
+
+; multi mode select
+{new SessionPanel main_multimode_panel
+	#ifdef HX_XBOX
+   		(file "main_multimode.milo")
+   	#else
+   		(file "main_multimode_og.milo")
+   	#endif
+   ;MTC - replaced this code as it forces us to multi qp when backing in
+   ;(mode_focus bandqp_btn)
+   (focus bandqp.btn)
+
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus multi.btn}
+   )
+   
+   (enter
+      ;MTC removed this and added the clear message to allow us to remember what mode we chose last
+      ;{$this set_focus [focus]}  
+       {session clear} 
+   )
+
+   (SELECT_START_MSG
+	 
+      {switch $component
+         (bandtour.btn
+			   {band_ui_sink set post_matchmaking TRUE} ; REA - set monitoring here to catch transition bugs
+            {song_mgr set mPlayer TRUE}
+			   ;{gamemode set_mode tour_world_local $player_num}
+			   {$this wait_for_session_ready}
+			   {gamemode set_mode tour_band $player_num}
+		      {game set leader_num $player_num}
+		      {session_mgr add_local_player
+              $player_num
+              {gamecfg
+                  get_controller_type_from_controller
+                  $player_num
+              }
+            }
+         )
+         (headtohead.btn
+			   {gamemode set_mode qp_hth_local_split} ; REA addition
+            {set $dest_screen {gamemode get matchmaking_screen}}
+		; REA
+            {ui goto_screen $dest_screen}
+         )
+         (headtohead_pro.btn
+			{gamemode set_mode qp_hth_local} ; REA addition
+			{set $dest_screen {gamemode get matchmaking_screen}}
+            ;{set $dest_screen qp_hth_seldiff_ranked_screen}
+            {ui goto_screen $dest_screen}
+         )
+         (bandqp.btn
+			{gamemode set_mode qp_coop_local}
+            {ui goto_screen {gamemode get matchmaking_screen}}
+         )
+      kDataUnhandled
+      }
+   )
+	
+	(session_ready
+      {gamecfg auto_assign_missing_slots}
+      {do ($player_num {gamemode get player_num})
+		   {helpbar set_limit_to_player_num $player_num}
+      }
+		{ui goto_screen tour_band_char_screen}
+   )
+}
+
+{new UIScreen main_multimode_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_multimode_panel  fx)
+   (focus main_multimode_panel)
+   (back main_screen)
+  
+    #ifndef HX_XBOX
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+	  
+		{set $last {ui previous_screen}}
+	
+		
+	  kDataUnhandled
+   )
+   #else
+		MAIN_SCREEN_TRANSITION_HANDLER
+   #endif
+}
+
+; head to head options panels
+#define MAIN_HTH_PANEL_HANDLERS
+(
+	#ifdef HX_XBOX
+   		(file "main_hth.milo")
+   	#else
+   		(file "main_hth_og.milo")
+   	#endif
+   (focus local.btn)
+
+   (enter
+      {if {profile_mgr get_all_unlocked}
+         {$this set_focus local.btn}
+         {unranked.btn set_state kDisabled} ;never gets re-enabled
+#ifndef HX_PS3
+         {ranked.btn set_state kDisabled} ;never gets re-enabled
+#endif
+      }
+   )
+      
+   (SELECT_START_MSG
+      {do ($dest_screen 
+            {if_else {gamemode get ranked}
+               ; in ranked TOW and (un)ranked SD, go to diff select screen
+               {gamemode get main_mode_screen}
+               {gamemode get matchmaking_screen}   
+            }
+          )
+
+         {if_else {! {gamemode get local_network}}
+            {ui goto_screen $dest_screen TRUE}
+            {ui goto_screen $dest_screen}
+         }
+
+      }
+      kDataUnhandled
+   )   
+)
+
+; for selecting hth split/alternating modes
+{new UIPanel main_hth_split_panel
+   MAIN_HTH_PANEL_HANDLERS
+   (mode_focus local.btn)
+
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus headtohead.btn}
+   )
+}
+
+#ifndef HX_XBOX		; PGM
+{new UIScreen main_hth_split_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_split_panel fx)
+   (focus main_hth_split_panel)
+   (back main_multimode_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   
+   (SELECT_START_MSG
+      {gamemode set_mode
+         {switch $component
+            (local.btn qp_hth_local_split)
+            (unranked.btn qp_hth_unranked_split)
+            (ranked.btn qp_hth_ranked_split)
+         }
+         $player_num
+      }
+      kDataUnhandled
+   )
+}
+#else
+{new UIScreen main_hth_split_screen
+   (panels meta movie_panel main_panel main_hth_split_panel fx)
+   (focus main_hth_split_panel)
+   (back main_multimode_screen)
+   
+   (SELECT_START_MSG
+      {gamemode set_mode
+         {switch $component
+            (local.btn qp_hth_local_split)
+            (unranked.btn qp_hth_unranked_split)
+            (ranked.btn qp_hth_ranked_split)
+         }
+         $player_num
+      }
+      kDataUnhandled
+   )
+}
+#endif
+
+; for selecting hth "pro" modes
+{new UIPanel main_hth_panel
+   MAIN_HTH_PANEL_HANDLERS
+   (mode_focus local.btn)
+
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus headtohead_pro.btn}
+   )
+}
+
+{new UIScreen main_hth_pro_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_panel fx)
+   (focus main_hth_panel)
+   (back main_multimode_screen)
+   
+   MAIN_SCREEN_TRANSITION_HANDLER
+   
+   (SELECT_START_MSG
+      {gamemode set_mode
+         {switch $component
+            (local.btn qp_hth_local)
+            (unranked.btn qp_hth_unranked)
+            (ranked.btn qp_hth_ranked)
+         }
+         $player_num
+      }
+      kDataUnhandled
+   )
+}
+
+; for selecting difficulty in ranked TOW, unranked SD, and ranked SD
+{new UIPanel main_hth_seldiff_panel
+   (file "main_hth_seldiff.milo")
+   ; need this crazy property because we don't have a session/PlayerConfig yet
+   (difficulty 
+      {elem (DIFF_SYMBOLS) {elem {find $syscfg tour solo default_difficulty} 1}}
+   )
+      
+   (enter
+      {$this set_focus
+         {sprint [difficulty] ".btn"}
+      }
+   )
+
+   (SELECT_START_MSG
+      {set [difficulty] {basename {$component name}}}
+      {ui goto_screen {gamemode get matchmaking_screen}}
+   )
+}
+
+{new UIScreen main_hth_split_ranked_seldiff_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel)
+   (focus main_hth_seldiff_panel)   
+   (back main_hth_split_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+      
+   (SELECT_START_MSG
+      ; set mode again here, in case we backed out
+      {gamemode set_mode qp_hth_ranked_split $player_num}
+      kDataUnhandled   
+   )
+}
+
+{new UIScreen main_hth_unsplit_ranked_seldiff_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel)
+   (focus main_hth_seldiff_panel)
+   (back main_hth_pro_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   
+   (SELECT_START_MSG
+      ; set mode again here, in case we backed out
+      {gamemode set_mode qp_hth_ranked $player_num}
+      kDataUnhandled   
+   )
+}
+
+
+; band coop options panel
+{new UIPanel main_bandcoop_panel
+   (file "main_bandcoop.milo")
+   (focus local.btn)
+
+   (enter
+      {if {profile_mgr get_all_unlocked}
+         {if {== kFocused {online.btn get_state}}
+            {$this set_focus local.btn}
+         }
+         {online.btn set_state kDisabled} ;never gets re-enabled
+      }
+   )
+
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus bandqp.btn}
+   )
+
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch $component
+            (local.btn
+               qp_coop_local
+            )
+            (online.btn
+               qp_coop_online
+            )
+         }
+         $player_num
+      }
+
+      ;{if_else {! {gamemode get local_network}}
+       ;  {goto_after_server_connect {gamemode get matchmaking_screen}}
+         {ui goto_screen {gamemode get matchmaking_screen}}
+      
+      kDataUnhandled
+   )
+}
+
+{new UIScreen main_bandcoop_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_bandcoop_panel fx)
+   (focus main_bandcoop_panel)
+   (back main_multimode_screen)
+   
+   #ifndef HX_XBOX
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+	  
+		
+		
+	  kDataUnhandled
+   )
+   #else
+		MAIN_SCREEN_TRANSITION_HANDLER
+   #endif
+}
+
+; world tour options panel
+{new UIPanel main_worldtour_panel
+	#ifdef HX_XBOX
+   		(file "main_worldtour.milo")
+   	#else
+   		(file "main_worldtour_og.milo")
+   	#endif
+   (focus local.btn)
+      
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus bandtour.btn}
+   )
+
+   (SELECT_START_MSG
+      {gamemode set_mode
+         {switch $component
+            (local.btn tour_world_local)
+            (online.btn tour_world_online)
+         }
+         $player_num
+      }
+
+   ;   {if_else {! {gamemode get local_network}}
+   ;      {goto_after_server_connect tour_band_sel_screen}
+         {ui goto_screen tour_band_sel_screen}
+
+      kDataUnhandled
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; credits
+
+{new CreditsPanel credits_panel
+   (file "credits.milo")
+   
+    (BUTTON_DOWN_MSG
+		{if {== $button kPad_Tri}
+        	{ui goto_screen credits_to_community_specialfeatures_screen}
+		}   
+	
+   )
+   (poll 
+      {if {!{credits.lst is_scrolling}}
+         {if {! {ui in_transition}}
+            {handle (ui credits_done)}
+         }
+      }
+   )
+   
+}
+
+{new UIScreen credits_screen
+   (panels meta credits_panel helpbar) ; keep meta panel
+   (focus credits_panel)
+   (back community_specialfeatures_screen) 
+   (scroll_sfx FALSE) ; don't play scroll sfx in this screen
+   (helpbar (Exit))
+   (enter
+		{helpbar set_config (Exit)}
+      {{meta meta_music} stop}
+   )
+   
+   (credits_done
+       {ui goto_screen community_specialfeatures_screen}
+   )
+   
+   (exit 
+		{{meta meta_music} start}
+   )
+}
+
+{new UIScreen pi_to_credits_screen
+	(panels meta_loading)
+	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen credits_screen}
+	)
+
+}
+
+{new UIScreen credits_to_community_specialfeatures_screen
+	(panels meta_loading)
+	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen community_specialfeatures_screen}
+	)
+
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; attract mode (just play movies until someone hits a button)
+
+{new UIPanel attract_movie_panel
+   (file "world/transition_video.milo")
+   (moviefinished FALSE)
+   (enter
+      #ifdef HX_EE
+         {set $moviefinished FALSE}
+         {set $rand_idx {random_int 0 4}}
+         {switch $rand_idx
+            (0
+               {video_file.mov set movie_file {sprintf "videos/entersandman_attract"}};
+            )
+            (1
+               {video_file.mov set movie_file {sprintf "videos/gowiththeflow_attract"}};
+            )
+            (2
+               {video_file.mov set movie_file {sprintf "videos/learntofly_attract"}};
+            )
+            (3
+               {video_file.mov set movie_file {sprintf "videos/tomsawyer_attract"}};
+            )
+            (4
+               {video_file.mov set movie_file {sprintf "videos/wanteddead_attract"}};
+            )
+            
+         }
+         {video_file.mov animate}
+      #endif
+   )
+   
+   #ifdef HX_EE
+      (poll
+         {if {&& {! $moviefinished} {video_file.mov is_movie_done} }
+            {do
+               {set $moviefinished TRUE}
+               {ui goto_screen attract_to_splash_screen}
+             }
+         }
+      )
+   #endif
+
+   (BUTTON_DOWN_MSG
+      {if {&& {|| {== $button kPad_Start} {== $button kPad_X}} {! $moviefinished} }
+         {do
+            {set $moviefinished TRUE}
+            {ui goto_screen attract_to_splash_screen}
+          }
+      }
+   )
+}
+
+
+{new UIPanel attract_overlay_panel
+	(file "attract_overlay.milo")
+	
+	(enter
+		{if_else {== {rnd aspect} kWidescreenAspect}
+			{do
+				{widescreen_left.tnm set_frame 1}
+				{widescreen_right.tnm set_frame 1}
+			}
+			{do
+				{widescreen_left.tnm set_frame 0}
+				{widescreen_right.tnm set_frame 0}
+			}
+		}
+	)
+}
+
+;HWR - load the new meta music on the entrance to the attract menu.
+;      That way it's loaded and ready to go when the user hits a button.
+{new UIScreen attract_screen
+   (panels meta attract_movie_panel attract_overlay_panel fx)
+   (focus attract_movie_panel)
+   
+   (enter
+		{{meta meta_music} stop}
+	)
+	(exit
+		{{meta meta_music} start}
+	)
+	
+}
+
+; exists just so we unload streaming movie before loading attract movie
+;HWR - Omit the meta panel, to force a change of meta music later
+{new UIScreen splash_to_attract_screen
+   (panels meta_loading fx)
+   (TRANSITION_COMPLETE_MSG
+   
+		{if {splash_panel is_loaded}
+			{splash_panel unload}
+		}
+		
+		{if {splash_screen is_loaded}
+			{splash_screen unload}
+		}
+		
+      {ui goto_screen attract_screen}  
+	   ;{ui goto_screen intro_movie_screen}
+   )
+}
+
+; for leaving attract mode
+{new UIScreen attract_to_splash_screen
+   (panels meta fx)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen splash_screen}   
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; vocalist needs mic screen
+{new UIScreen vocalist_must_have_mic_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+
+   (message band_vocalist_needs_mic)
+
+   (enter
+	{helpbar set_limit_to_player_num -1}
+      ; use a custom here so we don't get the Continue button of set_ok
+      {dialog_panel set_custom
+         {localize_token [message]}
+         ""                         ; opt1.btn
+         {localize_token RETURN}    ; opt2.btn
+         opt2.btn                   ; focus
+      }
+      ; now we need to disable opt1.btn
+      {dialog_panel disable {dialog_panel find opt1.btn}}
+
+      {platform_mgr add_sink $this signin_changed}
+   )
+
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+
+      ; don't forget to reenable opt1.btn
+      {dialog_panel enable {dialog_panel find opt1.btn}}
+   )
+
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen}
+   )   
+
+   (SELECT_MSG
+      {ui pop_screen}
+   )
+}
+

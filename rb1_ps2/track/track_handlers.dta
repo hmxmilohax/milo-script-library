@@ -1,0 +1,622 @@
+#ifndef TRACK_HANDLERS_DTA
+
+#define TRACK_HANDLERS_DTA (1)
+#include ../ui/global.dta
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; COMMON TRACK HANDLERS
+; Bass, drum and guitar tracks are gem tracks and inherit properties and handlers 
+; from COMMON_GEM_TRACK_HANDLERS. gem tracks and the vocal track both inherit
+; from COMMON_TRACK_HANDLERS. Each instrument track is defined in its own file.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#define COMMON_TRACK_EDITOR
+(
+   ; display the associated star_power_meter.. read only because you can't change it in milo
+   (instrument symbol (list (none bass drum guitar vocals)))
+   (player_intro object (class RndDir))
+   (star_power_meter object (class RndDir))
+   (streak_meter object (class RndDir))
+   (popup_object object (class RndDir))
+   (player_feedback object (class RndDir))
+   (failed_feedback object (class RndDir))
+   
+   (disable_player script
+      (script
+         {$this disable_player 1}
+      )
+   )
+   
+   (save_player script
+      (script
+         {$this save_player}
+         {script_task kTaskSeconds (delay 1.5) (script {$this enable_player})}
+      )
+   )
+)
+
+#define COMMON_TRACK_HANDLERS
+(
+   ; reference to the c++ track
+   (parent "")
+   
+   ; refernce to the player playing on this track
+   (player "")
+   
+   ; the instrument we represent
+   (instrument none proxy_save)
+   
+   ; the player intro that goes with this track
+   (player_intro "")
+   
+   ; the star power meter that goes with this track
+   (star_power_meter "")
+   
+   ; the streak meter that goes with this track
+   (streak_meter "")
+   
+   ; the popup help object that goes with this track
+   (popup_object "")
+   
+   ; player feedback object
+   (player_feedback "")
+   
+   ; failed message
+   (failed_feedback "")
+   
+   ; failed state of the player
+   (disabled FALSE)
+   
+   (simulated_net FALSE proxy_save)
+   
+   ; JMB - enable track fading
+   (track_fading TRUE)
+   
+   ; JMB - rect sizes for track fading
+   (fade1rect1 (256 64))
+   (fade2rect1 (256 64))
+   (fade1rect2 (192 32))
+   (fade2rect2 (192 48))
+   (fade1rect3 (128 32))
+   (fade2rect3 (128 32))
+   
+   ;JMB - mesh size for track fading. Should match the width of the background_video.mesh in ui/world/video_world.milo
+   (fade_mesh_width 848.)
+   
+   ; initialization to hook up parent and player
+   (init ($in_parent)
+      {set [parent] $in_parent}
+      {set [player] {[parent] player}}
+      
+      ; call the reset function
+      {$this reset}
+   )
+   
+   ; reset function which can apply to all tracks
+   (reset
+      ; JMB - make sure to reset the warning animations if the player is restarting from a failure state
+      {if {exists game}
+	      {if_else {== [instrument] vocals}
+	         {do
+	            {vocal_warning.mnm stop_animation}
+	            {vocal_warning.mnm set_frame 0.0}
+	         }
+	         {do
+	            {warning_track_emissive.anim stop_animation}
+	            {warning_track_emissive.anim set_frame 0.0}
+	         }
+	      }
+	      
+	      {do ($crowd_meter {$this get_crowd_meter})
+	         {if $crowd_meter
+	            {do ($crowd_meter_icon {$crowd_meter find [instrument]})
+	               {if ($crowd_meter_icon)
+	                  {do ($icon_state_anim {$crowd_meter_icon find icon_state.anim})
+	                     {if ($icon_state_anim)
+	                        {$icon_state_anim stop_animation}
+	                        {$icon_state_anim set_frame 0.0}
+	                     }
+	                  }
+	               }
+	            }
+	         }
+	      }
+	      
+	      {$this set_track_fade [track_fading]}
+      }
+            
+      ; reset the star power meter
+      {if {!= [star_power_meter] ""}
+         {[star_power_meter] reset}
+         
+         ; if I have a player then show the meter
+         {if {!= [player] ""}
+            {[star_power_meter] set_showing TRUE}
+         }
+      }
+      
+      ; reset the streak meter
+      {if {!= [streak_meter] ""}
+         {[streak_meter] reset}
+         
+         ; if I have a player then show the meter
+         {if {!= [player] ""}
+            {[streak_meter] set_showing TRUE}
+            {if_else {== [instrument] bass}
+               {[streak_meter] set max_multiplier 6}
+               {[streak_meter] set max_multiplier 4}
+            }
+         }
+      }
+      
+      ; reset the player feedback
+      {if {!= [player_feedback] ""}
+         {[player_feedback] reset}
+      }
+      
+      ; reset the failed feedback
+      {if {!= [failed_feedback] ""}
+         {[failed_feedback] reset}
+         
+         ; delete the delayed task popup for failing
+         {do ($task_name {sprint [instrument] "_failed"})
+            {if {exists $task_name}
+               {delete $task_name}
+            }
+         }
+      }
+      
+      {if {!= [parent] ""}
+         ; make sure bonus gems are off
+         {[parent] set_bonus_gems FALSE}
+         {[parent] solo_reset}
+      }
+      
+      ; call the milo reset trigger
+      {reset.trig trigger}
+      
+      ; call the track specific track reset function
+      {$this track_reset}
+      
+      ; reset the deploy state
+      {$this stop_deploy}
+      
+      ; setup for lod
+      {if {exists LOD.anim}
+         {LOD.anim set_frame $track_LOD}
+      }
+      
+      {if {!= [popup_object] ""}
+         {[popup_object] reset}
+         {if {!= [player] ""}
+            ; If the player is local or on Hard or Difficult, then disable the help
+            {if {|| 
+                  {|| 
+                     {== {[player] difficulty} kDifficultyHard}
+                     {== {[player] difficulty} kDifficultyExpert}
+                  }
+                  {[player] is_net}
+                }
+               {[popup_object] set popup_help_disabled TRUE}
+            }
+         }
+      }
+      
+      {$this setup_player_intro}
+      {if {exists game}
+         {$this setup_crowd_meter}
+      }      
+   )
+   
+   (setup_player_intro
+      {if {!= [player_intro] ""}
+         {[player_intro] reset}
+         {[player_intro] setup_player
+            {get_player_icon [player]}
+            {get_player_name [player]}
+         }
+      }
+   )
+   
+   (setup_crowd_meter
+      {do ($crowd_meter {$this get_crowd_meter})
+         {if $crowd_meter
+            {$crowd_meter send_icon
+               [instrument]
+               {get_player_icon [player]}
+            }
+         }
+      }
+   )
+   
+   ; track reset function to be overridden by track specific
+   (track_reset)
+   
+   ; happens on game won or game lost
+   (retract
+      {$this set_track_fade FALSE}
+      ; retract the track
+      {retract.trig trigger}
+      
+      {if {!= [instrument] vocals}
+         {script_task kTaskUISeconds (delay 1)
+            (script
+               ; clear all widgets off the track
+               {$this clear_all}
+            )
+         }
+      }
+      
+      {if {!= [player_feedback] ""}
+         {[player_feedback] reset}
+      }
+   )
+
+   ; happens on restart
+   (immediate_retract
+      ; immediatly retract the track
+      {$this reset}
+      {immediate_retract.trig trigger}
+   )
+   
+   (game_won
+      
+      {if_else {exists win_retract.trig}
+         {win_retract.trig trigger}
+         {$this retract}
+      }
+   
+      {if {!= [player_feedback] ""}
+         {[player_feedback] reset}
+      }      
+   )
+   
+   (game_over
+      ; reset popup help
+      {if {!= [popup_object] ""}
+         {[popup_object] reset}
+      }
+      
+      ; reset player intro
+      {if {!= [player_intro] ""}
+         {[player_intro] reset}
+      }
+      
+      {if {!= [failed_feedback] ""}
+         {[failed_feedback] reset}
+      }
+      
+      ; If there's a failed task.. delete it
+      
+      {do ($task_name {sprint [instrument] "_failed"})
+         {if {exists $task_name}
+            {delete $task_name}
+         }
+      }
+   )
+   
+   ; unison failure
+   (spotlight_fail
+      {spotlight_fail.trig trigger}
+   )
+   (spotlight_fail_guilty
+      {spotlight_fail_guilty.trig trigger}
+   )
+   
+   ; reset solos
+   (solo_reset
+      ; reset all the solo effects
+      {solo_reset.trig trigger}
+   )
+   
+   (set_streak ($streak $streak_mult $max_streak_mult)
+      {if {&& {!= [player] ""} {!= [streak_meter] ""}}
+         {do ($notes_per_streak {[player] notes_per_streak})
+         
+            ; super streak is defined as x5
+            {if {&& {>= $streak_mult 5} {< {[streak_meter] get streak_multiplier} 5}}
+               {$this super_streak TRUE}
+            }
+         
+            {[streak_meter] set_multiplier $streak_mult}
+            
+            {if {> $streak 0}
+               {set $percent {/ {mod $streak $notes_per_streak} $notes_per_streak}}
+
+               ; wipe all meters, if maxed or at a new multiplier, stop wiping
+               {if_else {&& {< $streak_mult $max_streak_mult} {!= $percent 0}}
+                  {[streak_meter] set_hit $percent}
+                  {[streak_meter] set_hit 1}
+               }
+            }
+         }
+      }
+   )
+   
+   (streak_broken
+      {if {&& {! {game is_game_over}} {!= [streak_meter] ""}}
+         {[streak_meter] break}
+         {synth play streak_fail.cue}
+      }
+      
+      {$this super_streak FALSE}
+   )
+   
+   (get_crowd_meter
+      {if_else {get_track_panel}
+         {if_else {{get_track_panel} exists crowd_meter}
+            {if_else {gamemode get update_crowd_meter}
+               {{get_track_panel} find crowd_meter}
+               0
+            }
+            0
+         }
+         0
+      }
+   )
+   
+   ; update the crowd meter
+   (set_crowd_rating ($in_val $state)
+      ; update my crowd meter on the global meter
+      {do ($crowd_meter {$this get_crowd_meter})
+         {if $crowd_meter
+            {if_else {>= $in_val {$crowd_meter get_peak_value}}
+               {{$crowd_meter find [instrument]} arrow_hide}
+               {{$crowd_meter find [instrument]} arrow_show}
+            }
+            {$crowd_meter set_val [instrument] $in_val}
+            {if {!= $state ""}
+               {$crowd_meter set_player_icon_state [instrument] $state}
+               ; per player warning states
+               {if_else {== $state "warning"}
+                  {indv_player_warning.trig trigger}
+                  {indv_player_warning_off.trig trigger}
+               }
+            }
+         }
+      }
+   )
+   
+   (set_net_talking ($talking)
+      {if {!= [player_intro] ""}
+         {[player_intro] set_talking $talking}   
+      }
+   )
+   
+   (enable_player
+      {if [disabled]
+      
+         ; delete the delayed task popup for failing
+         {do ($task_name {sprint [instrument] "_failed"})
+            {if {exists $task_name}
+               {delete $task_name}
+            }
+         }
+      
+         {bfb_reset.trig trigger}         
+         {set [disabled] FALSE}
+
+         {if {{$this dir} exists crowd_meter}
+            {{{$this dir} find crowd_meter} enable_player [instrument]}
+         }
+      }
+   )
+
+   (disable_player ($strikes)
+      {if {! [disabled]}
+         ; hide the track
+         {bfb_failed.trig trigger}
+
+         ; player feedback might be displaying bass groove or guitar solo or tambourine solo
+         {if {!= [player_feedback] ""}
+            {[player_feedback] reset}
+         }
+         
+         ; remove any popup help
+         {if {!= [popup_object] ""}
+            {[popup_object] reset}
+         }
+         
+         {set [disabled] TRUE}
+         {if {&& {!= [parent] ""} {{[parent] panel} exists crowd_meter}}
+            {{{[parent] panel} find crowd_meter} disable_player [instrument]}
+         }
+         
+         ; if we're a gem track, stop the gems coming
+         {if {&& {!= [parent] ""} {!= [instrument] vocals}}
+            {[parent] set_gems_enabled -1}
+         }
+         
+         ; delay 1 second for the failed camera shot
+         {script_task kTaskSeconds (name {sprint [instrument] "_failed"}) (delay 1.5)
+            (script
+               {if {!= [failed_feedback] ""}
+                  ; show player name and icon
+                  {if {!= [player_intro] ""}
+                     {[player_intro] intro}
+                  }
+                  
+                  {if_else {&& [player] {== {[player] enabled_state} kPlayerDisconnected}}
+                     ; show the disconnection message
+                     {[failed_feedback] disconnected}
+                     ; show failed feedback with strikes
+                     {[failed_feedback] failed $strikes}
+                  }
+                 
+               }
+               
+               ; remove the streak meter and the star power meter
+               {if {!= [instrument] vocals}
+                  {if {!= [star_power_meter] ""}
+                     {[star_power_meter] set_showing FALSE}
+                  }
+                  {if {!= [streak_meter] ""}
+                     {[streak_meter] set_showing FALSE}
+                  }
+               }
+            )
+         }
+      }
+   )
+
+   (save_player
+      {if [disabled]
+      
+         ; delete the delayed task popup
+         {do ($task_name {sprint [instrument] "_failed"})
+            {if {exists $task_name}
+               {delete $task_name}
+            }
+         }
+      
+         {bfb_saved.trig trigger}
+         {if {!= [failed_feedback] ""}
+            ; only hide local player icons
+            {if {! {[player] is_net}}
+               {[player_intro] hide}
+            }
+            ; show saved message
+            {[failed_feedback] saved}
+         }
+         
+         {if {!= [instrument] vocals}
+            {if {!= [star_power_meter] ""}
+               {[star_power_meter] set_showing TRUE}
+            }
+            {if {!= [streak_meter] ""}
+               {[streak_meter] set_showing TRUE}
+            }
+         }
+         
+         ; if we're a gem track, start the gems coming
+         {if {&& {!= [player] ""} {&& {!= [parent] ""} {!= [instrument] vocals}}}
+            {[parent] set_gems_enabled {[player] enable_time}}
+         }
+         
+         {if {&& {!= [parent] ""} {{[parent] panel} exists crowd_meter}}
+            {{{[parent] panel} find crowd_meter} enable_player [instrument]}
+         }
+      }
+   )
+   
+   ; overriden by gem_track
+   (super_streak ($val))
+   
+   ; energy deployment
+   (deploy)
+   (stop_deploy)
+   
+   ; intro
+   (play_intro)
+   
+   ; phrase missing
+   (on_miss_phrase ($phrase))
+   
+   (set_multiplier)
+   
+   (enter_coda
+      {enter_coda.trig trigger}
+      ; remove any player feedback
+      {if [player_feedback]
+         {[player_feedback] reset}
+      }
+      {if [player_intro]
+         {[player_intro] reset}
+      }
+      {if [failed_feedback]
+         {[failed_feedback] reset}
+      }
+      {if [star_power_meter]
+         {[star_power_meter] set_showing FALSE}
+      }
+      {if [streak_meter]
+         {[streak_meter] set_showing FALSE}
+      }
+      
+      ; If I'm  not the vocalist then enable all the gems that
+      ; are part of the big rock ending
+      {if {! {gamemode get is_practice}}
+         {if {&& {!= [instrument] vocals} {!= [parent] ""}}
+            {[parent] set_gems_enabled {taskmgr ms}}
+         }
+      }
+   )
+   
+   (coda_blown
+      {$this spotlight_fail}
+   )
+   
+   (coda_fail
+      {$this spotlight_fail_guilty}
+      {$this popup_help rock_ending FALSE}
+   )
+
+   (coda_success
+      {if {get_track_panel}
+         {if_else {== $game.play_mode coop}
+            {{get_track_panel} coda_success} ; in coop there's 1 global success
+            {do
+               {{{get_track_panel} ending_bonus [player]} success} ; in h2h each player has a success
+               {{get_track_panel} hth_coda_success [player]}
+            }
+         }
+      }
+      {if {exists bre_success.trig} 
+         {bre_success.trig trigger}
+      }
+      {$this popup_help rock_ending FALSE}
+   )
+   
+   ; popup help is triggered... forward to popup_object
+   (popup_help ($popup_key $state)
+      {if {!= [popup_object] ""}
+         ; Supress pop up help turning on if we're dead
+         {do ($dead {&& {!= [player] ""} {!= {[player] enabled_state} kPlayerEnabled}})
+            {if {! $dead}
+               {[popup_object] help $popup_key $state [instrument]}
+            }
+         }
+      }
+   )
+   
+   (player_disabled
+      {$this dts_popup}
+   )
+   
+   (player_saved
+      ; clear all deploy_to_save popups
+      {if {exists beatmatch}
+         {beatmatch foreach_active_player $player
+            {$player popup_help deploy_to_save FALSE}
+         }
+      }
+   )
+   
+   ; delpoy to save popup
+   (dts_popup
+      {if {exists beatmatch}
+         {beatmatch foreach_active_player $player
+            ; if player is enabled
+            {if {== {$player enabled_state} kPlayerEnabled}
+               ; and has enough energy
+               {if {>= {$player band_energy} .5}
+                  ; is drum or vocals
+                  {if {|| {== {$player instrument} drum} {== {$player instrument} vocals}}
+                     ; and is in a freestyle section
+                     {if_else {$player in_freestyle_section}
+                        {$player popup_help deploy_to_save TRUE}
+                        {$player popup_help deploy_to_save FALSE}
+                     }
+                  }
+                  ; is guitar or bass
+                  {if {|| {== {$player instrument} guitar} {== {$player instrument} bass}}
+                     {$player popup_help deploy_to_save TRUE}
+                  }
+               }
+            }
+         }
+      }
+   )
+)
+
+#endif ; TRACK_HANDLERS_DTA

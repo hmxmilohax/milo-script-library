@@ -1,0 +1,279 @@
+; all the songs to verify
+; adding (validate_ignore TRUE) to the song and it will be skipped
+(songs
+   #include ../songs/songs.dta
+   #ifdef HX_XBOX  ;HWR _ Hx-only
+   #include ../songs_download/songs.dta
+   #endif
+
+   ; track budget test song
+   (budget_test1             
+      (name "Budget 1 - Many Gems")
+      (artist "")
+      (song
+        (name        songs/behindblueeyes/behindblueeyes)
+        (tracks 
+           (
+            (drum (0 1 2 3))
+            (bass 4)  
+            (guitar (5 6)) 
+            (vocals (7 8))
+           ) 
+        )
+        ;                K   SN   CYMBALS   BASS   GUITAR   VOCALS   TRKS
+        (pans        (  0.0  0.0 -1.0  1.0   0.0 -1.0  1.0 -1.0  1.0  0.0 ))
+        (vols        (  0.0  0.0 -4.5 -4.5  -3.0 -4.5 -4.5 -1.5 -1.5  0.0 ))
+        (cores       (  -1   -1   -1   -1    -1    1   -1   -1   -1   -1))
+        (drum_solo
+           (seqs (kick.cue snare.cue tom1.cue tom2.cue crash.cue))
+        )
+        (midi_file test/budget_test1/budget_test1.mid)
+      )
+      (song_scroll_speed 3000)
+      (bank sfx/tambourine_bank.milo)
+      (anim_tempo kTempoMedium)
+      (preview 009845 044150)
+      (quickplay
+         (venue small_club_01)
+      )
+   )
+)
+
+; This is what font all the lyrics will be compared against
+; should be the file and font the lyrics are displayed with.
+(lyrics
+   (file "track/track_shared.milo")
+   (font "Chalet-NewYorkNineteenEighty.font")
+)
+   
+; a symbol for each difficulty
+(difficulties 
+   easy medium hard expert
+)
+
+; gem verification
+(num_gem_slots 5)
+(max_gems_per_chord 3)
+
+#define MUSICIAN_COMMON_EVENTS
+(
+   idle_realtime
+   idle
+   idle_intense
+   play
+   mellow
+   intense
+)
+
+
+(tracks
+   (required
+      'PART DRUMS'
+      'PART BASS'
+      'PART GUITAR'
+      ;; Some songs don't have vocals
+      EVENTS
+   )
+
+   (allowed
+      'PART DRUMS'
+      'PART BASS'
+      'PART GUITAR'
+      'PART VOCALS'
+      EVENTS
+      VENUE
+      BEAT
+   )
+)
+
+(events
+   (BEAT
+      (midi
+         (12 13)        ;; tempo beat track
+      )
+   )
+
+   (EVENTS
+      ; we also check that there's only 1 of these events
+      (midi
+         (24 26)        ;; practice mode beat box
+      )
+      (required
+         music_start
+         music_end
+         end
+      )
+      
+      (allowed
+         coda
+         section
+         crowd_realtime
+         crowd_mellow
+         crowd_normal
+         crowd_intense
+      )
+            
+      (last
+         end ; no event can be after song_over
+      )
+   )
+   
+   (VENUE
+      (midi
+         (24 26)         ;; click track
+         (37 40)         ;; spotlight focuses
+         (48 50)         ;; lighting keyframes
+         60              ;; camera cuts
+         (61 64)         ;; camera char focus
+         (70 73)         ;; camera shot type
+         (85 87)         ;; band members sing-a-long
+         (96 110)        ;; post proc notes
+
+      )
+      (allowed
+         chorus
+         verse
+         lighting
+         do_directed_cut
+	      do_optional_cut
+         bonusfx
+         bonusfx_optional
+         FogOn
+         FogOff
+         StrobeOff
+         Strobe6
+         Strobe8
+         Strobe10
+         Strobe12
+      )
+      
+      (required
+      )
+      
+      ; in depth testing of each one, notifies if bad.
+      ; uses mv variables, mv.val, mv.data, mv.song (string for notify)
+      ; mimics midi parser 
+      ; TODO you know, this looks alot like a normal parser
+        
+      (check_init
+         {set $mv.chorus FALSE}
+         {set $mv.verse FALSE}
+      )
+      
+      (check
+         {switch $mv.val    
+            (chorus {set $mv.chorus TRUE})
+            (verse {set $mv.verse TRUE})         
+            (lighting
+               ; Verse or chorus must have been triggered first.
+               {unless {|| $mv.chorus $mv.verse}
+                  {notify $mv.song " [lighting] needs verse or chorus first"}
+               }
+               ; format is lighting (adj1 adj2 adj3 ... )
+               {do ($adjectives {elem $mv.data 1})
+                  {foreach $adj $adjectives
+                     {unless {find_elem LIGHTING_ADJECTIVES $adj}
+                        {notify $mv.song " [lighting] unknown adjective " $adj }
+                     }
+                  }
+               }
+            )
+            (do_directed_cut
+               {do ($cat {elem $mv.data 1})
+                  {unless {find_elem CAMSHOT_CATEGORIES $cat}
+                     {notify $mv.song " do_directed_cut unknown category " $cat}
+                  }                
+               }
+            )
+         }
+      )
+   )  
+
+   ('PART GUITAR'
+      (required)
+      
+      (allowed 
+         MUSICIAN_COMMON_EVENTS
+         play_solo
+         map
+      )
+
+      (midi
+         (12 15)                  ;; h2h camera cuts and focus notes
+         ( 40  59)                ;; fret animation
+         ( 60  62)  67            ;; Easy Gems - 3 frets only, solo markings
+         ( 72  75)  79            ;; Medium Gems - 4 frets only, & solo markings
+         ( 84  88)  91            ;; Hard Gems - all 5 frets, & solo markings
+         ( 96 100) 103 105 106    ;; Expert Gems - all 5 frets, solo markings & MP phrases
+         116                      ;; spotlight phrases
+         (120 124)                ;; big rock ending
+      )
+   )
+   
+   ('PART BASS'
+      (required)
+      
+      (allowed 
+         MUSICIAN_COMMON_EVENTS      
+         play_solo         
+         map
+      )
+
+      (midi
+         (12 15)                  ;; h2h camera cuts and focus notes
+         ( 40  59)             ;; fret animation
+         ( 60  62)             ;; Easy Gems - 3 frets only
+         ( 72  75)             ;; Medium Gems - 4 frets only
+         ( 84  88)             ;; Hard Gems - all 5 frets
+         ( 96 100) 105 106     ;; Expert Gems - all 5 frets & MP phrases
+         116                   ;; spotlight phrases
+        (120 124)              ;; big rock ending
+      )
+   )
+   
+   ('PART DRUMS'
+      (required)
+      
+      (allowed
+         mix
+         ride_side_true          ;; ok to use side swipe on ride cym when hits are slow enough.
+         ride_side_false         ;; never use side swipe on ride cym
+         MUSICIAN_COMMON_EVENTS      
+      )
+
+      (midi
+         (12 15)                  ;; h2h camera cuts and focus notes
+         (24 27) (30 31) (34 42) (46 51) ;; animation
+         ( 60  64)                ;; Easy Gems
+         ( 72  76)                ;; Medium Gems
+         ( 84  88)                ;; Hard Gems
+         ( 96 100) 105 106        ;; Expert Gems & MP phrases
+         (110 112 )               ;; Tom Gems
+         116                      ;; spotlight phrases
+         (120 124)                ;; drum fills
+      )
+   )
+   
+   ('PART VOCALS'
+      (required)
+
+      (allowed
+         tambourine_start       ;; switches to tamb anim group on next camera cut.
+         tambourine_end          ;; switches back to normal anim groups.
+         cowbell_start
+         cowbell_end
+         clap_start
+         clap_end
+         MUSICIAN_COMMON_EVENTS
+      )
+
+      (midi
+         (12 15)                  ;; h2h camera cuts and focus notes
+         ( 40 84)          ;; transcribed vocal melody
+         ( 96 97)          ;; Percussion Gems -tambourine, cowbell,  etc.
+         103               ;; Percussion phrases
+         (105 106)         ;; MP 
+	      116               ;; spotlight phrases
+      )
+   )
+)

@@ -1,0 +1,1945 @@
+
+{func set_up_instrument_and_gamertag ($player_num)
+   {do
+	   ($pad_num {joypad_get_players_padnum $player_num})
+      ($controller_type {gamecfg get_controller_type_from_pad $pad_num})
+		{if {!= $controller_type kControllerNone}
+			{do
+		      {instrument.lbl set_localized 
+		         {get_font_char_from_controller_type $controller_type}
+		      }
+		      {gamertag.lbl set_localized 
+		         {platform_mgr get_name $pad_num}
+		      }
+			}
+		}
+   }
+}
+
+{new UIPanel options_lower3rd_panel
+#ifdef HX_XBOX
+   (file "options_lower3rd.milo")
+#else
+   (file "options_lower3rd_og.milo")
+#endif
+}
+
+
+{new SessionPanel options_panel
+	#ifndef HX_XBOX ;HWR - Modified options screen is PS2-only
+   		(file "options_ps2.milo")
+   	#else
+   		(file "options.milo")
+   	#endif
+   (focus video.btn)
+   (SELECT_MSG
+	   {game set leader_num $player_num}
+	   ; REA - also add the player to the session so controllers are tracked
+	   {if {!= {gamecfg get_controller_type_from_controller $player_num} kControllerNone}
+			{band_ui_sink set post_matchmaking TRUE} ; REA - set monitoring here to catch transition bugs
+	      {session_mgr add_local_player $player_num {gamecfg get_controller_type_from_controller $player_num}}
+	      {gamecfg auto_assign_missing_slots}
+			{switch $component
+				(video.btn
+					{goto_system_option_screen options_video_screen $player_num}
+				)
+				(audio.btn
+					{goto_system_option_screen options_audio_screen $player_num}
+				)
+				(gameplay.btn
+					{options_gameplay_screen set player_num $player_num}
+					{goto_system_option_screen options_gameplay_screen $player_num}
+					;{ui goto_screen options_gameplay_screen}
+				)
+				(calibrate_av.btn
+					{goto_system_option_screen calibrate_av_chooser_screen $player_num}
+				)
+				(characterdata.btn
+					;don't require that we switch to using that player's options
+					{options_savedata_panel set player_num $player_num}
+					{ui goto_screen options_savedata_screen}
+				)
+				(widescreen.btn   ;HWR - Temp hack - this should go on a "video" menu and be PS2-only
+					{if_else {== {rnd aspect} kRegularAspect}
+						{rnd set_aspect kWidescreenAspect}
+						{rnd set_aspect kRegularAspect}
+					}
+				)
+			}
+		}
+   )
+   
+   (load
+      ; set focus to ensure it's correct (might enter from different places)
+      {main_panel set mode_focus options.btn}
+   )
+
+   (options_dirty FALSE)
+   (exit
+      {set [options_dirty] TRUE}
+   )
+}
+
+{new UIScreen options_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel options_panel fx)
+   (focus options_panel)
+   (back main_screen)         ; this needs to back out to endgame in-game
+   
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (enter
+		{band_ui_sink set post_matchmaking FALSE} ; REA - set monitoring here to catch transition bugs
+		{session clear} ; REA - clear it
+		{game set leader_num -1}
+   )
+}
+
+;;
+
+{new UIPanel options_gameplay_panel
+#ifdef HX_XBOX
+   (file "options_gameplay.milo")
+#else
+   (file "options_gameplay_og.milo")
+#endif
+   (focus leftymode.btn)
+   (enter
+      {$this reset}
+      {helpbar set_limit_to_player_num {options_gameplay_screen get player_num}}
+   )
+   (exit       
+      {helpbar set_limit_to_player_num -1}
+   )
+	(reset
+	   {set_up_instrument_and_gamertag {options_gameplay_screen get player_num}}
+	)
+	(JOYPAD_CONNECT_MSG
+		{if {&& $connected {== $player_num {options_gameplay_screen get player_num}}}
+			{$this reset}
+		}
+	)
+}
+
+{new UIScreen options_gameplay_screen
+   (panels meta main_lower3rd_panel movie_panel options_gameplay_panel options_lower3rd_panel helpbar)
+   (focus options_gameplay_panel)
+   (back options_screen)    
+   ;;(helpbar (helpbar_back helpbar_toggleoption))
+   (helpbar (helpbar_back helpbar_select))
+   (player_num -1) ;what player brought up the options panel
+
+   (enter
+      {$this update_lefty_check}
+      
+      {do ($vocalhudtypelist {options_gameplay_panel find vocalhudtype.lst})
+          ($options {profile_mgr get_char_options_from_player [player_num]})
+         ; set the data for the vocal hud styles
+         {$vocalhudtypelist set_data (vocalstyle_static vocalstyle_scrolling)}
+         ; select the appropriate symbol
+         {switch {$options get_vocal_style}
+            (kVocalStyleStatic {$vocalhudtypelist set_selected vocalstyle_static})
+            (kVocalStyleScrolling {$vocalhudtypelist set_selected vocalstyle_scrolling})
+         }
+      }
+   )
+   
+   (TRANSITION_COMPLETE_MSG
+      {$this update_helpbar {$this focus_name}}
+   )
+
+   (FOCUS_MSG
+      {$this update_helpbar {$new_focus name}}
+   )
+
+   (update_helpbar ($component)
+      {switch $component
+         (leftymode.btn
+            ;;{helpbar set_config (helpbar_back helpbar_toggleoption)}
+			{helpbar set_config (helpbar_back helpbar_select)}
+         )
+         (vocalstyle.btn
+            {helpbar set_config (helpbar_back helpbar_changesetting)}
+         )
+         (vocalhudtype.lst
+            {helpbar set_config (helpbar_cancel helpbar_confirmsetting)}
+         )
+         ;default
+         FAIL
+      }
+   )
+   
+   (BUTTON_DOWN_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         {if_else 
+            {&&
+               {|| {== $button kPad_X} {== $button kPad_Tri}}
+               {== {$this focus_name} vocalhudtype.lst}
+            }
+            {if_else {{$this find vocalhudtype.lst} is_scrolling}
+               {do ($nothing)
+                  {set $nothing 0}
+               }
+               {do
+                  ($vocalhudtype {$this find vocalhudtype.lst})
+                  {if_else {== $button kPad_X}
+                     {$vocalhudtype confirm}
+                     {$vocalhudtype undo $player_num}
+                  }
+                  {$this set_focus {$this find vocalstyle.btn}}
+               }
+            }
+            kDataUnhandled
+         }
+      }
+   )
+
+   (BUTTON_UP_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         kDataUnhandled
+      }
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (leftymode.btn
+            {do
+               ($options {profile_mgr get_char_options_from_player [player_num]})
+               ($lefty_flipped {$options get_lefty})
+               {$options set_lefty {! $lefty_flipped}}
+               {$this update_lefty_check}
+            } 
+         )
+         (vocalstyle.btn
+            {{$this find vocalhudtype.lst} store}
+            {$this set_focus {$this find vocalhudtype.lst}}
+         )
+      }
+   )
+
+   (SCROLL_MSG
+      {switch $component
+         (vocalhudtype.lst 
+            {do
+               ($vocalhudtypelist {options_gameplay_panel find vocalhudtype.lst})
+               ($options {profile_mgr get_char_options_from_player [player_num]})
+               {switch {$vocalhudtypelist selected_sym}
+                  (vocalstyle_static {$options set_vocal_style kVocalStyleStatic})
+                  (vocalstyle_scrolling {$options set_vocal_style kVocalStyleScrolling})
+               }
+            } 
+         )
+      }
+   )
+
+   (update_lefty_check
+      {{options_gameplay_panel find check_lefty.mesh} set_showing
+         {{profile_mgr get_char_options_from_player [player_num]} get_lefty}
+      }
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; verify that you actually want to delete a character
+{new UIScreen option_characterdata_yesno_delete_screen
+   (panels dialog_panel helpbar_dialog)
+   (focus dialog_panel)
+   (enter
+   {helpbar_dialog set_config ('' helpbar_select)}
+      {dialog_panel set_yesno {localize_token shell_chardelete_cancel} no.btn}
+      {set [delete] FALSE}
+   )
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {set [delete] TRUE}
+         )
+      }
+      {ui pop_screen}
+   )
+   
+   (delete FALSE)
+}
+
+; decide if you want to delete or rename a character
+{new UIScreen option_characterdata_renamedelete_screen
+   (panels dialog_panel helpbar_dialog)
+   (helpbar (helpbar_cancel helpbar_select))
+   (helpbar_no_default TRUE) 
+   (focus dialog_panel)
+  
+   (enter
+		{helpbar_dialog set_config (helpbar_cancel helpbar_select)}
+		{helpbar_dialog set_limit_to_player_num {game get leader_num}}
+      {dialog_panel set_custom 
+         {localize_token shell_char_rename_delete} 
+         {localize shell_char_rename} 
+         {localize shell_char_delete} 
+         opt1.btn
+      }
+      {set [delete] FALSE}
+      {set [rename] FALSE}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (opt1.btn
+            ; rename
+            {set [rename] TRUE}
+            {ui pop_screen}
+         )
+         (opt2.btn
+            ; delete
+            {set [delete] TRUE}
+            {ui pop_screen}
+         )
+      }
+   )
+   
+   (BUTTON_DOWN_MSG
+		   {if {== $button kPad_Tri}
+               {ui pop_screen}
+			}
+			kDataUnhandled
+	)
+   
+   (rename FALSE)
+   (delete FALSE)
+}
+
+{new UIPanel options_characterdata_panel
+#ifdef HX_XBOX
+   (file "options_characterdata.milo")
+#else
+   (file "options_characterdata_og.milo")
+#endif
+   (focus charlist.lst)
+   
+   (enter
+      {set_up_instrument_and_gamertag [player_num]}
+      {helpbar set_limit_to_player_num [player_num]}
+      {char_data_provider init [player_num]}
+      {charlist.lst set_provider char_data_provider}
+      {platform_mgr add_sink $this signin_changed}
+   )
+   
+   (exit
+      {helpbar set_limit_to_player_num -1}
+      {platform_mgr remove_sink $this signin_changed}
+   )
+   
+   (signin_changed
+      {if_else {== {ui current_screen} options_characterdata_screen}
+         {$this process_signin_change}
+         ; else
+         {$this set signin_change_waiting TRUE}
+      }
+   )   
+   
+   ; called after this window is entered through a goto or pop
+   (transition_complete
+      {if {option_characterdata_renamedelete_screen get rename}
+         {option_characterdata_renamedelete_screen set rename FALSE}
+         {$this rename_char}
+      }
+
+      {if {option_characterdata_renamedelete_screen get delete}
+         {option_characterdata_renamedelete_screen set delete FALSE}
+         {ui push_screen option_characterdata_yesno_delete_screen}
+      }
+      
+      {if {option_characterdata_yesno_delete_screen get delete}
+         {option_characterdata_yesno_delete_screen set delete FALSE}
+         {$this delete_char}
+      }
+
+      {if {option_profile_change_warning_screen get profile_changed}
+         {option_profile_change_warning_screen set profile_changed FALSE}
+         {ui goto_screen main_screen}
+      }
+
+#ifndef HX_XBOX
+		{if {!= {option_chardata_rename_panel get new_name} ""}
+			{char_data_provider set_char_name {charlist.lst selected_pos} {option_chardata_rename_panel get new_name}}
+         {charlist.lst set_dirty}	
+			{option_chardata_rename_panel set new_name ""}
+		}
+#endif
+		
+      {if {$this get signin_change_waiting}
+         {$this set signin_change_waiting FALSE}
+         {$this process_signin_change}
+      }
+   )
+   
+   (process_signin_change
+      {if {== {ui current_screen} options_characterdata_screen}
+         {ui push_screen option_profile_change_warning_screen}
+      }
+   )
+   
+   ; deletes the currently selected character
+   (delete_char
+      {set $next_pos {charlist.lst selected_pos}}
+      
+      {char_data_provider delete_character {charlist.lst selected_pos}}
+      
+      {if {char_data_provider get_num_chars}
+         {if {== $next_pos {char_data_provider get_num_chars}}
+            {-- $next_pos}
+         }
+         
+         {set $first_showing {- $next_pos {charlist.lst num_display}}}
+         {++ $first_showing}
+         {if {< $first_showing 0}
+            {set $first_showing 0}
+         }
+         
+         {charlist.lst set_selected $next_pos $first_showing}
+      }
+      
+      {charlist.lst set_dirty}
+   )
+ 
+   ; pops up the keyboard to get the new name
+   (rename_char
+#ifdef HX_XBOX
+      {platform_mgr show_keyboard
+         [player_num]
+         {get_char_name_length}
+         {localize create_char_vk_title}
+         {localize rename_char_vk_desc}
+         {char_data_provider get_char_name {charlist.lst selected_pos}}
+         $this
+      }
+#else
+		{option_chardata_rename_panel set player $player_num}
+		{option_chardata_rename_panel set old_name {char_data_provider get_char_name {charlist.lst selected_pos}}}
+		{ui goto_screen option_chardata_rename_screen}
+#endif
+   )
+   
+   (SELECT_MSG
+      {switch $component
+         (charlist.lst
+            {if {> {char_data_provider get_num_chars} 0}
+            ; BMB: Removed by RAUSTIN and I don't know why in r1906
+;				   {game set leader_num $player_num} 
+               {ui push_screen option_characterdata_renamedelete_screen}
+            }
+         )
+      }
+   )
+
+#ifdef HX_XBOX
+   ; handles renaming the character
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {== {ui focus_panel} $this}
+         }
+         ; then
+         {if_else {! {profile_mgr is_char_name_unique [player_num] $text}}
+            {ui push_screen option_chardata_char_name_not_unique}
+            ; else
+            {do
+               {char_data_provider set_char_name {charlist.lst selected_pos} $text}
+               {autosave}
+               {charlist.lst set_dirty}
+            }
+         }
+      }
+   )
+#endif
+   (signin_change_waiting FALSE)
+	
+	(JOYPAD_CONNECT_MSG
+		{if {&& $connected {== $player_num [player_num]}}
+			{set_up_instrument_and_gamertag [player_num]}
+		}
+	)
+}
+
+{new UIScreen options_characterdata_screen
+   (panels meta main_lower3rd_panel movie_panel options_characterdata_panel options_lower3rd_panel helpbar)
+   (focus options_characterdata_panel)
+   (back options_savedata_screen)    
+   (helpbar (helpbar_back helpbar_choosecharacter))
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#ifndef HX_XBOX ; REA - Renaming screen using naming handlers
+{new UIPanel option_chardata_rename_panel
+   (file selname_og.milo)
+	(focus name.lbl)
+   (reset_focus TRUE)
+   (player 0)
+	(cancel TRUE)	
+	(name_label name.lbl)
+	(name_active TRUE)
+	(old_name "")
+	(new_name "")
+	(back_button_exits TRUE)
+   (randomize_button Randomize)
+   (back_button Back)
+	
+	NAMING_PANEL_HANDLERS ; REA - Naming screen a go go
+	
+	(enter
+		{title.lbl set text_token "rename band"}
+		{$this init_name}
+		{foreach_int $i 0 {strlen [old_name]}
+			{push_back [current_name] {str_elem [old_name]$i}}
+			{set [current_pos] {+ $i 1}}
+		}
+		{$this update_band}
+		{set [new_name] ""}
+	)
+	
+	(accept_name
+		{if_else {== {$this get_name} ""}
+         {do 
+            ; BMB: This is a hack fix but it's release day.
+            {set [kill] FALSE}
+            {ui push_screen name_error_screen}
+         }
+         ; else check for duplicate name
+			{if_else {&&
+				{! {== {$this get_name} [old_name]}}
+				{!
+               {profile_mgr is_char_name_unique
+                  [player]
+                  {$this get_name}
+               }
+            }
+				}
+				; then
+            {do
+               ; BMB: This is a hack fix but it's release day.
+               {set [kill] FALSE}
+   				{ui push_screen option_chardata_char_name_not_unique}
+            }
+				; else save off members and finalize band
+				{do
+					{set [new_name] {$this get_name}}
+					{ui goto_screen options_characterdata_screen}
+				}
+			}
+      }
+	)
+	
+	(cancel_name
+		{ui goto_screen options_characterdata_screen}
+	)
+	
+	(extra_function ; regen random name
+		{$this random_name}
+	)
+}
+
+{new UIScreen option_chardata_rename_screen
+   (panels meta main_lower3rd_panel movie_panel options_characterdata_panel option_chardata_rename_panel helpbar)
+   (focus option_chardata_rename_panel)
+   (helpbar (Delete helpbar_select helpbar_random helpbar_confirm))
+   (back_button_exits FALSE)
+   
+}
+#endif
+
+; names must be locally unique
+{new UIScreen option_chardata_char_name_not_unique
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok {localize_token shell_char_name_not_unique}}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (ok.btn
+            {ui pop_screen}
+         )
+      }
+   )
+}
+
+; decide if you want to delete a band or just remove a character from it.
+{new UIScreen option_banddata_deleteremove_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+
+   (enter
+      {dialog_panel set_custom 
+         {localize_token shell_band_delete_remove} 
+         {localize shell_band_delete} 
+         {localize shell_band_remove} 
+         opt1.btn
+      }
+      {set [delete] FALSE}
+      {set [remove] FALSE}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (opt1.btn
+            ; delete
+            {set [delete] TRUE}
+            {ui pop_screen}
+         )
+         (opt2.btn
+            ; remove
+            {set [remove] TRUE}
+            {ui pop_screen}
+         )
+      }
+   )
+   
+   (BUTTON_DOWN_MSG
+      {switch $button
+         (kPad_Tri
+            {ui pop_screen}
+         )
+         kDataUnhandled
+      }
+   )
+
+   (delete FALSE)
+   (remove FALSE)
+}
+
+; verify that you actually want to delete a band
+{new UIScreen option_banddata_yesno_delete_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno {localize_token shell_banddelete_cancel} no.btn}
+      {set [delete] FALSE}
+   )
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {set [delete] TRUE}
+            {ui pop_screen}
+         )
+         (no.btn
+            {ui pop_screen}
+         )
+      }
+   )
+   
+   (delete FALSE)
+}
+
+; screen used to remove a character from a band
+{new UIPanel options_banddata_remove_panel
+   (file "options_banddata_remove.milo")
+   (focus charlist.lst)
+
+   (enter
+      {charlist.lst set_provider char_remove_provider}
+      {set [remove_char] -1}
+   )
+   
+   (exit
+   )
+   
+   (SELECT_MSG
+      {switch $component
+         (charlist.lst
+            {set [remove_char] {charlist.lst selected_pos}}
+            {ui pop_screen}
+         )
+      }
+      kDataUnhandled
+   )
+   
+   (BUTTON_DOWN_MSG
+      {switch $button
+         (kPad_Tri
+            {ui pop_screen}
+         )
+         kDataUnhandled
+      }
+   )
+
+   (remove_char -1)
+}
+
+{new UIScreen options_banddata_remove_screen
+   (panels options_banddata_remove_panel)
+   (focus options_banddata_remove_panel)
+}
+
+; warns the user that they are not allowed to remove the band leader from a band.
+{new UIScreen option_banddata_remove_warning_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok {localize_token shell_band_remove_warning}}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (ok.btn
+            {ui pop_screen}
+         )
+      }
+   )
+}
+
+; main panel for updating band data
+{new UIPanel options_banddata_panel
+#ifdef HX_XBOX
+   (file "options_banddata.milo")
+#else
+   (file "options_banddata_og.milo")
+#endif
+   (focus bandlist.lst)
+   (player_num -1)
+
+   (enter
+      {set_up_instrument_and_gamertag [player_num]}
+      {helpbar set_limit_to_player_num [player_num]}
+      {band_data_provider init [player_num]}
+      {bandlist.lst set_provider band_data_provider}
+      {platform_mgr add_sink $this signin_changed}
+   )
+   
+   (exit
+      {helpbar set_limit_to_player_num -1}
+      {platform_mgr remove_sink $this signin_changed}
+   )
+   
+   (SIGNIN_CHANGED_MSG
+      {if_else {== {ui current_screen} options_banddata_screen}
+         {$this process_signin_change}
+         ; else
+         {$this set signin_change_waiting TRUE}
+      }
+   )   
+   
+   (process_signin_change
+      {if {== {ui current_screen} options_banddata_screen}
+         {ui push_screen option_profile_change_warning_screen}
+      }
+   )
+   
+   ; called after this window is entered through a goto or pop
+   (transition_complete
+      {if {option_banddata_deleteremove_screen get delete}
+         {option_banddata_deleteremove_screen set delete FALSE}
+         {ui push_screen option_banddata_yesno_delete_screen}
+      }
+
+      {if {option_banddata_deleteremove_screen get remove}
+         {option_banddata_deleteremove_screen set remove FALSE}
+         {ui push_screen options_banddata_remove_screen}
+      }
+
+      {if {option_banddata_yesno_delete_screen get delete}
+         {option_banddata_yesno_delete_screen set delete FALSE}
+         {$this delete_band}
+      }
+
+      {if {$this get signin_change_waiting}
+         {$this set signin_change_waiting FALSE}
+         {$this process_signin_change}
+      }
+      
+      {if {!= {options_banddata_remove_panel get remove_char} -1}
+         {set $char_num {options_banddata_remove_panel get remove_char}}
+         {options_banddata_remove_panel set remove_char -1}
+         {if_else {char_remove_provider is_band_leader $char_num}
+            {do   ; then
+               {ui push_screen option_banddata_remove_warning_screen}
+            }
+            {do   ; else
+               {$this remove_char $char_num}
+            }
+         }
+      }
+
+      {if {option_profile_change_warning_screen get profile_changed}
+         {option_profile_change_warning_screen set profile_changed FALSE}
+         {ui goto_screen main_screen}
+      }
+   )
+   
+   ; removes the character from the band
+   (remove_char ($char_num)
+      {char_remove_provider remove_character $char_num}
+   )
+   
+   ; deletes the currently selected character
+   (delete_band
+      {band_data_provider delete_band {bandlist.lst selected_pos}}
+      {autosave}
+      {bandlist.lst set_dirty}
+   )
+   
+   (SELECT_MSG
+      {switch $component
+         (bandlist.lst
+            {if {> {band_data_provider get_num_bands} 0}
+               {char_remove_provider init {bandlist.lst selected_pos}}
+               {ui push_screen option_banddata_deleteremove_screen}
+            }
+         )
+      }
+   )
+   
+   (signin_change_waiting FALSE)
+}
+
+{new UIScreen options_banddata_screen
+   (panels meta main_lower3rd_panel movie_panel options_banddata_panel options_lower3rd_panel helpbar)
+   (focus options_banddata_panel)
+   (back options_savedata_screen)    
+   (helpbar (helpbar_back helpbar_selband))
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; warns the user that they are not allowed to remove the band leader from a band.
+
+{new UIScreen option_profile_change_warning_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok {localize_token shell_change_profile_warning}}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (ok.btn
+            {set [profile_changed] TRUE}
+            {ui pop_screen}
+         )
+      }
+   )
+   
+   (profile_changed FALSE)
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{new UIPanel options_savedata_panel
+#ifdef HX_XBOX
+   (file "options_savedata.milo")
+#else
+   (file "options_savedata_og.milo")
+#endif
+   (focus banddata.btn)
+
+   (login_status kDesirable)
+
+   (enter		
+      {set_up_instrument_and_gamertag [player_num]}
+      {helpbar set_limit_to_player_num [player_num]}
+      {platform_mgr add_sink $this signin_changed}
+	  {helpbar set_config (Back Select)}
+	  {helpbar unhide_helpbar}
+   )
+
+   ; Decide which item should be highlighted and/or disabled and set accordingly
+   (reset_button_states
+      ; default set focus to band data (normally you don't do this but since 
+      ; focus is remembered as screen state it needs to be reset each time)
+
+      ; disable banddata if no characters
+      {char_data_provider init [player_num]}
+      {if_else {== {char_data_provider get_num_chars} 0}
+         {do
+            {if {== kFocused {banddata.btn get_state}}
+               {$this set_focus save.btn}
+            }
+            {banddata.btn set_state kDisabled}
+         }
+         ;else
+         {if {!= kFocused {banddata.btn get_state}}
+            {banddata.btn set_state kNormal}
+         }
+      }
+
+      ;disable saving if the cheat is active
+      {if_else {profile_mgr get_all_unlocked}
+         {do
+            ; Only set focus to load if save or autosave is selected and band data is disabled
+            {if {|| {== kFocused {save.btn get_state}}
+                    {== kFocused {autosave.btn get_state}}}
+               {$this set_focus load.btn}
+            }
+            {save.btn set_state kDisabled} ;never gets re-enabled
+            {autosave.btn set_state kDisabled} ; never gets re-enabled
+            {profile_mgr set_autosave_enabled FALSE }
+            ; Set up the autosave check
+            {{$this find autosave_check.mesh} set_showing FALSE}
+         }
+         ; else
+         {{$this find autosave_check.mesh} set_showing {profile_mgr get_autosave_enabled}}
+      }
+   )
+
+   (TRANSITION_COMPLETE_MSG
+      {if {$this get signin_change_waiting}
+         {$this set signin_change_waiting FALSE}
+         {$this process_signin_change}
+      }
+
+      {if {option_profile_change_warning_screen get profile_changed}
+         {option_profile_change_warning_screen set profile_changed FALSE}
+         {ui goto_screen main_screen}
+      }
+
+      {$this reset_button_states}
+   )
+
+   (exit
+      {$this set signin_change_waiting FALSE}
+
+      {helpbar set_limit_to_player_num -1}
+      {platform_mgr remove_sink $this signin_changed}
+   )
+
+   ;; Set when a signin change happens under a pushed screen...
+   (signin_change_waiting FALSE)
+
+   (signin_changed
+      {if_else {== {ui current_screen} options_savedata_screen}
+         {$this process_signin_change}
+         ; else
+         {$this set signin_change_waiting TRUE}
+      }
+   )
+
+   (process_signin_change
+      {if {== {ui current_screen} options_savedata_screen}
+         {ui push_screen option_profile_change_warning_screen}
+      }
+   )
+
+   (FOCUS_MSG
+     ; {if_else {== $new_focus autosave.btn}
+     ;    {if_else {{$this find autosave_check.mesh} showing}
+     ;       {helpbar set_config (Back '' Check)}
+     ;       {helpbar set_config (Back '' UnCheck)}
+     ;    }
+         ; else
+     ;    {helpbar set_config (Back '' Select)}
+      ;}
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (save.btn
+            {if {! {profile_mgr get_all_unlocked}}
+               {manual_save $player_num}
+            }
+         )
+         (load.btn
+            {manual_load $player_num}
+         )
+         (chardata.btn
+            {options_characterdata_panel set player_num [player_num]}
+            {ui goto_screen options_characterdata_screen}
+         )
+         (banddata.btn
+#ifndef HX_XBOX ;HWR - Matt says our version only uses characters, so...
+            {options_characterdata_panel set player_num [player_num]}
+            {ui goto_screen options_characterdata_screen}
+#else
+            {options_banddata_panel set player_num [player_num]}
+            {ui goto_screen options_banddata_screen}
+#endif
+         )
+#ifndef HX_XBOX
+         (autosave.btn
+            {do 
+               ($new_autosave {! {profile_mgr get_autosave_enabled}})
+
+               {profile_mgr set_autosave_enabled $new_autosave }
+               {{$this find autosave_check.mesh} set_showing $new_autosave}
+			   
+			   ;{if_else {== $new_autosave FALSE}
+				;	{helpbar set_config (Back '' Check)}
+				;	{helpbar set_config (Back '' UnCheck)}
+				;}
+			
+            }
+         )
+#endif
+      }
+      kDataUnhandled
+   )
+	
+	(JOYPAD_CONNECT_MSG
+		{if {&& $connected {== $player_num [player_num]}}
+			{set_up_instrument_and_gamertag [player_num]}
+		}
+	)
+}
+
+{new UIScreen options_savedata_screen
+   (panels meta main_lower3rd_panel movie_panel options_savedata_panel options_lower3rd_panel helpbar)
+   (focus options_savedata_panel)
+   (back options_screen)
+   (helpbar (helpbar_back helpbar_select))
+  
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; increments $value to an even multiple of 5
+{func increment_to_5mult ($value)
+   {* {+ {floor {/ $value 5.0}} 1} 5}
+}
+
+;; decrements $value to an even multiple of 5
+{func decrement_to_5mult ($value)
+   {* {- {ceil {/ $value 5.0}} 1} 5}
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Audio Latency (vs. Video)
+
+
+{new AudioLatencyPanel calibrate_av_chooser_manual_panel
+#ifdef HX_XBOX
+   (file calibrate_av_chooser.milo)
+#else
+   (file calibrate_av_chooser_og.milo)
+#endif
+   (focus next.btn)
+   (old_latency 0)
+   (confirmed FALSE)
+
+   (running FALSE)
+
+   (enter
+      {set [old_latency] {profile_mgr get_song_to_taskmgr_ms}}
+      {set [confirmed] FALSE}
+
+      {meta music_stop}
+      {$this set_latency {profile_mgr get_song_to_taskmgr_ms}}
+      {set [cycle_time_ms] 755} 
+      
+      {set [running] TRUE}
+      {next.btn set_localized ok}
+	   {$this preload_audio}
+      {$this start_audio}
+
+      {set_up_instrument_and_gamertag 
+         {calibrate_av_chooser_manual_screen get player_num}
+      }
+      {helpbar set_limit_to_player_num 
+         {calibrate_av_chooser_manual_screen get player_num}
+      }
+   )
+
+   (exit
+      {set [running] FALSE}
+      {$this stop_audio}
+      {meta music_start}
+      {helpbar set_limit_to_player_num -1}
+      {if {![confirmed]}
+         {$this set_latency [old_latency]}
+      }
+      kDataUnhandled
+   )
+   
+; Empirically we need to shift the audio result
+; by this amount to get a consistent result, ie
+; the audio hitting when you see the video.
+#ifdef HX_EE
+#define AUDIO_AV_OFFSET (45)
+#define AUDIO_LAG_OFFSET (60)
+#else
+#ifdef HX_PS3
+#define AUDIO_AV_OFFSET (35)
+#define AUDIO_LAG_OFFSET (45)
+#else
+#define AUDIO_AV_OFFSET (55)
+#define AUDIO_LAG_OFFSET (90)
+#endif
+#endif   
+   
+   (poll
+      {if [running]
+         ; adjust by default, so we can tune it with impunity.
+         ; the 90 is an empirically determined fudge factor for this platform
+         ; and samples, to get the sound to hit the center at time zero which is default.
+         {do ($atime {+ AUDIO_AV_OFFSET {$this get_audio_time} {- {profile_mgr get_default_song_to_taskmgr_ms}}})
+            ; the moving thing
+            {syncoff_gem.tnm set_frame 
+               {$this frame_from_ms 
+                  {+ $atime {profile_mgr get_default_song_to_taskmgr_ms}}
+                  }
+               }
+            ; the thing it hits, the mat anim.
+            {syncoff_target.mnm set_frame
+               {$this frame_from_ms 
+                  {+ $atime {profile_mgr get_song_to_taskmgr_ms}}
+               }
+            }
+         }
+      }
+      kDataUnhandled
+   )
+
+   ; set the latency
+   (set_latency ($latency)
+      {do ($user_latency {- {profile_mgr get_default_song_to_taskmgr_ms} $latency})
+         {if {&& 
+               {> $user_latency -301}
+               {< $user_latency 301}
+            }
+   
+            ;Set the true latency in the app.
+            {profile_mgr set_song_to_taskmgr_ms $latency}
+            ;Then lie to the user - don't tell them about the default portion.   
+            {syncoff_target.tnm set_frame 
+               {clamp {$this frame_from_ms $user_latency} 0.0 15.0}
+            }
+            {current_offset.lbl
+               set_localized {sprintf {localize calibrate_av_offset} $user_latency}
+            }
+         }
+      }
+   )
+
+
+   (frame_from_ms ($ms)
+      ;; there's a 15 frame animation running at 30fps in 1 sec length.
+      ;; The midpoint of the animation should come at time 0
+      {/ 
+         {* 
+            {mod  
+               {+ 
+                  ;show animation with the default latency
+                  $ms  
+                  {/ [cycle_time_ms] 2}
+               } 
+               [cycle_time_ms]
+            } 
+            15
+         } 
+         [cycle_time_ms]
+      }      
+   )
+
+   (BUTTON_DOWN_MSG
+      {switch $button
+         ((kPad_DUp kPad_DRight)
+            {$this set_latency {decrement_to_5mult {profile_mgr get_song_to_taskmgr_ms}}}
+         )
+         ((kPad_DDown kPad_DLeft)
+            {$this set_latency {increment_to_5mult {profile_mgr get_song_to_taskmgr_ms}}}
+         )
+
+         ;; default
+         kDataUnhandled
+      }
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (next.btn
+            {if_else [running]
+               {do
+                  {set [running] FALSE}
+                  {set [confirmed] TRUE}
+                  ;{print {sprintf "Current offset: %3.0f ms\n" {- $latency {profile_mgr get_default_song_to_taskmgr_ms}}}}
+                  {calibrate_video_offset_screen set player_num 
+                     {calibrate_av_chooser_manual_screen get player_num}
+                  } 
+                  {ui goto_screen calibrate_video_offset_screen}
+               }
+               ;else (not running)
+               {do
+                  ; transition to "running" state
+                  {set [running] TRUE}
+                  {next.btn set_localized ok}
+                  {$this start_audio}
+               }
+            }
+         )
+         ; default
+         kDataUnhandled
+      }
+   )
+}
+
+{new UIScreen calibrate_av_chooser_manual_screen
+(panels meta calibrate_av_chooser_manual_panel helpbar)
+
+   (focus calibrate_av_chooser_manual_panel)
+   (back calibrate_av_chooser_screen)
+   (player_num -1)
+   (helpbar (helpbar_cancel helpbar_confirmsetting))
+   (BUTTON_DOWN_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         kDataUnhandled
+      }
+   )
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Pick an Audio Latency from a list of presets
+
+{new UIPanel calibrate_av_chooser_panel
+#ifdef HX_XBOX
+   (file calibrate_av_chooser_auto.milo)
+#else
+   (file calibrate_av_chooser_auto_og.milo)
+#endif
+   (def_av {profile_mgr get_default_song_to_taskmgr_ms}) ;default a/v latency 
+   (def_ctrl {profile_mgr get_default_sync_offset_ms})   ;default controller lag
+   (lag_preset_buttons (lagbutton1.btn
+                        lagbutton2.btn 
+                        lagbutton3.btn 
+                        lagbutton4.btn 
+                        lagbutton5.btn 
+                        lagbutton6.btn))
+
+   (enter
+      ; make sure we select whatever they selected last time
+      {$this update_selection_from_profile}
+      
+      {set_up_instrument_and_gamertag 
+         {calibrate_av_chooser_screen get player_num}
+      }
+      {helpbar set_limit_to_player_num 
+         {calibrate_av_chooser_screen get player_num}
+      }
+   )
+
+   (exit
+      {helpbar set_limit_to_player_num -1}
+   )
+
+   (SELECT_MSG
+      {find_elem [lag_preset_buttons] $component $selected_button_ix}
+      {profile_mgr set_sync_preset_ix $selected_button_ix}
+
+      ; These were taken using "Dani California" which seemas about average.
+      {switch $component ;; TODO: use the note field and convert it to a float somehow, then just use {$component note}?
+         (lagbutton1.btn  ;standard
+            {profile_mgr set_song_to_taskmgr_ms 20}
+            {profile_mgr set_sync_offset 10}
+         )
+         (lagbutton2.btn  ;plasma
+            {profile_mgr set_song_to_taskmgr_ms 0}
+            {profile_mgr set_sync_offset 20}
+         )
+         (lagbutton3.btn  ;lcd
+            {profile_mgr set_song_to_taskmgr_ms 20}
+            {profile_mgr set_sync_offset 10}
+         ) 
+         (lagbutton4.btn  ;rear-proj
+            {profile_mgr set_song_to_taskmgr_ms 20}
+            {profile_mgr set_sync_offset -10}
+         ) 
+         (lagbutton5.btn  ;dlp
+            {profile_mgr set_song_to_taskmgr_ms -25}
+            {profile_mgr set_sync_offset -40}
+         ) 
+         (lagbutton6.btn
+            {ui goto_screen calibrate_av_chooser_manual_screen}
+            {calibrate_av_chooser_manual_screen set player_num 
+               {calibrate_av_chooser_screen get player_num}
+            }
+         )
+      }
+   
+      {if {!= $component lagbutton6.btn}
+         {ui goto_screen calibrate_finished_screen}
+      }
+
+      ; default
+      kDataUnhandled
+   )
+   (update_selection_from_profile
+      {$this set_focus {elem [lag_preset_buttons] {profile_mgr get_sync_preset_ix}}}
+   ) 
+}
+
+{new UIScreen calibrate_av_chooser_screen
+   (panels meta calibrate_av_chooser_panel helpbar)
+   (focus calibrate_av_chooser_panel)
+   (back options_screen) 
+   (helpbar (helpbar_cancel helpbar_select))
+   (player_num -1)
+   (BUTTON_DOWN_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         kDataUnhandled
+      }
+   )
+   (TRANSITION_COMPLETE_MSG
+      {autoload}
+      {calibrate_av_chooser_panel update_selection_from_profile}
+   )   
+}
+
+
+;define a global array
+#define HIT_COLLECTION (())
+#define IGNORE_COUNT (5)
+
+;; Controller Latency Screen
+;;
+{new AudioLatencyPanel options_lag_panel
+#ifdef HX_XBOX
+   (file calibrate_video.milo)
+#else
+   (file calibrate_video_og.milo)
+#endif
+   (focus autocalibrate.btn)
+
+   ; STATES
+   ; - init
+   ; - calibrating
+   ; - success
+   ; - failure
+   (state init)
+
+   (running FALSE) ; flag for animation
+
+   (lag 0)
+   (old_lag 0)
+   (confirmed FALSE)
+
+   (max_hits 35) ; how many hits required
+   (min_hits 8)  ; how many are required for "success"
+   (hit_count 0) ; how many have we collected
+   (ignore_count 0) ;we ignore your 1st N 'cause you suck 
+   (window 200)
+   (min_avg -500)
+   (max_avg 500)
+
+
+   (set_state ($s)
+      {set [state] $s}
+
+      ;update_groups
+      {cond
+         ({== [state] calibrating}
+            {buttons.grp set showing FALSE}
+         )
+         ; default
+         {buttons.grp set showing TRUE}
+      }
+
+      ;;update_text
+      {switch [state]
+         (init
+            {set [lag] {- {profile_mgr get_sync_offset}}}
+            {$this set_frame 0}
+            {countdown.lbl set_localized ""}
+            {instructions.lbl set text_token lag_info_why}
+            {instructions2.lbl set text_token lag_info_howto}
+            {setting.lbl set_localized {sprintf {localize lag_setting} 
+               {+ [lag] {profile_mgr get_default_sync_offset_ms}}}}
+            {autocalibrate.btn set text_token lag_button_calibrate}
+            {helpbar set_config (back select)}
+            {syncoff.grp set_showing FALSE}
+         )
+         (calibrating
+            {meta music_stop}
+            {instructions.lbl set text_token lag_measuring}
+            {instructions2.lbl set text_token ""}
+            {setting.lbl set_localized ""}
+            {helpbar set_config ()}
+            {syncoff_gem.mesh set_showing FALSE}
+            {syncoff.grp set_showing TRUE}
+         )
+         (success
+		    {meta music_start}
+            {$this set_frame 0}
+            {instructions.lbl set text_token lag_success}
+            {instructions2.lbl set_localized ""}
+            {setting.lbl set_localized {sprintf {localize lag_measured} 
+               {+ [lag] {profile_mgr get_default_sync_offset_ms}}}}
+            {autocalibrate.btn set text_token lag_button_recalibrate}
+            {helpbar set_config (back select)}
+            {syncoff.grp set_showing FALSE}
+         )
+         (failure
+		 
+            {meta music_start}
+            {set [lag] {- {profile_mgr get_sync_offset}}}               
+            {$this set_frame 0}
+            {instructions.lbl set text_token lag_info_failure}
+            {instructions2.lbl set text_token lag_info_howto}
+            {setting.lbl set_localized {sprintf {localize lag_setting} 
+               {+ [lag] {profile_mgr get_default_sync_offset_ms}}}}
+            {autocalibrate.btn set text_token lag_button_recalibrate}
+            {helpbar set_config (back select)}
+            {syncoff.grp set_showing FALSE}
+         )
+      }
+   )
+
+   (enter
+      {set [cycle_time_ms] 755}
+      {$this set_state init}
+
+      {set [lag] {- {profile_mgr get_sync_offset}}}
+      {set [old_lag] {profile_mgr get_sync_offset}}
+      {set [confirmed] FALSE}
+
+      {set_up_instrument_and_gamertag 
+         {calibrate_video_offset_screen get player_num}
+      }
+      {helpbar set_limit_to_player_num 
+         {calibrate_video_offset_screen get player_num}
+      }
+   )
+
+   (exit
+      {if [running]
+         {$this stop_audio}
+      }   
+      {helpbar set_limit_to_player_num -1}
+      
+      ;revert change if we back out
+      {if {![confirmed]}
+         {profile_mgr set_sync_offset [old_lag]}
+      }
+   )
+      
+   (get_sync_time 
+      {mod  
+         {+ 
+            AUDIO_LAG_OFFSET
+            {$this get_audio_time} 
+            {profile_mgr get_song_to_taskmgr_ms}
+            {/ [cycle_time_ms] 2}
+         } 
+         [cycle_time_ms]
+      } 
+   )
+   
+   (poll
+      {if [running]
+         ;; there's a 15 frame animation running at 30fps in N-second loops. 
+         ;; The midpoint of the animation should come at the beginning 
+         ;; of the audio loop.
+         
+         {do 
+            ($frame)
+            ; pardon my global, but faster than a property.
+            ; set this in poll so we mimic the game behavior of the
+            ; beatmatch being a frame behind for scoring.
+            {set $cur_time {$this get_sync_time}}
+            {set $frame
+               {/ 
+                  {* $cur_time 15}
+                  [cycle_time_ms]
+               }
+            }
+
+            ;wait until the time moves before showing the target
+            {if {< $cur_time {/ [cycle_time_ms] 2}}            
+               {syncoff_gem.mesh set_showing TRUE}
+            }
+            {$this set_frame $frame}
+         }
+      }
+      kDataUnhandled
+   )
+
+   (BUTTON_DOWN_MSG
+      {if_else {== [state] calibrating}
+         {if 
+            {&& [running] 
+               {||
+                  {< $button kPad_L3} ;disable sticks
+                  {||
+                     {== $button kPad_DUp}
+                     {== $button kPad_DRight}
+                     {== $button kPad_DDown}
+                     {== $button kPad_DLeft}
+                  }
+               }
+            }
+      
+            ; store a +/- value close to 0 in ms
+            {do            
+               ($value
+                  {- $cur_time {/ [cycle_time_ms] 2}}
+               )               
+               {-- [ignore_count]}
+               {if {&&
+                     {< [ignore_count] 0}
+                     {> $value {- [window]}} 
+                     {< $value [window]}
+                   }
+                  {push_back HIT_COLLECTION $value}
+                  ;{printf "hit offset: %f\n" $value}
+               }
+            }
+         }
+         ;else
+         kDataUnhandled
+      }
+   )
+
+
+   (SELECT_MSG
+      {switch $component
+         (autocalibrate.btn
+            {$this set_state calibrating}
+            {$this start_countdown}
+         )
+         (manual.btn
+            {set [confirmed] TRUE}
+            {calibrate_manual_screen set player_num 
+               {calibrate_video_offset_screen get player_num}
+            }
+            {ui goto_screen calibrate_manual_screen}
+         )
+         (next.btn
+            {calibrate_overscan_screen set player_num 
+               {calibrate_video_offset_screen get player_num}
+            }
+            {set [confirmed] TRUE}
+            {ui goto_screen calibrate_finished_screen};;HOJ calibrate_overscan_screen}
+         )
+         ;default
+         kDataUnhandled
+      }
+   )
+
+   (start_countdown
+      {thread_task
+         kTaskUISeconds
+         (script
+            {set $success TRUE}
+            {$this preload_audio}
+            
+            ;; clear the collected data and start the test
+            {resize HIT_COLLECTION 0}
+            {set [ignore_count] 5}
+
+            ;; countdown 3..2..1..GO!
+            {$task sleep {/ [cycle_time_ms] 1000}}
+
+            {countdown.lbl set text_token lag_3}
+            {$task sleep {/ [cycle_time_ms] 1000}}
+
+            {countdown.lbl set text_token lag_2}
+            {$task sleep {/ [cycle_time_ms] 1000}}
+
+            {countdown.lbl set text_token lag_1}
+            {$task sleep {/ [cycle_time_ms] 1000}}
+
+            {countdown.lbl set text_token lag_go}
+            {set [running] TRUE}
+            
+            ;audio starts 1/2 cycle before clap sound, so wait cycletime/2
+            {$task sleep {/ {/ [cycle_time_ms] 1000} 4}}            
+
+            {countdown.lbl set_localized ""}
+            {instructions.lbl set showing FALSE}
+
+            {$task sleep {/ {/ [cycle_time_ms] 1000} 4}}
+            {$this start_audio}
+
+            {$task sleep {* [max_hits] {/ [cycle_time_ms] 1000}}} ;in progress
+
+            {set [running] FALSE}
+            {$this stop_audio}
+
+            {syncoff_gem.mesh set_showing FALSE}
+            {$task sleep 1} ; while user realizes test is done
+            
+            ; assume we failed until we pass all "success" criteria
+            {$this set_state failure}          
+
+            ; calculate results if we got enough hits
+            {if {> {size HIT_COLLECTION} [min_hits]}
+               {sort HIT_COLLECTION}
+               ; ignore top and bottom five and take it from there.
+               {do ($sum 0)
+                  {foreach_int $i 5 {- {size HIT_COLLECTION} 5}
+                     {+= $sum {elem HIT_COLLECTION $i}}
+                  }
+                  {set [lag] 
+                     {floor {+ .5 {/ $sum {- {size HIT_COLLECTION} 10}}}}
+                  }
+               }                             
+               
+#ifndef _SHIP
+               {printf "--------------------------------------"}         
+               {foreach $a_hit HIT_COLLECTION
+                  {printf "%f\n" $a_hit}
+               }
+
+               {print "av -10 worst is " [lag] "\n"}
+#endif               
+
+               ; if we got a reasonable result, store it. Otherwise try again.
+               {if {&&   
+                      {> [lag] [min_avg]} 
+                      {< [lag] [max_avg]}
+                   }
+                  {do
+                     ; When doing this calibration I get 
+                     ; a value consistently off by about 72 ms 
+                     ; from what I measure
+                     ; if I go into the game and just play and measure
+                     ; the average deviation from the gem centers.
+                     ; Assuming it's a question of artwork or setup, I'm
+                     ; just going to subtract that off here until further
+                     ; investigation. -jwf
+                     {-= [lag] 72}
+                     {profile_mgr set_sync_offset {- [lag] }}
+                     {$this set_state success}
+                  }
+               }
+            }
+            {instructions.lbl set showing TRUE}
+         )
+      }
+   )            
+}
+
+{new UIScreen calibrate_video_offset_screen
+   (panels meta options_lag_panel helpbar)
+   (focus options_lag_panel)
+   (back calibrate_av_chooser_manual_screen)
+   (player_num -1)
+   (helpbar (helpbar_cancel helpbar_select))
+   (BUTTON_DOWN_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         kDataUnhandled
+      }
+   )
+}
+
+
+{new UIPanel calibrate_manual_panel
+#ifdef HX_XBOX
+   (file calibrate_manual.milo)
+#else
+   (file calibrate_manual_og.milo)
+#endif
+   (focus continue.btn)
+   (old_lag 0)
+   (confirmed FALSE)
+
+   (enter
+      {$this set_lag {- {profile_mgr get_sync_offset}}}
+
+      {set [old_lag] {profile_mgr get_sync_offset}}
+      {set [confirmed] FALSE}
+
+      {set_up_instrument_and_gamertag 
+         {calibrate_manual_screen get player_num}
+      }
+      {helpbar set_limit_to_player_num 
+         {calibrate_manual_screen get player_num}
+      }
+   )
+
+   (exit
+      {helpbar set_limit_to_player_num -1}
+      
+      ;revert change if we back out
+      {if {![confirmed]}
+         {profile_mgr set_sync_offset [old_lag]}
+      }
+   )
+
+   (set_lag ($lag)
+      {if {&& 
+            {> {+ $lag {profile_mgr get_default_sync_offset_ms}} -501}
+            {< {+ $lag {profile_mgr get_default_sync_offset_ms}} 501}
+          }
+         {profile_mgr set_sync_offset {- $lag}}
+         {current_offset.lbl
+            set_localized
+            {sprintf {localize calibrate_lag_offset}
+               {+ $lag {profile_mgr get_default_sync_offset_ms}}
+            }
+         }
+      }
+   )
+
+
+   (BUTTON_DOWN_MSG
+      {switch $button
+         ( (kPad_DDown kPad_DLeft)
+            {$this set_lag {decrement_to_5mult {- {profile_mgr get_sync_offset}}}})
+
+         ( (kPad_DUp kPad_DRight)
+            {$this set_lag {increment_to_5mult {- {profile_mgr get_sync_offset}}}})
+
+         ;; default
+         kDataUnhandled
+      }
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (continue.btn
+            {set [confirmed] TRUE}
+            {calibrate_overscan_screen set player_num 
+               {calibrate_manual_screen get player_num}
+            }
+            {ui goto_screen calibrate_finished_screen} ;;HOJ taking overscan out calibrate_overscan_screen}
+         )
+         ; default
+         kDataUnhandled
+      }
+   )
+} 
+
+{new UIScreen calibrate_manual_screen
+   (panels meta calibrate_manual_panel helpbar)
+   (focus calibrate_manual_panel)
+   (back calibrate_video_offset_screen)
+   (player_num -1)
+   (helpbar (helpbar_cancel helpbar_confirmsetting))
+   (BUTTON_DOWN_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         kDataUnhandled
+      }
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;stuff for setting video overscan
+{new UIPanel calibrate_overscan_panel
+#ifdef HX_XBOX
+   (file calibrate_overscan.milo)
+#else
+   (file calibrate_overscan_og.milo)
+#endif
+   (focus overscan.btn)
+   (original '')
+   (confirmed FALSE)
+
+   (enter
+		{$this set_focus overscan.btn}
+      {set [original] {profile_mgr get_overscan}}
+      {set [confirmed] FALSE}
+
+      {set_up_instrument_and_gamertag 
+         {calibrate_overscan_screen get player_num}
+      }
+      {helpbar set_limit_to_player_num 
+         {calibrate_overscan_screen get player_num}
+      }
+      {$this update_overscan_check}
+   )
+
+   (exit
+      {helpbar set_limit_to_player_num -1}
+
+      {if {![confirmed]}
+         {profile_mgr set_overscan [original]}
+      }
+   )
+
+   (FOCUS_MSG
+      {switch $new_focus
+         (overscan.btn
+			  {helpbar set_config (helpbar_back helpbar_select)}
+          ;;  {helpbar set_config (helpbar_back helpbar_toggleoption)}
+         )
+         (continue.btn
+		  {helpbar set_config (helpbar_back helpbar_select)}
+            ;;{helpbar set_config (helpbar_back helpbar_confirmsetting)}
+         )
+      }
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (overscan.btn
+            {do
+               ($overscanned {profile_mgr get_overscan})
+               {profile_mgr set_overscan {! $overscanned}}
+               {$this update_overscan_check}
+            }
+         )
+         (continue.btn
+            {set [confirmed] TRUE}
+            {ui goto_screen calibrate_finished_screen}
+         )
+         ; default
+         kDataUnhandled
+      }
+   )
+
+   (update_overscan_check
+      {{calibrate_overscan_panel find check_overscan.mesh} set_showing
+         {profile_mgr get_overscan}
+      }
+   )
+} 
+
+{new UIScreen calibrate_overscan_screen
+   (panels meta main_lower3rd_panel movie_panel calibrate_overscan_panel helpbar)
+   (focus calibrate_overscan_panel)
+   (back calibrate_video_offset_screen)
+   (player_num -1)
+    
+   ;;(helpbar (helpbar_cancel helpbar_toggleoption))
+   (helpbar (helpbar_cancel helpbar_select))
+   (BUTTON_DOWN_MSG
+      {if_else {!= [player_num] $player_num}
+         TRUE ; eat messages if not from the active player
+         kDataUnhandled
+      }
+   )
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+{new UIScreen calibrate_finished_screen
+   (panels meta dialog_panel helpbar)
+   (focus dialog_panel)
+   ;(back calibrate_av_chooser_screen)
+   (helpbar (helpbar_back helpbar_select))
+   
+   (enter
+      {dialog_panel set_ok
+         {localize_token calibration_finished}
+      }   
+   )
+   (SELECT_MSG
+      {ui goto_screen options_screen}
+   )
+}
+
+
+;;
+;; confirmation when changing the global system settings profile
+;;
+{func goto_system_option_screen ($screen $player_num)
+   {$screen set player_num $player_num}
+#ifndef HX_XBOX
+   {ui goto_screen $screen}
+#else
+   ;if the options master has not been set, or the options master is me
+   {if_else {||
+               {!{profile_mgr global_options_pad_set}}
+               {==   {profile_mgr get_global_options_pad} 
+                     {joypad_get_players_padnum $player_num}
+               }
+            }
+      {do
+         ;go straight through to checking if the player's signed in
+         {profile_mgr set_global_options_pad 
+               {joypad_get_players_padnum $player_num}
+         }
+         {warn_no_signin_goto_screen $screen $player_num}
+      }
+      ;else it's set and it's not me
+      {do 
+         {global_options_change_screen set destination_screen $screen}
+         {global_options_change_screen set player_num $player_num}
+         {ui goto_screen global_options_change_screen}
+      }
+   }
+#endif
+}
+
+{new UIScreen global_options_change_screen
+   (panels meta dialog_panel)
+   (focus dialog_panel)
+   (back options_screen)
+   (destination_screen '')
+   (active_pad_num -1)
+   (player_num -1) 
+  
+   (enter
+      {set [active_pad_num] {joypad_get_players_padnum [player_num]}}
+      {dialog_panel set_yesno 
+         {sprintf {localize confirm_change_active_options} 
+            {platform_mgr get_name {profile_mgr get_global_options_pad}}
+            {platform_mgr get_name [active_pad_num]}
+         } 
+         yes.btn
+      }
+   )
+   
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {profile_mgr set_global_options_pad 
+               {joypad_get_players_padnum [player_num]}}
+            {warn_no_signin_goto_screen [destination_screen] [player_num]}
+         )
+         (no.btn
+            {ui goto_screen options_screen}
+         )
+      }
+   )
+}
+
+;this screen either goes directly to $screen or shows an intermediate warning
+{func warn_no_signin_goto_screen ($screen $player_num)
+   {if_else {platform_mgr is_player_signed_in $player_num}
+      {ui goto_screen $screen}
+      ;else
+      {do
+         {warn_no_signin_screen set destination_screen $screen}
+         {warn_no_signin_screen set player_num $player_num}
+         {ui goto_screen warn_no_signin_screen}
+      }
+   }
+}
+
+#ifdef HX_XBOX
+{new UIScreen warn_no_signin_screen
+   (panels meta dialog_panel)
+   (focus dialog_panel)
+   (back options_screen)
+   (destination_screen '')
+   (player_num -1) 
+  
+   (enter
+      {set [active_pad_num] {joypad_get_players_padnum [player_num]}}
+      {dialog_panel set_ok 
+         {sprintf {localize warn_active_options_not_signed_in}
+            {platform_mgr get_name [active_pad_num]}
+         } 
+      }
+   )
+   
+   (SELECT_MSG
+      {switch $component
+         (ok.btn
+            {ui goto_screen [destination_screen]}
+         )
+      }
+   )
+}
+#else
+{new UIScreen warn_no_signin_screen
+	(panels meta dialog_panel)
+   (focus dialog_panel)
+   (back options_screen)
+   (destination_screen '')
+   (player_num -1) 
+   
+   (enter
+	{ui goto_screen [destination_screen]}
+   )
+  
+}
+#endif
+
+

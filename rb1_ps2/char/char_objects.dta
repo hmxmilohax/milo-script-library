@@ -1,0 +1,2356 @@
+#include ..\config\macros.dta
+#include char_face_exp.dta
+
+; these define the facial animation groups that can be used to animate facial expressions
+; tied to the animations - they are animated poses
+
+(CharClip
+   (editor 
+      (flags bitfield 
+         (list 
+            {if_else {== {{$this dir} get_type} ''}   
+               ()
+               {{$this dir} clip_flags}
+            } 
+         ) ; so each charclipset type can show its own flags.
+         (help "Band Clip Flags")
+      )
+   )
+)
+
+(CharClipGroup
+   (genre
+      (genre bitfield 
+         (list ("kGenreRocker" "kGenreDramatic" "kGenreBanger" "kGenreSpazz"))
+         (help "flags to determine which genres this clip group is good for")
+      )
+   )
+)
+
+
+; How long to blend to and from ik within an animation.
+#define IK_BLEND_TIME (.5)
+
+(CharClipSamples
+   (init
+      {if {$this dir} 
+         {switch {{$this dir} get_type}
+            (musician 
+               {$this set_type musician}
+               {$this set blend_width 1}
+               {$this set beat_align kPlayBeatAlign1}
+               
+               {if {find_elem ("male_guitar" "female_guitar") {{$this dir} name} } 
+                  {$this set flags {| kValidBass kValidGuitar}}
+               }                           
+            )
+            (guitarist_strum
+               {$this set flags kPlayAndAttitudeFlags}
+            )
+            (crowd
+               {$this set_type crowd}
+               {$this set blend_width 1}
+               {$this set beat_align kPlayBeatAlign1}
+            )
+            (viseme 
+               {$this set relative {{$this dir} find Base}}
+               {$this set blend_width .1}
+               {$this set beat_align kPlayRealTime}
+               {$this set default_loop kPlayLoop}
+               {$this set flags 0}
+            )
+            (shell
+               {$this set_type shell}
+               {$this set beat_align kPlayRealTime}
+               {$this set blend_width 1}
+               {$this set flags 
+                  {|
+                     kLeftArm
+                     kRightArm
+                     kLeftLeg
+                     kRightLeg
+                     kDisableLipSync
+                     kIgnoreAccent
+                     kValidBass
+                     kValidGuitar
+                  }
+               }      
+            )
+         }
+      }
+   )
+   ; go non musicians can have null type
+   (allow_null_type
+      {if_else {$this dir}
+         {!= {{$this dir} get_type} musician}
+         1
+      }
+   )
+   (types
+      (shell
+         (editor
+            (viseme_group symbol (list (CHARVISEMEGROUPS)) (help "facial mood group for this animation"))
+            (drum_singlestick bool (help "if drummer shows the separate sticks"))
+         )
+         
+         (viseme_group normal)
+         (drum_singlestick FALSE)
+
+         (enter
+            {if [viseme_group]
+               {$clip.dude change_face_group [viseme_group]}
+            }
+            
+            {do ($ss [drum_singlestick])
+               {with $clip.dude
+                  {if {$this exists sticks.grp}
+                     {sticks.grp set draw_only 
+                        {if_else $ss singlestick.grp doublestick.grp}
+                     }
+                  }
+               }            
+            }
+         )
+            
+         (event_handlers
+            (
+               CHARVISEMEGROUPS
+            )
+         )                  
+      )
+      (musician
+         (editor
+            (viseme_group symbol (list (CHARVISEMEGROUPS)) (help "facial mood group for this animation"))
+         )
+         
+         (viseme_group normal)
+
+         (enter
+            {if [viseme_group]
+               {$clip.dude change_face_group [viseme_group]}
+            }
+            ; okay this is kind of cheesy.
+            {if {== {$clip.dude get_type} vocal}
+               {$clip.dude set_instrument
+                  {cond 
+                     ( {has_substr {$this name} tambourine} tambourine)
+                     ( {has_substr {$this name} cowbell} cowbell)
+                     ( {has_substr {$this name} clap} clap)
+                     mic
+                  }
+               }
+            }
+         )
+;; DMS : Commented out to correctly precache
+;;#ifdef HX_XBOX		; PGM         
+;;        (exit
+;;            {with $clip.dude
+;;               {if {exists left_hand.weight}
+;;                  {left_hand.weight set beats_per_weight 0}
+;;               }
+;;               {if {exists right_hand.weight}
+;;                  {right_hand.weight set beats_per_weight 0}
+;;               }
+;;/*            
+;;              {if {exists left_foot.weight}
+;;                  {left_foot.weight set beats_per_weight 0}
+;;               }
+;;               {if {exists right_foot.weight}
+;;                  {right_foot.weight set beats_per_weight 0}
+;;               }
+;;*/
+;;            }
+;;         )
+;;#endif				; PGM
+         (event_handlers
+            (
+               '' ; when inserting one, it will bitch without this.
+               freeze
+               set_leftarm_true
+               set_rightarm_true
+               set_leftarm_false
+               set_rightarm_false
+               CHARVISEMEGROUPS
+            )
+         )
+        
+         CHAR_FACE_FUNCTIONS
+         
+         (freeze
+            ; placeholder to let the camera find it.  Though maybe it should
+            ; actually freeze the character as well.  Think about it.  Would be more
+            ; accurate.
+         )
+         
+         ; Set these flags.
+;; DMS : Commented out to correctly precache
+;;#ifdef HX_XBOX		; PGM         
+;;         (set_leftarm_true
+;;            {|= [flags] kLeftArm}
+;;            {$this set_beats_per_weight left_hand.weight}
+;;         )
+;;         (set_rightarm_true
+;;            {|= [flags] kRightArm}
+;;            {$this set_beats_per_weight right_hand.weight}
+;;         )
+;;         (set_leftarm_false
+;;            {&= [flags] {~ kLeftArm}}
+;;            {$this set_beats_per_weight left_hand.weight}
+;;         )
+;;         (set_rightarm_false
+;;            {&= [flags] {~ kRightArm}}
+;;            {$this set_beats_per_weight right_hand.weight}
+;;         )
+;;         (set_beats_per_weight ($setter)
+;;            {do ($weight {find_obj $clip.dude $setter})
+;;               {if $weight
+;;                  {$weight set beats_per_weight IK_BLEND_TIME}
+;;               }
+;;            }         
+;;         ) 
+;;      ) 
+;;      (crowd
+;;         (hand clap)
+;;         (editor
+;;            (hand symbol (list (clap fist horns)) (help "what the hands should look like"))
+;;         )
+;;         (enter
+;;            ; pick the right hands.
+;;            {do ($hand [hand])
+;;               {with $clip.dude
+;;                  {hands.grp set draw_only 
+;;                     {switch $hand
+;;                        (clap clap.grp)
+;;                        (fist fist.grp)
+;;                        (horns horns.grp)
+;;                     }
+;;                  }
+;;               }
+;;            }
+;;         )
+;;     )  
+;;#endif				; PGM         
+      )   
+   )
+)
+
+
+(CharClipSet
+   (types
+      (viseme
+         (version 2)
+         (clip_flags 
+            (
+               "kExpressionFirst"
+            )
+         ) 
+         (compression 
+            (tolerance .05)
+            (bones
+               (bone_L-brow1.mesh)
+               (bone_L-brow2.mesh)
+               (bone_L-brow3.mesh)
+               (bone_L-cheek.mesh)
+               (bone_L-cheek2.mesh)
+               (bone_L-crease.mesh)
+               (bone_L-eyelid-low.mesh)
+               (bone_L-lid.mesh (offset 1 0 0) )
+               (bone_L-lipcorner.mesh)
+               (bone_L-nose.mesh)
+               (bone_R-brow1.mesh)
+               (bone_R-brow2.mesh)
+               (bone_R-brow3.mesh)
+               (bone_R-cheek.mesh)
+               (bone_R-cheek2.mesh)
+               (bone_R-crease.mesh)
+               (bone_R-eyelid-low.mesh)
+               (bone_R-lid.mesh (offset 1 0 0) )
+               (bone_R-lipcorner.mesh)
+               (bone_R-nose.mesh)
+               (bone_brow-low.mesh)
+               (bone_brow-mid.mesh)
+               (bone_chin.mesh)
+               (bone_forehead.mesh)
+               (bone_head.mesh)
+               (bone_jaw.mesh)
+               (bone_liptop_left.mesh)
+               (bone_liptop_mid.mesh)
+               (bone_liptop_right.mesh)
+               (bone_lowlip_left.mesh)
+               (bone_lowlip_mid.mesh)
+               (bone_lowlip_right.mesh)
+               (bone_neck.mesh)
+               (bone_nose.mesh)
+               (bone_tongue1.mesh)
+               (bone_tongue2.mesh)
+               (bone_tongue3.mesh)
+               (bone_tongue4.mesh (offset 1 0 0) )
+               (bone_lowlip_left.mesh)
+               (bone_lowlip_right.mesh)
+               (bone_lowlip_mid.mesh)
+            )            
+         )         
+      )
+   
+      ; Used for all the full body musician animations.
+      (musician
+         (version 6)
+         (clip_flags (
+            "kLeftArm"
+            "kRightArm"
+            "kLeftLeg"
+            "kRightLeg"
+            "kAnimateEyes"
+            "kDisableLipSync"
+            "kTempoSlow"
+            "kTempoMedium"
+            "kTempoFast"
+            "kGenreRocker"
+            "kGenreDramatic"
+            "kGenreBanger"
+            "kGenreSpazz"           
+            "kPlayIdleRealtime"
+            "kPlayIdle"
+            "kPlayIdleIntense"
+            "kPlayMellow"
+            "kPlayNormal"
+            "kPlayIntense"
+            "kPlaySolo"
+            "kPlayDirectedCut"
+            "kValidGuitar"
+            "kValidBass"
+            "kIgnoreAccent"
+            )
+         )
+                  
+         (filter_clips
+            {cond 
+               ; In game the char_cache deals.
+               ({exists char_cache} 
+                  {if {== {game get_song} ''} {fail "song is null"}}
+                  {char_cache filter_clips $this {song_mgr anim_tempo {game get_song}}}
+               )
+               ; Keep only medium tempo clips chars_file is 
+               ; We need to keep all attitudes because of attitude
+               ; specific camera shots.
+               ({|| $venue_test $char_test $chars_file $first_chars_file_sync}
+                  {if_else {&& $chars_file {! $first_chars_file_sync} {has_substr {$this name} "female"}}
+                     {do ; Delete them all so we have enough ram.  Will load them during sync.
+                        {$this iterate CharClip $clip
+                           {unless {find_elem ("still" "stand_singer_pose" "stand_guitar_pose" "sit_drummer_pose") {$clip name}} 
+                              {delete $clip}
+                           }
+                        }
+                     }
+                     {do
+                        {$this delete_flags kTempoMedium kTempoMedium FALSE 0}
+                        {$this delete_variants}
+                     }
+                  }
+               )               
+            }
+         )
+         (bone_weights
+            (bone_pos_guitar.mesh 0) ; forget the guitar, man!
+         )
+         
+         (compression 
+            (tolerance .40)
+            (bones
+               (bone_R-ankle.mesh (weight .85))
+               (bone_L-ankle.mesh (weight .85))
+               (bone_R-hand.mesh)
+               (bone_L-hand.mesh)
+               (bone_R-hand_R-hip.mesh)
+               (bone_L-hand_L-hip.mesh)
+               (bone_R-hand_mouth.mesh)
+               (bone_L-hand_mouth.mesh)
+               (bone_L-index03.mesh)
+               (bone_L-middlefinger03.mesh)
+               (bone_L-ringfinger03.mesh)
+               (bone_L-pinky03.mesh)
+               (bone_L-thumb03.mesh)
+               (bone_R-index03.mesh)
+               (bone_R-middlefinger03.mesh)
+               (bone_R-ringfinger03.mesh)
+               (bone_R-pinky03.mesh)
+               (bone_R-thumb03.mesh)
+               (bone_head.mesh (weight 1.5) (offset 3 6 0 )) ; kind of at the nose.
+               (bone_head.mesh (weight 1.5) (offset -2 6 0 )) ; kind of at the chin.
+            )
+         )
+         
+         (criteria
+            ; no transitions from or to anything realtime.
+            ( 
+               (match
+                  {||
+                     {== {$a_clip get beat_align} kPlayRealTime}
+                     {== {$b_clip get beat_align} kPlayRealTime}
+                  }
+               )
+               (cancel)
+            )
+            (
+               ; only match within the same group 
+               ; and shares tempo
+               ; and shares play flags
+               ; and shares genres!
+               (match 
+                  {do ($shared_flags {& {$a_clip get flags} {$b_clip get flags}})
+                     {&& 
+                        {& $shared_flags kTempoAll}
+                        {& $shared_flags kPlayDirectedCut}
+                        {& $shared_flags kGenreAll}                     
+                        {$a_clip shares_groups $b_clip}
+                     }  
+                  }
+               )
+               (restrict {&& {< $b_start 1} {< $a_end 2}})
+               (beat_align 1)
+            )
+            (
+               (cancel) ; all others goodbye.
+            )
+         )
+      )
+      
+      (guitarist_strum
+         (version 1)
+         (clip_flags (
+            "kGenreRocker"
+            "kGenreDramatic"
+            "kGenreBanger"
+            "kGenreSpazz" 
+            "kPlayIdleRealtime"
+            "kPlayIdle"
+            "kPlayIdleIntense"
+            "kPlayMellow"
+            "kPlayNormal"
+            "kPlayIntense"
+            "kPlaySolo"
+            )
+         )
+      ) 
+      
+      (crowd 
+         (version 1) ; bump this up if any of this state changes, forces all new transitions.      
+         (clip_flags ( 
+            "kTempoSlow"
+            "kTempoMedium"
+            "kTempoFast"
+            ) 
+         ) 
+         (criteria
+            (
+               (beat_align 1)
+               (restrict {&& {< $b_start 1} {< $a_end 2}})
+            )
+         )               
+      )
+      
+      (shell
+        (version 2)
+         (clip_flags (
+            "kLeftArm"
+            "kRightArm"
+            "kLeftLeg"
+            "kRightLeg"
+            "kAnimateEyes"
+            "kDisableLipSync"
+            "kGenreRocker"
+            "kGenreDramatic"
+            "kGenreBanger"
+            "kGenreSpazz"           
+            "kValidGuitar"
+            "kValidBass"
+            "kIgnoreAccent"
+            )
+         )
+         
+         (bone_weights
+            (bone_pos_guitar.mesh 0) ; forget the guitar, man!
+         )
+         
+         (compression 
+            (tolerance .24)
+            (bones
+               (bone_R-ankle.mesh (weight .85))
+               (bone_L-ankle.mesh (weight .85))
+               (bone_R-knee.mesh (weight .85))
+               (bone_L-knee.mesh (weight .85))
+               (bone_R-hand.mesh)
+               (bone_L-hand.mesh)
+               (bone_R-hand_R-hip.mesh)
+               (bone_L-hand_L-hip.mesh)
+               (bone_R-hand_mouth.mesh)
+               (bone_L-hand_mouth.mesh)
+               (bone_L-index03.mesh)
+               (bone_L-middlefinger03.mesh)
+               (bone_L-ringfinger03.mesh)
+               (bone_L-pinky03.mesh)
+               (bone_L-thumb03.mesh)
+               (bone_R-index03.mesh)
+               (bone_R-middlefinger03.mesh)
+               (bone_R-ringfinger03.mesh)
+               (bone_R-pinky03.mesh)
+               (bone_R-thumb03.mesh)
+               (bone_head.mesh (weight 1.5) (offset 3 6 0 )) ; kind of at the nose.
+               (bone_head.mesh (weight 1.5) (offset -2 6 0 )) ; kind of at the chin.
+            )
+         )        
+         
+         (criteria
+            ; no transitions from or to anything realtime.
+            ( 
+               (match
+                  {||
+                     {== {$a_clip get beat_align} kPlayRealTime}
+                     {== {$b_clip get beat_align} kPlayRealTime}
+                  }
+               )
+               (cancel)
+            )
+            (
+               ; only match within the same group and if genres share.
+               (match 
+                  {do ($shared_flags {& {$a_clip get flags} {$b_clip get flags}})
+                     {&& 
+                        {& $shared_flags kGenreAll}  
+                        {$a_clip shares_groups $b_clip}
+                     }  
+                  }
+               )               
+               (restrict {&& {< $b_start 1} {< $a_end 2}})
+               (beat_align 1)
+            )
+            (
+               (cancel) ; all others goodbye.
+            )
+         )
+      )
+   )
+)
+
+
+(CharCollide
+   (editor 
+      (flags bitfield (list (CHAR_HAIR_FLAGS)) (help "Which collision volumes to hook up to this strand for collision"))
+   )
+)
+
+(CharCuff
+   (editor
+      ; the only categories we care about, pretty sure.
+      (category symbol (list (feet legs torso wrist)) (help "The outfit category to cuff against"))
+   )
+)
+
+(CharGuitarString
+   (types
+      (open_strums
+         (parser guitar_string_open)
+         (enter
+            {if [parser]
+               {handle ([parser] add_sink $this)}
+            }
+         )
+         (exit
+            {if [parser]
+               {handle ([parser] remove_sink $this)}
+            }
+         )
+         
+         (open
+            {$this set_open TRUE}
+         )
+         
+         (closed
+            {$this set_open FALSE}
+         )
+      )
+   )
+)
+
+(CharLookAt
+   (types
+      (guitar_lookat
+         (parser guitar_streak_parser)
+         (parser2 guitar_singalong_parser)
+         (weight 1)
+         
+         (enter
+            {if [parser]
+               {handle ([parser] add_sink $this)}
+            }
+            {if [parser2]
+               {handle ([parser2] add_sink $this)}
+            }
+         )
+         (exit
+            {if [parser]
+               {handle ([parser] remove_sink $this)}
+            }
+            {if [parser2]
+               {handle ([parser2] add_sink $this)}
+            }
+         )
+         
+         (lookat_in
+            {if_else [weight]
+               {lookat_in.trig trigger}
+               {lookat_out.trig trigger}
+            }
+         )
+         
+         (lookat_out
+            {lookat_out.trig trigger}
+         )
+      )
+      (drum_head
+         (enter
+            ; need to disable for shell
+            {set [weight]            
+               {if_else {{$this dir} get in_shell} 0 .8}
+            }
+         )
+      )
+   )
+)
+
+
+
+(CharWeightSetter   
+   (editor
+      (flags bitfield 
+         (list 
+            (
+               "kLeftArm"
+               "kRightArm"
+               "kLeftLeg"
+               "kRightLeg"
+               "kAnimateEyes"
+               "kIgnoreAccent"
+               "kDisableLipSync"
+            )     
+         ) 
+         (help "Which Band clip flags to look for")
+      )
+   )
+   (types
+      (singalong
+         (parser guitar_singalong_parser)
+         (editor
+            (parser string (help "name of singalong parser"))        
+         )
+         (enter 
+            {set [base_weight] 0}
+            {handle ([parser] add_sink $this)}
+         )
+         (exit
+            {set [base_weight] 0}
+            {handle ([parser] remove_sink $this)}
+         )
+      )
+      ; this ramps up and down a driver with drum hits, so various hits
+      ; can allow more or less of the addative animation to play through
+      (drummer_play
+         (lhand_weight 1)
+         (rhand_weight 1)
+         (enter
+            {set [base_weight] 1}
+            {handle (drums_left_hand add_sink $this)}
+            {handle (drums_right_hand add_sink $this)}
+         )
+         (exit
+            {set [base_weight] 1}
+            {handle (drums_left_hand remove_sink $this)}
+            {handle (drums_right_hand remove_sink $this)}
+         )
+         
+         (get_hand_weight ($group)
+            {switch $group
+               (hihat_fast 0.8)
+               (snare_fast 0.5)
+               (cymbal_r_grab 0.0)
+               (cymbal_l_grab 0.0)
+               (cymbal_l_crash 0.5)
+               (cymbal_l_crash_big 0.2)
+               (cymbal_r_crash 0.5)
+               (cymbal_l_crash_fast 0.5)
+               (floortom 0.5)
+               (floortom_fast 0.5)
+               (cymbal_l_side 0.2)
+               (cymbal_l_side_fast 0.1)
+               (cymbal_r_side 0.2)
+               (cymbal_r_side_fast 0.1)
+               (ride 0.65)
+               (ride_fast 0.45)
+               (ride_side_l 0.25)
+               (ride_side_r 0.25)
+               (cymbal_l 0.5)
+               (cymbal_r 0.5)
+               (tom_l 0.75)
+               (tom_r 0.75)
+               (tom_r_fast 0.5)
+               (tom_l_fast 0.5)
+               1
+            }
+         )
+         (drum_lhand ($group $length)
+            {set [lhand_weight] {$this get_hand_weight $group}}
+            {set [base_weight] {* [lhand_weight] [rhand_weight]}}
+         )
+         (drum_rhand ($group $length)
+            {set [rhand_weight] {$this get_hand_weight $group}}
+            {set [base_weight] {* [lhand_weight] [rhand_weight]}}
+         )
+      )
+   )   
+)
+
+
+#define LIPSERVO_COMMON
+(
+   (change_song
+      {with_file_path_root "."   
+         {$this set_blink_song}
+      }
+   )
+   
+   ; Make us blink!
+   (set_blink_song
+      {$this set_song "songs/_blinktrack/_blinktrack.voc" TRUE}; async
+      {set [loop] TRUE} ; loop...
+      {set [song_offset] {random_float 0 1000}} ; so we don't all blink together.
+   )
+)
+
+(FaceFxLipSyncServo
+   (types
+      (singer
+         (enter
+            ; In the shell we just want to do our own expressions.
+            {if_else {{$this dir} get in_shell}      
+               {do
+                  {set [weight_owner] $this}
+                  {set [weight] 0}
+               }
+               {set [weight_owner] expression.weight}
+            }
+         )   
+         LIPSERVO_COMMON   
+      )
+      ; This is actually used by the drums as well.
+      (guitar
+         (enter
+            ; For Jason's sing-along.
+            {if_else {&& {exists game} {game is_up}}
+               {set [song_owner] {find_obj $world player_vocals0 lip.faceservo}}
+               {set [song_owner] ''}
+            }
+         )
+         LIPSERVO_COMMON
+         (exit 
+            {set [song_owner] ''}            
+         )
+      )       
+   ) 
+)
+
+; Include all the instruments.
+#include instruments.dta
+
+#define OUTFIT_LOADER_COMMON
+(
+   ; Callback to the game to set my outfit.
+   (change_outfit ($async $loading)
+      {if $loading
+         {cond 
+         
+#ifndef _SHIP
+            ; load time optimization.
+            ( $char.no_clothes {$this select_all -1} )
+#endif
+            ( {exists char_cache}
+               {do ($char_data {char_cache find_char_data {$this dir}})
+#ifndef _SHIP
+                  {unless $char_data {fail "no char_data"}}
+#endif
+                  {$this set_prefab 
+                     {find {$char_data get_char_data} outfit}
+                  }
+                  {$this select_instrument $char_data}
+               }
+            )
+            ( $venue_test
+               {$this select_all -1}   ; start out with nothing, sync_mode will load them.
+            )
+            ; If loading up a venue, hide them all,
+            ; the venue will load up the proper outfits
+            ; depending on coop or h2h or whatnot.
+            ( $edit_mode
+               {do ($pd {{$this dir} proxy_dir})
+                  {if {&& $pd {== {$pd get_type} chars}}
+                     {$this select_all -1}
+                  }
+               }
+            )
+         }
+      }
+   )
+   
+   (create_path ($outfit $cat)
+      {cond 
+         ({&& {== $cat drum} {! {has_substr $outfit "drums_"}}}
+            {sprint
+               {cond
+                  ({&& {exists meta} {meta is_up}} small_club) ; for rock shop
+                  ({exists game} 
+                     {do ($venue {game get_venue_dir})
+                        {if_else
+                           {|| 
+                              {== $venue blank}
+                              {&& 
+                                 {gamemode get is_hth_arrangement} 
+                                 {== 
+                                    {{gamecfg get_player_config {gamecfg get leader_num}} get_track_sym} 
+                                    drum
+                                 }
+                              }
+                           }
+                           small_club
+                           $venue
+                        }
+                     }
+                  )
+                  ; in milo or wherever
+                  ($world 
+                     {do ($wp {path_name $world})
+                        {cond 
+                           ({has_substr $wp arena} arena)
+                           ({has_substr $wp big_club} big_club)
+                           ({has_substr $wp small_club} small_club)
+                           ({has_substr $wp theater} theater)
+                           small_club
+                        }
+                     }
+                  )
+                  small_club ; default...
+               }
+               "_drums_" $outfit
+            }
+         )
+         ({&& {|| {== $cat guitar} {== $cat bass}} 
+              {! {has_substr $outfit "_"}}}
+            {sprint $outfit "_"
+               {if_else {exists game}
+                  ; in the game, ask the character what variant we should have
+                  {{char_cache find_char_data {$this dir}} 
+                     selected_variant $cat $outfit
+                  }
+                  ; everywhere else, find the default variant
+                  {elem 
+                     {find $syscfg objects OutfitLoader types male category
+                        $cat outfits $outfit default_variant
+                     }
+                     1
+                  }
+               }
+            }   
+         )
+         (TRUE kDataUnhandled)
+      }
+   )
+   
+   (select_instrument ($char_data)
+      ; don't load any instruments, will load later when entering
+      ; venue or the instrument shop
+      {switch {$char_data get_instrument}
+         ; just keep our mic loaded
+         (drum 
+            ; don't load a drum in the shell
+            {$this wipe_instruments}
+         )
+         (guitar
+            {$this select guitar {$char_data selected_outfit guitar}}
+            ; don't show a bass unless we're in the bass instrument shop
+            {$this select bass none}  
+         )
+      }      
+   )
+   
+   (wipe_instruments
+      {foreach $inst (INSTRUMENTS)
+         {$this select {elem $inst 0} none}
+      }
+   )
+)
+
+
+(OutfitLoader
+   #include outfitloader.dta
+)   
+
+#define DEFORM_COMMON
+(  
+   (deform
+      ; this checks to see if the CharClipSet is proxied in.
+      {if {$this exists deform_clips}
+         {do ($clip {deform_clips find deform})
+            ; Prepare for the process.
+            {start_char_utl_deform}
+            ; First set to the zero pose and capture.
+            {char_utl_deform $this $clip ((0 1)) FALSE}
+            {$this iterate CharIKScale $s {$s capture_before}}
+            
+            {char_utl_deform $this $clip
+               ((0 {$this deform_frame 0})
+                (1 {$this deform_frame 1})
+                (2 {$this deform_frame 2})
+                (3 {$this deform_frame 3})
+                (4 {$this deform_frame 4}))
+               TRUE}
+
+            {end_char_utl_deform}; sync the meshes.
+            
+            {$this iterate CharIKScale $s {$s capture_after}}
+            {$this iterate CharIKHand $s {$s measure_lengths}}
+            {$this iterate CharForeTwist $s {$s measure_length_scale}}
+            
+   /*         
+            ; Show the delta between world z of hand and hip target (for adolph)
+            ; @TEST
+            {do ($a) ($b) ($hand) ($hip)
+               {bone_R-hand.mesh get_world_pos $a $b $hand}
+               {bone_target_R-hip.mesh get_world_pos $a $b $hip}
+               {print "delta z hand and hip is " {- $hand $hip} "\n"}
+               {print "relative to hand_base is " {- $hand_base {- $hand $hip}} "\n"}
+            }
+   */         
+         }
+      }
+   )
+)   
+
+#define PRE_META_CONFIGURE_COMMON
+(
+   {set [in_shell] TRUE} ; we're being put into the shell
+   
+   ; High concept is to clear everything
+   {$this iterate FaceFxLipSyncServo $servo
+      {$servo set_song "" TRUE}
+   }
+   
+   ; wipe out instruments right now to reduce fragmentation.
+   {OutfitLoader.outfit wipe_instruments}
+   {OutfitLoader.outfit start_load FALSE}
+   
+   ; clear our clips!
+   {main.drv set_clips ''}
+)
+
+
+#define META_CONFIGURE_COMMON
+(
+   ; set our clips!
+   {main.drv set_clips {char_cache get_shell_clips $this}}
+
+   ; Blink curse you, blink!   
+   {$this set_blink_song}
+
+   ; select appropriate instrument for shell
+   ; we do this here to try to avoid fragmentation.
+   {do ($char_data {char_cache find_char_data $this})
+      {OutfitLoader.outfit select_instrument $char_data}
+      {OutfitLoader.outfit start_load TRUE}
+   }   
+)
+   
+
+;; Characters.
+
+#define CHAR_COMMON
+(
+   (in_shell FALSE) ; used to load/configure differently when in game and shell
+   (playing TRUE) ; am I playing right now, ie, not BFB or h2h alternating.
+   (cur_play 0)   ; playing mode I should be in were i playing
+   (old_pelvis_scale 1) ; saved off value used for sitting camera shots.
+
+   (editor
+      (height float (help "Deformation height 0-1") (range 0 1)
+         (post_sync {$this deform})
+      )
+      (weight float (help "Deformation weight 0-1") (range 0 1)
+         (post_sync {$this deform})
+      )
+      (neutral script (help "Sets h=.5 w=.5") (script {set [height] .5} {set [weight] .5} {$this deform}) (refresh height weight))
+      (tall_and_fat script (help "Sets h=1 w=1") (script {set [height] 1} {set [weight] 1} {$this deform}) (refresh height weight))
+      (short_and_fat script (help "Sets h=0 w=1") (script {set [height] 0} {set [weight] 1} {$this deform}) (refresh height weight))
+      (tall_and_skinny script (help "Sets h=1 w=0") (script {set [height] 1} {set [weight] 0} {$this deform}) (refresh height weight))
+      (short_and_skinny script (help "Sets h=0 w=0") (script {set [height] 0} {set [weight] 0} {$this deform}) (refresh height weight))
+      (strum_and_fret script
+         (help "Makes the character strum and fret so the arms aren't all wacky")
+         (script 
+            {if {exists strum.dmidi} {strum.dmidi play 0 kPlayGraphLoop}}
+            {if {exists fret.dmidi} {fret.dmidi play 0 kPlayGraphLoop}}
+         )
+      )
+      (face_expression_test_group symbol (list (CHARVISEMEGROUPS))
+          (help "test group")
+      )
+      (face_expression_test script 
+         (script 
+            {set $clipset {expression.drv get clips_ptr}}
+            {set $grp {$clipset find [face_expression_test_group]}}
+            {expression.drv play_group {$grp name}}            
+         )
+      )
+      (become_bass script 
+         (script 
+            {$this exit}
+            {$this load_instrument bass}
+            {$this world_configure bass}
+            {$this enter}
+            {if {exists strum.dmidi} {strum.dmidi play 0 kPlayGraphLoop}}
+            {if {exists fret.dmidi} {fret.dmidi play 0 kPlayGraphLoop}}            
+            {main.drv play stand_guitar_pose}
+         ) 
+         (help "become a bassist")
+      )
+      (become_guitar script 
+         (script 
+            {$this exit}
+            {$this load_instrument guitar}
+            {$this world_configure guitar}
+            {$this enter}
+            {if {exists strum.dmidi} {strum.dmidi play 0 kPlayGraphLoop}}
+            {if {exists fret.dmidi} {fret.dmidi play 0 kPlayGraphLoop}}            
+            {main.drv play stand_guitar_pose}
+         ) 
+         (help "become a guitarist")
+      ) 
+            
+      ; Load win final animations.
+      (load_win_final script
+         (script {$this load_win_finals})
+         (help "load up the win_final animations.  Only do one at a time if possible, they are big!")
+      )
+      
+      (unload_win_final script
+         (script 
+            {do ($clips {main.drv get_clips})
+               {main.drv enter}
+               {do 
+                  {$clips iterate_self CharClip $clip
+                     {if {has_substr {$clip name} win_final}
+                        {delete $clip}
+                     }
+                  }
+               }
+            }
+         )
+         (help "unload the win final animations")
+      )
+   )
+   (face_expression_test_group normal)
+   
+   ; deform properties
+   (height 0.5 proxy_save)
+   (weight 0.5 proxy_save)
+   
+   (freeze_char ($freeze $unfreeze $units)
+      ; back up the animation until it's back from the event called freeze
+      {script_task $units (delay $freeze)
+        (script
+          {$this freeze}
+        )
+      }
+      {script_task $units (delay {+ $freeze $unfreeze})
+        (script
+          {$this unfreeze}
+        )
+      }
+   )
+   
+   ; this gets called when you change the properties in milo.
+   (change_char_config
+      {do ($char_data 0)
+         {if {exists char_cache}
+            {set $char_data {char_cache find_char_data $this}}
+#ifndef _SHIP
+            {unless $char_data {notify "no char_data"}}
+#endif
+            {if $char_data
+               {$char_data configure_char $this}
+            }
+         }
+         ; apply the deformation to our loaded guy.
+         {$this deform}
+      }
+                             
+      ; the UI might want to update now that we're loaded
+      {handle (ui change_char_config)}
+   )   
+      
+   (idle_realtime
+      {$this change_play kPlayIdleRealtime}
+   )
+      
+   (idle
+      {$this change_play kPlayIdle}
+   )
+   
+   (idle_intense
+      {$this change_play kPlayIdleIntense}
+   )      
+   
+   (mellow
+      {$this change_play kPlayMellow}
+   )
+   
+   (play 
+      {$this change_play kPlayNormal}
+   )
+   
+   (intense
+      {$this change_play kPlayIntense}
+   )
+   
+   (play_solo
+      {$this change_play kPlaySolo}
+   ) 
+     
+   (change_play ($mode)
+      {set [cur_play] $mode}
+      ; not playing remap the mode to an idle of similar intensity.
+      {unless [playing]
+         {switch $mode
+            ( (kPlayIntense kPlaySolo) {set $mode kPlayIdleIntense} )
+            ( (kPlayMellow kPlayNormal) {set $mode kPlayIdle} )
+         }
+      }
+      
+      {$this set_play $mode}
+   )
+      
+   (tambourine_start
+      {$this group_override tambourine}
+   )
+   
+   (tambourine_end
+      {$this group_override ''}
+   )   
+   
+   (cowbell_start
+      {$this group_override cowbell}
+   )
+   
+   (cowbell_end
+      {$this group_override ''}
+   )
+   
+   (clap_start
+      {$this group_override clap}
+   )
+   
+   (clap_end
+      {$this group_override ''}
+   )
+                                     
+   (game_over
+      {handle ([parser] remove_sink $this)}
+      
+      {$this group_override ''}
+      
+      {$this iterate CharIKMidi $midi
+         {handle ($midi game_over)}
+      }
+      {$this iterate CharDriverMidi $midi
+         {handle ($midi game_over)}
+      }
+   )
+   
+   ; Just before we play the new cam, force us to realtime
+   ; this is mostly for band world tour so we can dump animations
+   ; later.
+   (playing_final_cam  
+      {$this idle_realtime}
+   )
+   
+   (game_outro
+      
+      {if {exists game}
+         {{$this dir} remove_sink $this}
+      }
+   )
+   
+   (terminate
+   )   
+   
+   (change_proxies
+      ; set property indicating whether we're in shell, based on our proxy_dir
+      ; we only get loaded by the game, and that's in the shell, so we're shell
+      {do ($pd {$this proxy_dir})
+         {set [in_shell] {|| {&& $pd {== {$pd get_type} shell}} {exists game} }}
+      }   
+   )
+   
+   ; Called each time the loader finishes loading.
+   ; need to re-hook up the hair.
+   (sync_objects
+      {$this iterate CharHair $hair
+         {$hair hookup}
+      }
+      {do 
+         ($visemes 
+            {if_else {$this exists visemes} 
+               {$this find visemes} 
+               ; this could come up in Milo where they have no head at all.  Poor things.
+               {do ($vis '')
+/* TODO fix this!!!              
+                  {if {exists game}
+                     {notify "hey " $this " loading viseme 1 in game!"}
+                  }
+*/                  
+                  {with_file_path_root "."
+                     {set $vis {load_objects "char/male/anim/male_viseme_head_1.milo"}}
+                  }
+                  {$vis delete_loader}
+                  $vis
+               }
+            }
+         )
+         ; Visemes is proxied into the heads, so we have to hand-set these each time.
+         {handle (lip.faceservo set clips_ptr $visemes)}
+         {handle (expression.drv set_clips $visemes)}
+         {handle (face_accent.dmidi set_clips $visemes)}
+      }      
+   )
+   
+   ; should we split the clips up.
+   (split_clips
+      {|| $cache_mode $char.split_clips }
+   )
+   
+   ; Our song tempo.  Returns 0 if not splitting clips.
+   (song_tempo
+      {if_else {$this split_clips}
+         {song_mgr anim_tempo {game get_song}}      
+         0
+      }
+   )
+   
+   (world_configure_driver ($driver $suffix)
+      {if {$this split_clips}
+         {char_cache add_world_clips_loader $this $suffix kTempoAll}
+      }
+      {char_cache add_world_clips_loader $this $suffix {$this song_tempo}}
+      ; And kill off the clips that are there now, so we keep our high water mark smaller
+      {$driver set_clips ''}
+   )
+
+   (world_set_driver ($driver $suffix)
+      {if_else {$this split_clips}
+         {do
+            {$driver set_clips {char_cache get_world_clips $this $suffix kTempoAll}}           
+            {do ($clips {char_cache get_world_clips $this $suffix {$this song_tempo}})
+               ; clips may not be there because of shared bass and guitar, if same attitude.
+               ; this is okay.
+               {if $clips
+                  {reserve_to_fit $clips {$driver get_clips} 0}
+                  {merge_dirs $clips {$driver get_clips} kMergeMerge}
+                  {delete $clips}
+               }
+            }
+         }
+         {$driver set_clips {char_cache get_world_clips $this $suffix 0}}
+      }
+   )
+   
+   (prep_multi_driver ($driver $suffix)
+      {do ($clips {$driver get_clips})
+         {$clips delete_loader}
+         ; delete all animations that are not all tempos, 
+         ; which should mean what we are playing now is still fine.
+         {$clips delete_flags kTempoAll kTempoAll FALSE 0}
+      }
+      {char_cache add_world_clips_loader $this $suffix {$this song_tempo}}
+   )
+
+   (enter_multi_driver ($driver $suffix)
+      {do 
+         ($clips {char_cache get_world_clips $this $suffix {$this song_tempo}})
+         ; clips may not be there since we may have shared bass and guitar
+         {if $clips
+            ; kill the all tempo clips.  We already have them.
+            ; TODO we should do this from C too in CharCache since we get a filtering callback.
+            {$clips delete_flags kTempoAll kTempoAll TRUE 0}
+            {reserve_to_fit $clips {$driver get_clips} 0}
+            {merge_dirs $clips {$driver get_clips} kMergeMerge}
+            {delete $clips}
+         }
+      }
+   )
+
+   (set_blink_song   
+      {$this iterate FaceFxLipSyncServo $servo
+         {$servo set_blink_song}
+      }
+   )
+   
+   (disable_pelvis_ik
+      {set [old_pelvis_scale] {pelvis.ikscale get scale}}
+      {pelvis.ikscale set scale 1}
+   )
+      
+   (enable_pelvis_ik
+      {pelvis.ikscale set scale [old_pelvis_scale]}
+   )
+
+   ; return the path to win final animations.
+   (win_final_path 
+      {if_else {&& {$this split_clips} {exists char_cache}}
+         ; split is genre specific.
+         {sprint "char/" [gender] "/anim/" [gender] "_" {$this get_type} "_win_final_" {char_cache attitude_string [attitude]} ".milo"}
+         {sprint "char/" [gender] "/anim/" [gender] "_" {$this get_type} "_win_final.milo"}
+     }
+   )
+   
+   (win_final_start_load
+      {do
+         ($clips {main.drv get_clips})
+         
+         {main.drv enter}  ; reset the state just in case.
+         
+         ; Kill all beat based animations, the beat is over.
+         ; do so by setting flags.
+         {do 
+            {{$clips find win} set_flags kSaveMe}; in this case means "save me"
+            {{$clips find realtime_idle} set_flags kSaveMe}
+            {if {$clips exists still}  
+               {with {$clips find still}
+                  {|= [flags] kSaveMe}
+               }
+            }               
+            {$clips delete_flags kSaveMe kSaveMe FALSE 0}
+         }
+         
+         ; Add the loader.
+         {char_cache add_world_clips_loader $this _win_final 
+            {if_else {$this split_clips} -1 0}
+         }
+      }
+   )
+   
+   ; are the win finals loaded?
+   (win_final_loaded
+      ; TODO this might be too slow...  Maybe need a property
+      ; on Clips instead, that merging would set true.
+      {do ($ret FALSE)
+         ($clips {main.drv get_clips})
+         {$clips iterate_self CharClip $clip
+            {if {has_substr {$clip name} win_final} 
+               {set $ret TRUE}
+            }
+         }
+         $ret
+      }
+   )
+   
+   ; check to see if it's loaded yet,
+   ; if it is, return TRUE
+   (win_final_check_load
+      {if_else {$this win_final_loaded}
+         TRUE
+         {do 
+            ($wins 
+               {char_cache get_world_clips $this _win_final 
+                  {if_else {$this split_clips} -1 0}
+               }
+            )
+            {if_else $wins
+               {do ($clips {main.drv get_clips})
+                  {reserve_to_fit $wins $clips 0}
+                  {merge_dirs $wins $clips kMergeMerge}
+                  {delete $wins}
+                  TRUE        
+               }
+               FALSE
+            }
+         }
+      }
+   )
+   
+   ; synchronous load of win finals.
+   (load_win_finals
+      {do ($clips {main.drv get_clips})
+         {main.drv enter}
+         {do ($wins '')
+            {with_file_path_root "."
+               {set $wins {load_objects {$this win_final_path}}}
+            }
+            {reserve_to_fit $wins $clips 0}
+            {merge_dirs $wins $clips kMergeMerge}
+            {delete $wins}
+         }
+      }
+   )
+      
+   DEFORM_COMMON  
+)
+
+#define CHAR_ENTER_COMMON
+(
+   {set $is_proxy {&& {! {exists game}} {$this is_proxy}}}
+   {set [playing] TRUE}
+   {set [cur_play] 0}
+   
+   
+   {if_else {exists game}
+   
+      ; If actually in the game.   
+      {if {game is_up}
+               
+         {handle ([parser] add_sink $this)}      
+         {{$this dir} add_sinks $this 
+            game_over game_outro playing_final_cam
+         }      
+         
+         ; So we know when we hit and miss and all that.
+         {if {exists char_cache}
+            {do ($player {game get_player {char_cache find_index $this}})
+               {if $player
+                  {$player add_sinks $this hit miss pass disable_player enable_player}
+               }
+            }
+         }
+                  
+         ; Randomize these suckers!  Or do it when it comes time
+         ; to filter the clips, so we chuck out bad ones.
+         {$this iterate CharDriver $driver
+            {do ($clips {$driver get clips_ptr})
+               {if $clips 
+                  {$clips randomize_groups}
+               }
+            }
+         }
+         
+         ; If separate parts then see if we will register with the alternating things.
+         {if {gamemode get separate_parts}      
+            {do ($desired_name {switch $game.play_mode
+                  (h2h_drum drum)
+                  (h2h_guitar guitar)
+                  (h2h_bass bass)
+                  (h2h_vocals vocal)
+                  ''}
+                )
+               {if {&& $desired_name {has_substr {$this name} $desired_name}}
+                  {if_else {== {game get_player_num_from_slot_num 0} {char_cache find_index $this} }
+                     {slot0_enable add_sink $this}
+                     {slot1_enable add_sink $this}
+                  }
+                  {$this disable_player} ; start out disabled.
+               }
+            }
+         }
+         
+         {$this set_play kPlayIdleRealtime} 
+         {$this change_group [start_group]}
+      }
+      
+      ; Not in the app at all.
+      {do      
+         {set [attitude] 0} ; stomp out attitude so it uses all clips it can.
+         {cond
+            ($venue_test {eval 0} ) ; do nothing.
+            ([in_shell] {eval 0} ) ; for starters, nothing, they can set something on a camera
+            ($is_proxy {$this change_group [pose_group]})
+         }   
+         
+         ; We ONLY want to do any of this if not in game at all!
+         {cond 
+            ; if in chartest, venuetest, or milo with them proxied in, set to neutral
+            ; and bake them in.
+            ({|| $char_test $venue_test $is_proxy}
+               {set [weight] .5}
+               {set [height] .5}
+               {$this deform}
+            )
+            ; default, so we either deform or reset the saved out scales to one.
+            ; kind of silly, but there you go.
+            {$this iterate CharIKScale $s {$s set scale 1}}
+            {$this iterate CharForeTwist $s {$s set length_scale .38}}
+         }
+      }
+   }
+)
+
+(CharDriver
+   (types
+      ; used by the main driver, they should all be set this way.
+      (main
+         (change_clips
+            {cond 
+               ({exists char_cache}
+                  {with_file_path_root "."   
+                     {$this set_clips_path {char_cache get_shell_clips_path {$this dir}}}
+                  }
+               )
+               ( {&& {{$this dir} proxy_dir} {== {{{$this dir} proxy_dir} get_type} shell}}
+                  {do 
+                     ($gender {if_else {has_substr {{$this dir} name} female} female male})
+                     ($instrument {{$this dir} get_type})
+                     ($path {sprint "anim/" $gender "_" $instrument "_shell.milo"})
+                     {$this set clips $path}
+                  }
+               )
+            }
+         )        
+      )
+      (expression
+      )
+      (drum_add
+         (change_clips
+            ; load up nothing when in shell.
+            {if {{$this dir} get in_shell}
+               {$this set_clips_path ""}
+            }
+         )              
+      )
+   )
+)
+
+(CharDriverMidi 
+   (types
+      (musician
+         (parser bass_fret)
+         (editor
+            (parser symbol (help "Name of the midi parser to hook into"))
+         )
+         (enter
+            {if_else {exists [parser]}
+               {do 
+                  {[parser] add_sink $this}
+                  {if {[parser] idle}
+                     {do 
+                        ($idle {[parser] get idle_message})
+                        ($thing {[clips_ptr] find $idle})
+                        ; Thing can be a group or a clip.
+                        {set [inactive_clip]
+                           {if_else {$thing is_a CharClipGroup}
+                              {$thing find_clip 0} ; finds first thing in it, TODO could look up attitude if needed.
+                              $thing
+                           }
+                        }
+                        {$this play [inactive_clip]}
+                     }
+                  }
+               }
+               ; Parser does not exist.
+               {do ($scene {{$this dir} dir})
+                  {unless {== {$scene get_type} shell}
+                     ; If in chartest or venuetest or in edit_mode and my parent is not his own dir (ie, he's in a venue..)
+                     {if {|| $venue_test $char_test {&& $edit_mode {!= $scene {$this dir}}}}
+                        {$this play 0 kPlayGraphLoop} ; play anything, int 0 is flag that matches all.
+                     }
+                  }   
+               }                 
+            }
+         )
+         (exit
+            {handle ([parser] remove_sink $this)}
+         )
+         (game_over
+            {handle ([parser] remove_sink $this)}
+         )
+         (drum_lhand ($group $length)
+            {$this strum $group $length}
+         )
+         (drum_rhand ($group $length)
+            {$this strum $group $length}
+         )
+         
+         (strum ($group $length)
+            {do
+               ($flags {& {{$this dir} get_play_flags} kPlayAndAttitudeFlags})
+               ($group {[clips_ptr] find $group})
+               ($clip {$group find_clip $flags})
+               
+               ; TODO remove before ship, this is to prevent crashes if no match.  CDB finds these.
+               {unless $clip
+                  {print "NOTIFY: " {path_name $group} " could not find clip with flags " $flags ", trying 0\n"}
+                  {set $clip {$group get_clip}}
+               }
+               
+               ; TODO remove before ship
+               {if_else $clip               
+                  {do
+                     {if {== {$clip get beat_align} kPlayRealTime}
+                        {set $length {$mp.parser beat_to_sec_length $length}}
+                     }
+                     {$this midi_parser $clip $length}
+                  }
+                  {print "NOTIFY: " {path_name $group} " could find no clip\n"}
+               }
+            }
+         )
+      )
+   )
+)
+
+
+(CharHair
+   (editor 
+      (strands
+         (array
+            (struct 
+               (hookup_flags bitfield (list (CHAR_HAIR_FLAGS)) (help "Which collision volumes to hook up to this strand for collision"))
+            )
+         )
+      )
+   )
+)
+
+
+(CharIKMidi
+   (types
+      (musician
+         (parser guitar_fret_pos)
+         (editor
+            (parser symbol (help "Name of the midi parser to hook into"))
+         )
+         (enter 
+            {if {exists [parser]}
+               {[parser] add_sink $this}
+            }
+         )
+         (exit
+            {handle ([parser] remove_sink $this)}
+         ) 
+         (game_over
+            {handle ([parser] remove_sink $this)}
+         )        
+      )         
+   )         
+)
+
+; These are things that have to be enabled/disabled during h2h play
+#define GUITAR_THINGS
+(
+   (face_accent.dmidi 
+   fret.dmidi 
+   strum.dmidi 
+   fret.ikmidi 
+   string_hi.dmidi
+   string_low.dmidi
+   guitar.lookat)
+)
+
+#define DRUM_THINGS
+(
+   (hihat.dmidi 
+   kick.dmidi 
+   left_crash.dmidi 
+   left_foot.dmidi 
+   left_hand.dmidi 
+   ride.dmidi
+   right_crash.dmidi
+   right_foot.dmidi
+   right_hand.dmidi)
+)
+
+
+(CompositeCharacter
+   (types
+      (guitar
+         (clip_flags kValidGuitar)
+         (start_group stand)
+         (pose_group stand_pose)
+         (parser guitarist_parser)
+         (instrument guitar)
+         
+         (enable_player
+            {foreach $thing GUITAR_THINGS
+               {handle ({$thing get parser} add_sink $thing)} ; some parsers could be null.
+            }   
+            {set [playing] TRUE}
+            {$this change_play [cur_play]}
+         )
+         
+         (disable_player         
+            {foreach $thing GUITAR_THINGS
+               {handle ({$thing get parser} remove_sink $thing)} ; some parsers could be null.
+            }
+            {set [playing] FALSE}
+            {$this change_play [cur_play]}
+         )
+;; DMS : Commented out to correctly precache         
+;;#ifdef HX_XBOX		; PGM
+;;         (enter         
+;;            CHAR_ENTER_COMMON
+;;            ; Always start with your hands off of the guitar.
+;;            {left_hand.weight set beats_per_weight 0}
+;;            {right_hand.weight set beats_per_weight 0}
+;;           {left_hand.weight set weight 0}
+;;            {right_hand.weight set weight 0}
+;;         )
+;;#endif				; PGM
+         
+         ; Set the instrument for this guy based on the track type.
+         (load_instrument ($track_type)
+            {do ($char_data 
+                  {if_else {exists char_cache}
+                     {char_cache find_char_data $this}
+                     0
+                  }
+                )
+               {if_else {== $track_type guitar}
+                  {do
+                     {OutfitLoader.outfit select guitar 
+                        {if_else $char_data
+                           {$char_data selected_outfit $track_type}
+                           {$this valid_instrument $track_type}
+                        }
+                     }
+                     {OutfitLoader.outfit select bass none}
+                  }
+                  {do
+                     {OutfitLoader.outfit select bass 
+                        {if_else $char_data
+                           {$char_data selected_outfit $track_type}
+                           {$this valid_instrument $track_type}
+                        }
+                     }
+                     {OutfitLoader.outfit select guitar none}
+                  }
+               }
+            }
+            {OutfitLoader.outfit start_load TRUE}            
+         )              
+         
+         (pre_meta_configure
+            PRE_META_CONFIGURE_COMMON
+         )     
+         
+         (meta_configure
+            META_CONFIGURE_COMMON            
+         )         
+         
+         ; takes bass or guitar, must be called before "enter"
+         ; to work in game.
+         (world_configure ($t)
+         
+            {set [in_shell] FALSE} ; we're being put into game, not shell
+            {$this set_blink_song}
+            {if_else {== $t guitar}
+               {do
+                  {string01.string set parser guitar_string_open}
+                  {string02.string set parser guitar_string_open}
+                  {string03.string set parser guitar_string_open}
+                  {string04.string set parser guitar_string_open}
+                  {string05.string set parser guitar_string_open}
+                  {string06.string set parser guitar_string_open}
+                  {guitar.lookat set parser guitar_streak_parser}
+                  {set [clip_flags] kValidGuitar}
+                  {set [parser] guitarist_parser}
+                  {fret.dmidi set parser guitar_fret}
+                  {strum.dmidi set parser guitar_strum}
+                  {face_accent.dmidi set parser guitar_face_accent}
+                  {fret.ikmidi set parser guitar_fret_pos}
+                  {singalong.weight set parser guitar_singalong_parser}
+                  {string_hi.dmidi set parser guitar_string_hi}
+                  {string_low.dmidi set parser guitar_string_low}
+                  {handle (zBassOffset.drv enter)}
+               }
+               {do
+                  {string01.string set parser ''}
+                  {string02.string set parser ''}
+                  {string03.string set parser ''}
+                  {string04.string set parser ''}
+                  {string05.string set parser ''}
+                  {string06.string set parser ''}
+                  {guitar.lookat set parser ''}
+                  {set [clip_flags] kValidBass}
+                  {set [parser] bassist_parser}
+                  {fret.dmidi set parser bass_fret}
+                  {strum.dmidi set parser bass_strum}
+                  {face_accent.dmidi set parser bass_face_accent}
+                  {fret.ikmidi set parser bass_fret_pos}
+                  {singalong.weight set parser bass_singalong_parser}
+                  {handle (zBassOffset.drv play offset)}
+                  {string_hi.dmidi set parser bass_string_hi}
+                  {string_low.dmidi set parser bass_string_low}
+               }
+            }
+            ; Start loading our world clips
+            {if {exists char_cache}
+               {$this world_configure_driver main.drv ""}
+            }
+         )
+         
+         : Set the clips that we have loaded.         
+         (set_world_clips
+            {$this world_set_driver main.drv ""}
+         )    
+         
+         ; Preps for multievent, clearing out loaders from the currently loaded clips.
+         (prep_multi_event
+            {$this prep_multi_driver main.drv ""}
+         )                      
+
+         ; called when we go into that event.         
+         (enter_multi_event
+            {$this enter_multi_driver main.drv ""}
+         )
+         
+         CHAR_COMMON         
+      )   
+     
+     (drum
+         (clip_flags 0)     
+         (start_group sit)
+         (pose_group sit_pose)         
+         (parser drummer_parser)    
+              
+         (enter         
+            CHAR_ENTER_COMMON
+            {if {$this exists drumset.grp}
+               ; Char in a subdir, so have to do this, grr.
+               {if $world
+                  {if {$world exists drumset.env}
+                     {drumset.grp set environ {$world find drumset.env}}
+                  }
+                  {right_hand.dmidi play ready}
+                  {left_hand.dmidi play ready}
+               }
+               ; Hide the drumset group when in shell.
+               {drumset.grp set_showing {! [in_shell]}}
+            }
+            ; The instrument maker still needs an event to set these...
+            {if {$this exists sticks.grp}
+               {sticks.grp set draw_only 
+                  {if_else [in_shell] doublestick.grp singlestick.grp}
+               }
+            }
+         )
+         
+         (enable_player
+            {foreach $thing DRUM_THINGS
+               {{$thing get parser} add_sink $thing}
+            }
+            {set [playing] TRUE}
+            {$this change_play [cur_play]}
+         )
+         
+         (disable_player
+            {foreach $thing DRUM_THINGS
+               {{$thing get parser} remove_sink $thing}
+            }
+            {set [playing] FALSE}
+            {$this change_play [cur_play]}
+         )         
+         
+         ; Called once we know track and venue, to set the instrument.
+         (load_instrument ($track_type)
+            {OutfitLoader.outfit select drum 
+               {{char_cache find_char_data $this} selected_outfit drum}
+            }
+            {OutfitLoader.outfit start_load TRUE}
+         )       
+         
+         (pre_meta_configure
+            PRE_META_CONFIGURE_COMMON
+            ; clear out the additive clips.
+            {main_add.drv set_clips ''}
+         )                    
+                  
+         (meta_configure
+            META_CONFIGURE_COMMON
+         )                    
+          
+         (world_configure ($t)
+            
+            {set [in_shell] FALSE}
+            {$this set_blink_song}
+            ; Start loading our world clips
+            {if {exists char_cache}
+               {$this world_configure_driver main.drv ""}
+               {$this world_configure_driver main_add.drv "_play"}
+            }
+         )                              
+
+         : Set the clips that we have loaded.         
+         (set_world_clips
+            {$this world_set_driver main.drv ""}
+            {$this world_set_driver main_add.drv "_play"}
+         )
+         
+         ; Preps for multievent, clearing out loaders from the currently loaded clips.
+         (prep_multi_event           
+            {$this prep_multi_driver main.drv ""}            
+            {$this prep_multi_driver main_add.drv "_play"}
+         )                      
+
+         ; called when we go into that event.         
+         (enter_multi_event
+            {$this enter_multi_driver main.drv ""}
+            {$this enter_multi_driver main_add.drv "_play"}
+         )
+                        
+         CHAR_COMMON
+      )
+      
+      (vocal
+         (clip_flags 0)
+         (start_group stand)
+         (pose_group stand_pose)                  
+         (parser vocal_parser)
+         
+         (enable_player
+            {set [playing] TRUE}
+            {$this change_play [cur_play]}
+         )
+         
+         (disable_player
+            {set [playing] FALSE}
+            {$this change_play [cur_play]}
+         )         
+         
+         (set_instrument ($inst)
+            {hands.grp set draw_only
+               {switch $inst
+                  (cowbell cowbell.grp)
+                  (tambourine tambourine.grp)
+                  (mic mic.grp)
+                  (clap empty.grp) ;nothing, just hands.
+               }
+            }
+         )
+         (enter
+            CHAR_ENTER_COMMON
+            ; during precache we don't even have a body so don't set this.
+            {unless {&& $edit_mode $cache_mode}
+               {$this set_instrument mic}
+            }
+         )
+         (load_instrument ($track_type)
+            {OutfitLoader.outfit select mic 
+               {{char_cache find_char_data $this} selected_outfit mic}
+            }
+            {OutfitLoader.outfit start_load TRUE}
+         ) 
+
+         (pre_meta_configure
+            PRE_META_CONFIGURE_COMMON
+         )                    
+         
+         (meta_configure
+            META_CONFIGURE_COMMON
+         )                    
+         
+         (load_face_song
+            {do ($song {game get_song})
+               ($songpath 
+                  {if_else $song
+                     {sprint {song_mgr song_path $song} ".voc"}
+                     ""
+                  }
+               )
+               {$this iterate FaceFxLipSyncServo $servo
+                  {$servo set_song $songpath TRUE}
+               }            
+            }
+         )
+         
+         ; asynchronously load the song.
+         (world_configure ($track_type)
+         
+            {set [in_shell] FALSE}
+            {$this load_face_song}
+  
+            ; Start loading our world clips, if in game.
+            {if {exists char_cache}
+               {$this world_configure_driver main.drv ""}
+            }
+         )
+         
+         : Set the clips that we have loaded.         
+         (set_world_clips
+            {$this world_set_driver main.drv ""}         
+         )                  
+         
+         ; Preps for multievent, clearing out loaders from the currently loaded clips.
+         (prep_multi_event         
+            {$this load_face_song}
+            {$this prep_multi_driver main.drv ""}            
+         )                      
+
+         ; called when we go into that event.         
+         (enter_multi_event
+            {$this enter_multi_driver main.drv ""}
+         )         
+         
+         CHAR_COMMON       
+      )            
+   )
+)
+
+#define CharPart_None            (0x001)
+#define CharPart_FullBody        (0x002)
+#define CharPart_Hair            (0x004)
+#define CharPart_Head            (0x008)
+#define CharPart_Torso           (0x010)
+#define CharPart_Hands           (0x020)
+#define CharPart_Pants           (0x040)
+#define CharPart_Shoes           (0x080)
+#define CharPart_LeftLowerArm    (0x100)
+#define CharPart_RightLowerArm   (0x200)
+#define CharPart_Neck            (0x400)
+
+(Character
+   (types
+      (eq
+         (enter
+            {if {exists main.drv}
+               {main.drv play still}
+            }
+         )
+      )
+      (light_target
+         (editor
+            (base_anim symbol (list {$this get_clip_names}))
+            (base_amplitude float (range 0 1) (help "physical scale of animation loop"))
+            (base_speed float (help "speed multiplier"))
+            (base_phase float (range 0 1) (help "0 to 1, 0.5 would start the loop half way through"))
+            (add_anim symbol (list {$this get_clip_names}))
+            (add_amplitude float (range 0 1) (help "physical scale of animation loop"))
+            (add_speed float (help "speed multiplier"))
+            (add_phase float (range 0 1) (help "0 to 1, 0.5 would start the loop half way through"))
+            (test script (script {$this test_anim}))
+         )
+         (base_anim '')
+         (base_amplitude 1)
+         (base_speed 1)
+         (base_phase 0)
+         (add_anim '')
+         (add_amplitude 0.5)
+         (add_speed 1)
+         (add_phase 0)
+         
+         (get_clip_names
+            {set $clips {main.drv get clips_ptr}}
+            {set $clipnames {array 0}}
+            {$clips iterate CharClip $i
+               {insert_elem $clipnames 0 {$i name}}
+            }
+            $clipnames
+         )
+         
+         (test_anim
+            {$this play_anim [base_anim] [base_amplitude] [base_speed] [base_phase] [add_anim] [add_amplitude] [add_speed] [add_phase]}
+         )
+         
+         (play_anim ($base_anim $base_amp $base_speed $base_phase $add_anim $add_amp $add_speed $add_phase)
+            ; set blend weights on pos drivers
+            {base_pos.drv set weight $base_amp}
+            {target_pos.drv set weight $add_amp}
+            
+            ; set animation speed
+            {main.drv set beat_scale $base_speed}
+            {base_pos.drv set beat_scale $base_speed}
+            {base_rot.drv set beat_scale $add_speed}
+            {target_pos.drv set beat_scale $add_speed}
+            
+            ; play animations on all the drivers
+            {base_pos_still.drv play still {| kPlayNoBlend kPlayGraphLoop}}         ; still drivers always play
+            {target_pos_still.drv play still {| kPlayNoBlend kPlayGraphLoop}}
+            {main.drv play $base_anim {| kPlayNoBlend kPlayGraphLoop}}       ; controls first rot
+            {base_pos.drv play $base_anim {| kPlayNoBlend kPlayGraphLoop}}   ; controls first pos
+            {base_rot.drv play $add_anim {| kPlayNoBlend kPlayGraphLoop}}    ; controls second rot
+            {target_pos.drv play $add_anim {| kPlayNoBlend kPlayGraphLoop}}  ; controls second pos
+            
+            ; set offsets
+            {set $clip {main.drv first_clip}}
+            {set $offset {* {$clip get length} $base_phase}}
+            {main.drv offset $offset $offset}
+            {set $clip {base_pos.drv first_clip}}
+            {set $offset {* {$clip get length} $base_phase}}
+            {base_pos.drv offset $offset $offset}
+            {set $clip {base_rot.drv first_clip}}
+            {set $offset {* {$clip get length} $add_phase}}
+            {base_rot.drv offset $offset $offset}
+            {set $clip {target_pos.drv first_clip}}
+            {set $offset {* {$clip get length} $add_phase}}
+            {target_pos.drv offset $offset $offset}
+         )  
+      )
+   
+      (clothing_obj
+         (editor
+            (mat1 
+               (indent
+                  (target object (class Mat) (post_sync {$this update}))
+                  (diffuse_tex object (class Tex) (post_sync {$this update}))
+                  (two_color bool (post_sync {$this update}))
+                  (two_color_mask object (class Tex) (post_sync {$this update}))
+                  (custom_diffuse_tex object (class Tex) (post_sync {$this update}))
+                  (emissive_map object (class Tex) (post_sync {$this update}))
+                  (environ_map object (class CubeTex) (post_sync {$this update}))
+                  (normal_map object (class Tex) (post_sync {$this update}))
+                  (specular_map object (class Tex) (post_sync {$this update}) (refresh specular_rgb))
+                  (specular_power float (post_sync {$this update}))
+                  (specular_rgb color (post_sync {$this update}))
+                  (fleck_shaded bool (post_sync {$this update}))
+                  (substrate_depth float (post_sync {$this update}))
+                  (substrate_color color (post_sync {$this update}))
+                  (fleck_shaded_mask object (class Tex) (post_sync {$this update}))
+                  (norm_detail_map object (class Tex) (post_sync {$this update}))
+                  (norm_detail_strength float (post_sync {$this update}))
+                  (norm_detail_tiling float (post_sync {$this update}))
+               )
+            )
+            (mat2
+               (indent
+                  (target2 object (class Mat) (post_sync {$this update}))
+                  (diffuse_tex2 object (class Tex) (post_sync {$this update}))
+                  (two_color2 bool (post_sync {$this update}))
+                  (two_color_mask2 object (class Tex) (post_sync {$this update}))
+                  (custom_diffuse_tex2 object (class Tex) (post_sync {$this update}))
+                  (emissive_map2 object (class Tex) (post_sync {$this update}))
+                  (environ_map2 object (class CubeTex) (post_sync {$this update}))
+                  (normal_map2 object (class Tex) (post_sync {$this update}))
+                  (specular_map2 object (class Tex) (post_sync {$this update}) (refresh specular_rgb2))
+                  (specular_power2 float (post_sync {$this update}))
+                  (specular_rgb2 color (post_sync {$this update}))
+                  (fleck_shaded2 bool (post_sync {$this update}))
+                  (substrate_depth2 float (post_sync {$this update}))
+                  (substrate_color2 color (post_sync {$this update}))
+                  (fleck_shaded_mask2 object (class Tex) (post_sync {$this update}))
+                  (norm_detail_map2 object (class Tex) (post_sync {$this update}))
+                  (norm_detail_strength2 float (post_sync {$this update}))
+                  (norm_detail_tiling2 float (post_sync {$this update}))
+               )
+            )
+            (mat3
+               (indent
+                  (target3 object (class Mat) (post_sync {$this update}))
+                  (diffuse_tex3 object (class Tex) (post_sync {$this update}))
+                  (two_color3 bool (post_sync {$this update}))
+                  (two_color_mask3 object (class Tex) (post_sync {$this update}))
+                  (custom_diffuse_tex3 object (class Tex) (post_sync {$this update}))
+                  (emissive_map3 object (class Tex) (post_sync {$this update}))
+                  (environ_map3 object (class CubeTex) (post_sync {$this update}))
+                  (normal_map3 object (class Tex) (post_sync {$this update}))
+                  (specular_map3 object (class Tex) (post_sync {$this update}) (refresh specular_rgb2))
+                  (specular_power3 float (post_sync {$this update}))
+                  (specular_rgb3 color (post_sync {$this update}))
+                  (fleck_shaded3 bool (post_sync {$this update}))
+                  (substrate_depth3 float (post_sync {$this update}))
+                  (substrate_color3 color (post_sync {$this update}))
+                  (fleck_shaded_mask3 object (class Tex) (post_sync {$this update}))
+               )
+            )
+            (mat4
+               (indent
+                  (target4 object (class Mat) (post_sync {$this update}))
+                  (diffuse_tex4 object (class Tex) (post_sync {$this update}))
+                  (two_color4 bool (post_sync {$this update}))
+                  (two_color_mask4 object (class Tex) (post_sync {$this update}))
+                  (custom_diffuse_tex4 object (class Tex) (post_sync {$this update}))
+                  (emissive_map4 object (class Tex) (post_sync {$this update}))
+                  (environ_map4 object (class CubeTex) (post_sync {$this update}))
+                  (normal_map4 object (class Tex) (post_sync {$this update}))
+                  (specular_map4 object (class Tex) (post_sync {$this update}) (refresh specular_rgb2))
+                  (specular_power4 float (post_sync {$this update}))
+                  (specular_rgb4 color (post_sync {$this update}))
+                  (fleck_shaded4 bool (post_sync {$this update}))
+                  (substrate_depth4 float (post_sync {$this update}))
+                  (substrate_color4 color (post_sync {$this update}))
+                  (fleck_shaded_mask4 object (class Tex) (post_sync {$this update}))
+               )
+            )
+         )
+         (target "")
+         (diffuse_tex "")
+         (custom_diffuse_tex "")
+         (emissive_map "")
+         (environ_map "")
+         (normal_map "")
+         (specular_map "")
+         (specular_power 30)
+         (specular_rgb 0)
+         (two_color 1)
+         (target2 "")
+         (diffuse_tex2 "")
+         (custom_diffuse_tex2 "")
+         (emissive_map2 "")
+         (environ_map2 "")
+         (normal_map2 "")
+         (specular_map2 "")
+         (specular_power2 30)
+         (target3 "")
+         (diffuse_tex3 "")
+         (custom_diffuse_tex3 "")
+         (emissive_map3 "")
+         (environ_map3 "")
+         (normal_map3 "")
+         (specular_map3 "")
+         (specular_power3 30)
+         (specular_rgb2 0)
+         (specular_rgb3 0)
+         (two_color2 1)
+         (two_color3 1)
+         (two_color_mask "")
+         (two_color_mask2 "")
+         (two_color_mask3 "")
+         (spec_map_cache "")
+         (spec_map_cache2 "")
+         (spec_map_cache3 "")
+         (fleck_shaded 0)
+         (fleck_shaded2 0)
+         (fleck_shaded3 0)
+         (target4 "")
+         (diffuse_tex4 "")
+         (custom_diffuse_tex4 "")
+         (emissive_map4 "")
+         (environ_map4 "")
+         (normal_map4 "")
+         (specular_map4 "")
+         (specular_power4 30)
+         (specular_rgb4 0)
+         (two_color4 1)
+         (two_color_mask4 "")
+         (spec_map_cache4 "")
+         (fleck_shaded4 0)
+         (substrate_depth 1)
+         (substrate_color 1)
+         (fleck_shaded_mask "")
+         (substrate_depth2 1)
+         (substrate_color2 1)
+         (fleck_shaded_mask2 "")
+         (substrate_depth3 1)
+         (substrate_color3 1)
+         (fleck_shaded_mask3 "")
+         (substrate_depth4 1)
+         (substrate_color4 1)
+         (fleck_shaded_mask4 "")
+         (norm_detail_map "")
+         (norm_detail_strength 10.0)
+         (norm_detail_tiling 10.0)
+         (norm_detail_map2 "")
+         (norm_detail_strength2 10.0)
+         (norm_detail_tiling2 10.0)
+         
+         (enter
+            {if $edit_mode
+               {set [spec_map_cache] [specular_map]}
+               {set [spec_map_cache2] [specular_map2]}
+               {set [spec_map_cache3] [specular_map3]}
+               {set [spec_map_cache4] [specular_map4]}
+            }
+            {$this update}
+         )
+         (update
+            {if $edit_mode
+               {if {&& {! [spec_map_cache]} [specular_map]}
+                  {set [specular_rgb] {pack_color 1 1 1}}
+               }
+               {if {&& {! [spec_map_cache2]} [specular_map2]}
+                  {set [specular_rgb2] {pack_color 1 1 1}}
+               }
+               {if {&& {! [spec_map_cache3]} [specular_map3]}
+                  {set [specular_rgb3] {pack_color 1 1 1}}
+               }
+               {if {&& {! [spec_map_cache4]} [specular_map4]}
+                  {set [specular_rgb4] {pack_color 1 1 1}}
+               }
+               {set [spec_map_cache] [specular_map]}
+               {set [spec_map_cache2] [specular_map2]}
+               {set [spec_map_cache3] [specular_map3]}
+               {set [spec_map_cache4] [specular_map4]}
+            }
+            {if [target]
+               {[target] set diffuse_tex [diffuse_tex]}
+               {[target] set custom_diffuse_tex [custom_diffuse_tex]}
+               {[target] set emissive_map [emissive_map]}
+               {[target] set environ_map [environ_map]}
+               {[target] set normal_map [normal_map]}
+               {[target] set specular_map [specular_map]}
+               {[target] set two_color_mask [two_color_mask]}
+               {[target] set specular_power [specular_power]}
+               {[target] set specular_rgb [specular_rgb]}
+               {[target] set two_color [two_color]}
+               {[target] set fleck_shaded [fleck_shaded]}
+               {[target] set substrate_depth [substrate_depth]}
+               {[target] set substrate_color [substrate_color]}
+               {[target] set fleck_shaded_mask [fleck_shaded_mask]}
+               {[target] set norm_detail_map [norm_detail_map]}
+               {[target] set norm_detail_strength [norm_detail_strength]}
+               {[target] set norm_detail_tiling [norm_detail_tiling]}
+            }
+            {if [target2]
+               {[target2] set diffuse_tex [diffuse_tex2]}
+               {[target2] set custom_diffuse_tex [custom_diffuse_tex2]}
+               {[target2] set emissive_map [emissive_map2]}
+               {[target2] set environ_map [environ_map2]}
+               {[target2] set normal_map [normal_map2]}
+               {[target2] set specular_map [specular_map2]}
+               {[target2] set two_color_mask [two_color_mask2]}
+               {[target2] set specular_power [specular_power2]}
+               {[target2] set specular_rgb [specular_rgb2]}
+               {[target2] set two_color [two_color2]}
+               {[target2] set fleck_shaded [fleck_shaded2]}
+               {[target2] set substrate_depth [substrate_depth2]}
+               {[target2] set substrate_color [substrate_color2]}
+               {[target2] set fleck_shaded_mask [fleck_shaded_mask2]}
+               {[target2] set norm_detail_map [norm_detail_map2]}
+               {[target2] set norm_detail_strength [norm_detail_strength2]}
+               {[target2] set norm_detail_tiling [norm_detail_tiling2]}
+            }
+            {if [target3]
+               {[target3] set diffuse_tex [diffuse_tex3]}
+               {[target3] set custom_diffuse_tex [custom_diffuse_tex3]}
+               {[target3] set emissive_map [emissive_map3]}
+               {[target3] set environ_map [environ_map3]}
+               {[target3] set normal_map [normal_map3]}
+               {[target3] set specular_map [specular_map3]}
+               {[target3] set two_color_mask [two_color_mask3]}
+               {[target3] set specular_power [specular_power3]}
+               {[target3] set specular_rgb [specular_rgb3]}
+               {[target3] set two_color [two_color3]}
+               {[target3] set fleck_shaded [fleck_shaded3]}
+               {[target3] set substrate_depth [substrate_depth3]}
+               {[target3] set substrate_color [substrate_color3]}
+               {[target3] set fleck_shaded_mask [fleck_shaded_mask3]}
+            }
+            {if [target4]
+               {[target4] set diffuse_tex [diffuse_tex4]}
+               {[target4] set custom_diffuse_tex [custom_diffuse_tex4]}
+               {[target4] set emissive_map [emissive_map4]}
+               {[target4] set environ_map [environ_map4]}
+               {[target4] set normal_map [normal_map4]}
+               {[target4] set specular_map [specular_map4]}
+               {[target4] set two_color_mask [two_color_mask4]}
+               {[target4] set specular_power [specular_power4]}
+               {[target4] set specular_rgb [specular_rgb4]}
+               {[target4] set two_color [two_color4]}
+               {[target4] set fleck_shaded [fleck_shaded4]}
+               {[target4] set substrate_depth [substrate_depth4]}
+               {[target4] set substrate_color [substrate_color4]}
+               {[target4] set fleck_shaded_mask [fleck_shaded_mask4]}
+            }
+         )
+      )
+      (crowd
+         ; for future expansion.
+      )
+   )   
+)
+
+(PatchRenderer
+   (allowed_dirs RndDir)
+   ; app should set this
+   (test_patch  "test_patch.milo")
+)
+

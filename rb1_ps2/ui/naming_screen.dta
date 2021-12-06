@@ -1,0 +1,289 @@
+; REA - Naming screen handlers for shared use in character naming and high score naming
+#define kBandNameLength (15)
+
+#define NAMING_PANEL_HANDLERS
+(
+   ; localization data
+   #include ../ui/eng/locale_bandnames_og.dta
+
+	(current_name (""))
+	(current_char "")
+	(current_pos 0)
+	(current_char_num 0)
+	(blink FALSE)
+	(blink_delay 0.2)
+	(kill FALSE)
+	(random_active FALSE)
+	(canceled_exit FALSE)
+	
+   (init_name 
+		{$this clear_name}
+		{script_task kTaskUISeconds (delay [blink_delay])
+         (script
+            {$this blink_char}
+         )
+      }
+      {$this reset_helpbar}
+   )
+	
+   (clear_name
+		{resize [current_name] 0}
+		{push_back [current_name] ""}
+		{set [current_char_num] 0}
+		{set [current_char] {elem [naming_chars] [current_char_num]}}
+		{set [current_pos] 0}
+		{set [kill] FALSE}
+		{set [random_active] FALSE}
+      {$this update_name}
+   )
+	
+	(exit
+		{set [kill] TRUE}
+	)
+   
+   ; sent from the session
+   (update_band 
+		{$this update_name}
+   )
+
+	(blink_char
+		{if {! [kill]} ; Make sure timer hasn't bled to another screen
+			{set [blink] {! [blink]}}
+			{$this update_name}
+		   {script_task kTaskUISeconds (delay [blink_delay])
+		      (script
+		         {$this blink_char}
+		      )
+		   }
+		}
+	)
+
+   (TRANSITION_COMPLETE_MSG
+      {$this reset_helpbar}
+   )
+	
+   (BUTTON_DOWN_MSG
+		{if_else {&& [name_active] {! [kill]}}
+ 			{do
+				{switch $button
+					(kPad_DUp ; Increment char
+						{if [random_active]
+							{do
+								{$this clear_name}
+								{set [random_active] FALSE}
+							}
+						}
+                  {if {< [current_pos] kBandNameLength}
+   						{$this decrement_char}
+                  }
+					)
+					(kPad_DDown ; Decrement
+						{if [random_active]
+							{do
+								{$this clear_name}
+								{set [random_active] FALSE}
+							}
+						}
+                  {if {< [current_pos] kBandNameLength}
+						   {$this increment_char}
+                  }
+					)
+					(kPad_X ; Next
+						{if [random_active]
+							{do
+								{$this clear_name}
+								{set [random_active] FALSE}
+							}
+						}
+						; don't let them put a bad char first
+						{if {! {&& 
+								{== [current_pos] 0}
+							   {find_elem [prohibit_chars] [current_char]}
+							}}
+							{$this next_char}
+						}
+					)
+					(kPad_Tri ; Prev
+						{if_else [random_active]
+							{do
+								{$this clear_name}
+								{set [random_active] FALSE}
+							}
+							{$this prev_char}
+						}
+						
+					)
+					(kPad_R1 ; open for a panel to override	
+						{$this extra_function}
+					)
+					(kPad_Start
+                  {if {! [kill]} ; if we're not already saving or closing
+                     {if_else {> {size [current_name]} 0} ; if the name size is greater than 0
+								{do
+									{set [kill] TRUE}
+      						   {$this accept_name}
+								}
+                        ;
+                        {ui push_screen name_error_screen}
+                     }
+                  }
+					)
+					kDataUnhandled
+				}
+			}
+			;else
+			{if {|| {== $button kPad_Start} {== $button kPad_Tri} {== $button kPad_X}}
+			   {$this button_press}
+			}
+		}
+   )
+
+   (update_name
+      {do
+         ($render_cursor {< [current_pos] kBandNameLength}) ; render cursor should only be true if the cursor position is less than the max name length
+         ($extra_char ' ')
+
+         {if {&& $render_cursor [blink]} ; if we're rendering the cursor and blinking, add the current extra char to the end
+            {set $extra_char [current_char]}
+         }
+      
+         {[name_label] set text_token {sprintf "%s%s" {$this get_name} $extra_char}}
+      }
+   )
+
+   ; Moves the cursor to the next character or disables cursor drawing if it's at the max name length
+	(next_char ; Move to next char
+      {if {< [current_pos] kBandNameLength}
+         {++ [current_pos]}
+         {push_back [current_name] [current_char]}
+		{$this reset_helpbar}
+      }
+      {$this update_name}
+	)
+
+	(prev_char
+		{if_else {== [current_pos] 0} ; if we are on the first char then just cancel
+			{if [back_button_exits] ; if back button doesn't exit, do nothing, otherwise cancel entry
+				{$this cancel_name}
+			}
+			;else
+			{do
+            {remove_elem [current_name] {elem [current_name] [current_pos]}}
+				{-- [current_pos]}
+				{$this update_name}
+				{$this reset_helpbar}
+			}
+		}
+	)
+
+
+   ; BMB: reset_helpbar note, excitement!
+   ; This is replaced to remove the pile of if_else and replaced with a state
+   ; check to define the array. The reason it is done this way is array
+   ; definitions like () are not evaluated at creation time - so something like
+   ; ('' Select {$this get button} '') evaluates as {helpbar get button}
+   ; instead of what you would expect.
+   (reset_helpbar
+      {do 
+         ($helpbar_config ())
+         {resize $helpbar_config 0}
+
+         ; Back/delete button - If the current position is greater 0, show the
+         ; delete button, otherwise, show the "back" button (could be '')
+         {if_else {> [current_pos] 0}
+            {push_back $helpbar_config Delete}
+            {push_back $helpbar_config {$this get back_button}}
+         }
+
+         ; Select - If the name is less than the max length, show the select button
+         {if_else {< [current_pos] kBandNameLength}
+            {push_back $helpbar_config Select}
+            {push_back $helpbar_config ''}
+         }
+
+         ; Randomize - Show the randomize button defined in the child screen.  Could be ''
+         {push_back $helpbar_config {$this get randomize_button}}
+
+         ; Confirm - if the name isn't empty, show the confirm (PS2 Start) button
+         {if_else {|| {! [back_button_exits]} {> [current_pos] 0} }
+            {push_back $helpbar_config Confirm}
+            {push_back $helpbar_config ''}
+         }
+         
+         ; Set the helpbar config
+         {helpbar set_config $helpbar_config}
+      }
+  )
+	
+	(increment_char
+		{set [current_char_num] {+ [current_char_num] 1}}
+		{if {>= [current_char_num] {size [naming_chars]}}
+			{set [current_char_num] 0}
+		}
+		{set [current_char] {elem [naming_chars] [current_char_num]}}
+		{$this update_name}
+	)
+	
+	(decrement_char
+		{set [current_char_num] {- [current_char_num] 1}}
+		{if {< [current_char_num] 0}
+			{set [current_char_num] {- {size [naming_chars]} 1}}
+		}
+		{set [current_char] {elem [naming_chars] [current_char_num]}}
+		{$this update_name}
+	)
+	
+	(get_name
+		{do ($name "")
+			{foreach $char [current_name]
+				{set
+					$name {sprintf "%s%s" $name $char}
+				}
+			}
+			$name
+		}
+	)
+	
+	(stop_naming
+        {helpbar set_config ()}
+		{set [kill] TRUE}
+		{set [blink] FALSE}
+		{set [current_char] ""}
+		{$this update_name}
+	)
+
+	(random_name ;;HOJ RANDOM name generator
+		{do
+			{$this clear_name}
+		   {set $rname ""}
+		   
+		   {while {|| {== $rname ""} {> {strlen $rname} kBandNameLength}} 
+				{set $rname {sprintf "%s %s"{random_elem [first_name]} {random_elem [second_name]}}}
+			}
+		   
+			{foreach_int $i 0 {strlen $rname}
+				{push_back [current_name] {str_elem $rname $i}}
+				{set [current_pos] {+ $i 1}}
+			}
+
+			;{set [random_active] TRUE}
+			{set [current_char] "A"}
+			{$this update_name}
+			{$this reset_helpbar}
+		 }
+	)
+	
+
+)
+
+; are you sure you want to lose your changes?
+{new UIScreen name_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok {localize_token shell_no_band_name_error}}
+   )
+   (SELECT_MSG
+      {ui pop_screen}
+   )
+}

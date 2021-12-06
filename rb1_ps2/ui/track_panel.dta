@@ -1,0 +1,150 @@
+#define TRACK_END_FRAME (1920)
+
+#define TRACK_PANEL_HANDLERS (
+   (enter
+      {game add_sink $this}
+      {$this set_showing {gamemode get show_track}}
+   )
+   
+   (exit
+      {game remove_sink $this}      
+   )
+   
+   (unison_hit
+   )
+
+   (unison_miss
+   )
+
+   (set_track_out
+   )
+
+   (set_track_in
+   )
+
+   (animate_track ($start $end $period $units)
+   )     
+      
+   (animate_track_out
+   )
+
+   (animate_track_out_fast
+   )
+
+   (animate_track_in_fast
+   )
+
+   (finish_load
+      ; fully extend track for Track::FinishLoad
+      ; to grab the final position
+      {$this set_showing FALSE}
+      {$this set_track_out}
+   )
+
+   (intro_start
+   ;; @TEST
+      ;;{print "In Track Panel Intro Start!\n"}
+      {$this reset}
+      {$this set_showing {gamemode get show_track}}
+      {$this set_track_in}
+   )
+
+   (intro_skip
+      ; @TEST
+      ;;{print "In Track Panel Intro Skip!\n"}
+      {$this reset}
+      {$this set_showing {gamemode get show_track}}
+      {$this set_track_out}
+      {$this play_intro}
+   )
+
+   (on_reset
+      ; tell each track's trackdir about its parent track
+      {beatmatch foreach_active_player $m
+         {$m on_new_track} 
+         {{$m track} init {$m track}}
+      }
+      {{$this loaded_dir} reset}
+   )
+
+   (on_extend
+      {$this play_intro} ; handled by the dir
+      {if {&& {exists gamemode} {gamemode get play_track_intro_sfx}}
+         {synth play track_beg.cue}}
+
+      /*
+         i'm assuming that the graphics as well as the sounds
+         should be cut, so i'm commenting out this whole thing
+         for now.
+
+      {script_task kTaskBeats (delay 1.3)
+         (script
+            {play_game_seq nowbar_1}      
+            {$this pop_smasher 0}
+            {$this set_smasher_glowing 0 TRUE}
+         )
+      }
+      {script_task kTaskBeats (delay 1.4)
+         (script
+            {play_game_seq nowbar_2}
+            {$this pop_smasher 1}
+            {$this set_smasher_glowing 1 TRUE}
+         )
+      }
+      {script_task kTaskBeats (delay 1.5)
+         (script
+            {play_game_seq nowbar_3}
+            {$this pop_smasher 2}
+            {$this set_smasher_glowing 2 TRUE}
+         )
+      }
+      {script_task kTaskBeats (delay 1.6)
+         (script
+            {play_game_seq nowbar_4}
+            {$this pop_smasher 3}
+            {$this set_smasher_glowing 3 TRUE}
+         )
+      }
+      {script_task kTaskBeats (delay 1.7)
+         (script
+            {play_game_seq nowbar_5}
+            {$this pop_smasher 4}
+            {$this set_smasher_glowing 4 TRUE}
+         )
+      }
+      {script_task kTaskBeats (delay 2)
+         (script
+            {$this pop_smasher -1}  ; pop all
+         )
+      }
+      {script_task kTaskBeats (delay 2.5)
+         (script
+            {beatmatch foreach_active_player $m
+               {$m refresh_track_buttons}}
+         )
+      }
+      */
+   )
+)
+
+
+{new TrackPanel coop_track_panel
+   (file ../track/trackpanel.milo)
+   TRACK_PANEL_HANDLERS
+}
+
+{new TrackPanel hth_track_panel
+   (file
+      {if_else {== {{game get_participant_config 0} get_track_sym} vocals}
+         ../track/trackpanel_hth_vocals.milo
+         ../track/trackpanel_hth.milo
+      }
+   )
+   
+   TRACK_PANEL_HANDLERS
+}
+
+{func get_track_panel {gamemode get track_panel}}
+
+; for vocal testing
+{set $playback_file ""}

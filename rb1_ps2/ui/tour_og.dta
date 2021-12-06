@@ -1,0 +1,491 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#ifndef HX_XBOX
+
+{new UIScreen tour_movie_screen
+
+	(TRANSITION_COMPLETE_MSG
+		;#ifdef HX_EE
+		 ;HOJ HERE IS WERE WE PLACE VIDEOS FOR TIER 
+		;	 {do ($tp {tour performer})
+		;	       ($new_town {$tp new_town})
+		;		  {if_else {== $new_town ''}
+		;					{ui goto_screen {gamemode get tour_event_screen}}
+		;					{if_else {== $new_town 'paris'};Bonus town unlocked do not play a movie
+		;						{do
+		;							{$tp add_seen_town $new_town} 
+		;							{ui goto_screen {gamemode get tour_event_screen}}
+		;						}
+		;						{ui goto_screen transition_movie_screen}
+		;					}
+		;		  }
+		;	 }
+		 ; #else
+		;	{ui goto_screen {gamemode get tour_event_screen}}
+		; #endif
+		{ui goto_screen {gamemode get tour_event_screen}}
+   )
+
+}
+{new UIPanel transition_overlay_panel
+	(file "world/transition_video.milo")
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BWT hub lower3rd
+{new UIPanel tour_band_lower3rd_panel
+#ifdef HX_XBOX
+   (file "tour_band_lower3rd.milo")
+#else
+   (file "tour_band_lower3rd_og.milo")  ;MTC
+#endif
+}
+
+{new UIPanel tour_worldmap_lower3rd_panel
+	(file "tour_worldmap_band_lower3rd_og.milo")
+}
+; Video world panel
+;-----------------------------------
+; 
+;-----------------------------------
+{new UIPanel transition_movie_panel
+    (file "world/transition_video.milo")
+  
+  (moviefinished FALSE)
+   (enter
+		{set $moviefinished FALSE}
+		{if_else {!= $new_town ''}
+			{do
+			    ($tp {tour performer})
+			    ($new_town {$tp new_town})
+				{{meta meta_music} stop}
+				{$tp add_seen_town $new_town} 
+				{switch $new_town
+					(boston	      {video_file.mov set movie_file {sprintf "videos/placeholder_movie_act1"}});"act1"  
+					(newyork     {video_file.mov set movie_file {sprintf "videos/cube"}});"act2"
+					(chicago      {video_file.mov set movie_file {sprintf "videos/cube"}});"act3"
+					(losangeles  {video_file.mov set movie_file {sprintf "videos/cube"}});"act4"
+					(seattle       {video_file.mov set movie_file {sprintf "videos/cube"}});"act5"
+					(berlin         {video_file.mov set movie_file {sprintf "videos/cube"}});"act6"
+					(london       {video_file.mov set movie_file {sprintf "videos/cube"}});"act7"
+					(stockholm     {video_file.mov set movie_file {sprintf "videos/cube"}});"act8
+					(rome  {video_file.mov set movie_file {sprintf "videos/cube"}});"act9
+				;else
+					{video_file.mov set movie_file {sprintf "videos/cube"}};
+				}
+				{video_file.mov animate}
+				{film_grain.filt animate (loop 0 101)}
+			}
+			;else new town == ''
+			{ui goto_screen {gamemode get tour_event_screen}}
+		}
+	
+		
+   )
+    (poll
+		{if {&& {! $moviefinished}
+				   {video_file.mov is_movie_done} }
+			{do
+				 {set $moviefinished TRUE}
+				 {ui goto_screen {gamemode get tour_event_screen}}
+			 }
+		}
+			 
+   )
+   (exit
+		{{meta meta_music} start}
+	)
+   
+    (BUTTON_DOWN_MSG
+      {if {&& {|| {== $button kPad_Start}
+              {== $button kPad_X}} {! $moviefinished} }
+		{set $moviefinished TRUE}
+         {ui goto_screen {gamemode get tour_event_screen}}
+	  }
+   )
+      
+}
+
+{new UIScreen transition_movie_screen
+	(panels meta transition_movie_panel helpbar)
+	(focus transition_movie_panel)
+	(helpbar (select))
+}
+
+
+; Video world panel
+;----------------------
+; Boston
+;---------------------
+
+
+{new UIPanel transition_movie1_panel
+   (file "world/transition_video.milo")
+   (moviefinished FALSE)
+   (enter
+		{set $moviefinished FALSE}
+        {{meta meta_music} stop}
+		{video_file.mov set movie_file {sprintf "videos/cube"}}
+		{video_file.mov animate}
+		{film_grain.filt animate (loop 0 101)}
+   )
+   (exit
+	   {{meta meta_music} start}
+   )
+   (poll
+		{if {&& {! $moviefinished}
+				   {video_file.mov is_movie_done} }
+			{do
+				 {set $moviefinished TRUE}
+				 {ui goto_screen {gamemode get tour_event_screen}}
+				
+			 }
+		}
+			 
+   )
+   
+    (BUTTON_DOWN_MSG
+		  {if {&& {|| {== $button kPad_Start}
+              {== $button kPad_X}} {! $moviefinished} }
+			{set $moviefinished TRUE}
+			 {ui goto_screen {gamemode get tour_event_screen}}
+		  }
+    )
+      
+}
+
+{new UIScreen transition_movie1_screen
+	(panels meta transition_movie1_panel)
+	(focus transition_movie1_panel)
+}
+
+
+
+#endif
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#ifdef TOUR_LOGGING
+   #define TOUR_LOGVER (1)       ;; what version of the log are we on
+   #define TOUR_BALANCE_MAJORVER (0) ;; major balance version
+   #define TOUR_BALANCE_MINORVER (1) ;; minor balance version
+#endif
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; tour backgrounds
+{new WorldMapPanel tour_world_bg_panel
+   (file world/tour_worldmap.milo)
+   (zoomed FALSE)
+   (town boston)
+   (venue big_club)
+
+   (enter
+      {set [zoomed] FALSE}
+      {set [town] {{tour performer} town}}
+      {set [venue] {{tour performer} venue}}
+   )
+
+   (update
+      {$this sync [town] [venue] [zoomed]}
+   )
+
+   (zoom_in
+      {set [zoomed] TRUE}
+      {$this update}
+   )
+   
+   (zoom_out
+      {set [zoomed] FALSE}
+      {set [venue] ''} ; kill venue animation
+      {$this update}
+   )
+
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   ; "private" handlers
+
+   (zoom_in_impl
+      {zoom.grp animate (dest {zoom.grp end_frame})}
+   )
+
+   (zoom_out_impl
+      {zoom.grp animate (dest 0)}
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; common tour hints
+#define TOUR_HINT_PANEL_HANDLERS
+(
+   (force_exit TRUE)
+   (focus continue.btn)
+
+   (SELECT_START_MSG 
+		
+      {{tour hint} advance} ; go to next hint
+      {ui goto_screen
+         {cond
+            ({tour hint} {{tour hint} get screen})
+            ({gamemode is_solo} tour_solo_event_screen)
+#ifdef HX_EE
+            ;MTC I changed these from old tour screens
+            ({{tour performer} can_leave_hometown} tour_solo_event_screen)
+            ({{tour performer} can_leave_home_venue} tour_solo_event_screen)
+            (TRUE tour_chooseevent_screen)
+#else
+            ({{tour performer} can_leave_hometown} tour_band_town_screen)
+            ({{tour performer} can_leave_home_venue} tour_band_venue_screen)
+            (TRUE tour_band_event_screen)
+#endif
+         }
+         TRUE ; force it
+      }
+      kDataUnhandled
+   )
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; tour logging
+
+{func log_tour ($system $data)
+#ifdef TOUR_LOGGING
+   {$log_tour print $system " | " $data "\n"}
+}
+
+{do ($filename)
+   {if_else {using_cd}
+      {set $filename {sprintf "log_tour_%i.txt" {get_date_time}}}
+      {set $filename "log_tour.txt"}
+   }
+   {set $log_tour {new File $filename}}
+}
+
+{log_tour "INIT    " {sprintf "Initialising logging, rev: %d" TOUR_LOGVER}}
+{log_tour "INIT    " {sprintf "Metagame balance, rev: %d.%d" TOUR_BALANCE_MAJORVER TOUR_BALANCE_MINORVER}}
+{set $tour_cycle 0    
+#endif
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Common Tour Gig guide
+#define TOUR_EVENT_PANEL_HANDLERS
+(
+   (confirm_event
+      {log_tour "EVENT " {{tour event} event_token}}
+      ; choose any random songs now that everything else has been resolved
+      {{tour performer} set_random_songs}
+      ; initialize game
+      {game set_song  {{tour performer} next_song}}
+      {game set_venue {tour venue_variant}}
+   )
+   
+   (is_updown ($button)
+      {|| {== $button kPad_DDown}
+          {== $button kPad_DUp}
+          {== $button kPad_Circle}
+          {== $button kPad_Square}
+      }
+   )
+
+   ;HWR - Select a new song on the list
+   ;      (consolidated from tour_solo_og and tour_band_og)
+   (update_selection
+      {do
+         {set $provider {tour solo_event_provider}}
+         {set $pos {event.lst selected_pos}}
+         {set $town {$provider town $pos}}
+         {set $venue {$provider venue $pos}}
+         {{tour performer} set_town $town}
+         {{tour performer} set_venue $venue}
+      }
+      
+      {{tour performer} set_event 
+         {event.lst selected_sym} 
+         {game get leader_num}
+      }
+	  
+      ;HOJ Now check and set the background image
+      {if {!= $old_town $town}
+         {do
+            {switch $old_town
+               (boston       {fadeoutact.mat set diffuse_tex act10.tex})
+               (newyork      {fadeoutact.mat set diffuse_tex act2.tex})
+               (chicago      {fadeoutact.mat set diffuse_tex act3.tex}) 
+               (losangeles   {fadeoutact.mat set diffuse_tex act4.tex}) 
+               (seattle      {fadeoutact.mat set diffuse_tex act5.tex}) 
+               (berlin       {fadeoutact.mat set diffuse_tex act6.tex}) 
+               (london       {fadeoutact.mat set diffuse_tex act7.tex}) 
+               (stockholm    {fadeoutact.mat set diffuse_tex act8.tex}) 
+               (rome         {fadeoutact.mat set diffuse_tex act9.tex}) 
+               (sanfrancisco {fadeoutact.mat set diffuse_tex act1.tex}) 
+               (paris        {fadeoutact.mat set diffuse_tex act11.tex}) 
+            }
+            {if {!= $old_town -1}
+               {fadeoutact.mnm animate}}
+
+            {switch $town
+               (boston       {fadeinact.mat set diffuse_tex act10.tex})
+               (newyork      {fadeinact.mat set diffuse_tex act2.tex})
+               (chicago      {fadeinact.mat set diffuse_tex act3.tex}) 
+               (losangeles   {fadeinact.mat set diffuse_tex act4.tex}) 
+               (seattle      {fadeinact.mat set diffuse_tex act5.tex}) 
+               (berlin       {fadeinact.mat set diffuse_tex act6.tex}) 
+               (london       {fadeinact.mat set diffuse_tex act7.tex}) 
+               (stockholm    {fadeinact.mat set diffuse_tex act8.tex}) 
+               (rome         {fadeinact.mat set diffuse_tex act9.tex}) 
+               (sanfrancisco {fadeinact.mat set diffuse_tex act1.tex}) 
+               (paris        {fadeinact.mat set diffuse_tex act11.tex}) 
+            }
+            {fadeinact.mnm animate}
+
+            {set $old_town $town}
+         }
+      }
+
+      ;HWR - Stop the previous music preview
+      {meta music_stop_stream}
+   )
+      
+   ; REA - delay preview script addition
+   (last_preview_play 0.0)
+   (preview_playing FALSE)
+
+   ; don't play song snippet until user stops flipping through choices
+   (BUTTON_UP_MSG
+      {if {&& {$this is_updown $button} {gamecfg is_player_participating $player_num}}
+         {set [last_preview_play] {taskmgr ui_seconds}}
+         {set [preview_playing] FALSE}
+      }
+      kDataUnhandled
+   )
+   
+   ; REA - allows song preview playback on event panels
+   (play_preview
+	 {meta music_stop_stream} ; turn off song preview
+	 {do
+		; grab the next song in this event and play its preview
+		($song_to_set 
+		   {{tour performer} next_song}
+		)
+		{if {!= $song_to_set ""}
+           ;HWR - Play a separate .vgs file as the song preview, through the meta music system
+           {meta music_start_stream {sprintf "songs/%s/prev_%s" $song_to_set $song_to_set}}
+		}
+	 }
+   )
+   
+   ; REA - poll added to check the delay and start preview
+   (poll
+      {do 
+         ($last_play_delta  {- {taskmgr ui_seconds} [last_preview_play]})
+         {if {&& {> $last_play_delta 0.25} {! [preview_playing]} {! {ui in_transition}}}
+            {do
+               {$this play_preview} ; REA play preview 
+               {set [preview_playing] TRUE}
+            }
+         }
+      } 
+   )
+   
+   ; REA - clear our preview and start up the meta music
+   (exit
+	 ;HWR - Stop the song preivew and turn off the streaming override mode
+     {meta music_stop_stream}
+      
+     ;HWR - Restart the normal metagame music after the preview fades out
+     ; (meta music would keep playing the song preview without the delay)
+     {script_task kTaskSeconds (delay {+ {{meta meta_music} fade_time} 0.1})
+        (script {meta music_start})
+     }
+     
+     {set [last_preview_play] 0.0}
+     {set [preview_playing] FALSE}
+   )
+)
+
+; REA - Moved here since it will be used by solo tour also
+#ifndef HX_XBOX ; OG specific code
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; tour band creation/resolution screens
+
+{new BandCreatePanel tour_band_create_panel
+ 	(file selname_og.milo)
+	(focus name.lbl)
+   (reset_focus TRUE)
+   (player_num {game get leader_num})
+	(back_button_exits TRUE)
+	(name_label name.lbl)
+	(name_active TRUE)
+   (randomize_button Randomize)
+   (back_button Back)
+   (helpbar ())
+
+	NAMING_PANEL_HANDLERS ; REA - Naming screen a go go
+	
+	(enter
+		{$this init_name}
+	)
+	
+	(accept_name
+		{{tour performer} set_char_name {$this get_name}}
+		{if_else {== {{tour performer} get_char_name} ""}
+			{do
+			   {set [kill] FALSE} ; REA - unkill the naming
+            {ui push_screen name_error_screen}
+			}
+         ; else check for duplicate name
+			{if_else 
+				{!
+               {profile_mgr is_char_name_unique
+                  {gamecfg get leader_num}
+                  {{tour performer} get_char_name}
+               }
+            }
+				; then
+				{do
+					{set [kill] FALSE} ; REA - unkill the naming
+					{ui push_screen tour_band_create_name_not_unique_screen}
+				}
+				; else save off members and finalize band
+				{do
+					{$this stop_naming}
+	            {charcreator_panel add_char_to_profile}
+					{if_else {== {gamemode get max_players} 1} ; REA - If its solo tour we go elsewhere
+                  {autosave_push_goto tour_solo_diff_screen}
+						;else
+                  {autosave_push_goto {gamemode get matchmaking_screen}}
+					}
+				}
+			}
+      }
+   )
+	
+   ; Change whether the Select button is showing on the help bara)
+	
+	(extra_function ; regen random name
+		{$this random_name}
+	)
+	
+	(cancel_name
+		{if_else {== {gamemode get max_players} 1}
+			{ui goto_screen {gamemode get matchmaking_screen}}
+			;else
+			{ui goto_screen tour_band_char_screen}
+		}
+	)
+
+}
+
+{new UIScreen tour_band_create_name_not_unique_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   LIMIT_TO_LEADER_SESSION
+   (enter
+      {dialog_panel set_ok {localize_token tour_band_name_not_unique}}
+   )
+   (SELECT_MSG
+      {ui pop_screen}
+   )
+}
+#endif ; not HX_XBOX

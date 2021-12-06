@@ -1,0 +1,352 @@
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Band Select screen
+
+{new UIPanel tour_band_sel_panel
+   (file "tour_band_sel.milo")
+   (focus band.lst)
+
+   (band_provider 0)
+
+   (enter
+      ;; start by clearing any lingering unfinalized bands...
+      {tour clear_performer} ; sets performer to NULL, deletes unfinalized band
+
+      {set [band_provider] {get_band_provider}}
+      {band.lst set_provider [band_provider]}
+
+      {session add_sink $this signin_changed}
+      {memcardmgr add_sink $this save_load_complete_msg}
+
+      {autoload}
+   )
+
+   (exit
+      {session remove_sink $this signin_changed}
+      {memcardmgr remove_sink $this save_load_complete_msg}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (band.lst
+            {do ($pos {band.lst selected_pos})
+               {if_else {[band_provider] is_pos_create_band $pos}
+                  ; create a new band with a random name
+                  {tour set_performer {tour create_new_band}}
+                  ; else 
+                  ; If they chose Join a Band, do not set the performer or select a remote band
+                  {unless {[band_provider] is_pos_join_band $pos}
+                     {if_else {[band_provider] is_band_local $pos}
+                        ; set the provider since we have the master save data
+                        {tour set_performer {[band_provider] get_band $pos}}
+                        ; else set the band info necessary to connect later on the matchmaking screen   
+                        {[band_provider] select_remote_band $pos}
+                     }
+                  }
+               }
+            }
+            
+            ; refresh, so we see the band logo
+            {practice_space_panel refresh}
+            
+            {ui goto_screen {gamemode get matchmaking_screen}}
+         )
+      }
+   )
+
+   (signin_changed
+      {autoload}
+      ;; Refresh the display by re-setting the provider
+      {band.lst set_provider [band_provider]}
+   )
+   
+   (save_load_complete_msg
+      ;; Refresh the display by re-setting the provider
+      {band.lst set_provider [band_provider]}
+   )
+}
+
+
+{new UIScreen tour_band_sel_screen
+   (panels meta practice_space_panel tour_band_sel_panel helpbar)
+   (helpbar (helpbar_back helpbar_selband))
+   (focus tour_band_sel_panel)
+   (back main_worldtour_screen)
+   
+#ifdef HX_XBOX   	;; PGM
+   (enter
+      ;; update rich presence...
+      {presence_mgr set_assembling_band}
+      
+      ; select the coop matchmaking shot
+      {practice_space_panel select_cam "coop_enter"}
+   )
+#endif
+   
+#ifdef HX_XBOX   	;; PGM
+   (exit
+      ;; update rich presence...
+      {presence_mgr set_prepare_to_rock}
+   )
+#endif
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Band Resolution screen (missing/subs)
+
+{new BandLineupPanel tour_band_lineup_panel
+   (file "tour_band_lineup.milo")
+   (focus player00.btn)
+
+   (enter
+      {band_name.lbl set_localized {{tour performer} band_name}}
+
+      {$this update}
+   )
+
+   (update
+      {$this build_resolution_list}
+
+      {foreach $i (0 1 2 3)
+         {do ($rowArray {$this get_row $i})
+            ; 0 - isLeader
+            {{sprintf "leader%02d.lbl" $i} set_showing {elem $rowArray 0}}
+
+            ; 1 - instrument
+            {{sprintf "instrument%02d.lbl" $i}
+               set_localized
+               {cnv_instrumenttoicon {elem $rowArray 1}}
+            }
+
+            ; 2 - Original Name            
+            {{sprintf "original%02d.lbl" $i} set_localized {elem $rowArray 2}}
+            
+            ; 3 - state
+            ; 4 - Sub Name
+            {switch {elem $rowArray 3}
+
+               ;; TODO: text in locale.dta
+
+               (kMetaLineupPlaying
+                  {{sprintf "status%02d.lbl" $i}
+                     set
+                     text_token
+                     tour_band_lineup_status_playing
+                  }
+               )
+               (kMetaLineupOffline
+                  {{sprintf "status%02d.lbl" $i}
+                     set
+                     text_token
+                     tour_band_lineup_status_offline
+                  }
+               )
+               (kMetaLineupSub
+                  {{sprintf "status%02d.lbl" $i}
+                     set_localized
+                     {sprintf {localize tour_band_lineup_status_sub_fmt}
+                        {elem $rowArray 4}
+                     }
+                  }
+               )
+            }
+
+            ; 5 - Add button
+            ;{do ($btn {sprintf "add%02d.btn" $i})
+            ;   {if_else {elem $rowArray 5}
+            ;      {do
+            ;         {$btn set_showing TRUE}
+            ;         {$this enable $btn}
+            ;      }
+            ;      ; else
+            ;      {do
+            ;         {$this disable $btn}
+            ;         {$btn set_showing FALSE}
+            ;      }
+            ;   }
+            ;}
+
+            ; 6 - Is Visible
+            {$this
+               {if_else {elem $rowArray 6}
+                  enable
+                  ; else
+                  disable
+               }
+               {sprintf "player%02d.btn" $i}
+            }
+            {{sprintf "player%02d.grp" $i} set_showing {elem $rowArray 6}}
+         }
+      }
+   )
+
+   (SELECT_START_MSG
+      {tour_band_lineup_menu_panel set player_num $player_num}
+
+      {tour_band_lineup_menu_panel set row_num
+         {switch $component
+            (player00.btn 0)
+            (player01.btn 1)
+            (player02.btn 2)
+            (player03.btn 3)
+         }
+      }
+
+      {ui goto_screen tour_band_lineup_menu_screen}
+      
+      kDataUnhandled
+   )
+
+   (BUTTON_DOWN_MSG
+      {switch $button
+         (kPad_Xbox_B
+            {ui goto_screen tour_band_hub_screen}
+         )
+         ; default
+         kDataUnhandled
+      }
+   )
+}
+
+{new UIScreen tour_band_lineup_screen
+   (panels meta practice_space_panel tour_band_lineup_panel helpbar)
+   (helpbar (helpbar_back helpbar_continue))
+   (focus tour_band_lineup_panel)
+}
+
+{new UIPanel tour_band_lineup_menu_panel
+   (file "tour_band_lineup_menu.milo")
+   (focus opt0.btn)
+
+   (player_num -1)
+   (row_num -1)
+
+   (setup ($player_num $row_num)
+      {set [player_num] $player_num}
+      {set [row_num] $row_num}
+   )
+
+   (enter
+      {do
+         ($rowArray {tour_band_lineup_panel get_row [row_num]})
+         ($is_leader {== [player_num] {gamecfg get leader_num}})
+         ($is_self {tour_band_lineup_panel is_self [row_num] [player_num]})
+         ($is_sub {== {elem $rowArray 3} kMetaLineupSub})
+         ($char_name
+            {if_else $is_sub
+               {elem $rowArray 4}
+               ; else
+               {elem $rowArray 2}
+            }
+         )
+
+         {print
+            "DEBUG - row_num: "
+            [row_num]
+            ", is_leader: "
+            $is_leader
+            ", is_self: "
+            $is_self
+            ", is_sub: "
+            $is_sub
+            ", char_name: "
+            $char_name
+            "\n"
+         }
+
+         {$this enable opt1.btn}
+         {opt1.btn set_showing TRUE}
+
+         {if_else $is_leader
+            {if_else $is_self
+               {do
+                  ; disband
+                  {opt0.btn set text_token tour_band_lineup_disband}
+                  ; view char profile
+                  {opt1.btn set text_token tour_band_lineup_view_char_profile}
+               }
+               ; else
+               {if_else $is_sub
+                  {do
+                     ; make perm
+                     {opt0.btn set text_token tour_band_lineup_promote}
+                     ; view char profile
+                     {opt1.btn set text_token
+                        tour_band_lineup_view_char_profile
+                     }
+                  }
+                  ; else
+                  {do
+                     ; demote
+                     {opt0.btn set text_token tour_band_lineup_demote}
+                     ; view char profile
+                     {opt1.btn set text_token
+                        tour_band_lineup_view_char_profile
+                     }
+                  }
+               }
+            }
+            ; else
+            {if_else $is_self
+               {do
+                  ; demote
+                  {opt0.btn set text_token tour_band_lineup_demote}
+                  ; view char profile
+                  {opt1.btn set text_token tour_band_lineup_view_char_profile}
+               }
+               ; else
+               {do
+                  ; view char profile
+                  {opt0.btn set text_token tour_band_lineup_view_char_profile}
+                  ; <no second option>
+                  {$this disable opt1.btn}
+                  {opt1.btn set_showing FALSE}
+               }
+            }
+         }
+
+         {charname.lbl set_localized $char_name}
+      }
+   )
+
+   (SELECT_START_MSG
+      {switch {$component get text_token}
+         (tour_band_lineup_disband
+            {print "DISBAND!\n"}
+         )
+         (tour_band_lineup_demote
+            {print "DEMOTE!\n"}
+         )
+         (tour_band_lineup_promote
+            {print "PROMOTE!\n"}
+         )
+         (tour_band_lineup_view_char_profile
+            {print "PROFILE!\n"}
+         )
+      }
+
+      kDataUnhandled
+   )
+
+   (BUTTON_DOWN_MSG
+      {switch $button
+         (kPad_Tri
+            {ui goto_screen tour_band_lineup_screen}
+         )
+         ; default
+         kDataUnhandled
+      }
+   )
+}
+
+{new UIScreen tour_band_lineup_menu_screen
+   (panels
+      meta
+      practice_space_panel
+      tour_band_lineup_panel
+      tour_band_lineup_menu_panel
+      helpbar
+   )
+   (helpbar (helpbar_back helpbar_continue))
+   (focus tour_band_lineup_menu_panel)
+}

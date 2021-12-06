@@ -1,0 +1,1411 @@
+; common background piece
+{new UIPanel tour_solo_lower3rd_panel
+   ;(file "tour_solo_lower3rd.milo") HOJ MAY NEED TO ADD THIS BACK IN
+}
+#ifndef HX_XBOX
+; BWT endgame screens
+#define TOUR_ENDGAME_HANDLERS
+(
+   ENDGAME_PANEL_HANDLERS   
+   (complete_song
+      {$this set_results}
+      {$this submit_achievements}
+   )
+)
+#endif
+
+#ifndef HX_XBOX
+; solo tour character select ("matchmaking" screen)
+{new UIPanel tour_solo_char_panel
+#ifdef HX_XBOX
+   (file "tour_solo_char.milo")
+#else
+	(file "tour_solo_char_og.milo")
+#endif
+   (focus char.lst)
+   (reset_focus TRUE)
+   (player_num {game get leader_num})
+   (char_provider {object ""})
+      
+   (enter
+		{band_ui_sink set post_matchmaking TRUE} ; REA - bind to a controller
+		
+      ; the CharSelectPanel wants to know when to show/hide chars
+      {practice_space_panel set_showing_callback $this}
+      
+      {do ($player_num {game get leader_num})
+          ($pcfg {game get_player_config $player_num})
+          #ifndef HX_XBOX        
+          {$pcfg set is_multiplayer FALSE}
+          #endif
+
+         ;; make sure there's no character set yet
+         ;; (it'll muck up the character list)
+         {$pcfg set_char 0}
+
+		#ifndef HX_XBOX
+         {gender.grp set_showing FALSE} ; REA - hide the gender stuff
+		    ;--------------------------------------------------------------------------------------------------
+			; Temp Fix --- HOJ Need to clear player befoer we enter (we cannt creat ea profile to load
+			{charcreator_panel check_clear_player} 
+			;-------------------------------------------------------------------------------------------------
+		#endif
+
+         {gamertag.lbl set_localized {$pcfg get player_name}}
+         {instrument.lbl set_localized 
+            {get_font_char_from_controller_type {$pcfg get_controller_type}}
+         }
+             
+         {set [char_provider] {get_char_provider $player_num}}
+         #ifndef HX_XBOX
+         {[char_provider] set is_multiplayer FALSE}
+         #endif
+         {[char_provider] set_instrument_filter {$pcfg get_controller_sym}}
+         {char.lst set_provider [char_provider]}
+      
+         ; try and keep current char selected
+         {do ($char_pos {[char_provider] get_pos_from_char {$pcfg get_char}})
+            {unless {== $char_pos -1}
+               {char.lst set_selected $char_pos}   
+            }
+         }
+      }
+#ifdef HX_XBOX
+      {$this set_gender FALSE}
+	
+      {$this update} ; REA - don't do this initially
+#endif
+   )
+
+   
+   (unload
+      {practice_space_panel set_showing_callback ''}
+      ; free any new characters we have created
+      {charcreator_panel free_all}
+   )
+   
+   (update
+      {do ($pos {char.lst selected_pos})
+          ($player_num {game get leader_num})
+          ($pcfg {game get_player_config $player_num})
+          ($char 
+            {if_else {[char_provider] is_create_new $pos}
+               0
+               #ifndef HX_XBOX   ;MTC
+               {[char_provider] get_tour_char $pos}
+               #endif
+            }
+          )
+         {$pcfg set_char $char}
+      }
+   )
+   
+#ifdef HX_XBOX 
+   ; REA - don't set characters while updating
+   (SCROLL_MSG
+      {$this update}
+   )
+#endif
+   
+#ifdef HX_XBOX  
+   (FOCUS_MSG
+      {if_else {|| {== male.btn $new_focus} {== female.btn $new_focus}}
+         ; start loading up a new character for this player
+         {charcreator_panel request 
+            {game get leader_num} 
+            {basename {$new_focus name}}
+         }
+         ; don't keep the new guy around
+         {charcreator_panel free {game get leader_num}}
+      }
+   )
+#endif
+   
+   (SELECT_MSG
+      {if_else {== $component char.lst}      
+         {if_else {[char_provider] is_create_new {$component selected_pos}}
+            {if_else {profile_mgr at_char_limit}  ;MTC DONT CHANGE THIS Line or the next one
+                  {ui push_screen too_many_chars_screen} 
+                  ;else
+                  {do        
+				   ;Create a character instance here (MTC)
+				   {charcreator_panel request {game get leader_num} "male" }
+	               
+				   ; tell the panel which player is creating the character
+				   ; TODO could probably have the request handler below set this
+				   {charcreator_panel set char_player_num {game get leader_num}}
+
+				   ;HWR - Assign it to the leader
+				   ;{print "leader " {game get leader_num} "\n"}
+				   {do ($player_num {game get leader_num})
+					   ($pcfg {game get_player_config $player_num})
+					   {$pcfg set_char_from_charcreator charcreator_panel $player_num}
+					 {tour set_performer {$pcfg get_tour_performer}}
+				   }
+	               
+				   ;HWR - Move on with the tour
+						;{ui goto_screen matchmaking_band_screen}
+						{ui goto_screen tour_band_create_screen}
+				  };end do
+				};end if_else
+				  
+            {do
+               ;Load a character instance
+               #ifndef HX_XBOX
+               ($player_num {game get leader_num})
+               ($pcfg {game get_player_config $player_num})
+					{$this update}
+               {tour set_performer {$pcfg get_tour_performer}}
+               ;MTC set up the seen town list
+               {{tour performer} populate_seen_towns}
+               #endif
+               {ui goto_screen tour_solo_diff_screen}
+            }
+         }
+         {do
+            ; create a new character for this player
+            {charcreator_panel set char_player_num {game get leader_num}}
+            {ui goto_screen charcreator_maker_screen}
+         }
+      }      
+   )   
+
+#ifdef HX_XBOX
+   (set_gender ($enable)
+      {char.grp set_showing {! $enable}}
+      {gender.grp set_showing $enable}
+      {$this set_focus {if_else $enable male.btn char.lst}}
+   )
+#endif
+   
+   ; tells CharSelectPanel when to hide char
+   (show_char ($player_num)
+      {|| {!= {$this focus_name} char.lst}
+          {! {[char_provider] is_create_new {char.lst selected_pos}}}
+      }
+   )
+}
+
+{new UIScreen tour_solo_char_screen
+   (panels meta movie_panel tour_solo_char_panel tour_band_lower3rd_panel helpbar)
+   (helpbar (helpbar_back helpbar_select))
+   (focus tour_solo_char_panel)
+   (back main_solomode_screen)
+   
+#ifdef HX_XBOX   
+   (enter
+      {practice_space_panel select_cam "solo_enter"}
+   )
+#endif
+      
+#ifdef HX_XBOX      
+   (BUTTON_DOWN_MSG
+      {if_else {&& {== $button kPad_Tri} {{tour_solo_char_panel find gender.grp} showing}}
+         {tour_solo_char_panel set_gender FALSE}
+         kDataUnhandled
+      }   
+   )
+#else
+   (BUTTON_DOWN_MSG
+      ;{if_else {&& {== $button kPad_Tri} {{tour_solo_char_panel find gender.grp} showing}}
+         ;{tour_solo_char_panel set_gender FALSE}
+         kDataUnhandled
+      ;}   
+   )
+#endif
+}
+#endif   ; not HX_XBOX
+
+; REA - Create band screen addition
+#ifndef HX_XBOX
+{new UIScreen tour_solo_create_screen
+   (panels meta movie_panel tour_solo_char_panel helpbar)
+   (focus tour_band_create_panel)
+   (helpbar (helpbar_back helpbar_select))
+}
+#endif
+
+; solo tour difficulty select
+{new UIPanel tour_solo_diff_panel
+#ifdef HX_XBOX
+   (file "tour_solo_diff.milo")
+#else
+   (file "tour_solo_diff_og.milo")
+#endif
+   (player_num {game get leader_num})
+   
+   (enter
+      {$this refresh}
+   )
+   
+   (refresh
+      {do ($pcfg {game get_player_config {game get leader_num}})
+          ($char {$pcfg get_char})
+         {$this set_focus 
+            {sprintf "%s.btn" {{$pcfg get_char} solo_difficulty_sym}}
+         }
+         {foreach $diff (DIFF_SYMBOLS)
+            {{sprintf "%s_progress.lbl" $diff} set_localized
+               {fmt_songs_played
+                  {$char world_fame $diff}
+                  {$char total_world_fame $diff}
+               }
+            }
+         }
+      }
+   )
+   
+   (SELECT_MSG
+      {do ($pcfg {game get_player_config {game get leader_num}})
+          ($diff {basename {$component name}})
+         {$pcfg set_difficulty $diff}
+         {{$pcfg get_char} set_solo_difficulty $diff}
+      }
+	#ifndef HX_XBOX
+			;;HOJ --NEED TO FINISH TO SET ONLY WHEN ITS THE FIRST TIME THROUGH	
+			;#ifdef HX_EE REA - we don't do movies anymore, will fix the black screen delay
+			;	{ui goto_screen tour_movie_screen}
+			;#else
+				{ui goto_screen tour_solo_event_screen}
+			;#endif
+	#else
+      {ui goto_screen 
+         ;{if_else {tour hint}
+           ; {{tour hint} get screen}
+            tour_solo_event_screen
+         ;}
+      }
+	 #endif
+   )
+}
+
+{new UIScreen tour_solo_diff_screen
+   (panels meta movie_panel tour_solo_diff_panel tour_band_lower3rd_panel helpbar)
+   (helpbar (helpbar_back helpbar_select))
+   (focus tour_solo_diff_panel)
+#ifdef HX_XBOX
+   (back tour_solo_hub_screen)  
+#else
+   (back tour_solo_char_screen)  
+#endif
+}
+
+#ifdef HX_XBOX
+; Solo Tour Hub
+{new UIPanel tour_solo_hub_panel
+	#ifdef HX_XBOX
+   		(file tour_solo_hub.milo)
+   	#else
+   		(file tour_solo_hub_og.milo)
+   	#endif
+   (focus gigguide.btn)
+   (player_num {local_to_leader_player_num})
+      
+   (enter
+      {$this refresh}
+      {autosave}
+   )
+   
+   (refresh
+   #ifdef HX_XBOX   ;MTC
+      #ifdef TOUR_LOGGING
+         {$log_tour print "MONEYBAL | "}
+      #endif 
+   #endif
+      {do ($char {{game get_player_config {game get leader_num}} get_char})
+         ; set the TourChar to be the active TourPerformer
+         {tour set_performer $char}
+         
+         {name.lbl  set_localized {$char get_char_name}}
+         {part.lbl  set_localized {cnv_instrumenttoicon {$char get_instrument}}}
+         #ifdef HX_XBOX
+         {money.lbl set_localized {fmt_money {$char money}}}
+         #ifdef TOUR_LOGGING
+            {$log_tour print {sprintf "%s:%d," {$char get_instrument} {$char money}}}
+         #endif
+         #endif
+      }
+      #ifdef TOUR_LOGGING
+         {$log_tour print "\n"}
+      #endif
+   )
+   
+   (SELECT_START_MSG
+      {switch $component
+         (gigguide.btn
+            {ui goto_screen tour_solo_diff_screen}
+         )
+         (rokkshoppe.btn
+            ; restrict the shop to the player's controller and character
+            {shop_char_panel set char_player_num $player_num}
+            {ui goto_screen shop_screen}
+         )
+         (playerprofile.btn
+            {tour_char_profile_panel set player_num $player_num}
+            {ui goto_screen tour_char_profile_screen}
+         )
+         (community.btn
+            {ui goto_screen tour_hub_community_screen}
+         )
+      }
+      kDataUnhandled
+   )  
+}
+
+{new UIScreen tour_solo_hub_screen
+   (panels 
+      meta
+      movie_panel 
+      tour_solo_hub_panel
+      tour_solo_lower3rd_panel
+      helpbar
+   )
+   (helpbar (helpbar_back helpbar_select))
+   (focus tour_solo_hub_panel)
+   (back {gamemode get matchmaking_screen})
+
+   (enter
+      ;; set this here because it's a central point, and it's the return
+      ;;   path from the rock shop
+      {presence_mgr set_prepare_to_rock}
+      
+      {practice_space_panel select_cam solo_enter}
+   )
+}
+
+; Character Profile
+{new CharProfilePanel tour_char_profile_panel
+   (file tour_char_profile.milo)
+   (focus gamertag.btn)
+   (player_num -1)
+
+   (enter
+      {$this set_char {{gamecfg get_player_config [player_num]} get_char}}
+
+      {char_name.lbl set_localized {$this get_char_name}}
+      {gamertag.btn set_localized {$this get_gamertag}}
+      #ifdef HX_XBOX
+      {cash.lbl set_localized {fmt_money {$this get_money}}}
+      #endif
+      {motto.lbl set_localized {$this get_motto}}
+      {bands.lst set_provider {$this get_char_band_provider}}
+      {song.lst set_provider {$this get_top_five_provider}}
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (motto.btn
+            {platform_mgr add_sink $this}
+            {platform_mgr show_keyboard
+               $player_num
+               kMottoLength
+               {localize band_profile_vk_motto_title}
+               {localize band_profile_vk_motto_desc}
+               {$this get_motto}
+            }
+         )
+      }
+   )
+
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {platform_mgr remove_sink $this}
+
+      {if $ok
+         {$this set_motto $text}
+         {motto.lbl set_localized $text}
+
+         {band_ui_sink show_network_busy_icon}
+         {rock_central verify_band_motto $text $this}
+      }
+   )
+
+   (BUTTON_DOWN_MSG
+      {if_else {band_ui_sink is_network_busy}
+         TRUE
+         ; else
+         kDataUnhandled
+      }
+   )
+
+   (ROCK_CENTRAL_OP_COMPLETE_MSG
+      {band_ui_sink hide_network_busy_icon}
+
+      {switch $arg1
+         (RB_RETCODE_CHAR_MOTTO_PROFANE
+            {ui push_screen tour_char_motto_profane_screen}
+         )
+         (RB_RETCODE_CHAR_MOTTO_IP
+            {ui push_screen tour_char_motto_ip_screen}
+         )
+         ; else (SUCCESS or SERVER_DOWN)
+      }
+   )
+}
+
+{new UIScreen tour_char_profile_screen
+   (panels
+      meta
+      movie_panel 
+      tour_char_profile_panel
+      helpbar
+   )
+   (helpbar (helpbar_back helpbar_select))
+   (focus tour_char_profile_panel)
+   (back tour_solo_hub_screen)
+}
+
+; bad char motto errors
+{new UIScreen tour_char_motto_profane_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+
+   (enter
+      {dialog_panel set_ok {localize_token tour_char_profile_motto_profane}}
+   )
+
+   (SELECT_MSG
+      {ui pop_screen}
+   )
+}
+
+{new UIScreen tour_char_motto_ip_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+
+   (enter
+      {dialog_panel set_ok {localize_token tour_char_profile_motto_ip}}
+   )
+
+   (SELECT_MSG
+      {ui pop_screen}
+   )
+}
+#endif     ;HX_XBOX
+
+; Solo Tour Choose Event/Song
+{new UIPanel tour_solo_event_panel
+   TOUR_EVENT_PANEL_HANDLERS
+   
+   #ifdef HX_XBOX
+		(file "tour_solo_event.milo")
+   #else
+		(file "tour_solo_event_og.milo")
+		(old_town -1)
+   #endif
+   
+   (focus event.lst)
+   (player_num {gamecfg get leader_num})
+   
+   (enter
+	  {{meta meta_music} stop} ; REA - we have preview music now
+	  
+	  ;MTC pop the tier_unlock_screen
+      {do
+            ($tp {tour performer})
+			($new_town {$tp new_town})
+			{if {== $new_town 'boston'}
+			   {do
+			       {$tp add_seen_town $new_town} 
+			       {set $new_town {$tp new_town}}
+			   }
+			}
+			
+		    {if {&& {!= $new_town ''}{!= $new_town 'paris'}{!= $new_town 'boston'}}
+				 {ui push_screen tier_unlock_screen}
+		    }
+      }
+      
+	  #ifndef HX_XBOX
+		{set $old_town -1}
+		{helpbar set_config (helpbar_back helpbar_continue)}
+	  #endif
+	  {$this refresh} 
+	  
+	  {$this play_preview}
+   )
+      
+   (refresh
+     
+      {event.lst set_provider {tour solo_event_provider}}
+      {if {tour event}
+		  {do
+			 {event.lst set_selected {{tour event} get event_name}}
+		 }
+      }
+      ; always set event, to clear state
+      {$this update_selection}
+
+#ifdef HX_XBOX      
+      ; trigger any new hints (really just for cheats)
+      {if {tour hint}
+         {ui goto_screen {{tour hint} get screen}}
+      }
+#endif     
+      {do ($char {tour performer})
+         ; song progress
+         {progress.lbl set_localized
+            {fmt_songs_played
+               {$char world_fame}
+               {$char total_world_fame}
+            }
+         }
+         ;career score
+         {career.lbl set_localized
+            {sprintf {localize tour_solo_career}
+              {fmt_score {$char career_score}}
+         }
+       }
+      }
+  
+   )
+   
+   (SCROLL_MSG
+      {$this update_selection}   
+   )
+   
+   (SELECT_START_MSG
+      {if {!= kTourLocked {{tour performer} event_status}}
+         {$this confirm_event}
+         {ui goto_screen {gamemode get ready_screen}}
+      }
+      kDataUnhandled 
+   )
+}
+
+
+#ifdef HX_XBOX
+{new UIScreen tour_solo_event_screen
+   (panels meta tour_world_bg_panel tour_solo_event_panel helpbar)
+   (focus tour_solo_event_panel)   
+   (back tour_solo_hub_screen)   
+}
+#else
+{new UIScreen tour_solo_event_song_screen
+   (panels meta tour_solo_event_panel helpbar)
+   (focus tour_solo_event_panel)   
+   (helpbar (helpbar_back helpbar_continue))
+   (back tour_solo_event_exit_screen)   
+   
+   (enter
+	{helpbar unhide_helpbar}
+	{helpbar set_config (helpbar_back helpbar_continue)}
+	)
+}
+
+{new UIScreen tour_solo_event_screen
+	(panels meta meta_loading)
+	
+	(enter
+	   {meta music_stop}
+	
+	)
+	
+	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen tour_solo_event_song_screen}
+	)
+}
+
+{new UIScreen tour_solo_event_exit_screen
+	(panels meta meta_loading)
+	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen tour_solo_diff_screen}
+	)
+}
+#endif
+
+; Screen to get a song loading (since we don't have track/difficulty select)
+{new UIScreen tour_solo_ready_screen
+#ifdef HX_XBOX
+   (panels meta tour_world_bg_panel)
+#else
+   (panels meta)
+#endif
+   
+   (enter
+      ; initialize player's track type
+      {do ($pcfg {game get_player_config {game get leader_num}})
+         {$pcfg set_track_type {{$pcfg get_char} get_instrument}}
+      }
+      {session add_sink $this}
+      {{game get_player_config {game get leader_num}} set_ready TRUE}
+   )
+ 
+   (exit
+      {session remove_sink $this}
+   )
+   
+   (start_loading_msg
+      {ui goto_screen loading_screen}   
+   )
+}
+
+; Solo Tour Hints
+{new UIPanel tour_solo_newtown_panel
+   (file "tour_solo_newtown.milo")
+
+   (enter
+      {do ($town {{tour performer} new_town})
+         ; need to refresh it with the new events
+         {{tour solo_event_provider} refresh}
+         
+         ; update the TourChar's event so we select it in the list
+         {{tour performer} set_event 
+            {{tour solo_event_provider} first_event $town}
+            {game get leader_num}
+         }
+         
+         {town.lbl set_localized
+            {sprintf "You unlocked %s" {localize_token $town}}
+         }
+#ifdef HX_XBOX         
+         {tour_world_bg_panel set town $town}
+         {tour_world_bg_panel zoom_out}
+         {tour_world_bg_panel update}
+#endif
+      }
+   )
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_newtown_screen
+   (panels meta tour_solo_newtown_panel helpbar)
+   (focus tour_solo_newtown_panel)
+   (helpbar ())
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Solo Tour Results Screen
+{new UIPanel tour_solo_endgame_panel
+
+	#ifdef HX_XBOX
+		(file "tour_solo_endgame.milo") ; TEMP
+   #else
+		(file "tour_solo_endgame_og.milo") ; TEMP
+   #endif
+   
+   (focus continue.btn)
+   TOUR_ENDGAME_HANDLERS
+   
+   (enter
+   ; no need to autosave here, we're not done with event yet
+   
+   #ifndef HX_XBOX  
+      {$this set_results}
+      {$this submit_achievements}
+   
+      {do ($tp {tour performer})
+       ;   ($num_playable_songs {$tp num_playable_songs})
+          ($performer {beatmatch active_player 0})
+          ($event {tour event})
+			
+         ; star rating
+         {stars.lbl set_localized {$performer star_rating}}
+
+         ; score
+         {score.lbl set_localized {fmt_score {$performer score}}}
+         
+         ; now complete the event, awarding songs, money, items...
+         {{tour performer} complete_event}
+		  
+	
+      }
+    #endif   ;not HX_XBOX
+   )
+   #ifdef HX_XBOX
+   (SELECT_MSG
+      {ui goto_screen tour_solo_gigcomplete_screen}
+   )
+   #endif
+   
+   #ifndef HX_XBOX
+   (SELECT_MSG
+	   ; REA - lets submit this to highscores
+		{do ($pcfg {game get_player_config {gamecfg get leader_num}})
+		   {if {highscores is_solo_high_score {game get_song} {$pcfg get_track_sym} {$pcfg get_difficulty_sym} {{beatmatch main_performer} score}}
+				{highscores save_solo_high_score {game get_song} {$pcfg get_track_sym} {$pcfg get_difficulty_sym} {{beatmatch main_performer} score} {$pcfg intro_name}}
+			}
+		}
+
+		;HOJ Trans
+		{ui goto_screen endgame_autosave_start_screen}
+	
+	)
+  #endif
+}
+
+{new UIScreen tour_solo_endgame_screen
+   (panels tour_solo_endgame_panel helpbar)
+   (focus  tour_solo_endgame_panel)
+   (helpbar ('' helpbar_finishsong))
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Solo Tour Gig Complete
+{new UIPanel tour_solo_gigcomplete_panel
+   (file "tour_solo_gigcomplete.milo")
+   (focus continue.btn)
+      
+   (enter   
+      {do ($tp {tour performer})
+         ; ($num_playable_songs {$tp num_playable_songs})
+          ($performer {beatmatch active_player 0})
+          ($event {tour event})
+
+         ; star rating
+         {stars.lbl set_localized {$performer star_rating}}
+
+         ; score
+         {score.lbl set_localized {fmt_score {$performer score}}}
+         
+         ; outfit!
+         {do ($gender {$tp get_gender})
+             ($category {$event outfit_category_unlock $gender})
+             ($outfit   {$event outfit_unlock $gender})
+            {if_else {&& {!= $category ''}
+                         {! {$tp has_outfit $category $outfit}}}
+               {do
+                  {outfit.lbl set_showing TRUE}
+                  {outfit.lbl set_localized
+                     {sprintf {localize tour_solo_outfit} {localize_token $outfit}}
+                  }
+               }
+               {outfit.lbl set_showing FALSE}
+            }
+         }
+                  
+         ; instrument!
+         {do ($instrument {$tp get_instrument})
+             ($outfit   {$event instrument_unlock $instrument})
+             ($category {if_else {== $instrument vocals} mic $instrument})
+            {if_else {&& {!= $outfit ''}
+                         {! {$tp has_outfit $category $outfit}}}
+               {do
+                  {instrument.lbl set_showing TRUE}
+                  {instrument.lbl set_localized
+                     {sprintf {localize tour_solo_instrument} {localize_token $outfit}}
+                  }
+               }
+               {instrument.lbl set_showing FALSE}
+            }
+         }
+         
+         ; now complete the event, awarding songs, money, items...
+         {{tour performer} complete_event}
+
+         ; new town!
+         {do ($new_town {$tp new_town})
+            {newtown.lbl set_showing {!= $new_town ''}}
+            {unless {== $new_town ''}
+               {newtown.lbl set_localized
+                  {sprintf {localize tour_endgame_newtown} {localize $new_town}}
+               }
+            }
+         }
+         
+         ; new songs!
+         {do ;($num_new_songs {- {$tp num_playable_songs}
+                         ;       $num_playable_songs})
+            {newgigs.lbl set_showing $num_new_songs}
+           ; {if $num_new_songs
+            ;   {newgigs.lbl set_localized 
+             ;     sprintf 
+				;	{localize tour_solo_new_events} 
+                 ;    $num_new_songs
+                  ;}
+               ;}
+            }
+         
+        #ifdef HX_XBOX     ;MTC
+         ; $ reward!
+         {money.lbl set_localized 
+            {sprintf
+               {localize tour_solo_reward}
+               {fmt_money {$tp reward {$performer num_stars}}}
+            }
+         }
+         #endif
+         
+         ; logging, assumes single song events
+         {log_tour "EVENT   " {sprintf "WON $%d"  {{tour performer} reward {$performer num_stars}}}}
+         {log_tour "EVENT   " {sprintf "WON *x%d" {$performer num_stars}}}
+         
+         ; Solo Tour achievements
+         ; finished tour achievement
+         {if {$tp is_tour_complete}
+            {achievements submit {game get leader_num}
+               {symbol {sprintf "ach_solo_%s_%s"
+                  {$tp get_instrument}
+                  {{game get_player_config {game get leader_num}} get_difficulty_sym}
+               }}
+            }
+         }
+         ; unlocked venue type achievement
+         {foreach $venue (big_club theater arena)
+            {if {$tp is_venue_type_unlocked $venue}
+               {achievements submit {game get leader_num}
+                  {symbol {sprintf "ach_solo_venue_%s" $venue}}
+               }
+            }
+         }
+      }
+      
+   )
+ 
+   (SELECT_START_MSG
+      ; autosave here if necessary
+      #ifdef HX_XBOX   ;Taking this out, fixed my save/loads.  No idea why.
+		  {ui goto_screen endgame_autosave_start_screen}
+	  #endif
+	  kDataUnhandled
+   )
+}
+
+
+{new UIScreen tour_solo_gigcomplete_screen
+   (panels tour_solo_gigcomplete_panel helpbar)
+   (focus tour_solo_gigcomplete_panel)
+   (helpbar ('' helpbar_returntomap))
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;   Win the game sequence screens
+
+{new UIPanel tour_solo_congrats_easy_panel
+#ifdef HX_XBOX
+   (file "tour_solo_congrats_easy.milo")
+#else
+   (file "tour_solo_congrats_easy_og.milo")
+#endif
+   (focus continue.btn)
+   
+   (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+         {ui goto_screen goto_tour_solo_credits_movie_screen}
+      }   
+   )
+}
+
+#ifdef HX_XBOX
+{new UIPanel tour_solo_congrats_panel
+   (file "tour_solo_congrats.milo")
+   (focus continue.btn)
+   
+   (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+         {ui goto_screen tour_solo_video_credits_screen}
+      }   
+   )
+}
+#else ; HOJ SHOWING ENDGAME MOVIES BASED ON INSTRUMENT
+
+
+{new UIPanel tour_solo_win_movie_panel ;HOJ SOLO ENDGAME MOVIES
+   (file "world/transition_video.milo")
+	(moviefinished FALSE)
+	#ifdef HX_EE
+	(enter
+			{{meta meta_music} stop}
+			{set $moviefinished FALSE}
+			{set $instrument  {game get_instrument_from_controller {game get leader_num}}}
+			
+		
+			{switch $instrument
+				(guitar
+					{video_file.mov set movie_file {sprintf "videos/win_guitar"}};
+				)
+				(bass
+					{video_file.mov set movie_file {sprintf "videos/win_guitar"}};
+				)
+				(drum
+					{video_file.mov set movie_file {sprintf "videos/win_drums"}};
+				)
+				(vocals
+					
+					{video_file.mov set movie_file {sprintf "videos/win_vocals"}};
+				)
+				
+			}
+			{video_file.mov animate}
+			;{film_grain.mnm animate (loop 0 101)}
+			
+	
+	)
+	
+	 (poll
+		{if {&& {! $moviefinished}
+				   {video_file.mov is_movie_done} }
+			{do
+				 {set $moviefinished TRUE}
+				 {ui goto_screen  tour_solo_congrats_screen};tour_solo_video_credits_screen}
+			 }
+		}
+	)
+#endif
+ 
+   
+   (BUTTON_DOWN_MSG
+      {if {&& {|| {== $button kPad_Start}
+              {== $button kPad_X}} {! $moviefinished} }
+			  {set $moviefinished TRUE}
+         {ui goto_screen tour_solo_congrats_screen};tour_solo_video_credits_screen}
+      }   
+   )
+}
+
+{new UIScreen tour_solo_win_movie_screen
+	(panels meta tour_solo_win_movie_panel)
+	(focus tour_solo_win_movie_panel)
+
+}
+
+{new UIPanel tour_solo_congrats_panel
+   (file "tour_solo_congrats_og.milo")   ;MTC
+   
+     (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+         {ui goto_screen goto_tour_solo_credits_movie_screen};tour_solo_video_credits_screen}
+      }   
+   )
+   
+}
+
+
+{new UIScreen tour_solo_congrats_screen
+   (panels tour_solo_congrats_panel helpbar)
+   (focus tour_solo_congrats_panel)
+ 
+  (helpbar ('' helpbar_continue))
+	;(TRANSITION_COMPLETE_MSG
+	;	{ui goto_screen goto_tour_solo_credits_movie_screen}
+	;)
+}
+
+{new UIScreen goto_tour_solo_credits_movie_screen
+   (panels )
+   
+ 	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen tour_solo_credits_movie_screen}
+	)
+}
+
+
+{new UIPanel tour_solo_credits_movie_panel
+   	(file "world/intro_video.milo")
+	(moviefinished FALSE)
+	(enter
+	   ;HWR - Make sure there's no meta music playing in the background
+	   {meta music_stop_stream}
+	   
+		#ifdef HX_EE
+			; Show the movie in the proper aspect ratio for the screen shape  
+	        {16x9.mesh set_showing FALSE}
+	        {4x3.mesh set_showing FALSE}
+	        {16x9zoom.mesh set_showing FALSE}
+	        {4x3std.mesh set_showing TRUE}
+			{intro_video.mov set movie_file {sprintf "videos/rb_endcredits"}};
+			{intro_video.mov animate}
+			;{film_grain.mnm animate (loop 0 101)}
+			{set $moviefinished FALSE}
+		#endif
+	)
+	
+	#ifdef HX_EE
+	 (poll
+		{if {&& {! $moviefinished}
+				   {intro_video.mov is_movie_done} }
+			{do
+				 {set $moviefinished TRUE}
+				 {ui goto_screen tour_solo_to_pi_credits_movie_screen}
+			 }
+		}
+	)
+  #endif
+   
+   (BUTTON_DOWN_MSG
+       {if {&& {|| {== $button kPad_Start}
+              {== $button kPad_X}} {! $moviefinished} }
+		 {do
+		 {set $moviefinished TRUE}
+			{ui goto_screen tour_solo_to_pi_credits_movie_screen}
+		 }
+      }
+   )
+}
+
+{new UIScreen tour_solo_credits_movie_screen
+   (panels meta tour_solo_credits_movie_panel); helpbar )
+   ;;(helpbar ('' helpbar_continue))
+   (focus tour_solo_credits_movie_panel)
+  
+}
+
+{new UIPanel tour_solo_pi_credits_movie_panel
+   	(file "world/intro_video.milo")
+	(moviefinished FALSE)
+	(enter
+	   ;HWR - Make sure there's no meta music playing in the background
+	   {meta music_stop_stream}
+	   
+		{set $moviefinished FALSE}
+		#ifdef HX_EE
+			; Show the movie in the proper aspect ratio for the screen shape  
+	        {16x9.mesh set_showing FALSE}
+	        {4x3.mesh set_showing FALSE}
+	        {16x9zoom.mesh set_showing FALSE}
+	        {4x3std.mesh set_showing TRUE}
+			{intro_video.mov set movie_file {sprintf "videos/pi_endcredits"}};
+			{intro_video.mov animate}
+			;{film_grain.mnm animate (loop 0 101)}
+			{set $moviefinished FALSE}
+		#endif
+	)
+	
+	#ifdef HX_EE
+	 (poll
+		{if {&& {! $moviefinished}
+				   {intro_video.mov is_movie_done} }
+			{do
+				 {set $moviefinished TRUE}
+				 {ui goto_screen tour_solo_video_credits_screen}
+			 }
+		}
+	)
+  #endif
+   
+   (BUTTON_DOWN_MSG
+      {if {&& {|| {== $button kPad_Start}
+              {== $button kPad_X}} {! $moviefinished} }
+		 {do
+		 {set $moviefinished TRUE}
+			{ui goto_screen tour_solo_video_credits_screen}
+		 }
+      }
+   )
+}
+
+{new UIScreen tour_solo_pi_credits_movie_screen
+   (panels meta tour_solo_pi_credits_movie_panel );helpbar )
+   ;;(helpbar ('' helpbar_continue))
+   (focus tour_solo_pi_credits_movie_panel)
+  
+}
+
+
+{new UIScreen tour_solo_to_pi_credits_movie_screen
+
+	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen tour_solo_pi_credits_movie_screen}
+	)
+}
+
+#endif
+
+{new UIPanel video_credits_panel
+   (file "")
+	(TRANSITION_COMPLETE_MSG
+		{ui goto_screen tour_solo_text_credits_screen}
+	)
+   
+   
+}
+
+{new UIPanel tour_solo_item_reward_panel
+   (file "tour_solo_item_rewards.milo")
+   (focus continue.btn)
+   
+   (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+         {ui goto_screen tour_solo_sendoff_screen}
+      }   
+   )
+}
+
+{new UIPanel tour_solo_sendoff_panel
+#ifdef HX_XBOX
+   (file "tour_solo_win_sendoff.milo")
+#else
+   (file "tour_solo_win_sendoff_og.milo")  ;MTC
+#endif
+   (focus continue.btn)
+   
+   (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+         {ui goto_screen {gamemode get continue_screen}}
+      }   
+   )
+}
+{new UIScreen tour_solo_video_credits_screen
+  (TRANSITION_COMPLETE_MSG
+	{ui goto_screen tour_solo_video_show_credits_screen}
+  )
+}
+
+{new UIScreen tour_solo_video_show_credits_screen
+   (panels video_credits_panel )
+  (focus video_credits_panel)
+}
+
+{new CreditsPanel solo_credits_panel
+   (file "credits.milo")
+   
+     (BUTTON_DOWN_MSG
+		{if {== $button kPad_Tri}
+				{ui goto_screen tour_solo_sendoff_screen}
+		}   
+	)
+	
+	 (poll 
+      {if {!{credits.lst is_scrolling}}
+         {if {! {ui in_transition}}
+            {handle (ui credits_done)}
+         }
+      }
+   )
+   
+}
+
+{new UIScreen tour_solo_text_credits_screen
+   (panels solo_credits_panel helpbar)
+   (helpbar (Exit))
+   (scroll_sfx FALSE) ; don't play scroll sfx in this screen
+   (focus solo_credits_panel)
+   
+		(enter
+			{helpbar set_config (Exit)}
+		)
+		
+		(credits_done
+			{ui goto_screen tour_solo_sendoff_screen}
+		)
+}
+
+{new UIScreen tour_solo_item_reward_screen
+   (panels tour_solo_item_reward_panel helpbar)
+   (focus tour_solo_item_reward_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+{new UIScreen tour_solo_sendoff_screen
+   (panels tour_solo_sendoff_panel helpbar)
+   (focus tour_solo_sendoff_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+{new UIScreen tour_solo_win_screen
+  (panels )
+   
+   (TRANSITION_COMPLETE_MSG
+	
+		{ui goto_screen tour_solo_win_movie_screen}
+   )
+}
+
+{new UIScreen tour_solo_easy_win_screen
+   (panels tour_solo_congrats_easy_panel helpbar)
+   (focus tour_solo_congrats_easy_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Sponsor screens
+
+; Guitar Welcome
+{new UIPanel tour_solo_guitar_welcome_panel
+   (file "tour_solo_guitar_welcome.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+#ifndef HX_XBOX
+;MTC a pop-up for saying gratz, you won a tier of the tour
+{new UIPanel too_many_chars_panel
+   (file "popup_maxchar_og.milo")
+   (enter
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+   )
+  
+   (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+         {ui pop_screen}
+      }   
+   )
+}
+
+{new UIScreen too_many_chars_screen 
+   (panels too_many_chars_panel helpbar_dialog)
+   (helpbar ('' helpbar_continue))
+   
+   (enter
+	{helpbar_dialog set_config ('' helpbar_continue)}
+	{helpbar_dialog set_limit_to_player_num {game get leader_num}}
+   )
+}
+
+;MTC a pop-up for saying gratz, you won a tier of the tour
+{new UIPanel tier_unlock_panel
+   (file "tier_unlock_og.milo")
+   (enter
+          {set $tp {tour performer}}
+          {set $new_town {$tp new_town}}
+   
+		{if {helpbar_dialog is_up}
+			{helpbar_dialog set_limit_to_player_num -1}
+			{helpbar_dialog set_config ('' helpbar_continue)}
+		}
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      
+      {$tp add_seen_town $new_town} 
+				{switch $new_town
+					(newyork       {tour1.lbl set text_token "ACT II: Get in the Van"})
+					(chicago       {tour1.lbl set text_token "ACT III: Playing for Gas Money"})
+					(losangeles    {tour1.lbl set text_token "ACT IV: Road Dogs"})
+					(seattle       {tour1.lbl set text_token "ACT V: Headlining Act"})
+					(berlin        {tour1.lbl set text_token "ACT VI: Get in the Limo"})
+					(london        {tour1.lbl set text_token "ACT VII: Jet Setters"})
+					(stockholm     {tour1.lbl set text_token "ACT VIII: I'm Your Biggest Fan"})
+					(rome          {tour1.lbl set text_token "ACT IX: Around the World"})
+					(sanfrancisco  {tour1.lbl set text_token "Final Act: 999,999 Faces Rocked"})
+				}
+   )
+  
+   (BUTTON_DOWN_MSG
+      {if {== $button kPad_X}
+	  {helpbar_dialog set_config (helpbar_back helpbar_continue)}
+          {do
+			 {synth play button_select_g1.cue}
+			 {ui pop_screen}
+         }
+      }   
+   )
+}
+
+{new UIScreen tier_unlock_screen
+   (panels tier_unlock_panel helpbar_dialog)
+   (helpbar ('' helpbar_continue))
+   
+    (enter
+		{if {helpbar_dialog is_up}
+			{helpbar_dialog set_limit_to_player_num -1}
+			{helpbar_dialog set_config ('' helpbar_continue)}
+		}
+		)
+	(exit
+		
+	)	
+}
+#endif
+
+#ifdef HX_XBOX
+{new UIScreen tour_solo_guitar_welcome_screen
+   (panels meta tour_world_bg_panel tour_solo_guitar_welcome_panel helpbar)
+   (focus tour_solo_guitar_welcome_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+; Drum Welcome
+{new UIPanel tour_solo_drum_welcome_panel
+   (file "tour_solo_drum_welcome.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_drum_welcome_screen
+   (panels meta tour_world_bg_panel tour_solo_drum_welcome_panel helpbar)
+   (focus tour_solo_drum_welcome_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+; Vocal Welcome
+{new UIPanel tour_solo_vocal_welcome_panel
+   (file "tour_solo_vocal_welcome.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_vocal_welcome_screen
+   (panels meta tour_world_bg_panel tour_solo_vocal_welcome_panel helpbar)
+   (focus tour_solo_vocal_welcome_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+;;;;
+; Guitar Big Club
+{new UIPanel tour_solo_guitar_sponsorbig_panel
+   (file "tour_solo_guitar_sponsorbig.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_guitar_sponsorbig_screen
+   (panels meta tour_world_bg_panel tour_solo_guitar_sponsorbig_panel helpbar)
+   (focus tour_solo_guitar_sponsorbig_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+; Drum Big Club
+{new UIPanel tour_solo_drum_sponsorbig_panel
+   (file "tour_solo_drum_sponsorbig.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_drum_sponsorbig_screen
+   (panels meta tour_world_bg_panel tour_solo_drum_sponsorbig_panel helpbar)
+   (focus tour_solo_drum_sponsorbig_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+; Vocal Big Club
+{new UIPanel tour_solo_vocal_sponsorbig_panel
+   (file "tour_solo_vocal_sponsorbig.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_vocal_sponsorbig_screen
+   (panels meta tour_world_bg_panel tour_solo_vocal_sponsorbig_panel helpbar)
+   (focus tour_solo_vocal_sponsorbig_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+;;;;
+; Guitar Arena
+{new UIPanel tour_solo_guitar_sponsorarena_panel
+   (file "tour_solo_guitar_sponsorarena.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_guitar_sponsorarena_screen
+   (panels meta tour_world_bg_panel tour_solo_guitar_sponsorarena_panel helpbar)
+   (focus tour_solo_guitar_sponsorarena_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+; Drum Big Club
+{new UIPanel tour_solo_drum_sponsorarena_panel
+   (file "tour_solo_drum_sponsorarena.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_drum_sponsorarena_screen
+   (panels meta tour_world_bg_panel tour_solo_drum_sponsorarena_panel helpbar)
+   (focus tour_solo_drum_sponsorarena_panel)
+   (helpbar ('' helpbar_continue))
+}
+
+; Vocal Big Club
+{new UIPanel tour_solo_vocal_sponsorarena_panel
+   (file "tour_solo_vocal_sponsorarena.milo")
+
+   TOUR_HINT_PANEL_HANDLERS
+}
+
+{new UIScreen tour_solo_vocal_sponsorarena_screen
+   (panels meta tour_world_bg_panel tour_solo_vocal_sponsorarena_panel helpbar)
+   (focus tour_solo_vocal_sponsorarena_panel)
+   (helpbar ('' helpbar_continue))
+}
+#endif ;HX_XBOX

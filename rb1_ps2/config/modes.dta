@@ -1,0 +1,758 @@
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; band mode settings/mode-specific handlers
+
+;; default settings; this gets merged into every mode config array.
+
+; macro for song sync screen (net game) or just song select screen (local game)
+#define QP_SELSONG_SCREEN
+(
+   {if_else {== {session mode} kNetLocal}
+      qp_selsong_screen
+      pre_selsongsync_screen
+   }   
+)
+
+(defaults
+   (disable_player_intro    FALSE) ; Disable player intros
+   (dont_show_gems_in_solos  TRUE) ; Show gems during solos?
+   (disable_guitar_fx       FALSE) ; Universally disable guitar fx?
+
+   (is_drum_trainer           FALSE) ; Is this the drum trainer mode?
+   (is_tutorial               FALSE) ; Is this the tutorial mode?
+   (is_practice               FALSE) ; Is this a practice mode?
+   (tutorial_cares_about_mics FALSE) ; Does this tutorial care about the microphone?
+   (tutorial_has_no_lefty     FALSE) ; Does this tutorial not have a lefty mode?
+
+   (show_hud             TRUE) ; Should the HUD be drawn?
+   (show_mtv_overlay     TRUE) ; Should the MTV-style text overlay appear when
+                               ;  a song starts?
+   (show_track           TRUE) ; Should the track_panel be drawn?
+
+   (show_prefab_chars    TRUE) ; Show prefab characters in char list?
+   (allow_create_char    TRUE) ; Allow "create new char" from character selection
+   (auto_choose_char    FALSE) ; Choose a prefab character based on
+                               ;  detected controller
+   (force_player_vocal_gender FALSE) ; show the player's vocal character gender
+                                     ; by forced to match song (solo quickplay)
+
+   (local_network        TRUE) ; Are we restricted to the local network?
+   (ranked              FALSE) ; Are we playing a ranked game online?
+   (profile_required    FALSE) ; Players must have a profile available
+                               ; (for save/load)
+   (online_play_required FALSE) ; Players must be allowed to play online
+   (online_mode         CONTEXT_GAME_MODE_SOLO_QUICKPLAY)
+                                ; Sessions on our server are partioned by this
+                                ; setting. We pull this from our xlast_macros
+   (login_status        kDesirable) ; Would this mode like to be connected to the
+                                    ; server? The Rock Central logic will overwrite
+                                    ; this for non xbox cases such that
+                                    ; online modes will always be mandatory.
+   (player_arrangement kArrangeBand) ; kArrangeBand == solo/coop,
+                                     ; kArrangeHth == hth
+   (is_tour             FALSE) ; Are we in playing a tour career (solo or multi)
+   (choose_leader_from_band FALSE) ; Is there a known leader (in a TourBand obj),
+                                   ; or should we arbitratily pick one
+                                   ; (e.g., in band quickplay)?
+   (can_lose             TRUE) ; Is it possible to get kicked out of the game early?
+   (separate_parts      FALSE) ; Do we separate parts for same instruments?
+   (max_delta           FALSE) ; Maximum point delta between sides?
+   (skip_matchmaking    FALSE) ; Skip the matchmaking_screen entirely
+   (load_chars          FALSE) ; Load characters for the world?
+
+   (allow_bass           TRUE) ; Do we allow players to pick bass v. guitar?
+   (max_players             4) ; Head-to-head would set this to 2
+   (max_local_players       4) ; Local Head-to-head would set this to 2
+                               ; Online Head-to-head would set this to 1
+   (min_players             2) ; Any solo mode would set this to 1
+                               ;  ALSO: band coop sets to 1 for testing
+   (update_crowd_meter   TRUE) ; if the game updates the crowd_meter
+   (crowd_reacts         TRUE) ; should crowd react to you? (claps, boos)
+   (play_star_sfx        TRUE) ; if the star power sfx should be played
+   (play_track_intro_sfx TRUE) ; if the track intro sfx should be played
+   (play_streak_sfx      TRUE) ; if the streak meter sfx should be played
+   (vocal_smooth_update FALSE) ; update vocalist's score midphrase?
+
+   (ready_screen         qp_seldiff_screen)       ; aka difficulty select screen
+   (matchmaking_screen   matchmaking_band_screen) ; go from main menu
+   (lose_screen          lose_screen)             ; push from game_panel
+   (win_screen           endgame_waiting_screen)  ; push from game_panel
+   (endgame_screen       qp_endgame_screen)
+   (main_screen          main_screen)             ; go post-win/lose/quit's quit
+   (main_mode_screen     main_screen)             ; last screen on the main menu flow
+   (post_matchmaking_screen QP_SELSONG_SCREEN)    ; go after matchmaking is done
+   (continue_screen         QP_SELSONG_SCREEN)    ; go post-win/lose/quit's new song
+   (game_screen          game_screen)
+   (community_screen     main_community_screen) ; leaderboards start screen
+   (quit_screen          meta_loading_main_screen) ; where to go on quit
+   (show_pause_quit      TRUE)              ; show "quit" option on pause menu?
+   (pause_new_song_screen QP_SELSONG_SCREEN)       ; ...on new_song from pause
+   (confirm_quit_screen       confirm_quit_screen)
+   (confirm_restart_screen    confirm_quit_screen)
+   
+   ; where to go after a fatal error (like user signout or disconnect)
+   (uisink_lost_connection_screen    main_screen)  
+   (uisink_default_screen            main_screen)
+   (uisink_signout_screen            main_screen)
+
+   ; this is the "band" name we want to use in venues
+   (band_name "Rock Band")
+   (band_logo 0)
+
+   (track_panel coop_track_panel)
+
+   ; handlers that rely on mode properties
+   (is_solo {== {gamemode get max_players} 1})
+   (is_band_arrangement {== {gamemode get player_arrangement} kArrangeBand})
+   (is_hth_arrangement {== {gamemode get player_arrangement} kArrangeHth})
+   (is_coop {&& {! {gamemode get is_solo}} {gamemode get is_band_arrangement}})
+   (is_online {gamemode get online_play_required})
+   (is_solo_tour {&& {gamemode get is_solo} {gamemode get is_tour}})
+   (is_bwt ; bwt == band world tour
+      {&&
+         {gamemode get is_band_arrangement}
+         {gamemode get is_tour}
+         {! {gamemode get is_solo}}
+      }
+   )
+   (is_xbox
+#ifdef HX_XBOX
+      TRUE
+#else
+      FALSE
+#endif
+   )
+   (is_ps3
+#ifdef HX_PS3
+      TRUE
+#else
+      FALSE
+#endif
+   )
+
+   (show_loading_images FALSE)
+   (popup_help_can_disable FALSE)
+   (on_pause_restart {session end_game kRestart})
+   (intro_category INTRO)
+   (win_camera WIN)   
+   (outro_camera OUTRO_MULTI)
+   (crowd_audio TRUE)   
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_QUICKPLAY)
+   
+   (pause_screen pause_screen)
+   
+   (practice_mode_fx FALSE)
+   (render_practice_loop FALSE)
+   
+   ; venues we can pick from randomly on song select screen
+   (venues (VENUES))
+   
+   ; if a UIPanel or Screen should always accept input from a player.
+   (always_allow_player FALSE)
+   
+   ; determines number of songs initially unlocked on song select screen
+   (unlock_song_initial_num 10)
+   (unlock_song_instrument '') ; should be set by modes
+   
+   ; game systems that can be disabled
+   (enable_bre TRUE)
+   (enable_streak TRUE)
+   (enable_star_power TRUE)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; settings for each mode
+
+;; Each mode can have an enter and exit handler.
+;;
+;;   enter runs after it's corresponding node and properties have been set.
+;;   exit runs before the mode/properties are replaced by a new mode.
+;;
+;;   (enter
+;;      <script>
+;;   )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Init
+
+;; init is set by the engine during bootup, and also can
+;;  be used when there is no mode (ie on the main menu).
+(init
+   (community_screen main_leaderboard_screen)
+   (login_status kDontCare)
+   (cannot_connect_warning community_no_server_warning)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Quickplay Solo
+
+(qp_solo
+   (skip_matchmaking TRUE)
+   (main_mode_screen main_solomode_screen)
+   (ready_screen qp_seldiff_solo_screen) ; aka difficulty select screen
+      
+   ; right now this only matters on the matchmaking screen, so it
+   ; could be omitted, but including for consistency
+   (auto_choose_char TRUE)
+   (allow_create_char FALSE)
+      
+   ; force a reload of our vocalist if song gender does not match
+   (force_player_vocal_gender TRUE)
+
+   (max_players 1)
+   (max_local_players 1)
+   (min_players 1)
+   (player_arrangement kArrangeBand)
+   (intro_category INTRO_VENUE)
+
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_QUICKPLAY)
+   (cannot_connect_warning solo_no_server_warning)
+
+   (unlock_song_instrument 
+      {{{game get_player_config {game get leader_num}} get_char} get_instrument}
+   )
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Quickplay Head to Head
+
+#define HTH_PROPERTIES (
+   (matchmaking_screen matchmaking_hth_screen)
+   (game_screen hth_game_screen)
+   (track_panel hth_track_panel)
+   (endgame_screen qp_hth_endgame_screen)
+   (uisink_default_screen matchmaking_hth_screen)
+
+   (auto_choose_char TRUE)
+   (allow_create_char FALSE)
+
+   (can_lose FALSE)
+   (max_players 2)
+   (player_arrangement kArrangeHth)
+   (login_status kProhibited)
+   
+   (venues (HTH_VENUES))
+   
+   (unlock_song_instrument 
+      {{{game get_player_config {game get leader_num}} get_char} get_instrument}
+   )
+
+   (crowd_reacts FALSE)
+)
+
+#define HTH_SPLIT_PROPERTIES
+(
+   HTH_PROPERTIES
+   (separate_parts TRUE)  
+   (max_delta TRUE)
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_TUG_OF_WAR)
+   (vocal_smooth_update TRUE)
+)
+
+#define HTH_UNSPLIT_PROPERTIES
+(
+   HTH_PROPERTIES
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_SCORE_DUEL)
+)
+
+; local head-to-head, face-off - score duel
+(qp_hth_local
+   HTH_UNSPLIT_PROPERTIES
+   (main_mode_screen main_hth_pro_screen)
+   (max_local_players 2)
+   (ready_screen qp_hth_seldiff_screen)
+)
+
+; local head-to-head, separate parts - tug of war
+(qp_hth_local_split
+   HTH_SPLIT_PROPERTIES
+   (main_mode_screen main_hth_split_screen)
+   (max_local_players 2)
+   (ready_screen hth_split_seldiff_screen)
+)
+
+; online hth, unranked, face-off - score duel
+(qp_hth_unranked
+   HTH_UNSPLIT_PROPERTIES
+   (main_mode_screen main_hth_pro_screen)
+   (max_local_players 1)
+   (local_network FALSE)
+   (profile_required TRUE)
+   (online_play_required TRUE)
+   (online_mode CONTEXT_GAME_MODE_UNRANKED_PRO_HEAD_TO_HEAD)
+   (ready_screen qp_hth_seldiff_screen)
+)
+
+; online hth, unranked, separate parts - tug of war
+(qp_hth_unranked_split
+   HTH_SPLIT_PROPERTIES
+   (main_mode_screen main_hth_split_screen)
+   (max_local_players 1)
+   (local_network FALSE)
+   (profile_required TRUE)
+   (online_play_required TRUE)
+   (online_mode CONTEXT_GAME_MODE_UNRANKED_HEAD_TO_HEAD)
+   (ready_screen hth_split_seldiff_screen)
+)
+
+; online hth, ranked, face-off - score duel
+(qp_hth_ranked
+   HTH_UNSPLIT_PROPERTIES
+   (main_mode_screen main_hth_unsplit_ranked_seldiff_screen)
+   (max_local_players 1)
+   (local_network FALSE)
+   (ranked TRUE)
+   (online_mode -1) ; We can't determine our online mode at this point, since we haven't chosen a track yet
+   (profile_required TRUE)
+   (online_play_required TRUE)
+   (ready_screen qp_hth_ranked_preload_screen)
+   (show_pause_quit FALSE)
+   (pause_new_song_screen '')
+   (always_allow_player TRUE)
+)
+
+; online hth, ranked, separate parts - tug of war
+(qp_hth_ranked_split
+   HTH_SPLIT_PROPERTIES
+   (main_mode_screen main_hth_split_ranked_seldiff_screen)
+   (max_local_players 1)
+   (local_network FALSE)
+   (ranked TRUE)
+   (online_mode -1) ; We can't determine our online mode at this point, since we haven't chosen a track yet
+   (profile_required TRUE)
+   (online_play_required TRUE)
+   (ready_screen qp_hth_ranked_preload_screen)
+   (show_pause_quit FALSE)
+   (pause_new_song_screen '')
+   (always_allow_player TRUE)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Quickplay Coop
+
+#define COOP_MODE_PROPERTIES
+(
+#ifdef HX_XBOX 
+   (main_mode_screen main_bandcoop_screen)
+#else
+   (main_mode_screen main_multimode_screen) ; REA - Just go back to the main menu
+#endif
+   (auto_choose_char TRUE)
+   (allow_create_char FALSE)
+   (uisink_default_screen matchmaking_band_screen)
+   (login_status kProhibited)
+   (intro_category {gamecfg get coop_intro_category})
+   (online_mode CONTEXT_GAME_MODE_BAND_QUICKPLAY)
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_BAND_QUICKPLAY)
+   (unlock_song_instrument band)
+)
+
+(qp_coop_local
+   COOP_MODE_PROPERTIES
+)
+
+(frame_rate
+   COOP_MODE_PROPERTIES
+   (game_screen frame_rate_game_screen)
+)
+
+(qp_coop_online
+   COOP_MODE_PROPERTIES
+   (local_network FALSE)
+   (profile_required TRUE)
+   (online_play_required TRUE)
+   (quit_screen matchmaking_band_screen)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tour
+
+#define TOUR_MODE_PROPERTIES
+(
+   (show_prefab_chars FALSE)
+   (show_loading_images TRUE)
+   (is_tour TRUE)
+)
+
+(tour_solo
+   TOUR_MODE_PROPERTIES
+   (pause_new_song_screen tour_solo_event_screen)
+   (continue_screen 
+#ifndef HX_XBOX
+;  MTC Took out the tour_movie_screen
+;	#ifdef HX_EE
+;		tour_movie_screen
+;	#else
+		tour_solo_event_screen
+;	 #endif
+#else
+	
+      {if_else {tour hint}
+         {{tour hint} get screen}
+         tour_solo_event_screen
+      }
+
+#endif
+   )
+   (tour_win_screen
+      {if_else {== {{tour performer} solo_difficulty} kDifficultyEasy}
+         tour_solo_easy_win_screen
+         tour_solo_win_screen
+      }
+   )
+   (tour_event_screen
+			tour_solo_event_screen)
+   (max_players 1)
+   (max_local_players 1)
+   (min_players 1)
+   (band_name {{tour performer} get_char_name})
+   (online_mode CONTEXT_GAME_MODE_SOLO_TOUR)
+   (matchmaking_screen tour_solo_char_screen)
+   (post_matchmaking_screen tour_solo_hub_screen)
+   (endgame_screen tour_solo_endgame_screen)
+   (lose_screen tour_solo_lose_screen)
+   (allow_bass FALSE)
+   (intro_category INTRO_VENUE)   
+   (show_pause_quit FALSE) ; no quit screen from here
+   ;(confirm_restart_screen solo_tour_restart_screen) REA - use default
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_TOUR)
+   (cannot_connect_warning solo_no_server_warning)
+   (unlock_song_instrument {{tour performer} get_instrument})
+   #ifndef HX_XBOX
+   (ready_screen tour_solo_ready_screen)
+   #endif
+)
+
+;MTC I ADDED THIS
+(tour_band
+   TOUR_MODE_PROPERTIES
+   (pause_new_song_screen tour_band_event_screen)
+   (continue_screen 
+	#ifndef HX_XBOX
+	;MTC took out the tour_movie_screen which is long gone
+;		#ifdef HX_EE
+;			tour_movie_screen
+;		#else
+			tour_band_event_screen
+;		 #endif
+		  
+	#else
+		  {if_else {tour hint}
+			 {{tour hint} get screen}
+			 tour_band_event_screen
+		  }
+	#endif
+   )
+   ;MTC - Fixed multi tour crash on win
+   (tour_win_screen tour_band_win_screen
+      
+   )
+   (tour_event_screen
+			tour_band_event_screen)
+   (max_players 4)
+   (max_local_players 4)
+   (min_players 2)
+   (online_mode CONTEXT_GAME_MODE_SOLO_TOUR)
+   (matchmaking_screen matchmaking_band_screen)
+   (post_matchmaking_screen 	
+				#ifndef HX_XBOX
+					;#ifdef HX_EE	REA - removed, we don't need movies anymore
+					;	tour_movie_screen
+				   ;#else
+						tour_band_event_screen  
+				   ;#endif
+			   #else
+					tour_band_seldiff_screen
+				#endif
+	)
+   (ready_screen tour_band_seldiff_screen)
+   (endgame_screen tour_band_endgame_screen)
+   (lose_screen tour_solo_lose_screen)
+   (allow_bass TRUE)
+   (intro_category INTRO_VENUE)   
+   (pause_quit_screen gNullStr) ; no quit screen from here
+   (main_mode_screen main_multimode_screen) ; REA - Just go back to the main menu
+)
+
+
+#define TOUR_BAND_PROPERTIES
+(
+   TOUR_MODE_PROPERTIES
+   (pause_new_song_screen tour_band_event_screen)
+   (continue_screen 
+      {if_else {tour hint}
+         {{tour hint} get screen}
+         tour_band_event_screen
+      }
+   )
+   
+   (main_mode_screen tour_band_sel_screen)
+   (profile_required TRUE)
+   (choose_leader_from_band TRUE)
+   (post_matchmaking_screen
+      {do ($band {tour performer})
+         {if_else {$band is_finalized}
+            tour_band_hub_screen
+            ; else              
+             tour_band_create_screen
+         }
+       }
+     )
+#ifdef HX_BOX   
+(ready_screen 
+      {if_else {== {{tour event} get warning_screen} ''}
+         tour_band_seldiff_screen
+         tour_band_marathon_screen
+      }
+   )
+#else
+(ready_screen tour_band_seldiff_screen)
+#endif
+
+   (min_players 1)
+      
+   ; minimum number of dudes we need to play a song
+   (min_num_participants {if_else $cheat.bwt_no_min_participants 1 2})
+       
+   (band_name {{tour performer} band_name})
+   (band_logo 
+      {if_else {{tour performer} has_logo_patch}
+         {{tour performer} logo_patch}
+         0
+      }
+   )
+   (tour_win_screen tour_band_win_screen)
+   (endgame_screen 
+      {if_else {{tour performer} last_song}
+         tour_band_endgame_screen
+         tour_nextsong_screen
+      }
+   )
+   (lose_screen tour_band_lose_screen)
+   ;(confirm_quit_screen tour_band_quit_screen) REA - use default
+   ;(confirm_restart_screen tour_band_restart_screen) REA - use default
+   (uisink_default_screen tour_band_sel_screen)
+   (uisink_signout_screen tour_band_sel_screen)
+   (intro_category 
+      ; first song gets this, the rest get quick.
+      {if_else {{tour performer} first_song} 
+         {gamecfg get coop_intro_category}
+         INTRO_MULTI
+      }
+   )
+   (online_mode CONTEXT_GAME_MODE_BAND_WORLD_TOUR)
+   (win_camera 
+      {if_else {{tour performer} last_song} WIN WIN_QUICK }
+   )
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_BAND_WORLD_TOUR)
+   (unlock_song_instrument band)
+)
+
+(tour_world_local
+   TOUR_BAND_PROPERTIES
+   (show_pause_quit FALSE) ; no quit screen from here
+   (cannot_connect_warning tour_no_server_warning)
+)
+
+(tour_world_online
+   TOUR_BAND_PROPERTIES
+   (local_network FALSE)
+   (online_play_required TRUE)
+   (show_pause_quit TRUE)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Drum Trainer
+
+#define DRUM_TRAINER_MODE
+(
+   (is_drum_trainer TRUE)
+   (show_hud FALSE)
+   (show_mtv_overlay FALSE)
+   (start_difficulty kDifficultyEasy)
+   (login_status kProhibited)
+   (start_tracktype kTrackDrum)
+   (update_crowd_meter FALSE)
+   (play_star_sfx FALSE)
+   (max_players 1)
+   (max_local_players 1)
+   (min_players 1)
+   (player_arrangement kArrangeBand)
+   (intro_category INTRO_VENUE)
+   (pause_screen drum_trainer_pause_screen)
+   (main_mode_screen drum_trainer_menu_screen)
+   (main_screen main_screen)
+   (crowd_reacts FALSE)
+)
+
+(drum_trainer_beats
+   DRUM_TRAINER_MODE
+   (game_panel  drum_trainer_beats_panel)
+   (game_screen drum_trainer_beats_screen)
+   (assets "beats.milo")
+   (start_song drum_trainer_beats)
+)
+
+(drum_trainer_fills
+   DRUM_TRAINER_MODE
+   (dont_show_gems_in_solos FALSE)
+   (game_panel  drum_trainer_fills_panel)
+   (game_screen drum_trainer_fills_screen)
+   (assets "fills.milo")
+   (start_song drum_trainer_fills)
+)
+
+(drum_trainer_freestyle
+   DRUM_TRAINER_MODE
+   (game_panel  drum_trainer_freestyle_panel)
+   (game_screen drum_trainer_freestyle_screen)
+   (assets "freestyle.milo")
+   (start_song drum_trainer_freestyle)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tutorials
+
+#define TUTORIALS_MODE
+(
+   (is_tutorial TRUE)
+   (disable_guitar_fx TRUE)
+   (show_hud FALSE)
+   (show_mtv_overlay FALSE)
+   (load_chars       FALSE)
+   (start_difficulty  kDifficultyEasy)
+   (login_status kProhibited)
+   (min_players 1)
+   (crowd_audio FALSE)
+   (first_screen tutorials_lesson_menu_screen)
+   (disable_player_intro TRUE)
+   (play_star_sfx FALSE)
+   (play_track_intro_sfx FALSE)
+   (play_streak_sfx FALSE)
+   (pause_screen '') ;tutorial doesn't use this system
+   (crowd_reacts FALSE)
+)
+
+(tutorial_drums
+   TUTORIALS_MODE
+   (popup_help_can_disable TRUE)
+   (main_panel   tutorials_drums_main_panel)
+   (main_screen  tutorials_drums_main_screen)
+   (win_screen   tutorials_drums_beat_menu)
+   (righty_assets       "drum_tutorial_righty.milo")
+   (lefty_assets        "drum_tutorial_lefty.milo")
+   (lesson_menu_assets  "drum_tutorial_menu_og.milo")
+   (start_tracktype   kTrackDrum)
+   (failure_vo  drum_tut_thrash_didnt_finish)
+   (notes_format   tutorial_drum_notes_format)
+   (percent_format tutorial_drum_percent_format)
+   (next_lesson_text     tutorial_drum_next_lesson)
+   (previous_lesson_text tutorial_drum_previous_lesson)
+   (restart_lesson_text  tutorial_drum_restart_lesson)
+   (tut_info_frame 0)
+)
+
+(tutorial_guitar
+   TUTORIALS_MODE
+   (popup_help_can_disable TRUE)
+   (main_panel   tutorials_guitar_main_panel)
+   (main_screen  tutorials_guitar_main_screen)
+   (righty_assets       "guitar_tutorial_righty.milo")
+   (lefty_assets        "guitar_tutorial_lefty.milo")
+   (lesson_menu_assets  "guitar_tutorial_menu_og.milo")
+   (start_tracktype   kTrackGuitar)
+   (failure_vo  drum_tut_thrash_didnt_finish)
+   (notes_format   tutorial_guitar_notes_format)
+   (percent_format tutorial_guitar_percent_format)
+   (next_lesson_text     tutorial_guitar_next_lesson)
+   (previous_lesson_text tutorial_guitar_previous_lesson)
+   (restart_lesson_text  tutorial_guitar_restart_lesson)
+   (tut_info_frame 0)
+)
+
+(tutorial_vocals
+   TUTORIALS_MODE
+   (tutorial_has_no_lefty TRUE)
+   (tutorial_cares_about_mics TRUE)
+   (popup_help_can_disable TRUE)
+   (main_panel   tutorials_vocals_main_panel)
+   (main_screen  tutorials_vocals_main_screen)
+   (mixed_assets       "vocals_tutorial.milo")
+   (lesson_menu_assets  "vocals_tutorial_menu_og.milo")
+   (start_tracktype   kTrackVocals)
+   (failure_vo  drum_tut_thrash_didnt_finish)
+   (notes_format   tutorial_vocals_notes_format)
+   (percent_format tutorial_vocals_percent_format)
+   (next_lesson_text     tutorial_vocals_next_lesson)
+   (previous_lesson_text tutorial_vocals_previous_lesson)
+   (restart_lesson_text  tutorial_vocals_restart_lesson)
+   (tut_info_frame 0)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Practice Mode
+(practice
+   (is_practice TRUE)
+   (on_pause_restart {ui pop_screen practice_loading_screen})
+   (first_screen practice_selsong_screen)
+   (ready_screen qp_seldiff_solo_screen) ;same as solo quickplay
+   (load_chars FALSE)
+   (main_screen main_screen)
+   (game_screen practice_game_screen)
+   (pause_new_song_screen practice_selsong_screen)
+   (confirm_restart_screen '') ;don't have to confirm restart in practice mode
+   (login_status kDontCare)
+   (min_players 1)
+   (can_lose FALSE)
+   (pause_screen pause_screen)
+   (practice_mode_fx TRUE)
+   (crowd_audio FALSE)
+   (crowd_reacts FALSE)
+   (render_practice_loop TRUE)
+   
+   ; copies from quickplay
+   (skip_matchmaking TRUE)
+      
+   ; right now this only matters on the matchmaking screen, so it
+   ; could be omitted, but including for consistency
+   (auto_choose_char TRUE)
+   (allow_create_char FALSE)
+
+   (max_players 1)
+   (max_local_players 1)
+   (min_players 1)
+   (player_arrangement kArrangeBand)
+   (intro_category INTRO_VENUE)
+
+   (game_mode_context CONTEXT_GAME_MODE_TYPE_QUICKPLAY)
+
+   (win_screen           practice_vocal_end_screen)
+   (lose_screen          practice_vocal_end_screen)
+   (endgame_screen       practice_vocal_end_screen)
+
+   (play_star_sfx FALSE)
+   (play_track_intro_sfx FALSE)
+   (play_streak_sfx      FALSE)
+
+   (always_allow_player TRUE)
+      
+   ; for SongMgr/song select screen
+   (unlock_song_instrument 
+      {{{game get_player_config {game get leader_num}} get_char} get_instrument}
+   )
+
+   (enable_bre TRUE)
+   (enable_streak FALSE)
+   (enable_star_power FALSE)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Leaderboards via the main community screen
+(community_leaderboards
+   (community_screen                 main_leaderboard_screen)
+   (cannot_connect_warning community_no_server_warning)
+   ; where to go after a fatal error (like user signout or disconnect)
+   (uisink_lost_connection_screen    main_community_screen)  
+   (uisink_default_screen            main_community_screen)
+   (uisink_signout_screen            main_community_screen)
+)

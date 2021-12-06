@@ -1,0 +1,427 @@
+; Format for objects definitions
+;
+; (<class>
+;    (description <str>) ; provide description for System Autodocumentation
+;    (allowed_dirs <ObjectDir>) ; only allow creation if object dir is listed.
+;    (allowed_dirs) ; never allow creation in Milo (there are no allowed object dirs)
+;    (superclasses ...) ; list of this class's superclasses, 
+;                           not including Object
+;    (editor ; property descriptions for editing
+;        (<property> <type> (<type-specific data>))
+;
+;        Types:
+;           int, float, string, symbol, bool
+;           int (list (<str> <str> ...)); each string corresponds to a macro
+;           string (list (<str> <str> ...)); list of strings
+;           symbol (list (<sym> <sym> ...)); enumerated symbols
+;            Note that if a (list) option is provided for an object property,
+;            it overrides the (class) filter.  You must have either a (list) 
+;            or (class) block.
+;           object (class <className> [type]) (dir_prop customdir) (dir <script>) (list (<obj1> <obj2> ...)) (obj_flags no_null no_this)
+;            Note that the class tag will be ignored if the list tag is used.
+;            The dir_prop and dir tags are mutually exclusive.
+;           bitfield (list (<str> <str> ...)) ; each string corresponds to a macro
+;            Note that bitfield flags can be grouped with parentheses to denote mutual exclusion
+;           file (dir TRUE) (ext <description> <ext> <ext> ...); dir used for directory selection
+;           color
+;           script (not a property, but listed in the editor block)
+;
+;           SPHERE, VECTOR2, VECTOR3; pre-defined structs of floats, mapped to C++ objects
+;
+;        Common:
+;           (help <str>) ; displayed at bottom of prop. editor dialog
+;           (no_test) ; property won't be written and reread in unittest
+;           (read_only TRUE|FALSE) ; read-only props. can't be updated through prop. editor
+;           (fixed_size TRUE|FALSE) ; for arrays, means can't change the size of the array
+;           (refresh <property>) ; refresh display of another top-level property.  If no property is listed, all properties are refreshed.
+;           (pre_sync <script> ; executed before property set
+;           (post_sync <script> ; executed after property set
+;           (alias <str>) ; rename property for display in property editor
+;           (hide TRUE|FALSE) ; show property
+;
+;        Range checking:
+;           Range checking applies to int and float properties.  These properties can
+;           be in structs and arrays.
+;           (range <num_low> <num_high>)
+;
+;        Structs:
+;             Note: structs can't be specified in data, and must be created in C++.
+;             Structs may have multiple properties.
+;           (<structName>
+;              (struct
+;                 (<property_name> <property_type>)
+;                 (<property_name> <property_type>)
+;                 ; etc.
+;              )
+;              [(header <str>)] ; optional struct header
+;           )
+;
+;        Arrays:
+;           ; Arrays of properties are allowed in data.
+;           ; You can only have an array of one type.  If you need an array of 
+;           ; multiple types, create an array of struct.
+;           ; Arrays of structs must be coded in C++.
+;           (<array_name> array <property_type>)
+;           (<array_name>
+;              (array
+;                 (struct
+;                    (<property_name> <property_type>)
+;                    (<property_name> <property_type>)
+;                    ; etc.
+;                 )
+;              )
+;              [(fixed_size TRUE|FALSE] ; if TRUE, disallow element insertion & deletion
+;           )
+;
+;        Indentation:
+;             Used to segregate properties in the Property Editor.  Indents 
+;             have no effect on property paths or C++ property code.  They're 
+;             used to visually group properties.
+;           (<HeaderName>
+;              (indent
+;                 (<property_name> <property_type>)
+;                 (<property_name> <property_type>)
+;                 ; etc.
+;              )
+;           )
+;
+;        Notes:
+;           $milo_prop_path contains the property path of the propery being updated.
+;           Call {milo update_objects TRUE} to update Milo's object lists manually
+;              This is only necessary if you create/delete objects behind the scenes.
+;
+;        Examples:
+;
+;           (height int (help "height in meters") (read_only TRUE))
+;           (weight float (refresh height guitar) (help "weight affects height & guitar"))
+;           (guitar symbol (list (Explorer SG 'Flying V')))
+;           (crowd_state int (list ("CROWD_OK" "CROWD_GOOD"))) ; strings correspond to macros
+;           (mytrans object (class Trans) (dir_prop customdir) (obj_flags no_null no_this)) 
+;              ; do not allow a null value & also disallow setting the property
+;              ; to the object we're currently editing
+;           (mydraws object (list {$this get_objlist}) (help "objects to draw"))
+;           (mybitfield bitfield (list ("FLAG_1" "FLAG_2"))) ; strings correspond to macros
+;	         (flags bitfield (list (flag1 flag2) (flag3 flag4) flag5))
+;	            ; So if flag2 is checked, flag1 will be unchecked.  If flag5 if checked, 
+;	            ; there are no consequences.
+;           (print script (script {print "Object is: " $this "\n"}) (label "print it"))
+;           ('File root' file (dir TRUE) (help "Current directory to lookup resources"))
+;           ('Texture' file (ext "Texture Files" bmp png))
+;           ('Background color' color)
+;
+;           (player ; structure
+;              (struct
+;                 (string name (help "player name"))
+;                 (int score (help "high score"))
+;              )
+;           )
+;
+;           (pollables ; array of objects
+;              (array object (class CharPollable) (read_only TRUE))
+;           )
+;
+;           (rod_bones ; array of structures
+;              (array 
+;                 (struct
+;                    (bone object (class Trans) (help "Where to anchor one end of the rod"))
+;                    (weight float (help "Weight on this end"))
+;                 )
+;              )
+;           )
+;
+;           (outfits  ; array of struct of array of struct with an array
+;              (array 
+;                 (struct
+;                    (lods 
+;                       (array 
+;                          (struct
+;                             (screen_size float (help "min screen size to use this lod"))
+;                             (draws 
+;                                (array object (class Draw))
+;                             )
+;                          )
+;                       )
+;                    )  
+;                 )
+;              )
+;           )
+;
+;           ('my alpha stuff'
+;              (indent
+;                 (alpha_cut bool)
+;                 (alpha_write bool)
+;              )
+;              (read_only TRUE)
+;           )
+;
+;    )
+;    (types ; list of types for this class
+;        (<type>
+;           (<type members, including editor block>)
+;        )
+;    )
+;    (init  ; Script where you can configure an object 
+;           ; when it's created in Milo, 
+;           ; $this is set to the object
+;           ; and it's called after the object has been put into its dir
+;        {$this set_type blah} ; just an example...
+;        ...
+;    )
+;
+;    (allow_null_type <val>) ; Whether or not no type is allowed for 
+;        ; this class and object.  
+;        ; $this is set to the object so you can perform tests on it.
+; 
+
+; "Intrinsic" types.
+#define SPHERE ((struct (x float) (y float) (z float) (radius float)))
+#define VECTOR3 ((vector (x float) (y float) (z float)))
+#define VECTOR2 ((vector (x float) (y float)))
+#define COLOR ((struct (r float) (g float) (b float)))
+#define RECT ((struct (x float) (y float) (w float) (h float)))
+#define MATRIX3 ((struct (pitch float) (roll float) (yaw float) (x_scale float) (y_scale float) (z_scale float)))
+#define TRANSFORM ((struct (pitch float) (roll float) (yaw float) (x_scale float) (y_scale float) (z_scale float) (x float) (y float) (z float)))
+#define QUAT ((struct (x float) (y float) (z float) (w float)))
+#define BOX ((struct (min_x float) (max_x float) (min_y float) (max_y float) (min_z float) (max_z float)))
+
+(Object
+   (description "The Object class is the root of the class hierarchy. Every
+        class has Object as a superclass.")
+   (types
+      (ParticleUI
+         (editor
+            (part_type symbol (list ('Basic' 'Fancy')) (refresh basics))
+            (basics 
+               (indent 
+                  (mat object (class Mat) (help "material for particle system"))
+                  (max_parts float (help "maximum number of particles"))
+                  (emit_rate (vector (min float) (max float)))
+                  (life (vector (min float) (max float)))
+                  (speed (vector (min float) (max float)))
+                  (start_size  (vector (min float) (max float)))
+                  (grow_ratio float (hide {!= [part_type] 'Fancy'}))
+                  (shrink_ratio float (hide {!= [part_type] 'Fancy'}))
+                  (delta_size (vector (min float) (max float)))
+                  (force_dir  (vector (x float) (y float) (z float)))
+                  (speed_drag float (hide {!= [part_type] 'Fancy'}))
+                  (bounce object (class Trans))
+                  (start_color_1 color)
+                  (start_color_1_alpha float)
+                  (start_color_2 color)
+                  (start_color_2_alpha float)
+                  (mid_color_1 color (hide {!= [part_type] 'Fancy'}))
+                  (mid_color_1_alpha float (hide {!= [part_type] 'Fancy'}))
+                  (mid_color_2 color (hide {!= [part_type] 'Fancy'}))
+                  (mid_color_2_alpha float (hide {!= [part_type] 'Fancy'}))
+                  (end_color_1 color)
+                  (end_color_1_alpha float)
+                  (end_color_2 color)
+                  (end_color_2_alpha float)
+                  (mid_color_ratio float (hide {!= [part_type] 'Fancy'}))
+                  (preserve_parts bool)
+                  ; now active display?
+                  (align 
+                     (indent
+                        (with_velocity bool)
+                        (stretch_with_speed bool)
+                        (stretch_speed float)
+                        (constant_area bool)
+                        (perspective bool)
+                     )
+                     (hide {!= [part_type] 'Fancy'})
+                  )
+                  (bursts 
+                     (indent
+                        (burst_max int)
+                        (time_between (vector (min float) (max float)))
+                        (peak_rate (vector (min float) (max float)))
+                        (duration (vector (min float) (max float)))
+                     )
+                     (hide {!= [part_type] 'Fancy'})
+                  )                  
+                  (do_spin bool (hide {!= [part_type] 'Fancy'}) (refresh basics))
+                  (spin 
+                     (indent
+                        (rpm (vector (min float) (max float)))
+                        (rpm_drag float)
+                        (start_offset (vector (min float) (max float)))
+                        (end_offset (vector (min float) (max float)))
+                     )
+                     (hide {! [do_spin]})
+                  )
+                  (do_bubble bool (hide {!= [part_type] 'Fancy'}) (refresh basics))
+                  (bubble
+                     (indent
+                        (bubble_period (vector (min float) (max float)))
+                        (bubble_size  (vector (min float) (max float)))
+                     )
+                     (hide {! [do_bubble]})
+                  )
+               )
+            )
+            (emit 
+               (indent
+                  (box_emitter 
+                     (indent
+                        (mesh_emitter object (class RndMesh))
+                        (extent_1 (vector (x float) (y float) (z float)))
+                        (extend_2 (vector (x float) (y float) (z float)))
+                        (pitch (vector (min float) (max float)))
+                        (yaw (vector (min float) (max float)))
+                     )
+                  )
+                  (relative_parent object (class trans))
+                  (relative_motion float)
+                  (subsamples int)
+                  (frame_drive bool)
+                  (pre_spawn bool)
+               )
+            )
+         )
+         (part_type 'Basic')
+         (mat '')
+         (max_parts 0)
+         (emit_rate 0)
+         (life 0)
+         (speed 0)
+         (start_size 0)
+         (delta_size 0)
+         (do_bubble 0)
+         (bubble_period 0)
+         (bubble_size 0)
+         (force_dir 0) 
+         (bounce '')
+         (start_color_1 0)
+         (start_color_2 0)
+         (end_color_1 0)
+         (end_color_2 0)
+         (preserve_parts 0)
+         (grow_ratio 0)
+         (shrink_ratio 0)
+         (mid_color_ratio 0)
+         (mid_color_1 0)
+         (mid_color_2 0)
+         (do_spin 0)
+         (rpm vector 0)
+         (rpm_drag 0)
+         (start_offset 0)
+         (end_offset 0)
+         (with_velocity 0)
+         (stretch_with_speed 0)
+         (stretch_speed 0)
+         (constant_area 0)
+         (perspective 0)
+         (burst_max 0)
+         (time_between 0)
+         (peak_rate 0)
+         (duration 0)
+         (speed_drag 0)
+         (mesh_emitter '')
+         (extent_1 0)
+         (extend_2 0)
+         (pitch 0)
+         (yaw 0)
+         (relative_parent '')
+         (relative_motion 0)
+         (subsamples 0)
+         (frame_drive 0)
+         (pre_spawn 0)
+         (start_color_1_alpha 0)
+         (mid_color_1_alpha 0)
+         (end_color_1_alpha 0)
+         (start_color_2_alpha 0)
+         (mid_color_2_alpha 0)
+         (end_color_2_alpha 0)
+      )
+   
+      (timeline
+         (editor
+            (events 
+               (array symbol (list {{$this dir} supported_events})) 
+               (post_sync {$this restart})
+               (refresh current)
+            )
+            (current symbol (read_only TRUE))
+            (fire script (script {$this fire}) (refresh current))
+            (skip script (script {$this skip}) (refresh current))
+            (reset script (script {$this reset}) (refresh current))
+         )
+         (current 
+            {if_else {size [events]}
+               {elem [events] [current_index]}
+               ''
+            }
+         )
+         (current_index 0)
+         (events ())
+         (fire
+            {handle ({$this dir} {elem [events] [current_index]})}
+            {$this skip}
+         )
+         (skip
+            {++ [current_index]}
+            {if {>= [current_index] {size [events]}}
+               {set [current_index] 0}
+            }
+         )
+         (reset
+            {set [current_index] 0}
+         )
+      )
+   )
+   (views
+      (Note
+         (note {$this note} {$this set_note $milo_value})
+      )
+   )
+)
+
+(ObjectDir
+   (description "An ObjectDir keeps track of a set of Objects.  
+      It can subdir or proxy in other ObjectDirs.  
+      To rename subdir or proxy files search for remap_objectdirs in system/run/config/objects.dta")
+   (types
+      ; types can define "change_proxies" handler called from 
+      ; ObjectDir::PostLoad, mainly to override or delete proxy files
+   )
+   (editor
+      (subdirs (array file) (help "Subdirectories of objects") 
+         (post_sync 
+            {handle ($this enter)}
+            {milo update_objects}
+         )
+         (hide {$this is_proxy})
+      )
+      (proxy_file file 
+         (hide {! {$this is_proxy}})
+         (post_sync {handle ($this enter)})
+      )
+   )
+   ; remapping of subdirs and proxies.
+   ; Use this temporarily if you need to rename files which are 
+   ; subdirs.  Rename the files in perforce.  Put the name changes
+   ; below, excluding the .milo extension, in the format <oldname> <newname>
+   ; Then load up the .milo file(s) subdiring the changed dirs, and resave.
+   ; Voila, the subdir name has been changed in the milo file.
+   ; You can even do entire subdir trees at a time,
+   ; like if a subdirs b subdirs c subdirs d, you can rename all four files, 
+   ; put the renamings in the list, open them all up in Milo, and save them out again.   ; KEEP this commented out. If it finds it, it turns all file names into symbols
+/*   
+   (remap_objectdirs
+      (theater_lighting theater_geom)
+      (theater_01_geom theater_geom)
+      (male_bass male_guitar)
+   )
+*/   
+)
+
+#include rnd_objects.dta
+#include synth_objects.dta
+#include ../char/char_objects.dta
+#include ../ui/ui_objects.dta
+#include ../track/track_objects.dta
+#include ../world/world_objects.dta
+
+#ifdef INIT_BAND
+#include ../band/band_objects.dta
+#endif

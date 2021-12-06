@@ -1,0 +1,281 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Leaderboards
+#define HIGHSCORE_PANEL_HANDLERS
+(
+#ifdef HX_WII	;; REA  FIXME
+	(file "high_scores_og.milo")
+#else
+   (file "high_scores_og.milo")
+#endif
+
+   (init_hs
+      {$this update_titles}
+   )
+
+   (update_titles
+      ;; clear them out
+      {event.lbl set_localized ""}
+      {song.lbl set_localized ""}
+      {type.lbl set_localized ""}
+
+      {song.lbl set_localized {song_mgr song_name {highscores get_song_sym}}}
+      {event.lbl set text_token {highscores get_diff_sym}}
+      {type.lbl set_localized {highscores get_track_type_char}}
+
+   )
+	
+	(update_list
+		{do ($num_scores {highscores get_num_scores})
+		    ($pos 1)
+			; Show current scores
+			{if {> $num_scores 0}
+				{do
+					{foreach_int $i 1 {+ $num_scores 1}
+						{if {== $i [high_score]}
+							{++ $pos} ; increment past the new score
+						}
+						; set the score labels
+						{if {! {> $pos 10}}
+							{{sprintf "player%d.lbl" $pos} set text_token {highscores get_name $i}}
+							{{sprintf "score%d.lbl" $pos} set_localized {fmt_score {highscores get_score $i}}}
+						}
+						{++ $pos}
+					}
+				}
+			}
+			; Hide non-used score fields
+			{if {! {> $pos 10}}
+				{foreach_int $i $pos 11
+					{if {! {== $i [high_score]}} ; set the score
+						{do
+							{{sprintf "player%d.lbl" $i} set_showing FALSE}
+							{{sprintf "score%d.lbl" $i} set_showing FALSE}
+							{{sprintf "rank%d.lbl" $i} set_showing FALSE}
+						}
+					}
+				}
+			}
+		}
+	)
+)
+
+{new UIPanel highscores_qp_panel
+   (player_num {game get leader_num})
+	(back_button_exits FALSE)
+	(high_score 0)
+	(name_label player1.lbl)
+	(score_label score1.lbl)
+	(name_active FALSE)
+   (last_used_name (""))
+   (randomize_button '')
+   (back_button '')
+
+   HIGHSCORE_PANEL_HANDLERS
+	NAMING_PANEL_HANDLERS ; REA - Naming screen a go go
+	
+	(enter 
+		{set [name_active] FALSE}
+		{if_else {gamemode is_solo}
+			{do ($pcfg {game get_player_config {gamecfg get leader_num}})
+				{set [high_score] {highscores is_solo_high_score {game get_song} {$pcfg get_track_sym} {$pcfg get_difficulty_sym} {{beatmatch main_performer} score}}}
+			}
+			;else band qp
+			{set [high_score] {highscores is_mp_high_score {game get_song} {{beatmatch main_performer} score}}}
+		}
+	   {$this update_titles}
+		; Show the naming input if applicable
+		{if {! {== [high_score] 0}} ; We got a high score, set up the naming stuff
+			{do
+				{set [name_label] {sprintf "player%d.lbl" [high_score]}}
+				{set [score_label] {sprintf "score%d.lbl" [high_score]}}
+				{[score_label] set_localized {fmt_score {{beatmatch main_performer} score}}}
+				{set [name_active] TRUE}
+				
+            {$this init_name}
+
+            {resize [current_name] 0}
+            {insert_elems [current_name] 0 [last_used_name]}
+            {set [current_pos] {- {size [current_name]} 1}}
+
+            {$this update_name}
+			}
+		}
+		
+		{$this update_list}
+	)
+	
+   (SELECT_START_MSG
+		{ui goto_screen qp_complete_screen}
+   )
+	
+	(accept_name
+			{if_else {gamemode is_solo}
+				{do ($pcfg {game get_player_config {gamecfg get leader_num}})
+					{highscores save_solo_high_score {game get_song} {$pcfg get_track_sym} {$pcfg get_difficulty_sym} {{beatmatch main_performer} score} {$this get_name}}
+				} 
+				;else
+				{do
+					{highscores save_mp_high_score {game get_song} {{beatmatch main_performer} score} {$this get_name}}
+				}
+			}
+
+	      ; BMB: hide helpbar here
+
+	      {$this stop_naming}
+
+	      ; Save the current name for next time
+	      {resize [last_used_name] 0}
+	      {insert_elems [last_used_name] 0 [current_name]}
+
+	      ; delay before exiting the screen
+	      {script_task  kTaskUISeconds (name {sprint "Score_Delay_Task"}) (delay 3)
+	         (script
+	            {ui goto_screen endgame_autosave_start_screen}
+	         )
+	      }
+		
+   )
+	
+	(extra_function
+	)
+	
+	(JOYPAD_CONNECT_MSG 
+		{if {== $player_num {game get leader_num}}
+			{if_else {== $connected FALSE}
+				{do ($task_name {sprint "Score_Delay_Task"})
+					{if {exists $task_name}
+					   {delete $task_name}
+					   {helpbar set_config ('' Continue)}
+					}
+				 }
+			 {do
+				 {if {== [kill] TRUE}
+					{script_task  kTaskUISeconds (name {sprint "Score_Delay_Task"}) (delay 0.5)
+						 (script
+							{helpbar set_config ('' Continue)}
+						)
+					}
+				  }
+			  }
+			}
+		}
+	)
+	
+	(cancel_name
+	)
+	
+	(button_press
+		{ui goto_screen qp_complete_screen}
+	)
+}
+
+{new UIScreen highscores_screen
+   (panels highscores_qp_panel helpbar)
+   (focus highscores_qp_panel)
+   (helpbar ('' helpbar_select '' helpbar_confirm))
+   (back qp_complete_screen)
+   
+   (enter
+		{helpbar set_limit_to_player_num {game get leader_num}}
+   )
+}
+
+{new UIPanel highscores_list_panel
+	(high_score 0)
+   HIGHSCORE_PANEL_HANDLERS
+   
+	(enter 
+		{$this init_hs}
+		{$this update_list}
+	)
+	
+   (BUTTON_DOWN_MSG
+		{switch $button
+		   ;(kPad_X
+			;   {ui goto_screen leaderboards_selsong_screen}
+			;)
+		   (kPad_Tri
+			   {ui goto_screen leaderboards_selsong_screen}
+			)
+			(kPad_Start
+			   {ui goto_screen leaderboards_selsong_screen}
+			)
+		}
+		kDataUnhandled
+   )
+	
+}
+
+{new UIScreen highscores_list_screen
+   (panels meta movie_panel highscores_list_panel helpbar)
+   (focus highscores_list_panel)
+   (helpbar (helpbar_back))
+   (back leaderboards_selsong_screen)
+}
+
+#ifndef HX_XBOX ; Only OG
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; High score track select screen (choose from all 4 tracktypes)
+{new UIPanel leaderboards_seltrack_panel
+   (file "leaderboards_seltrack.milo")
+   (focus guitar.btn)
+   
+   (enter
+		 {helpbar set_limit_to_player_num -1}
+   )
+   (SELECT_MSG
+      {highscores set_track_type 
+         {switch $component
+            (guitar.btn kTrackGuitar)
+            (bass.btn   kTrackBass)
+            (drums.btn  kTrackDrum)
+            (vocals.btn kTrackVocals)
+				(band.btn   kTrackBand)
+         }
+      }
+		; goto select difficulty
+		{if_else {== $component band.btn}
+			{do
+				{highscores set_diff_sym easy} ; default value
+				{ui goto_screen leaderboards_selsong_screen} ; skip select difficulty
+			}
+			;else
+			{ui goto_screen highscore_seldiff_screen}
+		}
+   )
+}
+
+{new UIScreen highscore_seltrack_screen
+   (panels meta movie_panel leaderboards_seltrack_panel helpbar)
+   (focus leaderboards_seltrack_panel)
+   (helpbar (back select))
+   (back community_specialfeatures_screen)
+}
+#endif
+
+;; High score difficulty select screen
+{new UIPanel highscore_seldiff_panel
+   (file "leaderboards_seldiff.milo")
+   (focus easy.btn)
+   
+   (SELECT_MSG
+      {highscores set_diff_sym
+         {switch $component
+            (easy.btn easy)
+            (medium.btn medium)
+            (hard.btn hard)
+            (expert.btn expert)
+         }
+      }
+     
+	  ; goto select difficulty
+	   {ui goto_screen leaderboards_selsong_screen}
+   )
+}
+
+{new UIScreen highscore_seldiff_screen
+   (panels meta movie_panel highscore_seldiff_panel helpbar)
+   (focus highscore_seldiff_panel)
+   (helpbar (back select))
+   (back highscore_seltrack_screen)
+}

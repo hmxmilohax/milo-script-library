@@ -1,0 +1,118 @@
+;;;
+;;; drum trainer pause panel
+;;;
+{new UIPanel drum_trainer_pause_panel
+   ;;
+   ;; properties
+   ;;
+   (file "drum_trainer_pause.milo")
+   (player_number -1)
+
+
+   ;;
+   ;; metagame
+   ;;
+   (enter
+      {set [metronome_was_ready] {{gamemode get game_panel} get_metronome_ready}}
+      {{gamemode get game_panel} set_metronome_ready FALSE}
+      {{gamemode get game_panel} pause}
+      {$this set_focus resume.btn}
+      {{game get_player [player_number]} enable_swings FALSE}
+      {beatmatch never_allow_input TRUE}
+      {$this update_metronome}
+      kDataUnhandled
+   )
+   (exit
+      {{game get_player [player_number]} enable_swings TRUE}
+      {beatmatch never_allow_input FALSE}
+      {band_ui_sink set_net_sync TRUE}
+      {{gamemode get game_panel} unpause}
+      kDataUnhandled
+   )
+
+
+   ;;
+   ;; metronome
+   ;;
+   (update_metronome_label
+      {metronome.btn set_localized
+         {localize
+            {if_else
+               [metronome_state]
+               drum_trainer_metronome_on
+               drum_trainer_metronome_off
+            }
+         }
+      }
+   )
+   (update_metronome
+      {set [metronome_state] {{gamemode get game_panel} get_metronome}}
+      {$this update_metronome_label}
+   )
+   (toggle_metronome
+      {set [metronome_state] {! [metronome_state]}}
+      {{gamemode get game_panel} set_metronome [metronome_state]}
+      {$this update_metronome_label}
+   )
+
+
+   ;;
+   ;; button handlers
+   ;;
+   (button_resume
+      {{gamemode get game_panel} set_metronome_ready [metronome_was_ready]}
+      {if {== {session mode} kNetLocal}
+         {set $game_unpause_on_exit TRUE}}
+      {ui pop_screen}
+   )
+   (button_metronome
+      {$this toggle_metronome}
+   )
+   (button_quit
+      {{gamemode get game_panel} pre_exit}
+      {session end_game kQuit}
+      {band_ui_sink sync_screen {gamemode get quit_screen} 1}
+   )
+
+
+   ;;
+   ;; message handlers
+   ;;  
+   (SELECT_MSG
+      {switch $component
+         (resume.btn    {$this button_resume})
+         (metronome.btn {$this button_metronome})
+         (quit.btn      {$this button_quit})
+      }
+      kDataUnhandled
+   )
+   (BUTTON_DOWN_MSG
+      {if_else {== [player_number] $player_num}
+         {do
+            {if {|| {== $button kPad_Start}
+                    {== $button kPad_Tri}
+                }
+               {$this button_resume}
+            }
+            kDataUnhandled
+         }
+         TRUE
+      }
+   )
+
+
+   ;;
+   ;; variables
+   ;;
+   (metronome_state      -1)
+   (metronome_was_ready  -1)
+}
+
+
+;;;
+;;; drum trainer pause screen
+;;;
+{new UIScreen drum_trainer_pause_screen
+   (panels drum_trainer_pause_panel)
+   (focus drum_trainer_pause_panel)
+}

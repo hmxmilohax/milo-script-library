@@ -1,0 +1,220 @@
+
+(RndDir
+   (types
+   
+      (smasher_plate
+         (editor
+            (reset script (script {$this reset}))
+            (lefty bool (post_sync {$this set_lefty [lefty]}))
+            (is_drum bool)
+            (test script (script {$this test}))
+            (fast_test script (script {$this fast_test}))
+            (stop_test script (script {$this stop_test}))
+            (setup_draworder script (script {$this setup_draworder TRUE}))
+            (smasher_list (array object (class RndDir)))
+         )
+         
+         (lefty FALSE)
+         
+         (is_drum FALSE)
+         
+         ; dynamically created list of smashers
+         (smasher_list ())
+         
+         (striped FALSE)
+         
+         (reset
+            {foreach $smasher [smasher_list]
+               {$smasher reset}
+            }            
+            {$this update_colors}
+
+            {if {! [striped]}
+               {$this setup_draworder FALSE}
+               {set [striped] TRUE}
+            }
+         )
+         
+         (enter
+            ;{$this reset}
+         )
+         
+         (set_lefty ($in_val)
+            {set [lefty] $in_val}
+            {if {exists orientation.grp}
+               {orientation.grp set_frame {if_else [lefty] 1 0}}
+            }
+            {$this update_colors}
+         )
+         
+         (update_colors
+            ; we need to flip AND reassign colors if this is the drummer
+            {if_else [is_drum]
+               {do
+                  {gem_smasher1 set_color {if_else [lefty] green red}}
+                  {gem_smasher2 set_color {if_else [lefty] blue yellow}}
+                  {gem_smasher3 set_color {if_else [lefty] yellow blue}}
+                  {gem_smasher4 set_color {if_else [lefty] red green}}
+               }
+               {do
+                  {gem_smasher0 set_color green}
+                  {gem_smasher1 set_color red}
+                  {gem_smasher2 set_color yellow}
+                  {gem_smasher3 set_color blue}
+                  {gem_smasher4 set_color orange}
+               }
+            }         
+         )
+         
+         ; Sets up the draw order for the smashers. We may need to do some tricky things
+         ; to make all common elements draw at the same time seeing as though there
+         ; will be a lot of repetition.
+         (setup_draworder ($force)
+            {if {|| $force {$this is_proxy}} ; don't do this in milo by default, it invalidates the save
+              {$this collect_groups {object before_gems.grp} base_bottom.grp}
+              {$this collect_groups {object before_gems.grp} base_top.grp}
+              {$this collect_drawables {object after_gems.grp} effects.grp}
+              {if {exists gem_smashers.grp} {gem_smashers.grp set_showing FALSE}}
+            }
+         )
+         
+         (collect_groups ($dst_group $src_group_name)
+            {foreach $smasher [smasher_list]
+               {$dst_group add_object {$smasher find $src_group_name}}
+            }            
+         )
+         
+         ; collects the drawables from a gem smasher and stripe
+         (collect_drawables ($dst_group $src_group_name)
+            {do ($done FALSE)
+                ($i 0)
+                ($obj)
+                ($cur_obj)
+               {while {! $done}
+                  {set $done TRUE}
+                  {foreach $smasher [smasher_list]
+                     {set $obj {$this get_draw_object $smasher $src_group_name $i}}
+                     {if {!= $obj ""}
+                        {set $done FALSE}
+  
+                        ;{$dst_group add_object $obj}
+                        
+                        {set $cur_object {$this find_part_in_group $dst_group {$obj name}}}
+                        {if_else {!= $cur_object ""}
+                           {do
+                              ; already added an object with this name
+                              ;{print "Already added " {$obj name} "\n"}
+                              
+                              {$smasher iterate_self BandMeshLauncher $launcher
+                                 {if {== {$launcher get part} $obj}
+                                    {$launcher set part $cur_object}
+                                    
+                                    {if {!= $cur_object $obj}
+                                       {$obj set_showing FALSE}
+                                    }
+                                 }
+                              }
+                              
+                              {$cur_object set_trans_parent $this}
+                              
+                           }
+                           {do
+                              ; add the new object to the group
+                              {$dst_group add_object $obj}                           
+                           }
+                        }
+                        
+                        
+                        
+                     }
+                  }
+                  {++ $i}
+               }
+            }
+         )
+         
+         (find_part_in_group ($group $name)
+            {do ($objects {$group get_array objects})
+                ($ret_obj "")
+               {foreach $elem $objects
+                  {if {&& {== $name {$elem name}} {$elem is_a ParticleSys}}
+                     {set $ret_obj $elem}
+                  }
+               }
+               $ret_obj
+            }
+         )
+         
+         ; returns indexed draw object in a gem_smasher's draw order
+         (get_draw_object ($smasher $group_name $index)
+            {do ($draw_objects {{$smasher find $group_name} get_array objects})
+               {if_else {< $index {size $draw_objects}}
+                  {elem $draw_objects $index}
+                  ""
+               }
+            }
+         )
+         
+         
+         (test
+            {$this reset}
+            {$this stop_test}
+            {thread_task kTaskSeconds (name smasher_plate_test) 
+               (script
+                  {set $hello 1}
+                  
+                  {foreach $smasher [smasher_list]
+                     {$smasher set_glow FALSE}
+                  }
+                  
+                  {if {> {random_int 0 6} 2}
+                     ; pick one random smasher to hit
+                     {do ($smasher)
+                        {set $smasher {elem [smasher_list] {random_int 0 5}}}
+                        {$smasher set_glow TRUE}
+                        {$smasher hit}
+                        ; do another smasher... maybe
+                        {if {>= {random_int 0 3} 2}
+                           {set $smasher {elem [smasher_list] {random_int 0 5}}}
+                           {$smasher set_glow TRUE}
+                           {$smasher hit}
+                        }
+
+                     }
+                  }
+                  
+                 
+                  {$task sleep .2}
+                  {$task loop}
+               )
+            }          
+            
+         )
+         
+         (fast_test
+            {$this reset}
+            {$this stop_test}
+            {set $count 0}
+            {thread_task kTaskSeconds (name smasher_plate_test) 
+               (script
+                  {set $hello 1}
+                  {{elem [smasher_list] $count} hit}
+                  
+                  {set $count {mod {+ 1 $count} 5}}
+                  {$task sleep .05}
+                  {$task loop}
+               )
+            }                 
+         )
+         
+         (stop_test
+            {if {exists smasher_plate_test}
+               {delete smasher_plate_test}
+            }
+            {foreach $smasher [smasher_list]
+               {$smasher set_glow FALSE}
+            }
+         )
+      )
+   )
+)

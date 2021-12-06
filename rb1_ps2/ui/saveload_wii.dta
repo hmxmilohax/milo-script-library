@@ -1,0 +1,554 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;memcard result constants located in:
+;	system/src/os/memcard.h
+;  system/run/config/macros.dta
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#define kSaveSignin (0)
+#define kSaveSet (1)
+#define kSaveDisable (2)
+#define kSaveDelete (3)
+
+#define kAutosaveTypePushPop (0)
+#define kAutosaveTypePushPopGoto (1)
+#define kAutosaveTypeGotoPop (2)
+#define kAutosaveTypeGotoGoto (3)
+
+#define kSaveFileSize (512)
+
+;; global variables used by saveload stuff:
+
+;; $save_load_mode
+;; $saveload_player_num
+;; $autosave_goto_screen
+;; $autosave_goto_type    
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Starts the SaveLoad subsystems
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{func manual_save_start ($player_num)
+   {wii_saveload_begin_async}
+
+   {set $save_load_mode kManualSave}
+   {set $saveload_player_num 0}
+   {set $saveload_goto_type kMetaNextTypePushPop}
+
+   {push_save_screen_no_overwrite}
+}
+
+{func manual_load_start ($player_num)
+   {wii_saveload_begin_async}
+
+   {set $save_load_mode kManualLoad}
+   {set $saveload_player_num 0}
+   {set $saveload_goto_type kMetaNextTypePushPop}
+
+   {if_else {profile_mgr has_unsaved_data $player_num}
+      {ui push_screen manual_load_confirm_screen}
+      ; else
+      {ui push_screen manual_load_screen}
+   }
+}
+
+{func wii_autosave_start ($goto_type $next_screen)
+   {if {! $saveload_ui_is_up}
+      {set $save_load_mode kAutoSave}
+
+      {set $saveload_goto_screen $next_screen}
+      {set $saveload_goto_type $goto_type}
+
+      {if_else {&& {profile_mgr has_unsaved_data FALSE} {profile_mgr get_should_autosave}}
+         {do
+            {wii_saveload_begin_async}
+
+            {set $saveload_player_num 0}
+            {switch $saveload_goto_type
+               ((kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
+                  {goto_save_screen_with_overwrite}
+               )
+               ; default
+               {push_save_screen_with_overwrite}
+            }
+         }
+         ; else, move on to cleanup...
+         {wii_saveload_cleanup_and_shutdown}
+      }
+   }
+}
+
+{func wii_autoload_start  ($goto_type $next_screen)
+   ; Has autoload already completed? ($autoload_complete is only inside this block)
+   {if {&& {! $saveload_ui_is_up} {! $autoload_complete}}
+      {set $save_load_mode kAutoLoad}
+      {set $saveload_goto_type $goto_type}
+      {set $saveload_goto_screen $next_screen}
+
+      {set $saveload_player_num 0}
+
+      ;; We only attempt to autoload once at the start; afterwards, we rely on
+      ;; what's in memory or manual loads. Since we also need to show a warning
+      ;; once at the start, we do that, and let the warning continue onto the
+      ;; actual load
+
+      {wii_saveload_begin_async}
+      {set $autoload_complete TRUE}
+      {ui push_screen auto_load_screen}
+   }
+}
+
+{func wii_saveload_begin_async
+   {if $saveload_ui_is_up
+      {fail "wii_saveload_begin called, but $saveload_ui_is_up is already true\n"}
+   }
+
+   {set $progressive_scan_previous_setting {profile_mgr get_progressive_scan}}
+   {set $saveload_ui_is_up TRUE}
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DEFINES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#define SAVE_HELPBAR
+(
+	{if {helpbar_dialog is_up}
+		{helpbar_dialog set_config ('' helpbar_select)}
+		{helpbar_dialog set_limit_to_player_num -1}
+		}
+		  {script_task kTaskUISeconds (delay 1.5)
+		(script
+			{if {helpbar_dialog is_up}
+			 {helpbar_dialog set_config ('' helpbar_select)}
+			 {helpbar_dialog set_limit_to_player_num -1}
+			}
+		)
+	}
+)
+
+#define SAVE_HELPBAR_CONTINUE
+(
+   {helpbar reset_icons}
+   {if {helpbar_dialog is_up}
+      {helpbar_dialog set_config ('' helpbar_continue)}
+      {helpbar_dialog set_limit_to_player_num -1}
+   }
+
+   {script_task kTaskUISeconds (delay 1.5)
+      (script
+         {if {helpbar_dialog is_up}
+            {helpbar_dialog set_config ('' helpbar_continue)}
+            {helpbar_dialog set_limit_to_player_num -1}
+         }
+      )
+   }
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SCREENS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{new UIScreen save_screen
+   SAVELOAD_DIALOG_SCREEN
+   
+   ; public properties
+
+   (overwrite 0)
+
+   ; private properties 
+
+   (enter_time 0.0)
+   (save_time 0.0)
+   (done_saving FALSE)
+   (done_polling FALSE)
+   (long FALSE)
+   
+   (enter
+      {set [enter_time] {taskmgr ui_seconds}}
+      {set [save_time] 0.0}
+      {set [done_saving] FALSE}
+      {set [done_polling] FALSE}
+
+      {$this setup_msg mc_save}
+      {$this set_title mc_title_saving}
+
+      {memcardmgr save_game $saveload_player_num [overwrite]}
+   )
+
+   (MEMCARD_RESULT_MSG
+      {switch $result
+
+         ; no errors
+         (kMCNoError
+            {set [done_saving] TRUE}
+            {set [save_time] {taskmgr ui_seconds}}
+            {ui goto_screen save_complete_screen}
+         )
+
+         ; default - all other errors 
+         {set [done_polling] TRUE}
+         {ui goto_screen save_failed_screen}
+         
+      }
+   )
+}
+
+{new UIScreen manual_load_screen
+   SAVELOAD_DIALOG_SCREEN
+
+   (enter
+      {$this setup_msg mc_auto_load_looking}
+      {$this set_title mc_title_checking}
+      {memcardmgr load_game $player_num}
+   )
+
+   (MEMCARD_RESULT_MSG
+      {switch $result
+
+			; no errors
+			(kMCNoError
+				{$this setup_msg mc_manual_load_complete}
+				{$this set_title mc_title_loading}
+
+				{profile_mgr set_global_options_pad 0}
+
+				{script_task kTaskUISeconds (delay 1.5)
+					(script
+						{on_saveload_done kMetaSaveLoaded}
+					)
+				}
+			)
+			
+         ; default - all other errors 
+         {ui goto_screen load_failed_screen}
+      }
+   )
+}
+
+{new UIScreen load_failed_screen
+	SAVELOAD_DIALOG_SCREEN_HELP
+
+	(enter
+		SAVE_HELPBAR_CONTINUE
+		{$this setup_continue mc_load_failed}
+		{$this set_title mc_title_caution}
+	)
+
+	(SELECT_START_MSG
+		{switch $component
+			(option1.btn
+				{on_saveload_done kMetaSaveError}
+			)
+		}
+		kDataUnhandled
+	)
+}
+
+{new UIScreen save_not_enough_space_screen
+   SAVELOAD_DIALOG_SCREEN_HELP
+
+   (enter
+		SAVE_HELPBAR
+      {$this setup_2btn
+         ; Message
+			mc_save_not_enough_space
+         ; Buttons
+         mc_button_exit_to_menu
+         mc_button_continue_no_save
+         ; Default
+         opt2
+      }
+
+      {$this set_title mc_title_caution}
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (option1.btn
+            ;; quit game
+         )
+         (option2.btn
+            {ui goto_screen disable_autosave_screen}
+         )
+      }
+      kDataUnhandled
+   )
+}
+
+{new UIScreen disable_autosave_screen
+   SAVELOAD_DIALOG_SCREEN_HELP
+
+   (enter
+	SAVE_HELPBAR
+		
+      {$this setup_2btn
+         ; Message
+         mc_save_autoload_disable
+         ; Buttons
+         mc_button_yes
+         mc_button_no
+         ; Default
+         opt2
+      }
+      {$this set_title mc_title_caution}
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (option1.btn   
+            {profile_mgr set_autosave_enabled FALSE}
+            {on_saveload_done kMetaSaveError} ; disable autosave
+         )
+         (option2.btn
+            {profile_mgr set_autosave_enabled TRUE}
+            {on_saveload_done kMetaSaveLoaded} ; autosave is enabled
+         )
+      }
+   )
+}
+
+{new UIScreen manual_load_no_file_screen
+   SAVELOAD_DIALOG_SCREEN_HELP
+
+   (enter
+		SAVE_HELPBAR_CONTINUE
+		{$this setup_msg mc_manual_load_no_file}
+      {$this set_title mc_title_loading}
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (option1.btn
+            {on_saveload_done kMetaSaveUnchanged}
+         )
+      }
+      kDataUnhandled
+   )
+}
+
+{new UIScreen save_complete_screen
+   SAVELOAD_DIALOG_SCREEN
+
+   (enter
+      {$this setup_msg mc_save_complete}
+      {$this set_title mc_title_saving}
+   )
+   
+   (TRANSITION_COMPLETE_MSG
+      {script_task kTaskUISeconds (delay 1.5)
+         (script
+				{do
+					{if {helpbar is_up}
+						{helpbar unhide_helpbar}
+					}
+					{on_saveload_done kMetaSaveLoaded}
+				}
+         )
+      } 
+   )
+}
+
+{new UIScreen manual_load_confirm_screen
+   SAVELOAD_DIALOG_SCREEN_HELP
+
+   (enter
+		SAVE_HELPBAR
+		{$this setup_2btn
+         mc_manual_load_confirm_unsaved
+         mc_button_yes
+         mc_button_no
+         opt2
+      }
+      {$this set_title mc_title_caution}
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (option1.btn 
+            {ui goto_screen manual_load_screen}
+         )
+         (option2.btn
+            {on_saveload_done kMetaSaveUnchanged}
+         )
+         kDataUnhandled
+      }
+   )
+}
+
+{new UIScreen save_failed_screen
+	SAVELOAD_DIALOG_SCREEN_HELP
+
+	(enter
+		SAVE_HELPBAR_CONTINUE
+		{$this setup_continue mc_save_failed_no_disable}
+		{$this set_title mc_title_caution}
+	)
+
+	(SELECT_START_MSG
+		{switch $component
+			(option1.btn
+				{on_saveload_done kMetaSaveError}
+			)
+		}
+		kDataUnhandled
+	)
+}
+
+{new UIScreen progressive_scan_warning_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      SAVE_HELPBAR_CONTINUE      
+      {dialog_panel set_yesno
+         {setup_msg mc_progressive_scan_warning}
+         no.btn
+      }
+   )
+
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {ui goto_screen progressive_scan_intro_continue_screen}
+         )
+         (no.btn
+            {profile_mgr set_progressive_scan FALSE}
+            {goto_next_save_screen}
+         )
+      }
+      kDataUnhandled
+   )
+}
+
+{new UIScreen progressive_scan_intro_continue_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+
+   (enter
+      SAVE_HELPBAR_CONTINUE      
+      {dialog_panel set_ok mc_progressive_scan_warning}
+      {dialog_panel set_title progressive_scan_notice_title}
+   )
+   
+   (SELECT_MSG
+      {profile_mgr set_progressive_scan TRUE}
+      {ui goto_screen progressive_scan_intro_confirm_screen}
+   )
+}
+
+
+{new UIScreen auto_load_screen
+   SAVELOAD_DIALOG_SCREEN
+
+   (enter
+      {$this setup_msg mc_auto_load_looking}
+      {$this set_title mc_title_checking}
+      {memcardmgr select_device $saveload_player_num TRUE $this}
+      {memcardmgr load_game $saveload_player_num} 
+   )
+   ;; load result messages...
+
+   (MEMCARD_RESULT_MSG
+		{script_task kTaskUISeconds (delay 1.5) ;;
+		(script ;;
+
+      {switch $result
+         (kMCNoError
+            {$this setup_msg mc_auto_load_complete}
+            {$this set_title mc_title_loading}
+
+            ;; Use this profile's options (TODO PS3 revisions???)
+            {profile_mgr set_global_options_pad 0}
+
+            {script_task kTaskUISeconds (delay 1.5)
+               (script
+                  {on_saveload_done kMetaSaveLoaded}
+               )
+            }
+         )
+         ; default
+         {ui goto_screen load_failed_screen}
+      }
+      
+      ) ;;
+      } ;;
+      
+   )
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SUPPORT FUNCTIONS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{func on_saveload_done ($state)
+   {memcardmgr saveload_profile_complete $saveload_player_num $state}
+   {wii_saveload_cleanup_and_shutdown}
+}
+
+{func wii_saveload_cleanup_and_shutdown
+   {memcardmgr saveload_all_complete}
+
+   ; If progressive scan is enabled, insert the warning message before exiting
+   {if_else {&& 
+                ; only happen if we're loading
+                {|| {== $save_load_mode kManualLoad} {== $save_load_mode kAutoLoad}}
+                ; and if progressive scan is enabled
+                {profile_mgr get_progressive_scan} 
+                ; and it's different than the previous setting
+                {!= {profile_mgr get_progressive_scan} $progressive_scan_previous_setting}
+            } 
+      ;then
+      {ui goto_screen progressive_scan_warning_screen}
+      ;else
+      {goto_next_save_screen}
+   }
+}
+
+{func goto_next_save_screen
+   {if_else $saveload_ui_is_up
+      {do
+         {switch $saveload_goto_type
+            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
+               {ui pop_screen $saveload_goto_screen}
+            )
+            (kMetaNextTypeGotoGoto
+               {ui goto_screen $saveload_goto_screen}
+            )
+            ; default
+            {ui pop_screen}
+         }
+
+         ;; clear ui_is_up state
+         {set $saveload_ui_is_up FALSE}
+      }
+      ; else
+      {do
+         {switch $saveload_goto_type
+            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto)
+               {ui goto_screen $saveload_goto_screen}
+            )
+            (kMetaNextTypeGotoPopGoto
+               {ui pop_screen $saveload_goto_screen}
+            )
+            (kMetaNextTypeGotoPop
+               {ui pop_screen}
+            )
+            ; default, do nothing (nothing pushed, so nothing to pop)
+         }
+      }
+   }
+}
+
+{func push_save_screen_no_overwrite
+   {save_screen set overwrite FALSE}
+   {ui push_screen save_screen}
+}
+
+{func push_save_screen_with_overwrite
+   {save_screen set overwrite TRUE}
+   {ui push_screen save_screen}
+}
+
+{func goto_save_screen_with_overwrite
+   {save_screen set overwrite TRUE}
+   {ui goto_screen save_screen}
+}

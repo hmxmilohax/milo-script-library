@@ -1,0 +1,144 @@
+#include macros.dta
+
+; some representative songs
+(glitch_songs
+   cherrybomb
+)
+
+; venues we want to test
+(glitch_venues
+   arena_01
+   arena_03
+   arena_04
+   arena_05
+   arena_06
+   big_club_01
+   big_club_03
+   big_club_06
+   small_club_01
+   small_club_02
+   small_club_03
+   small_club_04
+   small_club_05
+   small_club_06   
+   small_club_07
+   small_club_08
+   theater_01
+   theater_02
+   theater_03
+   theater_04
+   theater_06
+   theater_07  
+   theater_08
+)
+
+(objects
+   (GlitchReport
+      (init 
+         {$this set_type band}
+      )
+      (types
+         (band 
+            ; Data
+            (frame_ms 40) ; frame must be worse than this
+            (glitch_ms 4) ; glitch delta must be more than this.
+            (num_glitches 200) ; keep these worst ones.
+            
+            ; Methods
+            (run_session
+               {setup_game
+                  $glitch_song
+                  $glitch_venue
+                  ((drum kDifficultyExpert) 
+                   (bass kDifficultyExpert) 
+                   (guitar kDifficultyExpert) 
+                   (vocals kDifficultyExpert))
+               }
+               
+               {game add_sink $this}
+               {ui goto_screen loading_screen}
+            )
+            
+            (downbeat
+               {beatmatch foreach_active_player $player
+                  ; force deploy powerup every 4 bars, hopefully this will catch it.
+                  ; we do deploy_if_possible because that way we can be charged to full
+                  ; and the vocal hud will expose new shaders this way.
+                  {unless {mod $measure 4}
+                     {$player deploy_if_possible}
+                  }
+                  ; autoplay is always on, except for a little bit
+                  {$player set_auto_play {!= $measure 20}}
+               }
+            )
+            
+            (intro_start
+               {$world add_sink $this}
+               {$this start_report}
+            )
+            
+            (game_outro
+               {$world remove_sink $this}
+               {$this stop_report}
+               ; reset_screen, since we may have pushed endgame screens
+               {ui reset_screen restart_glitch}
+            )
+         )
+      )
+   )
+)
+
+(ui
+   (init
+      #include ../ui/init.dta
+   
+      ; just for unloading game between sessions
+      {new UIScreen restart_glitch
+         (panels)
+         (TRANSITION_COMPLETE_MSG
+            ; now it's safe to clear state for next run
+            {session clear}
+         )
+      }
+      
+      {set $fake_controllers TRUE}
+      
+      ; start glitch report
+      {make_glitch_report}
+   )
+)
+
+(synth
+   (mute TRUE)
+)
+
+(rnd
+   (maximize FALSE)
+   (force_hd TRUE)
+)
+
+; a list of files that are likely to require new shaders, so we can hopefully
+; avoid shader notifies in the metagame
+(shader_files
+   "ui/world/tour_worldmap.milo"
+   
+   #ifndef HX_XBOX
+    "ui/practice_space_og.milo"
+	#else
+   "ui/practice_space.milo"
+   #endif
+   
+   "ui/stores/store.milo"
+)
+
+(shaders
+   (manual
+      #include shaders.dta
+   )
+   (auto
+      #include shaders_auto.dta
+   )
+)      
+
+
+#merge band.dta
