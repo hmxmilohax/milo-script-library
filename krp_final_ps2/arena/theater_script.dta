@@ -1,0 +1,102 @@
+CROWD
+LIGHTS
+FX
+BOOT
+CAMERA_COMMON
+{func
+   pick_shot
+   {do
+      ($shots)
+      {if_else
+         {'||'
+            $camera.excitement_change
+            {<
+               {random_float}
+               0.5}}
+         {do
+            {set $shots $camera.crowd_shots}
+            {set $camera.excitement_change FALSE}
+            {arena set_fade 240}}
+         {set $shots $camera.stage_shots}}
+      {set
+         $camera.next_tick
+         {'+' $db.music_tick 1920}}
+      {do
+         ($shot)
+         {set
+            $shot
+            {random_elem $shots}}
+         {eval $shot}
+         {remove_elem $shots $shot}
+         {if
+            {!
+               {size $shots}}
+            {cond
+               ({== $shots $camera.stage_shots}
+                  {insert_elems $camera.stage_shots 0 $camedit.stage_shots})
+               ({== $shots $camera.crowd_shots}
+                  {insert_elems $camera.crowd_shots 0 $camedit.crowd_shots})}
+            {if
+               {>
+                  1
+                  {size $shots}}
+               {remove_elem $shots $shot}}}}}}
+{func
+   check_shot
+   {if
+      {&&
+         {>= $db.music_tick $camera.next_tick}
+         {! $arena.game_over}
+         {<
+            {random_float}
+            $camera.probability}}
+      {arena set_fade 0}
+      {if_else
+         {&&
+            $camera.excitement_change
+            {== $arena.excitement kExcitementBoot}}
+         {do
+            {arena set_fade 240}
+            {cam_boot}
+            {set $camera.excitement_change FALSE}
+            {set
+               $camera.next_tick
+               {'+' $db.music_tick 1920}}}
+         {pick_shot}}
+      {set $camera.probability 0.0}
+      {update_crowd}}}
+{arena
+   add_handlers
+   (terminate
+      {delete pick_shot}
+      {delete check_shot})
+   (init
+      {arena set_fade 240}
+      {cam_begin}
+      {set $camera.probability 1.0}
+      {set $camera.excitement_change FALSE}
+      {set
+         $camera.next_tick
+         {'+' $db.music_tick 5760}})
+   (downbeat
+      {set
+         $camera.probability
+         {'+'
+            $camera.probability
+            {elem CAMERA_PROBABILITY $arena.excitement}}}
+      {if_else
+         {&&
+            {>
+               $db.music_tick
+               {- $game.phrase_end_tick 480}}
+            {! $arena.is_intro}}
+         {arena
+            delay_task
+            480
+            {check_shot}}
+         {check_shot}})
+   (excitement
+      {set $camera.probability 1.0}
+      {set $camera.excitement_change TRUE}
+      {set $camera.next_tick $db.music_tick}
+      {check_shot})}

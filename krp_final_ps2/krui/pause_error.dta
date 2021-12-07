@@ -1,0 +1,175 @@
+{new_kr_panel
+   pause_error
+   (navigator
+      (vertical resume.btn exit.btn))
+   (set_exit_text
+      ($text)
+      {$this set exit_text $text})
+   (enter
+      {exit.btn
+         set_localized_text
+         {$this get exit_text}})}
+{new_kr_panel
+   pause_error_controller
+   (enter
+      {$this set_focus resume.btn})
+   (set_exit_text
+      ($text)
+      TRUE)}
+#define PAUSE_ERROR_SCREEN_HANDLERS
+((auto_back FALSE)
+   (status
+      (default
+         ((button select)
+            (text select))))
+   (enter_pause_error
+      ($num_players $exit_prompt $exit_button_text)
+      {$this set exit_prompt $exit_prompt}
+      {$this
+         set
+         back_screen
+         {ui current_screen}}
+      {$this set num_players $num_players}
+      {{ui panel pause_error}
+         set_exit_text
+         $exit_button_text}
+      {$this clear_vram}
+      {ui goto_screen $this})
+   (SELECT_MSG
+      {switch
+         $component
+         (resume.btn
+            {ui
+               goto_screen
+               {$this get back_screen}})
+         (exit.btn
+            {{$this get exit_prompt}
+               enter_exit_prompt})}))
+#define PAUSE_CONTROLLER_SCREEN_HANDLERS
+((panels pause_bg status pause_error_controller)
+   (focus pause_error_controller)
+   (poll
+      {do
+         (($controller_loss
+               {controller_mgr
+                  is_missing_controller
+                  {$this get num_players}}))
+         {if_else
+            {==
+               {resume.btn state}
+               kDisabled}
+            {if
+               {! $controller_loss}
+               {resume.btn set_state kFocused}}
+            {if
+               $controller_loss
+               {resume.btn set_state kDisabled}}}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {controller_mgr
+            is_missing_controller
+            {$this get num_players}}
+         TRUE
+         kDataUnhandled}))
+{new_kr_screen
+   pause_controller_loss
+   PAUSE_ERROR_SCREEN_HANDLERS
+   PAUSE_CONTROLLER_SCREEN_HANDLERS
+   (enter
+      {pause_error.roll set_text controller_disconnected}
+      {pause_error.lbl
+         set_localized_text
+         {platform
+            localized_text
+            {if_else
+               {==
+                  {$this get num_players}
+                  2}
+               controller_loss_twomic
+               controller_loss_onemic}}})}
+{new_kr_screen
+   pause_controller_status
+   PAUSE_ERROR_SCREEN_HANDLERS
+   PAUSE_CONTROLLER_SCREEN_HANDLERS
+   (enter
+      {pause_error.roll set_text controller_status}
+      {pause_error.lbl
+         set_localized_text
+         {platform
+            localized_text
+            {if_else
+               {==
+                  {$this get num_players}
+                  2}
+               controller_status_twomic
+               controller_status_onemic}}})}
+#define PAUSE_MIC_SCREEN_HANDLERS
+((panels pause_bg status pause_error)
+   (focus pause_error)
+   (enter
+      {$this set_focus resume.btn}
+      {pause_error.roll
+         set_text
+         {if_else
+            {controller_mgr
+               is_missing_mic
+               {$this get num_players}}
+            microphone_not_detected
+            microphone_changed}}
+      {pause_error.lbl
+         set_localized_text
+         {if_else
+            {controller_mgr
+               is_missing_mic
+               {$this get num_players}}
+            {platform
+               localized_text
+               {if_else
+                  {==
+                     {$this get num_players}
+                     2}
+                  mic_loss_twomic
+                  mic_loss_onemic}}
+            {platform
+               localized_text
+               {if_else
+                  {==
+                     {$this get num_players}
+                     2}
+                  mic_status_twomic
+                  mic_status_onemic}}}})
+   (poll
+      {if
+         {!
+            {the_db is_karaoke}}
+         {if_else
+            {==
+               {resume.btn state}
+               kDisabled}
+            {if
+               {!
+                  {controller_mgr
+                     is_missing_mic
+                     {$this get num_players}}}
+               {$this set_focus resume.btn}}
+            {if
+               {controller_mgr
+                  is_missing_mic
+                  {$this get num_players}}
+               {if
+                  {==
+                     {resume.btn state}
+                     kFocused}
+                  {$this navigate_next}}
+               {resume.btn set_state kDisabled}}}}))
+{new_kr_screen pause_mic_loss PAUSE_ERROR_SCREEN_HANDLERS PAUSE_MIC_SCREEN_HANDLERS}
+{new_kr_screen pause_mic_status PAUSE_ERROR_SCREEN_HANDLERS PAUSE_MIC_SCREEN_HANDLERS}
+{new_kr_screen
+   pause_eyetoy_loss
+   (panels pause_bg status pause_error)
+   (focus pause_error)
+   PAUSE_ERROR_SCREEN_HANDLERS
+   (enter
+      {$this set_focus resume.btn}
+      {pause_error.roll set_text eyetoy_disconnected}
+      {pause_error.lbl set_text eyetoy_loss})}

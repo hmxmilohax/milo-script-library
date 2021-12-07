@@ -1,0 +1,64 @@
+LIGHTS_COMMON
+#define LIGHT_PROBABILITY
+((0 6.25e-2 0.125 0.5 0.5))
+{func
+   check_light
+   {set
+      $light.probability
+      {'+'
+         $light.probability
+         {elem LIGHT_PROBABILITY $arena.excitement}}}
+   {if
+      {'||'
+         $light.force_choice
+         {<
+            {random_float}
+            $light.probability}}
+      {if_else
+         {&&
+            $arena.game_over
+            {! $arena.game_won}}
+         {do
+            (($blend 0))
+            {do_boot01}
+            {color_off}
+            {arena venue_boot}}
+         {pick_light}}
+      {set $light.probability 0.0}
+      {set $light.force_choice FALSE}}}
+{arena
+   add_handlers
+   (init
+      {set $light.force_choice FALSE}
+      {set $light.probability 1.0}
+      {set $light.skip_bars 2})
+   (terminate
+      {delete check_light})
+   (game_over
+      {set $light.force_choice TRUE}
+      {check_light})
+   (power_off
+      {switch
+         $arena.game_result
+         (kGameResultLose
+            {char_off})
+         (kGameResultWin
+            {char_off})
+         (kGameResultWin0
+            {char_1_off})
+         (kGameResultWin1
+            {char_0_off})})
+   (downbeat
+      {if_else
+         {! $light.skip_bars}
+         {if
+            {! $arena.game_over}
+            {check_light}}
+         {set
+            $light.skip_bars
+            {- $light.skip_bars 1}}})
+   (excitement
+      {if
+         {! $light.skip_bars}
+         {set $light.force_choice TRUE}
+         {check_light}})}

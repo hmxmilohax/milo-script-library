@@ -1,0 +1,283 @@
+{class
+   ModeMgr
+   (init
+      {$this set cur_player_idx 0}
+      {$this set cur_player_idx2 1}
+      {$this set cur_team 0}
+      {$this set num_teams 0}
+      {$this set random_mode kNoRoundRandom}
+      {$this set challenge_mode 0})
+   (sync_players
+      {if
+         {meta is_active}
+         {if
+            {'||'
+               {!=
+                  {$this get cur_player_idx}
+                  {the_db get_cur_player 0}}
+               {!=
+                  {$this get cur_player_idx2}
+                  {the_db get_cur_player 1}}}
+            {$this
+               set
+               cur_player_idx
+               {the_db get_cur_player 0}}
+            {$this
+               set
+               cur_player_idx2
+               {the_db get_cur_player 1}}}}
+      TRUE)
+   (get_num_teams
+      {$this get num_teams})
+   (set_num_teams
+      ($num)
+      {$this set num_teams $num}
+      {$this set cur_team 0})
+   (reset_cur_team
+      {print
+         "mode mgr reset_cur_team\n"}
+      {$this set cur_team 0}
+      {if_else
+         {&&
+            {the_db is_challenge}
+            {>
+               {the_db get_num_players}
+               2}
+            {'||'
+               {the_db is_duet_compete}
+               {minigame_mgr is_compete_active}}}
+         {do
+            {the_db set_cur_player 0}
+            {the_db
+               set_cur_player_2
+               {mode_mgr get_num_teams}}}
+         {do
+            {the_db set_cur_player 0}
+            {the_db set_cur_player_2 1}}})
+   (next_team
+      {print
+         "next_team!\n"}
+      {$this
+         set
+         cur_team
+         {'+'
+            1
+            {$this get cur_team}}}
+      {if_else
+         {<
+            {$this get cur_team}
+            {$this get_num_teams}}
+         {do
+            {if_else
+               {&&
+                  {the_db is_challenge}
+                  {>
+                     {the_db get_num_players}
+                     2}
+                  {'||'
+                     {the_db is_duet_compete}
+                     {minigame_mgr is_compete_active}}}
+               {do
+                  {the_db
+                     set_cur_player
+                     {$this get cur_team}}
+                  {the_db
+                     set_cur_player_2
+                     {'+'
+                        {$this get cur_team}
+                        {mode_mgr get_num_teams}}}}
+               {do
+                  {the_db
+                     set_cur_player
+                     {'*'
+                        {$this get cur_team}
+                        2}}
+                  {the_db
+                     set_cur_player_2
+                     {'+'
+                        {'*'
+                           {$this get cur_team}
+                           2}
+                        1}}}}
+            TRUE}
+         FALSE})
+   (init_teams
+      {the_db
+         set_num_players
+         {'*'
+            {mode_mgr get_num_teams}
+            2}}
+      {$this reset_cur_team})
+   (is_team_mode
+      {&&
+         {the_db is_duet}
+         {!
+            {$this challenge_team_solo_event}}})
+   (is_duet_compete_mode
+      {'||'
+         {the_db is_duet_compete}
+         {the_db is_challenge_duet_compete}})
+   (get_team_name
+      ($team_idx)
+      {localize
+         {sprint
+            "team"
+            $team_idx}})
+   (get_cur_team_name
+      {$this
+         get_team_name
+         {$this get cur_team}})
+   (init_all
+      {if
+         {the_db is_medley}
+         {{ui panel medleyselsong}
+            reset_medley_songs}}
+      {if
+         {the_db is_challenge}
+         {challenge_mgr clean_up_challenge}
+         {the_db set_challenge_type 0}}
+      {score_tracker init 0}
+      {the_db set_cur_player 0})
+   (get_round_name
+      {if_else
+         {$this is_team_mode}
+         {if_else
+            {$this is_duet_compete_mode}
+            {sprint
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 0}}
+               " "
+               {localize vs.}
+               " "
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 1}}}
+            {mode_mgr get_cur_team_name}}
+         {the_db
+            get_player_name
+            {the_db get_cur_player 0}}})
+   (is_random_round
+      {&&
+         {score_tracker is_multi_round}
+         {'||'
+            {==
+               {$this get random_mode}
+               kAllRoundsRandom}
+            {&&
+               {==
+                  {$this get random_mode}
+                  kLastRoundRandom}
+               {score_tracker is_last_round}}
+            {&&
+               {the_db is_challenge}
+               {the_db get_challenge_medley}}}})
+   (set_random_round
+      ($mode)
+      {$this set random_mode $mode})
+   (get_song_type_name
+      {localize
+         {cond
+            ({the_db is_short_play}
+               short)
+            ({the_db is_practice_mode}
+               practice)
+            (TRUE full)}})
+   (set_challenge_mode
+      ($num)
+      {$this set challenge_mode $num})
+   (get_challenge_mode
+      {$this get challenge_mode})
+   (is_one_mic_challenge
+      {if_else
+         {the_db is_challenge}
+         {==
+            {$this get challenge_mode}
+            1}
+         FALSE})
+   (is_two_mic_challenge
+      {if_else
+         {the_db is_challenge}
+         {==
+            {$this get challenge_mode}
+            2}
+         FALSE})
+   (challenge_team_solo_event
+      {if_else
+         {$this is_two_mic_challenge}
+         {&&
+            {!
+               {the_db is_duet}}
+            {!
+               {challenge_mgr is_minigame_compete}}
+            {!
+               {challenge_mgr is_minigame_coop}}}
+         FALSE})
+   (post_results_screen
+      {if_else
+         {'||'
+            {score_tracker is_multi_round}
+            {the_db is_challenge}}
+         {if_else
+            {>
+               {$this get_num_teams}
+               1}
+            {if_else
+               {mode_mgr challenge_team_solo_event}
+               {$this post_players_screen}
+               {$this post_teams_screen}}
+            {if_else
+               {==
+                  {$this get_num_teams}
+                  1}
+               {if_else
+                  {mode_mgr challenge_team_solo_event}
+                  {$this post_players_screen}
+                  ROUNDRECAP_SCREEN}
+               {if_else
+                  {>
+                     {the_db get_num_players}
+                     1}
+                  {$this post_players_screen}
+                  {fail
+                     "multiple rounds, but no teams or multiple players!"}}}}
+         endgame})
+   (post_teams_screen
+      {if_else
+         {==
+            {$this get cur_team}
+            {-
+               {$this get num_teams}
+               1}}
+         ROUNDRECAP_SCREEN
+         {if_else
+            {challenge_mgr is_minigame_current}
+            {minigame_mgr first_setup_screen}
+            PARAM_SCREEN}})
+   (post_players_screen
+      {if_else
+         {==
+            {the_db get_next_player}
+            -1}
+         ROUNDRECAP_SCREEN
+         {if_else
+            {challenge_mgr is_minigame_current}
+            {minigame_mgr first_setup_screen}
+            PARAM_SCREEN}})
+   (exit_mode_text
+      {if_else
+         {the_db is_challenge}
+         {sprint
+            {localize exit}
+            " "
+            {localize kr_challenge}
+            " "
+            {localize mode}}
+         {sprint
+            {localize exit}
+            " "
+            {localize
+               {the_db get_mode_name}}
+            " "
+            {localize mode}}})}
+{new ModeMgr mode_mgr}

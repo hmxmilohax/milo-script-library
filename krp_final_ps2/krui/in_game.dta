@@ -1,0 +1,320 @@
+{new_kr_panel
+   in_training
+   (focus training_sound.sld)
+   (enter
+      {$this hide_slider})
+   (show_slider
+      {{ui panel soundsetup_pause}
+         init_slider
+         training_sound.sld
+         vox}
+      {training_sound.sld set_text vox}
+      {training_sound.sld set_showing TRUE}
+      {training_sound.sld set_num_steps 20})
+   (hide_slider
+      {training_sound.sld set_showing FALSE})
+   (force_sound_level_slider
+      ($vol $name)
+      {training_sound.sld set_text $name}
+      {training_sound.sld set_selected_frac $vol})}
+{new_kr_panel
+   in_game
+   (focus soundpopup.sld)
+   (enter
+      {$this hide_slider})
+   (poll
+      {if
+         {!
+            {{ui screen in_game}
+               allow_pause}}
+         {$this hide_slider}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {==
+            {$this get sound_button}
+            -1}
+         {do
+            {if
+               {&&
+                  {!
+                     {the_db is_tutorial}}
+                  {!
+                     {the_db is_singdance}}
+                  {'||'
+                     {== $button kPad_Square}
+                     {== $button kPad_Tri}
+                     {== $button kPad_Circle}
+                     {== $button kPad_X}}}
+               {do
+                  (($sound_level
+                        {$this find_sound_level $button}))
+                  {if
+                     {'||'
+                        {!= $sound_level earpiece}
+                        {platform has_earpiece}}
+                     {$this set sound_level $sound_level}
+                     {$this set sound_button $button}
+                     {$this show_slider}}}}
+            TRUE}
+         {if_else
+            {'||'
+               {== $button kPad_DLeft}
+               {== $button kPad_DRight}}
+            kDataUnhandled
+            TRUE}})
+   (BUTTON_UP_MSG
+      {if
+         {==
+            $button
+            {$this get sound_button}}
+         {$this hide_slider}})
+   (SCROLL_MSG
+      {{ui panel soundsetup_pause}
+         update_sound
+         soundpopup.sld
+         {$this get sound_level}}
+      {level
+         update_volume
+         {$this get sound_level}})
+   (find_sound_level
+      ($button)
+      {switch
+         $button
+         (kPad_Square mic)
+         (kPad_Tri vox)
+         (kPad_Circle music)
+         (kPad_X earpiece)})
+   (show_slider
+      {{ui panel soundsetup_pause}
+         init_slider
+         soundpopup.sld
+         {$this get sound_level}}
+      {soundpopup.sld
+         set_text
+         {$this get sound_level}}
+      {soundpopup.sld set_showing TRUE})
+   (hide_slider
+      {$this set sound_button -1}
+      {soundpopup.sld set_showing FALSE})}
+#define IN_GAME_SCREEN_HANDLERS
+((auto_back FALSE)
+   (allow_timeout FALSE)
+   (char none)
+   (init
+      {$this set eyetoy_check FALSE}
+      {$this set karaoke_mic_check FALSE})
+   (enter
+      {$this
+         set
+         mic_state0
+         {mic_utl is_mic_connected 0}}
+      {$this
+         set
+         mic_state1
+         {mic_utl is_mic_connected 1}})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {the_game is_paused}
+         {the_game unpause}
+         {synth pause_all_sfx FALSE}})
+   (set_eyetoy_check
+      ($bool)
+      {$this set eyetoy_check $bool})
+   (set_karaoke_mic_check
+      ($bool)
+      {$this set karaoke_mic_check $bool})
+   (exit_finale
+      {set $is_finale FALSE}
+      {attract_mgr restore_settings}
+      {ui goto_screen exit_game_main})
+   (poll
+      {loading.lbl
+         set_showing
+         {the_game is_restarting}}
+      {if
+         {&&
+            {the_db eyetoy_video}
+            {game_eyetoy is_connected}}
+         {$this set eyetoy_check TRUE}}
+      {if
+         {&&
+            {! $is_finale}
+            {$this allow_pause}}
+         {cond
+            ({controller_mgr
+                  is_missing_controller
+                  {the_db get_num_mics}}
+               {$this handle_error pause_controller_loss})
+            ({&&
+                  {controller_mgr
+                     is_missing_mic
+                     {the_db get_num_mics}}
+                  {'||'
+                     {!
+                        {the_db is_karaoke}}
+                     {$this get karaoke_mic_check}}}
+               {$this set karaoke_mic_check FALSE}
+               {$this handle_error pause_mic_loss})
+            ({'||'
+                  {&&
+                     {$this get mic_state0}
+                     {!
+                        {mic_utl is_mic_connected 0}}}
+                  {&&
+                     {$this get mic_state1}
+                     {!
+                        {mic_utl is_mic_connected 1}}}}
+               {$this set karaoke_mic_check FALSE}
+               {$this handle_error pause_mic_status})
+            ({&&
+                  {$this get eyetoy_check}
+                  {the_db eyetoy_video}
+                  {!
+                     {game_eyetoy is_connected}}}
+               {$this set eyetoy_check FALSE}
+               {$this handle_error pause_eyetoy_loss})}
+         {$this
+            set
+            mic_state0
+            {mic_utl is_mic_connected 0}}
+         {$this
+            set
+            mic_state1
+            {mic_utl is_mic_connected 1}}
+         {if
+            {&&
+               {!
+                  {$this get karaoke_mic_check}}
+               {&&
+                  {$this get mic_state0}
+                  {'||'
+                     {!
+                        {the_db is_duet}}
+                     {$this get mic_state1}}}}
+            {$this set karaoke_mic_check TRUE}}})
+   (JOYPAD_CONNECT_MSG
+      #ifndef HX_GC
+      {if
+         {&&
+            {! $connected}
+            {!
+               {controller_mgr
+                  is_missing_controller
+                  {the_db get_num_mics}}}
+            {$this allow_pause}}
+         {$this handle_error pause_controller_status}}
+      #endif)
+   (handle_error
+      ($screen_name)
+      {the_game pause}
+      {{ui screen $screen_name}
+         enter_pause_error
+         {the_db get_num_mics}
+         {ui screen pause_exitprompt_exit}
+         {mode_mgr exit_mode_text}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         $is_finale
+         {if_else
+            {'||'
+               {== $button kPad_Start}
+               {== $button kPad_Square}
+               {== $button kPad_Tri}
+               {== $button kPad_Circle}
+               {== $button kPad_X}
+               {== $button kPad_Select}}
+            {do
+               {the_game pause}
+               {if_else
+                  $is_finale
+                  {$this exit_finale}
+                  {ui goto_screen exit_game_attract}}}
+            TRUE}
+         {if_else
+            {$this allow_pause}
+            {if_else
+               {== $button kPad_Start}
+               {{ui screen PAUSE_SCREEN}
+                  enter_pause}
+               kDataUnhandled}
+            TRUE}})
+   (allow_pause
+      {&&
+         {!
+            {the_game is_booting}}
+         {the_game allow_pause}
+         {the_game is_playing}
+         {!
+            {the_game is_paused}}})
+   (game_over
+      {cond
+         ($is_finale
+            {$this exit_finale})
+         ({the_db is_tutorial}
+            {ui goto_screen endgame_tutorial})
+         ({the_db is_practice_mode}
+            {ui goto_screen endgame_practice})
+         ({'||'
+               {the_db is_duet_knockout}
+               {the_db is_duet_battle}}
+            {ui goto_screen exit_game_results})
+         ({&&
+               {the_db allow_restart}
+               {==
+                  {the_db
+                     get_game_rating
+                     {the_db get_active_player}}
+                  kRatingFail}}
+            {cond
+               ({the_db is_medley}
+                  {ui goto_screen endmedley_failed})
+               (TRUE
+                  {ui goto_screen endgame_failed})})
+         ({&&
+               {'||'
+                  {score_tracker is_multi_round}
+                  {the_db is_challenge}}
+               {==
+                  {the_db
+                     get_game_rating
+                     {the_db get_active_player}}
+                  kRatingFail}}
+            {ui goto_screen endgame_failround})
+         (TRUE
+            {ui goto_screen exit_game_results})}))
+{new_kr_screen
+   in_game
+   (panels in_game)
+   (focus in_game)
+   IN_GAME_SCREEN_HANDLERS}
+{new_kr_screen
+   in_game_training
+   (panels in_training in_game)
+   (focus in_game)
+   IN_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   logo
+   (fade_mats TRUE)}
+{new_kr_screen
+   in_attract
+   (panels logo)
+   (auto_back FALSE)
+   (char none)
+   (BUTTON_DOWN_MSG
+      {if_else
+         {'||'
+            {== $button kPad_Start}
+            {== $button kPad_Square}
+            {== $button kPad_Tri}
+            {== $button kPad_Circle}
+            {== $button kPad_X}
+            {== $button kPad_Select}}
+         {do
+            {the_game pause}
+            {ui
+               goto_screen
+               {if_else $is_finale exit_game_main exit_game_attract}}
+            {set $is_finale FALSE}}
+         TRUE})
+   (game_over
+      {ui goto_screen exit_game_attract})}

@@ -1,0 +1,79 @@
+{new_kr_screen
+   in_minigame
+   (auto_back FALSE)
+   (enter
+      {$this
+         set
+         mic_state0
+         {mic_utl is_mic_connected 0}}
+      {$this
+         set
+         mic_state1
+         {mic_utl is_mic_connected 1}}
+      {if
+         {meta is_minigame_paused}
+         {meta unpause_minigame}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {$this allow_pause}
+            {== $button kPad_Start}}
+         {{ui
+               screen
+               {minigame_mgr pause_screen}}
+            enter_minigame_pause}
+         kDataUnhandled})
+   (allow_pause
+      {&&
+         {meta allow_minigame_pause}
+         {!
+            {meta is_minigame_paused}}})
+   (poll
+      {if
+         {$this allow_pause}
+         {cond
+            ({controller_mgr
+                  is_missing_controller
+                  {minigame_mgr num_players}}
+               {$this handle_error pause_controller_loss})
+            ({controller_mgr
+                  is_missing_mic
+                  {minigame_mgr num_players}}
+               {$this handle_error pause_mic_loss})
+            ({'||'
+                  {&&
+                     {$this get mic_state0}
+                     {!
+                        {mic_utl is_mic_connected 0}}}
+                  {&&
+                     {$this get mic_state1}
+                     {!
+                        {mic_utl is_mic_connected 1}}}}
+               {$this handle_error pause_mic_status})}
+         {$this
+            set
+            mic_state0
+            {mic_utl is_mic_connected 0}}
+         {$this
+            set
+            mic_state1
+            {mic_utl is_mic_connected 1}}})
+   (JOYPAD_CONNECT_MSG
+      {if
+         {&&
+            {! $connected}
+            {!
+               {controller_mgr
+                  is_missing_controller
+                  {minigame_mgr num_players}}}
+            {!
+               {meta is_minigame_paused}}}
+         {$this handle_error pause_controller_status}})
+   (handle_error
+      ($screen_name)
+      {meta pause_minigame}
+      {{ui screen $screen_name}
+         enter_pause_error
+         {minigame_mgr num_players}
+         {ui screen minigame_exit_prompt}
+         {localize exit_minigame_mode}})}

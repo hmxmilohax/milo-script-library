@@ -1,0 +1,88 @@
+#define TITLE_SCREEN_HANDLERS
+((auto_back FALSE)
+   (char none)
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {!=
+               {$this get enter_time}
+               0}
+            {'||'
+               {platform is_button select $button}
+               {== $button kPad_Start}}}
+         {play_sfx select}
+         {$this set enter_time 0}
+         {if_else
+            {&&
+               {==
+                  {platform get_name}
+                  xbox}
+               {! $xbox_done_initial_mc_check}}
+            {do
+               {live_mgr logon TRUE}
+               {set $xbox_done_initial_mc_check TRUE}
+               {ui goto_screen bootup_load}}
+            {ui goto_screen MAIN_SCREEN}}})
+   (enter
+      {$this
+         set
+         enter_time
+         {$this time}}
+      {attract_mgr reset}
+      {title_nintendo.lbl
+         set_showing
+         {==
+            gc
+            {platform get_name}}}
+      {$this anim_task title_start.tnm 1000 0 2})
+   (exit
+      {$this clear_tasks})
+   (time_elapsed
+      ($time)
+      {>=
+         {-
+            {$this time}
+            {$this get enter_time}}
+         $time})
+   (launch_attract_time
+      {$this time_elapsed 90000}))
+{new_kr_panel
+   title
+   (fade_mats TRUE)}
+{new_kr_screen
+   title
+   (panels bg title)
+   (focus title)
+   TITLE_SCREEN_HANDLERS
+   (poll
+      {if
+         {&&
+            {attract_mgr enabled}
+            {$this get enter_time}
+            {$this launch_attract_time}}
+         {$this set enter_time 0}
+         {mode_mgr set_num_teams 0}
+         {score_tracker init 0}
+         {the_db set_num_players 1}
+         {attract_mgr launch}
+         {ui goto_screen LOADING_SCREEN}}
+      {if
+         {==
+            {title_start.tnm frame}
+            2}
+         {$this anim_task title_start.tnm 1000 0 2}})}
+{new_kr_panel
+   title_demo
+   (enter
+      {title_demo_tech.lbl
+         set_localized_text
+         {localize
+            {if_else
+               {the_db is_demo_mag}
+               demo_tech_mag
+               demo_tech_ddr}}})}
+{new_kr_screen
+   title_demo
+   (panels bg title_demo)
+   (focus title_demo)
+   TITLE_SCREEN_HANDLERS}

@@ -1,0 +1,229 @@
+{func
+   update_song_name
+   ($show)
+   {selsong_song.lbl set_showing $show}
+   {if
+      $show
+      {selsong_song.lbl
+         set_localized_text
+         {the_db
+            get_song_title
+            {the_db get_song_pos}}}}}
+{func
+   update_song_complexity
+   ($show)
+   {note0.mesh set_showing $show}
+   {note1.mesh
+      set_showing
+      {&&
+         $show
+         {>
+            {the_db get_cur_song_complexity}
+            1}}}
+   {note2.mesh
+      set_showing
+      {&&
+         $show
+         {>
+            {the_db get_cur_song_complexity}
+            2}}}}
+{func
+   update_trueduet_icon
+   ($show)
+   {trueduet_icon.mesh
+      set_showing
+      {&&
+         $show
+         {the_db is_duet_true_duet}}}}
+{func
+   update_full_length
+   ($show)
+   {selsong_fulllength.lbl set_showing $show}
+   {if
+      $show
+      {selsong_fulllength.lbl
+         set_localized_text
+         {the_db get_song_full_length}}}}
+{func
+   update_short_length
+   ($show)
+   {selsong_shortlength.lbl set_showing $show}
+   {if
+      $show
+      {if_else
+         {the_db is_karaoke}
+         {selsong_shortlength.lbl set_text n_a}
+         {selsong_shortlength.lbl
+            set_localized_text
+            {the_db get_song_short_length}}}}}
+{func
+   update_dance_length
+   ($show)
+   {selsong_dancelength.lbl set_showing $show}
+   {if
+      $show
+      {selsong_dancelength.lbl
+         set_localized_text
+         {the_db get_song_dance_length}}}}
+{set
+   $max_dance_levels
+   ((easy 3)
+      (medium 5)
+      (hard 7)
+      (expert 9))}
+{func
+   update_dance_difficulty
+   ($show)
+   {selsongsingdance_easy.view set_showing $show}
+   {selsongsingdance_medium.view set_showing $show}
+   {selsongsingdance_hard.view set_showing $show}
+   {selsongsingdance_expert.view set_showing $show}
+   {if
+      $show
+      {foreach
+         $diff
+         {the_db get_song_dance_difficulty}
+         {do
+            (($diff_name
+                  {elem $diff 0})
+               ($song_level
+                  {elem $diff 1})
+               ($max_level
+                  {elem
+                     {find $max_dance_levels $diff_name}
+                     1})
+               ($cur_level 1))
+            {while
+               {<= $cur_level $max_level}
+               {{sprint
+                     "selsongsingdance_"
+                     $diff_name
+                     $cur_level
+                     ".mesh"}
+                  set_showing
+                  {<= $cur_level $song_level}}
+               {'++' $cur_level}}}}}}
+{func
+   update_bpm
+   ($show)
+   {selsongsingdance_bpm.lbl set_showing $show}
+   {if
+      $show
+      {selsongsingdance_bpm.lbl
+         set_localized_text
+         {sprint
+            {the_db get_song_bpm}}}}}
+{func
+   update_song_info
+   ($show)
+   {update_song_name $show}
+   {update_song_complexity $show}
+   {if_else
+      {the_db is_singdance}
+      {do
+         {update_dance_length $show}
+         {update_dance_difficulty $show}
+         {update_bpm $show}}
+      {do
+         {update_short_length $show}
+         {update_trueduet_icon $show}
+         {update_full_length $show}}}}
+#define SELSONG_PANEL_HANDLERS
+((focus selsong.lst)
+   (enter
+      {$this
+         set
+         prev_song_pos
+         {the_db get_song_pos}}
+      {selsong.lst set_provider song_provider}
+      {selsong.lst
+         set_selected_pos
+         {the_db get_song_pos}}
+      {force_param_expand param_selsong}
+      {update_song_info TRUE}
+      {meta_music_stop}
+      {song_preview
+         {the_db get_song_name}}
+      {selsong_anim.view set_frame 0}
+      {$this set choose_random FALSE})
+   (exit
+      {param_selsong.btn
+         set_selected_pos
+         {the_db get_song_pos}}
+      {song_preview ''}
+      {meta_music_start})
+   (poll
+      {selsong_anim.view
+         set_frame
+         {'+'
+            {selsong_anim.view frame}
+            {if_else
+               {selsong.lst is_scrolling}
+               800
+               100}}}
+      {if
+         {==
+            {selsong_anim.view frame}
+            76800}
+         {selsong_anim.view set_frame 0}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {$this get choose_random}
+         TRUE
+         {if_else
+            {&&
+               {!
+                  {selsong.lst is_scrolling}}
+               {!
+                  {selsong.lst is_random}}
+               {!
+                  {selsong.lst is_skipping}}}
+            {cond
+               ({platform is_button back $button}
+                  {go_back PARAM_SCREEN})
+               ({platform is_button random $button}
+                  {play_sfx random}
+                  {$this set choose_random TRUE}
+                  {selsong.lst scroll_random})}
+            kDataUnhandled}})
+   (SELECT_MSG
+      {switch
+         $component
+         (selsong.lst
+            {ui goto_screen PARAM_SCREEN})})
+   (RANDOM_MSG
+      {$this
+         delay_task
+         500
+         {ui component_select selsong.lst selsong selsong kPad_X}})
+   (SCROLL_START_MSG
+      {update_song_info FALSE}
+      {$this
+         update_high_score
+         {the_db get_song_name}
+         FALSE})
+   (SCROLL_MSG
+      {if_else
+         $done
+         {do
+            {the_db
+               set_song
+               {selsong.lst selected_pos}}
+            {update_song_info TRUE}
+            {song_preview
+               {the_db get_song_name}}
+            {param_selsong.btn
+               set_localized_text
+               {the_db
+                  get_song_title
+                  {the_db get_song_pos}}}
+            {$this
+               update_high_score
+               {the_db get_song_name}
+               TRUE}}
+         {do
+            {song_preview ''}
+            {param_selsong.btn
+               set_localized_text
+               ""}}}))
+{new_selsong_panel selsong SELSONG_PANEL_HANDLERS}

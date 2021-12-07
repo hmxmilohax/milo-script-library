@@ -1,0 +1,558 @@
+#define SETUP_SCREEN_HANDLERS
+((dockable TRUE)
+   (char mode)
+   (SELECT_MSG
+      {switch
+         $component
+         (setup_continue.btn
+            {if_else
+               {the_db is_challenge}
+               {ui goto_screen CHALLENGE_EVENTS_SCREEN}
+               {{ui screen PARAM_SCREEN}
+                  enter_playersetup}})}
+      kDataUnhandled)
+   (status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)))
+      (setup_continue.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text continue))))
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button back $button}
+         {mode_mgr init_all}}
+      kDataUnhandled))
+#define SETUP_PANEL_HANDLERS
+((retain_last_focus FALSE)
+   (enter_mode
+      ($state)
+      {if
+         {$this is_single_round $state}
+         {score_tracker init 0}}
+      {if
+         {$this is_team_mode}
+         {mode_mgr init_teams}}
+      {if
+         {the_db is_medley}
+         {{ui panel medleyselsong}
+            init_medley}}
+      {the_db set_cur_player 0}
+      {the_db set_cur_player_2 1}))
+{new_setup_handler
+   players
+   (button
+      "setup_players.btn")
+   (enter_mode
+      ($value)
+      {the_db set_num_players $value})
+   (disable_single_round FALSE)}
+{new_setup_handler
+   teams
+   (button
+      "setup_teams.btn")
+   (enter_mode
+      ($value)
+      {mode_mgr set_num_teams $value}
+      {the_db
+         set_num_players
+         {'*' 2 $value}})
+   (disable_single_round FALSE)}
+{new_setup_handler
+   challenge_teams
+   (button
+      "setup_teams.btn")
+   (enter_mode
+      ($value)
+      {do
+         (($adjusted_value
+               {'*'
+                  2
+                  {- $value 2}})
+            ($players
+               {'+' 2 $adjusted_value}))
+         {mode_mgr
+            set_num_teams
+            {int
+               {/ $players 2}}}
+         {the_db set_num_players $players}})
+   (disable_single_round FALSE)}
+{new_setup_handler
+   medley_songs
+   (button
+      "setup_songs.btn")
+   (enter_mode
+      ($value)
+      {{ui panel medleyselsong}
+         set_num_medley_songs
+         $value})
+   (disable_single_round FALSE)}
+{new_setup_handler
+   song_type
+   (button
+      "setup_songtype.btn")
+   (enter_mode
+      ($value)
+      {if_else
+         {== $value kShortSong}
+         {the_db set_short_play TRUE}
+         {the_db set_short_play FALSE}}
+      {the_db set_practice_mode FALSE})
+   (disable_single_round TRUE)}
+{new_setup_handler
+   rounds
+   (button
+      "setup_rounds.btn")
+   (enter_mode
+      ($value)
+      {score_tracker init $value})
+   (disable_single_round TRUE)}
+{new_setup_handler
+   random
+   (button
+      "setup_random.btn")
+   (enter_mode
+      ($value)
+      {mode_mgr set_random_round $value})
+   (disable_single_round TRUE)}
+{new_setup_handler
+   events
+   (button
+      "setup_events.btn")
+   (enter_mode
+      ($value)
+      {score_tracker init $value})}
+{new_setup_handler
+   mystery
+   (button
+      "setup_mystery.btn")
+   (enter_mode
+      ($value)
+      {challenge_mgr set_mystery_events $value})}
+{new_setup_handler
+   mini_games
+   (button
+      "setup_minigames.btn")
+   (enter_mode
+      ($value)
+      {if_else
+         {== $value kMinigamesOff}
+         {challenge_mgr set_minigames FALSE}
+         {challenge_mgr set_minigames TRUE}})}
+{new_setup_handler
+   dance_mat
+   (button
+      "setup_dancemat.btn")
+   (enter_mode
+      ($value)
+      {if_else
+         {== $value kDanceMatOff}
+         {challenge_mgr set_dance_mat FALSE}
+         {challenge_mgr set_dance_mat TRUE}})}
+{new_setup_panel
+   onemic_arcade
+   (navigator
+      (vertical setup_players.btn setup_rounds.btn setup_songtype.btn setup_random.btn setup_continue.btn))
+   (focus setup_players.btn)
+   (mode_state
+      (players
+         (first 2)
+         (value 2)
+         (options
+            (2 3 4 5 6 7 8)))
+      (rounds
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4 5)))
+      (song_type
+         (first kFullSong)
+         (value kFullSong)
+         (options
+            (full short)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode FALSE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   onemic_arcade
+   (panels bg status left onemic_rollout onemic_arcade)
+   (focus onemic_arcade)
+   SETUP_SCREEN_HANDLERS
+   (ruleset kRuleArcade)}
+{new_setup_panel
+   onemic_medley
+   (navigator
+      (vertical setup_players.btn setup_songs.btn setup_rounds.btn setup_random.btn setup_continue.btn))
+   (focus setup_players.btn)
+   (mode_state
+      (players
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4 5 6 7 8)))
+      (medley_songs
+         (first 3)
+         (value 3)
+         (options
+            (3 4 5)))
+      (rounds
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4 5)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      {==
+         {$state value players}
+         1})
+   (is_team_mode FALSE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   onemic_medley
+   (panels bg status left onemic_rollout onemic_medley)
+   (focus onemic_medley)
+   SETUP_SCREEN_HANDLERS
+   (ruleset kRuleMedley)}
+{new_setup_panel
+   onemic_singdance
+   (navigator
+      (vertical setup_players.btn setup_rounds.btn setup_random.btn setup_continue.btn))
+   (focus setup_players.btn)
+   (mode_state
+      (players
+         (first 2)
+         (value 2)
+         (options
+            (2 3 4 5 6 7 8)))
+      (rounds
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4 5)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode FALSE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   onemic_singdance
+   (panels bg status left onemic_rollout onemic_singdance)
+   (focus onemic_singdance)
+   SETUP_SCREEN_HANDLERS
+   (ruleset kRuleSingDance)}
+{new_setup_panel
+   twomic_duets
+   (navigator
+      (vertical setup_teams.btn setup_rounds.btn setup_songtype.btn setup_random.btn setup_continue.btn))
+   (focus setup_teams.btn)
+   (mode_state
+      (teams
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4)))
+      (rounds
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4 5)))
+      (song_type
+         (first kFullSong)
+         (value kFullSong)
+         (options
+            (full short)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      {==
+         {$state value teams}
+         1})
+   (is_team_mode TRUE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   twomic_duets
+   (panels bg status left twomic_rollout twomic_duets)
+   (focus twomic_duets)
+   SETUP_SCREEN_HANDLERS}
+{new_setup_panel
+   twomic_duetsmedley
+   (navigator
+      (vertical setup_teams.btn setup_songs.btn setup_rounds.btn setup_random.btn setup_continue.btn))
+   (focus setup_teams.btn)
+   (mode_state
+      (teams
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4)))
+      (medley_songs
+         (first 3)
+         (value 3)
+         (options
+            (3 4 5)))
+      (rounds
+         (first 1)
+         (value 1)
+         (options
+            (1 2 3 4 5)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      {==
+         {$state value teams}
+         1})
+   (is_team_mode TRUE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   twomic_duetsmedley
+   (panels bg status left twomic_rollout twomic_duetsmedley)
+   (focus twomic_duetsmedley)
+   SETUP_SCREEN_HANDLERS}
+{new_setup_panel
+   twomic_knockout
+   (navigator
+      (vertical setup_rounds.btn setup_songtype.btn setup_random.btn setup_continue.btn))
+   (focus setup_rounds.btn)
+   (mode_state
+      (rounds
+         (first 1)
+         (value 1)
+         (increment 2)
+         (options
+            (1 3 5)))
+      (song_type
+         (first kFullSong)
+         (value kFullSong)
+         (options
+            (full short)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode TRUE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   twomic_knockout
+   (panels bg status left twomic_rollout twomic_knockout)
+   (focus twomic_knockout)
+   SETUP_SCREEN_HANDLERS}
+{new_setup_panel
+   twomic_knockoutmedley
+   (navigator
+      (vertical setup_rounds.btn setup_songs.btn setup_random.btn setup_continue.btn))
+   (focus setup_rounds.btn)
+   (mode_state
+      (rounds
+         (first 1)
+         (value 1)
+         (increment 2)
+         (options
+            (1 3 5)))
+      (medley_songs
+         (first 3)
+         (value 3)
+         (options
+            (3 4 5)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode TRUE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   twomic_knockoutmedley
+   (panels bg status left twomic_rollout twomic_knockoutmedley)
+   (focus twomic_knockoutmedley)
+   SETUP_SCREEN_HANDLERS}
+{new_setup_panel
+   twomic_singoff
+   (navigator
+      (vertical setup_rounds.btn setup_songtype.btn setup_random.btn setup_continue.btn))
+   (focus setup_rounds.btn)
+   (mode_state
+      (rounds
+         (first 1)
+         (value 1)
+         (increment 2)
+         (options
+            (1 3 5)))
+      (song_type
+         (first kFullSong)
+         (value kFullSong)
+         (options
+            (full short)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode TRUE)
+   SETUP_PANEL_HANDLERS}
+{new_kr_screen
+   twomic_singoff
+   (panels bg status left twomic_rollout twomic_singoff)
+   (focus twomic_singoff)
+   SETUP_SCREEN_HANDLERS}
+#define CHALLENGE_HELP_HANDLER
+((help_text_label setup_challenge_helptext.lbl)
+   (help_text
+      (setup_players.btn krc_players_help)
+      (setup_teams.btn krc_teams_help)
+      (setup_events.btn krc_events_help)
+      (setup_mystery.btn krc_mystery_help)
+      (setup_minigames.btn krc_minigames_help)
+      (setup_dancemat.btn krc_dancemat_help)
+      (setup_random.btn krc_random_help)
+      (setup_continue.btn krc_continue_help)))
+#define CHALLENGE_SETUP_SELECT_HANDLER
+((SELECT_MSG
+      {switch
+         $component
+         (setup_continue.btn
+            {do
+               {challenge_mgr setup_challenge_events}
+               {if
+                  {the_db is_medley}
+                  {{ui panel medleyselsong}
+                     set_num_medley_songs
+                     {the_db num_medley_songs}}}})}))
+{new_setup_panel
+   onemic_challenge
+   (navigator
+      (vertical setup_players.btn setup_events.btn setup_random.btn setup_minigames.btn setup_dancemat.btn setup_mystery.btn setup_continue.btn))
+   (focus setup_players.btn)
+   (mode_state
+      (players
+         (first 2)
+         (value 2)
+         (options
+            (2 3 4 5 6 7 8)))
+      (events
+         (first 2)
+         (value 2)
+         (options
+            (2 3 4 5)))
+      (mystery
+         (first kMysteryEventsOff)
+         (value kMysteryEventsOff)
+         (options
+            (none last on)))
+      (mini_games
+         (first kMinigamesOff)
+         (value kMinigamesOff)
+         (options
+            (off on)))
+      (dance_mat
+         (first kDanceMatOff)
+         (value kDanceMatOn)
+         (options
+            (off on)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode FALSE)
+   (enter
+      {mode_mgr set_challenge_mode 1})
+   SETUP_PANEL_HANDLERS
+   CHALLENGE_SETUP_SELECT_HANDLER}
+{new_kr_screen
+   onemic_challenge
+   (panels bg status left onemic_rollout onemic_challenge)
+   (focus onemic_challenge)
+   SETUP_SCREEN_HANDLERS
+   CHALLENGE_HELP_HANDLER}
+{new_setup_panel
+   twomic_challenge
+   (navigator
+      (vertical setup_teams.btn setup_events.btn setup_random.btn setup_minigames.btn setup_dancemat.btn setup_mystery.btn setup_continue.btn))
+   (focus setup_teams.btn)
+   (mode_state
+      (challenge_teams
+         (first 2)
+         (value 2)
+         (options
+            (2 4 6 8)))
+      (events
+         (first 2)
+         (value 2)
+         (options
+            (2 3 4 5)))
+      (mystery
+         (first kMysteryEventsOff)
+         (value kMysteryEventsOff)
+         (options
+            (none last on)))
+      (mini_games
+         (first kMinigamesOff)
+         (value kMinigamesOff)
+         (options
+            (off on)))
+      (dance_mat
+         (first kDanceMatOff)
+         (value kDanceMatOn)
+         (options
+            (off on)))
+      (random
+         (first kNoRoundRandom)
+         (value kNoRoundRandom)
+         (options
+            (none last all))))
+   (is_single_round
+      ($state)
+      FALSE)
+   (is_team_mode TRUE)
+   (enter
+      {mode_mgr set_challenge_mode 2})
+   SETUP_PANEL_HANDLERS
+   CHALLENGE_SETUP_SELECT_HANDLER}
+{new_kr_screen
+   twomic_challenge
+   (panels bg status left twomic_rollout twomic_challenge)
+   (focus twomic_challenge)
+   SETUP_SCREEN_HANDLERS
+   CHALLENGE_HELP_HANDLER}

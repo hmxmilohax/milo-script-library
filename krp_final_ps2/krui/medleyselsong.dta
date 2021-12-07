@@ -1,0 +1,400 @@
+{new_kr_panel
+   medleyselsong
+   (fade_mats TRUE)
+   (focus medleyselsong.lst)
+   (init
+      {$this set medley_num 3}
+      {$this set medley_max_num 5}
+      {$this set medley_idx 0}
+      {$this
+         set
+         medleynum_lbls
+         (medleyselsong_1.lbl medleyselsong_2.lbl medleyselsong_3.lbl medleyselsong_4.lbl medleyselsong_5.lbl)}
+      {$this
+         set
+         medleysong_lbls
+         (medleyselsong_song1.lbl medleyselsong_song2.lbl medleyselsong_song3.lbl medleyselsong_song4.lbl medleyselsong_song5.lbl)}
+      {$this
+         set
+         medleysong_meshes
+         (medleyselsong_select1.mesh medleyselsong_select2.mesh medleyselsong_select3.mesh medleyselsong_select4.mesh medleyselsong_select5.mesh)}
+      {$this
+         set
+         random_songs
+         {array
+            {$this get medley_max_num}}}
+      {$this reset_random_flags})
+   (enter
+      {$this init_medley_list medleyselsong.lst}
+      {$this update_medley_labels}
+      {force_param_expand param_selsong}
+      {param_selsong.btn set_text select_your_songs}
+      {medleyselsong.view
+         set_frame
+         {-
+            {$this get medley_num}
+            3}}
+      {$this
+         update_medley_state
+         {!
+            {$this is_medley_choosen}}}
+      {$this set choose_random FALSE})
+   (exit
+      {song_preview ''}
+      {meta_music_start})
+   (is_medley_choosen
+      {==
+         {$this get medley_idx}
+         {$this get medley_num}})
+   (num_medley_songs
+      {$this get medley_num})
+   (set_num_medley_songs
+      ($num)
+      {$this set medley_num $num})
+   (set_medley_index
+      ($idx)
+      {$this set medley_idx $idx})
+   (init_medley
+      {the_db
+         setup_medley
+         {the_db get_num_players}
+         {$this get medley_num}}
+      {$this set medley_idx 0}
+      {$this reset_random_flags})
+   (init_medley_list
+      ($lst)
+      {$lst set_provider song_provider}
+      {$lst set_selected_pos 0}
+      {do
+         (($cur_idx 0))
+         {while
+            {<
+               $cur_idx
+               {$this get medley_idx}}
+            {$lst
+               hide_element
+               {the_db get_medley_song_pos $cur_idx}}
+            {'++' $cur_idx}}})
+   (update_medley_labels
+      {do
+         (($idx 0))
+         {while
+            {<
+               $idx
+               {$this get medley_max_num}}
+            {do
+               (($num
+                     {elem
+                        {$this get medleynum_lbls}
+                        $idx})
+                  ($lbl
+                     {elem
+                        {$this get medleysong_lbls}
+                        $idx})
+                  ($msh
+                     {elem
+                        {$this get medleysong_meshes}
+                        $idx})
+                  ($showing
+                     {<
+                        $idx
+                        {$this get medley_num}}))
+               {$num set_showing $showing}
+               {$lbl set_showing $showing}
+               {$msh set_showing $showing}
+               {if
+                  $showing
+                  {if_else
+                     {<
+                        $idx
+                        {$this get medley_idx}}
+                     {if_else
+                        {elem
+                           {$this get random_songs}
+                           $idx}
+                        {$lbl set_text random}
+                        {$lbl
+                           set_localized_text
+                           {the_db
+                              get_song_title
+                              {the_db get_medley_song_pos $idx}}}}
+                     {if_else
+                        {==
+                           $idx
+                           {$this get medley_idx}}
+                        {$lbl set_text select}
+                        {$lbl set_text ''}}}}}
+            {'++' $idx}}}
+      {$this update_medley_status_panel})
+   (update_medley_status_panel
+      {{ui panel status}
+         set_display
+         {if_else
+            {==
+               {$this get medley_idx}
+               0}
+            ((button back)
+               (text back)
+               (button select)
+               (text select)
+               (button random)
+               (text random_medley))
+            {if_else
+               {$this is_medley_choosen}
+               ((button back)
+                  (text remove)
+                  (button select)
+                  (text select))
+               ((button back)
+                  (text remove)
+                  (button select)
+                  (text select)
+                  (button random)
+                  (text random_medley))}}})
+   (add_medley_song
+      {do
+         (($song_idx
+               {medleyselsong.lst selected_pos}))
+         {the_db
+            set_medley_song
+            {$this get medley_idx}
+            $song_idx}
+         {medleyselsong.lst hide_element $song_idx}}
+      {$this
+         set
+         medley_idx
+         {'+'
+            {$this get medley_idx}
+            1}}
+      {$this update_medley_labels})
+   (remove_medley_song
+      {$this
+         set
+         medley_idx
+         {-
+            {$this get medley_idx}
+            1}}
+      {do
+         (($insert_pos
+               {the_db
+                  get_medley_song_pos
+                  {$this get medley_idx}}))
+         {medleyselsong.lst show_element $insert_pos}}
+      {set
+         {elem_var
+            {$this get random_songs}
+            {$this get medley_idx}}
+         FALSE}
+      {$this update_medley_labels})
+   (is_medley_song_choosen
+      ($medley_index $song_idx)
+      {do
+         (($check_idx 0)
+            ($choosen FALSE))
+         {while
+            {< $check_idx $medley_index}
+            {if
+               {==
+                  $song_idx
+                  {the_db get_medley_song_pos $check_idx}}
+               {set $choosen TRUE}}
+            {'++' $check_idx}}
+         $choosen})
+   (is_medley_random
+      {do
+         (($is_random FALSE))
+         {foreach
+            $random_flag
+            {$this get random_songs}
+            {if
+               $random_flag
+               {set $is_random TRUE}}}
+         $is_random})
+   (get_random_song_idx
+      {int
+         {random_int
+            0
+            {the_db num_songs}}})
+   (get_random_medley_song
+      ($medley_index)
+      {do
+         (($random_idx
+               {$this get_random_song_idx}))
+         {while
+            {$this is_medley_song_choosen $medley_index $random_idx}
+            {set
+               $random_idx
+               {$this get_random_song_idx}}}
+         $random_idx})
+   (choose_random_medley_songs
+      ($update_display)
+      {while
+         {<
+            {$this get medley_idx}
+            {$this get medley_num}}
+         {do
+            (($random_idx
+                  {$this
+                     get_random_medley_song
+                     {$this get medley_idx}}))
+            {the_db
+               set_medley_song
+               {$this get medley_idx}
+               $random_idx}
+            {if
+               $update_display
+               {medleyselsong.lst hide_element $random_idx}}
+            {set
+               {elem_var
+                  {$this get random_songs}
+                  {$this get medley_idx}}
+               TRUE}
+            {$this
+               set
+               medley_idx
+               {'+'
+                  {$this get medley_idx}
+                  1}}}}
+      {if
+         $update_display
+         {$this update_medley_labels}
+         {medleyselsong.lst set_selected_pos 0}}
+      TRUE)
+   (reset_medley_songs
+      {$this set medley_idx 0}
+      {$this reset_random_flags})
+   (reset_random_flags
+      {do
+         (($idx 0))
+         {while
+            {<
+               $idx
+               {size
+                  {$this get random_songs}}}
+            {set
+               {elem_var
+                  {$this get random_songs}
+                  $idx}
+               FALSE}
+            {'++' $idx}}})
+   (SCROLL_START_MSG
+      {$this update_song_info FALSE})
+   (SCROLL_MSG
+      {if_else
+         $done
+         {do
+            {$this update_song_preview}
+            {$this update_song_info TRUE}}
+         {song_preview ''}})
+   (SELECT_MSG
+      {switch
+         $component
+         (medleyselsong_continue.btn
+            {{ui panel param_selsong}
+               update_medley_display}
+            {ui goto_screen PARAM_SCREEN})})
+   (BUTTON_DOWN_MSG
+      {cond
+         ({$this get choose_random TRUE}
+            TRUE)
+         ({!
+               {medleyselsong.lst is_scrolling}}
+            {cond
+               ({platform is_button select $button}
+                  {if
+                     {!
+                        {$this is_medley_choosen}}
+                     {play_sfx select}
+                     {$this add_medley_song}
+                     {$this update_medley_state TRUE}})
+               ({platform is_button back $button}
+                  {if_else
+                     {==
+                        {$this get medley_idx}
+                        0}
+                     {do
+                        {{ui panel param_selsong}
+                           update_medley_display}
+                        {go_back PARAM_SCREEN}}
+                     {do
+                        {play_sfx back}
+                        {$this remove_medley_song}
+                        {$this update_medley_state TRUE}}})
+               ({platform is_button random $button}
+                  {if
+                     {!
+                        {$this is_medley_choosen}}
+                     {$this choose_random_medley_songs TRUE}
+                     {$this update_medley_state FALSE}
+                     {play_sfx random}
+                     {$this set choose_random TRUE}
+                     {$this
+                        delay_task
+                        500
+                        {ui component_select medleyselsong_continue.btn medleyselsong medleyselsong kPad_X}}})})
+         (TRUE kDataUnhandled)})
+   (update_medley_state
+      ($show_info)
+      {$this update_medley_focus}
+      {$this
+         update_song_info
+         {&&
+            $show_info
+            {!
+               {$this is_medley_choosen}}}}
+      {$this update_song_preview})
+   (update_medley_focus
+      {if_else
+         {==
+            {$this get medley_idx}
+            {$this get medley_num}}
+         {do
+            {medleyselsong_continue.btn set_showing TRUE}
+            {$this set_focus medleyselsong_continue.btn}}
+         {do
+            {medleyselsong_continue.btn set_showing FALSE}
+            {$this set_focus medleyselsong.lst}}})
+   (update_song_info
+      ($show)
+      {trueduet_icon.mesh
+         set_showing
+         {&&
+            $show
+            {the_db is_duet}
+            {the_db
+               is_true_duet_song
+               {the_db
+                  get_song
+                  {medleyselsong.lst selected_pos}}}}}
+      {medleyselsong_complexity.lbl set_showing $show}
+      {do
+         (($complexity
+               {the_db
+                  get_song_complexity
+                  {the_db
+                     get_song
+                     {medleyselsong.lst selected_pos}}}))
+         {note0.mesh set_showing $show}
+         {note1.mesh
+            set_showing
+            {&&
+               $show
+               {> $complexity 1}}}
+         {note2.mesh
+            set_showing
+            {&&
+               $show
+               {> $complexity 2}}}})
+   (update_song_preview
+      {if_else
+         {$this is_medley_choosen}
+         {do
+            {song_preview ''}
+            {meta_music_start}}
+         {do
+            {meta_music_stop}
+            {song_preview
+               {the_db
+                  get_song
+                  {medleyselsong.lst selected_pos}}}}}
+      TRUE)}

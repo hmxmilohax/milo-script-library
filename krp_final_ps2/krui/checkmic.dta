@@ -1,0 +1,497 @@
+#ifdef HX_GC
+{set
+   $mic_notches
+   (0.0 1.0)}
+#else
+{set
+   $mic_notches
+   (4.0e-2 0.1 0.17 0.23 0.3 0.37 0.43 0.51 0.58)}
+#endif
+#define CHECKMIC_ONEMIC_COMPONENTS
+({$this
+      set
+      meters
+      (level0.mtr)}
+   {$this set num_mics 1})
+#define CHECKMIC_ONEMIC_INIT
+((init
+      {$this
+         set
+         sliders
+         (level0.sld)}
+      {$this set player_button player.btn}
+      CHECKMIC_ONEMIC_COMPONENTS)
+   CHECKMIC_READY_BUTTON_FOCUS)
+#define CHECKMIC_ONEMIC_INIT_NOGAIN
+((init
+      {$this set player_button player.btn}
+      CHECKMIC_ONEMIC_COMPONENTS))
+#define CHECKMIC_ONEMIC_INIT_PAUSE
+((init
+      {$this
+         set
+         sliders
+         (level0.sld)}
+      {$this set help_text checkmic_help.lbl}
+      CHECKMIC_ONEMIC_COMPONENTS))
+#define CHECKMIC_TWOMIC_COMPONENTS
+({$this
+      set
+      meters
+      (level0.mtr level1.mtr)}
+   {$this set num_mics 2})
+#define CHECKMIC_TWOMIC_INIT
+((init
+      CHECKMIC_TWOMIC_COMPONENTS
+      {$this
+         set
+         sliders
+         (level0.sld level1.sld)}
+      {$this set team_button team.btn}
+      {$this
+         set
+         player_labels
+         (player0.lbl player1.lbl)}))
+#define CHECKMIC_TWOMIC_INIT_PAUSE
+((init
+      CHECKMIC_TWOMIC_COMPONENTS
+      {$this set help_text checkmic_help.lbl}
+      {$this
+         set
+         sliders
+         (level0.sld level1.sld)}))
+#define CHECKMIC_TWOMIC_INIT_NOGAIN
+((init
+      CHECKMIC_TWOMIC_COMPONENTS
+      {$this set team_button team.btn}
+      {$this
+         set
+         player_labels
+         (player0.lbl player1.lbl)}))
+#define CHECKMIC_TWOMIC_INIT_OPTIONS
+((init
+      CHECKMIC_TWOMIC_COMPONENTS
+      {$this set help_text checkmic_help.lbl}
+      {$this
+         set
+         sliders
+         (level0.sld level1.sld)}))
+#define CHECKMIC_HANDLERS
+((enter
+      {if
+         {meta is_active}
+         {meta_music_stop}}
+      {do
+         (($mic 0))
+         {while
+            {<
+               $mic
+               {$this get num_mics}}
+            {mic_utl
+               start_mic
+               {$this get_player_mic $mic}}
+            {if
+               {$this has sliders}
+               {$this
+                  set_slider_pos
+                  {elem
+                     {$this get sliders}
+                     $mic}
+                  $mic}}
+            {'++' $mic}}}
+      {if
+         {$this has player_button}
+         {{$this get player_button}
+            set_selected}
+         {{$this get player_button}
+            set_localized_text
+            {mode_mgr get_round_name}}}
+      {if
+         {$this has team_button}
+         {{$this get team_button}
+            set_selected}
+         {{$this get team_button}
+            set_localized_text
+            {mode_mgr get_round_name}}}
+      {if
+         {$this has player_labels}
+         {do
+            (($idx 0))
+            {foreach
+               $lbl
+               {$this get player_labels}
+               {set
+                  $cur_player
+                  {the_db get_cur_player $idx}}
+               {$lbl
+                  set_localized_text
+                  {the_db get_player_name $cur_player}}
+               {'++' $idx}}}}
+      {if
+         {$this has help_text}
+         {{$this get help_text}
+            set_localized_text
+            {localize mic_helptext}}})
+   (exit
+      {do
+         (($mic 0))
+         {while
+            {<
+               $mic
+               {$this get num_mics}}
+            {mic_utl
+               stop_mic
+               {$this get_player_mic $mic}}
+            {'++' $mic}}})
+   (poll
+      {do
+         (($mic 0))
+         {while
+            {<
+               $mic
+               {$this get num_mics}}
+            {do
+               (($meter
+                     {elem
+                        {$this get meters}
+                        $mic}))
+               {if
+                  {$this has sliders}
+                  {do
+                     (($slider
+                           {elem
+                              {$this get sliders}
+                              $mic}))
+                     {if_else
+                        {&&
+                           $mic
+                           {!
+                              {the_db is_duet}}
+                           {!
+                              {meta is_active}}}
+                        {$this disable_slider $slider}
+                        {$this update_slider_state $slider $mic}}}}
+               {$meter
+                  set_pos
+                  {mic_utl
+                     get_mic_energy
+                     {$this get_player_mic $mic}}}
+               {'++' $mic}}}})
+   (SCROLL_MSG
+      {do
+         (($mic 0))
+         {foreach
+            $slider
+            {$this get sliders}
+            {if
+               {== $slider $component}
+               {$this
+                  set_mic_gain
+                  $slider
+                  {$this get_player_mic $mic}}}
+            {'++' $mic}}})
+   (update_slider_state
+      ($sld $mic)
+      {if_else
+         {==
+            {$sld state}
+            kDisabled}
+         {if
+            {mic_utl
+               is_mic_connected
+               {$this get_player_mic $mic}}
+            {$sld set_state kNormal}}
+         {if
+            {!
+               {mic_utl
+                  is_mic_connected
+                  {$this get_player_mic $mic}}}
+            {$this disable_slider $sld}}}
+      TRUE)
+   (disable_slider
+      ($sld)
+      {if
+         {==
+            {$sld state}
+            kFocused}
+         {$this navigate_next}}
+      {$sld set_state kDisabled})
+   (set_slider_pos
+      ($slider $mic_idx)
+      {$slider
+         set_num_steps
+         {size $mic_notches}}
+      {do
+         (($pos 0)
+            ($cur_gain
+               {mic_utl
+                  get_mic_gain
+                  {$this get_player_mic $mic_idx}}))
+         {while
+            {>
+               $cur_gain
+               {elem $mic_notches $pos}}
+            {'++' $pos}}
+         {$slider set_selected_pos $pos}})
+   (set_mic_gain
+      ($slider $mic_idx)
+      {the_db
+         set_mic_gain
+         {$this get_player_mic $mic_idx}
+         {elem
+            $mic_notches
+            {$slider selected_pos}}})
+   (get_player_mic
+      ($idx)
+      {if_else
+         {&&
+            {the_db is_challenge_duet_compete}
+            {!
+               {the_db is_duet_compete}}
+            {!=
+               xbox
+               {platform get_name}}}
+         {the_db get_cur_player $idx}
+         $idx}))
+#define CHECKMIC_READY_BUTTON_FOCUS
+((focus ready.btn)
+   (retain_back_focus TRUE))
+{new_kr_panel
+   checkmic_onemic
+   (navigator
+      (vertical level0.sld sound.btn ready.btn))
+   CHECKMIC_READY_BUTTON_FOCUS
+   CHECKMIC_ONEMIC_INIT
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_onemic_nogain
+   (navigator
+      (vertical ready.btn sound.btn))
+   (fade_mats TRUE)
+   CHECKMIC_READY_BUTTON_FOCUS
+   CHECKMIC_ONEMIC_INIT_NOGAIN
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_twomic
+   (navigator
+      (vertical level0.sld level1.sld sound.btn ready.btn))
+   (fade_mats TRUE)
+   CHECKMIC_READY_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_twomic_nogain
+   (navigator
+      (vertical sound.btn ready.btn))
+   (fade_mats TRUE)
+   CHECKMIC_READY_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT_NOGAIN
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_trueduet
+   (navigator
+      (vertical level0.sld level1.sld choose.btn sound.btn ready.btn))
+   (fade_mats TRUE)
+   CHECKMIC_READY_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_trueduet_nogain
+   (navigator
+      (vertical choose.btn sound.btn ready.btn))
+   (fade_mats TRUE)
+   CHECKMIC_READY_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT_NOGAIN
+   CHECKMIC_HANDLERS}
+#define CHECKMIC_OPTIONS_BUTTON_FOCUS
+((focus level0.sld)
+   (retain_last_focus FALSE))
+{new_kr_panel
+   checkmic_pause_onemic
+   (navigator
+      (vertical level0.sld continue.btn))
+   CHECKMIC_OPTIONS_BUTTON_FOCUS
+   CHECKMIC_ONEMIC_INIT_PAUSE
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_pause_twomic
+   (navigator
+      (vertical level0.sld level1.sld continue.btn))
+   CHECKMIC_OPTIONS_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT_PAUSE
+   CHECKMIC_HANDLERS}
+{new_kr_panel
+   checkmic_options
+   (navigator
+      (vertical level0.sld level1.sld continue.btn))
+   CHECKMIC_OPTIONS_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT_OPTIONS
+   CHECKMIC_HANDLERS}
+#define CHECKMIC_OPTIONS_STATUS
+((status
+      (continue.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text select)))
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button left)
+            (button right)
+            (text adjust_level)))))
+#define CHECKMIC_PAUSE_HANDLERS
+(CHECKMIC_OPTIONS_STATUS
+   (enter_checkmic_pause
+      ($back_screen)
+      {$this set back_screen $back_screen}
+      {ui goto_screen $this})
+   (SELECT_MSG
+      {if
+         {== $component continue.btn}
+         {ui
+            goto_screen
+            {$this get back_screen}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button back $button}
+         {go_back
+            {$this get back_screen}}}))
+{new_kr_screen
+   checkmic_pause_onemic
+   (panels pause_bg status checkmic_pause_onemic)
+   (focus checkmic_pause_onemic)
+   CHECKMIC_PAUSE_HANDLERS}
+{new_kr_screen
+   checkmic_pause_twomic
+   (panels pause_bg status checkmic_pause_twomic)
+   (focus checkmic_pause_twomic)
+   CHECKMIC_PAUSE_HANDLERS}
+{new_kr_screen
+   options_mic
+   (panels bg status left options_rollout checkmic_options)
+   (dockable TRUE)
+   (focus checkmic_options)
+   CHECKMIC_OPTIONS_STATUS
+   (goto
+      (continue.btn OPTIONS_SCREEN))}
+#define CHECKMIC_SCREEN_HANDLERS
+((char main)
+   (status
+      (level0.sld
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button left)
+            (button right)
+            (text adjust_level)))
+      (level1.sld
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button left)
+            (button right)
+            (text adjust_level)))
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select))))
+   (goto
+      (choose.btn READY_SCREEN)
+      (sound.btn SOUNDSETUP_SCREEN)
+      (ready.btn LOADING_SCREEN)))
+#define CHECKMIC_ONEMIC_SCREEN_HANDLERS
+(CHECKMIC_SCREEN_HANDLERS
+   (char_pics
+      ((0 checkmic_player.pic))))
+#define CHECKMIC_TWOMIC_SCREEN_HANDLERS
+(CHECKMIC_SCREEN_HANDLERS
+   (char_pics
+      ((0 checkmic_player0.pic)
+         (1 checkmic_player1.pic))))
+{new_kr_screen
+   checkmic_onemic
+   (panels bg status left checkmic_onemic)
+   (focus checkmic_onemic)
+   CHECKMIC_ONEMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   checkmic_onemic_nogain
+   (panels bg status left checkmic_onemic_nogain)
+   (focus checkmic_onemic_nogain)
+   CHECKMIC_ONEMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   checkmic_twomic
+   (panels bg status left checkmic_twomic)
+   (focus checkmic_twomic)
+   CHECKMIC_TWOMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   checkmic_twomic_nogain
+   (panels bg status left checkmic_twomic_nogain)
+   (focus checkmic_twomic_nogain)
+   (char main)
+   CHECKMIC_TWOMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   checkmic_trueduet
+   (panels bg status left checkmic_trueduet)
+   (focus checkmic_trueduet)
+   CHECKMIC_TWOMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   checkmic_trueduet_nogain
+   (panels bg status left checkmic_trueduet_nogain)
+   (focus checkmic_trueduet_nogain)
+   CHECKMIC_TWOMIC_SCREEN_HANDLERS}
+#define CHECKMIC_MINIGAME_SCREEN_HANDLERS
+((status
+      (level0.sld
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button left)
+            (button right)
+            (text adjust_level)))
+      (level1.sld
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button left)
+            (button right)
+            (text adjust_level)))
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select))))
+   (goto
+      (ready.btn
+         {minigame_mgr ready_screen})))
+{new_kr_panel
+   checkmic_minigame_onemic
+   (navigator
+      (vertical level0.sld ready.btn))
+   CHECKMIC_OPTIONS_BUTTON_FOCUS
+   CHECKMIC_ONEMIC_INIT
+   CHECKMIC_HANDLERS}
+{new_kr_screen
+   checkmic_minigame_onemic
+   (panels bg status left checkmic_minigame_onemic)
+   (focus checkmic_minigame_onemic)
+   CHECKMIC_MINIGAME_SCREEN_HANDLERS}
+{new_kr_panel
+   checkmic_minigame_twomic
+   (navigator
+      (vertical level0.sld level1.sld ready.btn))
+   CHECKMIC_OPTIONS_BUTTON_FOCUS
+   CHECKMIC_TWOMIC_INIT
+   CHECKMIC_HANDLERS}
+{new_kr_screen
+   checkmic_minigame_twomic
+   (panels bg status left checkmic_minigame_twomic)
+   (focus checkmic_minigame_twomic)
+   CHECKMIC_MINIGAME_SCREEN_HANDLERS}

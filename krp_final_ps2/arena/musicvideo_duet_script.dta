@@ -1,0 +1,408 @@
+CROWD
+DUET_LIGHTS
+DUET_SINGER
+STAGE_CHARS
+FX
+BOOT
+CAMERA_COMMON
+CAMERA_DUET_COMMON
+{func
+   check_shot
+   {if
+      {&&
+         {>= $db.music_tick $camera.next_tick}
+         {! $arena.game_over}}
+      {arena set_fade 0}
+      {if_else
+         {&&
+            $camera.excitement_change
+            {== $arena.excitement kExcitementBoot}}
+         {do
+            {arena set_fade 240}
+            {cam_boot}
+            {set $camera.excitement_change FALSE}
+            {set
+               $camera.next_tick
+               {'+' $db.music_tick 960}}}
+         {if_else
+            {< $arena.excitement kExcitementOkay}
+            {pick_shot_bad}
+            {if_else
+               {!= $camera.singer -1}
+               {pick_singer_shot}
+               {if_else
+                  {== $camera.unison_section TRUE}
+                  {pick_two_singer_shot}
+                  {pick_unison_shot}}}}}
+      {update_crowd}}}
+{func
+   update_shots
+   ($shots $num_ticks)
+   {do
+      ($shot $shots)
+      {set
+         $camera.next_tick
+         {'+' $db.music_tick $num_ticks}}
+      {set
+         $shot
+         {random_elem $shots}}
+      {eval $shot}
+      {remove_elem $shots $shot}
+      {if
+         {!
+            {size $shots}}
+         {cond
+            ({== $shots $camera.r_char_shots}
+               {insert_elems $camera.r_char_shots 0 $camedit.r_char_shots})
+            ({== $shots $camera.l_char_shots}
+               {insert_elems $camera.l_char_shots 0 $camedit.l_char_shots})
+            ({== $shots $camera.r_char_closeup_shots}
+               {insert_elems $camera.r_char_closeup_shots 0 $camedit.r_char_closeup_shots})
+            ({== $shots $camera.l_char_closeup_shots}
+               {insert_elems $camera.l_char_closeup_shots 0 $camedit.l_char_closeup_shots})
+            ({== $shots $camera.r_corner_shots}
+               {insert_elems $camera.r_corner_shots 0 $camedit.r_corner_shots})
+            ({== $shots $camera.l_corner_shots}
+               {insert_elems $camera.l_corner_shots 0 $camedit.l_corner_shots})
+            ({== $shots $camera.left_stage_shots}
+               {insert_elems $camera.left_stage_shots 0 $camedit.stage_shots_left})
+            ({== $shots $camera.right_stage_shots}
+               {insert_elems $camera.right_stage_shots 0 $camedit.stage_shots_right})
+            ({== $shots $camera.crowd_shots}
+               {insert_elems $camera.crowd_shots 0 $camedit.crowd_shots})
+            ({== $shots $camera.r_char_shots_great}
+               {insert_elems $camera.r_char_shots_great 0 $camedit.r_char_shots_great})
+            ({== $shots $camera.l_char_shots_great}
+               {insert_elems $camera.l_char_shots_great 0 $camedit.l_char_shots_great})
+            ({== $shots $camera.r_char_closeup_shots_great}
+               {insert_elems $camera.r_char_closeup_shots_great 0 $camedit.r_char_closeup_shots_great})
+            ({== $shots $camera.l_char_closeup_shots_great}
+               {insert_elems $camera.l_char_closeup_shots_great 0 $camedit.l_char_closeup_shots_great})
+            ({== $shots $camera.stage_shots_great}
+               {insert_elems $camera.stage_shots_great 0 $camedit.stage_shots_great})
+            ({== $shots $camera.r_corner_shots_great}
+               {insert_elems $camera.r_corner_shots_great 0 $camedit.r_corner_shots_great})
+            ({== $shots $camera.l_corner_shots_great}
+               {insert_elems $camera.l_corner_shots_great 0 $camedit.l_corner_shots_great})
+            ({== $shots $camera.crowd_shots_great}
+               {insert_elems $camera.crowd_shots_great 0 $camedit.crowd_shots_great})}
+         {if
+            {>
+               {size $shots}
+               1}
+            {remove_elem $shots $shot}}}}}
+{func
+   pick_stage_shot
+   {do
+      ($sshots)
+      {if_else
+         {>= $arena.excitement kExcitementGreat}
+         {do
+            {set $sshots $camera.stage_shots_great}
+            {set $camera.cur_stage_idx -1}}
+         {if_else
+            {== $camera.cur_stage_idx -1}
+            {if_else
+               {<
+                  {random_float}
+                  0.5}
+               {do
+                  {set $sshots $camera.left_stage_shots}
+                  {set $camera.cur_stage_idx 0}}
+               {do
+                  {set $sshots $camera.right_stage_shots}
+                  {set $camera.cur_stage_idx 1}}}
+            {if_else
+               {== $camera.cur_stage_idx 1}
+               {do
+                  {set $sshots $camera.left_stage_shots}
+                  {set $camera.cur_stage_idx 0}}
+               {do
+                  {set $sshots $camera.right_stage_shots}
+                  {set $camera.cur_stage_idx 1}}}}}
+      $sshots}}
+{func
+   pick_right_shot
+   {do
+      ($rshots)
+      {if_else
+         {>= $arena.excitement kExcitementGreat}
+         {set $rshots $camera.r_char_shots_great}
+         {set $rshots $camera.r_char_shots}}
+      {set
+         $rand_factor
+         {random_float}}
+      {if
+         {< $rand_factor 0.3}
+         {if_else
+            {>= $arena.excitement kExcitementGreat}
+            {set $rshots $camera.r_char_closeup_shots_great}
+            {set $rshots $camera.r_char_closeup_shots}}}
+      {if
+         {> $rand_factor 0.85}
+         {if_else
+            {>= $arena.excitement kExcitementGreat}
+            {set $rshots $camera.r_corner_shots_great}
+            {set $rshots $camera.r_corner_shots}}}
+      $rshots}}
+{func
+   pick_left_shot
+   {do
+      ($lshots)
+      {if_else
+         {>= $arena.excitement kExcitementGreat}
+         {set $lshots $camera.l_char_shots_great}
+         {set $lshots $camera.l_char_shots}}
+      {set
+         $rand_factor
+         {random_float}}
+      {if
+         {< $rand_factor 0.3}
+         {if_else
+            {>= $arena.excitement kExcitementGreat}
+            {set $lshots $camera.l_char_closeup_shots_great}
+            {set $lshots $camera.l_char_closeup_shots}}}
+      {if
+         {> $rand_factor 0.85}
+         {if_else
+            {>= $arena.excitement kExcitementGreat}
+            {set $lshots $camera.l_corner_shots_great}
+            {set $lshots $camera.l_corner_shots}}}
+      $lshots}}
+{func
+   pick_shot_bad
+   {do
+      ($shots)
+      {if_else
+         {== $camera.cur_stage_idx 1}
+         {do
+            {set $shots $camera.left_stage_shots}
+            {set $camera.cur_stage_idx 0}}
+         {do
+            {set $shots $camera.right_stage_shots}
+            {set $camera.cur_stage_idx 1}}}
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $camera.stage_shots}
+      {update_shots $shots 1920}}}
+{func
+   pick_singer_shot
+   {do
+      ($shots $shot)
+      {if_else
+         {== $camera.singer 1}
+         {if_else
+            {== $camera.current_shots $camera.l_char_shots}
+            {set $shots $camera.stage_shots}
+            {set $shots $camera.l_char_shots}}
+         {if_else
+            {== $camera.current_shots $camera.r_char_shots}
+            {set $shots $camera.stage_shots}
+            {set $shots $camera.r_char_shots}}}
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $shots}
+      {if
+         {&&
+            {== $shots $camera.stage_shots}
+            {<
+               {random_float}
+               0.25}}
+         {if_else
+            {>= $arena.excitement kExcitementGreat}
+            {set $shots $camera.crowd_shots_great}
+            {set $shots $camera.crowd_shots}}}
+      {if
+         {== $shots $camera.stage_shots}
+         {set
+            $shots
+            {pick_stage_shot}}}
+      {if
+         {== $shots $camera.r_char_shots}
+         {set
+            $shots
+            {pick_right_shot}}}
+      {if
+         {== $shots $camera.l_char_shots}
+         {set
+            $shots
+            {pick_left_shot}}}
+      {update_shots $shots 960}}}
+{func
+   pick_two_singer_shot
+   {do
+      ($shots $shot)
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $camera.stage_shots}
+      {if_else
+         {>= $arena.excitement kExcitementGreat}
+         {switch
+            $camera.singer_stage_index
+            (0
+               {set
+                  $shots
+                  {pick_stage_shot}}
+               {set $camera.singer_stage_index 1})
+            (1
+               {set $shots $camera.crowd_shots_great}
+               {set $camera.singer_stage_index 2})
+            (2
+               {set
+                  $shots
+                  {pick_stage_shot}}
+               {set $camera.singer_stage_index 1})
+            (3
+               {set $shots $camera.crowd_shots_great}
+               {set $camera.singer_stage_index 2})}
+         {switch
+            $camera.singer_stage_index
+            (0
+               {set
+                  $shots
+                  {pick_stage_shot}}
+               {set $camera.singer_stage_index 1})
+            (1
+               {set $shots $camera.l_corner_shots}
+               {set $camera.singer_stage_index 2})
+            (2
+               {set $shots $camera.crowd_shots}
+               {set $camera.singer_stage_index 3})
+            (3
+               {set $shots $camera.l_corner_shots}
+               {set $camera.singer_stage_index 0})}}
+      {update_shots $shots 960}}}
+{func
+   pick_unison_shot
+   {do
+      ($shot $shots)
+      {cond
+         ({== $camera.current_shots $camera.stage_shots}
+            {if_else
+               {== $camera.last_shots $camera.l_char_shots}
+               {set $shots $camera.r_char_shots}
+               {set $shots $camera.l_char_shots}})
+         ({== $camera.current_shots $camera.r_char_shots}
+            {if_else
+               {<
+                  {random_float}
+                  0.8}
+               {set $shots $camera.stage_shots}
+               {set $shots $camera.l_char_shots}})
+         ({== $camera.current_shots $camera.l_char_shots}
+            {if_else
+               {<
+                  {random_float}
+                  0.8}
+               {set $shots $camera.stage_shots}
+               {set $shots $camera.r_char_shots}})}
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $shots}
+      {set
+         $rand_factor
+         {random_float}}
+      {if
+         {== $shots $camera.stage_shots}
+         {if_else
+            {< $rand_factor 0.25}
+            {if_else
+               {>= $arena.excitement kExcitementGreat}
+               {set $shots $camera.crowd_shots_great}
+               {set $shots $camera.crowd_shots}}
+            {set
+               $shots
+               {pick_stage_shot}}}}
+      {if
+         {== $shots $camera.r_char_shots}
+         {set
+            $shots
+            {pick_right_shot}}}
+      {if
+         {== $shots $camera.l_char_shots}
+         {set
+            $shots
+            {pick_left_shot}}}
+      {update_shots $shots 960}}}
+{arena
+   add_handlers
+   (init
+      {set $camera.singer_left_index 0}
+      {set $camera.singer_right_index 0}
+      {set $camera.singer_stage_index 1}
+      {set $camera.cur_stage_idx -1}
+      {set
+         $camera.left_stage_shots
+         {array 0}}
+      {set
+         $camera.right_stage_shots
+         {array 0}}
+      {set
+         $camera.l_char_closeup_shots
+         {array 0}}
+      {set
+         $camera.r_char_closeup_shots
+         {array 0}}
+      {set
+         $camera.l_char_closeup_shots_great
+         {array 0}}
+      {set
+         $camera.r_char_closeup_shots_great
+         {array 0}}
+      {set
+         $camera.l_char_shots_great
+         {array 0}}
+      {set
+         $camera.r_char_shots_great
+         {array 0}}
+      {set
+         $camera.stage_shots_great
+         {array 0}}
+      {set
+         $camera.l_corner_shots_great
+         {array 0}}
+      {set
+         $camera.r_corner_shots_great
+         {array 0}}
+      {set
+         $camera.crowd_shots_great
+         {array 0}}
+      {insert_elems $camera.l_char_closeup_shots 0 $camedit.l_char_closeup_shots}
+      {insert_elems $camera.r_char_closeup_shots 0 $camedit.r_char_closeup_shots}
+      {insert_elems $camera.left_stage_shots 0 $camedit.stage_shots_left}
+      {insert_elems $camera.right_stage_shots 0 $camedit.stage_shots_right}
+      {insert_elems $camera.l_char_closeup_shots_great 0 $camedit.l_char_closeup_shots_great}
+      {insert_elems $camera.r_char_closeup_shots_great 0 $camedit.r_char_closeup_shots_great}
+      {insert_elems $camera.l_char_shots_great 0 $camedit.l_char_shots_great}
+      {insert_elems $camera.r_char_shots_great 0 $camedit.r_char_shots_great}
+      {insert_elems $camera.stage_shots_great 0 $camedit.stage_shots_great}
+      {insert_elems $camera.l_corner_shots_great 0 $camedit.l_corner_shots_great}
+      {insert_elems $camera.r_corner_shots_great 0 $camedit.r_corner_shots_great}
+      {insert_elems $camera.crowd_shots_great 0 $camedit.crowd_shots_great}
+      {arena set_fade 240}
+      {cam_begin}
+      {set $camera.last_shots $camera.l_char_shots}
+      {set $camera.current_shots $camera.stage_shots}
+      {set $camera.probability 1.0}
+      {set $camera.excitement_change FALSE}
+      {set
+         $camera.next_tick
+         {'+' $db.music_tick 5760}})
+   (terminate
+      {set $camera.left_stage_shots 0}
+      {set $camera.right_stage_shots 0}
+      {set $camera.l_char_closeup_shots 0}
+      {set $camera.r_char_closeup_shots 0}
+      {set $camera.l_char_shots_great 0}
+      {set $camera.r_char_shots_great 0}
+      {set $camera.l_char_closeup_shots_great 0}
+      {set $camera.r_char_closeup_shots_great 0}
+      {set $camera.stage_shots_great 0}
+      {set $camera.l_corner_shots_great 0}
+      {set $camera.r_corner_shots_great 0}
+      {set $camera.crowd_shots_great 0}
+      {delete check_shot}
+      {delete update_shots}
+      {delete pick_stage_shot}
+      {delete pick_right_shot}
+      {delete pick_left_shot}
+      {delete pick_shot_bad}
+      {delete pick_singer_shot}
+      {delete pick_two_singer_shot}
+      {delete pick_unison_shot})}
