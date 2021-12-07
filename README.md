@@ -19,22 +19,22 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Karaoke Revolution Volume 3** | PS2 | TBD | TBD |
 | **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | Available<br>Available<br>Available |
 | **Eyetoy: Antigrav** | PS2 | TBD | TBD |
-| **Guitar Hero** | PS2 | Known (DTB) | Extracted |
+| **Guitar Hero** | PS2 | Known (old-style DTB) | Extracted |
 | **Guitar Hero II** | PS2<br>Xbox 360 | Known (old-style DTB)<br>Known (new-style DTB) | Extracted<br>Available |
 | **Guitar Hero Encore: Rocks the 80's** | PS2 | Known (old-style DTB) | Extracted |
-| **Rock Band** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB)<br>*(DTAs for the<br>PS2 version available)* | Extracted<br>Available<br>Available<br>Available |
+| **Rock Band** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB)<br>*(DTAs for the<br>PS2 version available)* | Extracted<br>Extracted<br>Available<br>Available |
 | **Rock Band Track Pack Volume 1** | PS2<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available |
-| **AC/DC Live: Rock Band Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
+| **AC/DC Live: Rock Band Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available<br>Available<br>Available |
 | **Rock Band Track Pack Volume 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available |
-| **Rock Band Track Pack: Classic Rock** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
-| **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
-| **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
+| **Rock Band Track Pack: Classic Rock** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available<br>Available<br>Available |
+| **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available<br>Available<br>Available |
+| **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available<br>Available<br>Available |
 | **Rock Band Country Track Pack 2** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
-| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Available<br>Available<br>Available |
-| **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
+| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Extracted<br>Available<br>Available |
+| **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Available<br>Available |
 | **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
-| **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
-| **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
+| **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Available<br>Available |
+| **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Available<br>Available |
 | **Rock Band Blitz** | PS3<br>Xbox 360 | Known (new-style DTB) | Available<br>Available |
 
 ### Prototypes and Demos
