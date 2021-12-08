@@ -15,8 +15,8 @@ Here are some tables for games that fit within our scope and where they're at as
 | **FreQuency** | PS2 | Known (Python 1) | Extracted |
 | **Amplitude** | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (DTA) | Not available<br>Available |
-| **Karaoke Revolution Volume 2** | PS2 | TBD | TBD |
-| **Karaoke Revolution Volume 3** | PS2 | TBD | TBD |
+| **Karaoke Revolution Volume 2** PS2 | Unknown | Not available |
+| **Karaoke Revolution Volume 3** PS2 | Unknown | Not available |
 | **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | Available<br>Available<br>Available |
 | **Eyetoy: Antigrav** | PS2 | TBD | TBD |
 | **Guitar Hero** | PS2 | Known (old-style DTB) | Extracted |
@@ -30,7 +30,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available<br>Available<br>Available |
 | **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Available<br>Available<br>Available |
 | **Rock Band Country Track Pack 2** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
-| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Extracted<br>Available<br>Available |
+| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Available<br>Extracted<br>Available<br>Extracted |
 | **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Available<br>Available |
 | **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Available<br>Available<br>Available |
 | **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Available<br>Available |
