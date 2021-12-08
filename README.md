@@ -15,8 +15,8 @@ Here are some tables for games that fit within our scope and where they're at as
 | **FreQuency** | PS2 | Known (Python 1) | Extracted |
 | **Amplitude** | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (DTA) | Not available<br>Available |
-| **Karaoke Revolution Volume 2** PS2 | Unknown | Not available |
-| **Karaoke Revolution Volume 3** PS2 | Unknown | Not available |
+| **Karaoke Revolution Volume 2** | PS2 | Unknown | Not available |
+| **Karaoke Revolution Volume 3** | PS2 | Unknown | Not available |
 | **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | Available<br>Available<br>Available |
 | **Eyetoy: Antigrav** | PS2 | TBD | TBD |
 | **Guitar Hero** | PS2 | Known (old-style DTB) | Extracted |
