@@ -1,0 +1,687 @@
+{new
+   UIPanel
+   leaderboards_panel
+   (file
+      "leaderboards.milo")
+   (focus leaderboard.lst)
+   LIMIT_TO_SESSION_IF_LEADER
+   (read_done TRUE)
+   (limits_array
+      ())
+   (login_status kDesirable)
+   (set_limits
+      ($a)
+      {set
+         [limits_array]
+         $a})
+   (enter
+      {leaderboards create}
+      {leaderboards
+         set_page_size
+         {leaderboard.lst num_display}}
+      {$this
+         update_warning
+         ""}
+      {leaderboard.lst
+         set_provider
+         {leaderboards get_provider}}
+      {leaderboards
+         set_limits
+         [limits_array]}
+      {leaderboards enumerate})
+   (update_leaderboard
+      {leaderboard.lst
+         set_provider
+         {leaderboards get_provider}}
+      {do
+         ($user_pos
+            {leaderboards get_user_pos})
+         {if
+            {> $user_pos 0}
+            {leaderboard.lst set_selected $user_pos}}})
+   (update_warning
+      ($msg)
+      {warning.lbl set_localized $msg})
+   (exit
+      {band_ui_sink hide_network_busy_icon}
+      {leaderboards cancel_enumerate}
+      {leaderboard.lst set_showing FALSE}
+      {leaderboard.lst set_provider leaderboard.lst}
+      {leaderboards destroy})
+   (BUTTON_DOWN_MSG
+      {cond
+         ({&&
+               {== $button kPad_R1}
+               {leaderboards enum_complete}}
+            {leaderboards rotate_filter}
+            {leaderboards enumerate})
+         ({&&
+               {== $button kPad_DDown}
+               {==
+                  {leaderboard.lst selected_pos}
+                  {-
+                     {leaderboard.lst num_display}
+                     1}}}
+            {leaderboards request_new_page TRUE})
+         ({&&
+               {== $button kPad_DUp}
+               {==
+                  {leaderboard.lst selected_pos}
+                  0}}
+            {leaderboards request_new_page FALSE})
+         (TRUE kDataUnhandled)})
+   (SELECT_START_MSG
+      {switch
+         $component
+         (leaderboard.lst
+            {leaderboards
+               select_row
+               {leaderboard.lst selected_pos}
+               $player_num})})
+   (poll
+      {if
+         {&&
+            [read_done]
+            {!
+               {leaderboards enum_complete}}}
+         {$this show_async_read}}
+      {if
+         {&&
+            {!
+               [read_done]}
+            {leaderboards enum_complete}}
+         {$this hide_async_read}
+         {leaderboard.lst set_dirty}})
+   (show_async_read
+      {set
+         [read_done]
+         FALSE}
+      {band_ui_sink show_network_busy_icon})
+   (hide_async_read
+      {set
+         [read_done]
+         TRUE}
+      {band_ui_sink hide_network_busy_icon})}
+{new
+   UIPanel
+   leaderboards_netwatcher_panel
+   (file
+      "")
+   (enter
+      {platform_mgr add_sink $this connection_status_changed}
+      {server add_sink $this server_status_changed})
+   (return_screen main_community_screen)
+   (exit
+      {platform_mgr remove_sink $this connection_status_changed}
+      {server remove_sink $this server_status_changed})
+   (connection_status_changed
+      ($connected)
+      {band_ui_sink trigger_event leaderboard_error})
+   (server_status_changed
+      ($connected)
+      {band_ui_sink trigger_event leaderboard_error})}
+{new
+   UIPanel
+   leaderboards_lower3rd_panel
+   (file
+      "leaderboards_lower3rd.milo")
+   (enter
+      {$this update_titles}
+      {$this
+         update_filter
+         {leaderboards get_filter}})
+   (update_titles
+      {event.lbl
+         set_localized
+         ""}
+      {song.lbl
+         set_localized
+         ""}
+      {type.lbl
+         set_localized
+         ""}
+      {switch
+         {leaderboards get_type}
+         (kPlayerSong
+            {if_else
+               {==
+                  {leaderboards get_song_sym}
+                  career}
+               {song.lbl
+                  set_localized
+                  {localize career}}
+               {song.lbl
+                  set_localized
+                  {song_mgr
+                     song_name
+                     {leaderboards get_song_sym}}}}
+            {event.lbl
+               set_localized
+               {localize player_song}}
+            {type.lbl
+               set_localized
+               {leaderboards get_track_type_char}})
+         (kHTHProRanked
+            {event.lbl
+               set_localized
+               {localize hth_pro}}
+            {type.lbl
+               set_localized
+               {leaderboards get_track_type_char}})
+         (kHTHRanked
+            {event.lbl
+               set_localized
+               {localize hth_normal}}
+            {type.lbl
+               set_localized
+               {leaderboards get_track_type_char}})
+         (kBandSong
+            {if_else
+               {==
+                  {leaderboards get_song_sym}
+                  career}
+               {song.lbl
+                  set_localized
+                  {localize career}}
+               {song.lbl
+                  set_localized
+                  {song_mgr
+                     song_name
+                     {leaderboards get_song_sym}}}}
+            {event.lbl
+               set_localized
+               {localize band_song}})
+         (kBandFans
+            {event.lbl
+               set_localized
+               {localize band_fans}})})
+   (update_filter
+      ($type)
+      {switch
+         $type
+         (kByGamer
+            {filter_title.lbl
+               set_localized
+               {localize filter_gamer}})
+         (kByGamerRank
+            {filter_title.lbl
+               set_localized
+               {localize filter_gamer}})
+         (kByRank
+            {filter_title.lbl
+               set_localized
+               {localize filter_rank}})
+         (kByFriends
+            {filter_title.lbl
+               set_localized
+               {localize filter_friends}})})}
+{new
+   UIScreen
+   leaderboards_screen
+   (panels meta postsong_sfx_panel movie_panel leaderboards_panel leaderboards_netwatcher_panel leaderboards_lower3rd_panel helpbar)
+   (focus leaderboards_panel)
+   (helpbar
+      {switch
+         {leaderboards get_type}
+         #ifdef HX_PS3
+         (kPlayerSong
+            (helpbar_back '' helpbar_changefilter))
+         (kHTHProRanked
+            (helpbar_back '' helpbar_changefilter))
+         (kHTHRanked
+            (helpbar_back '' helpbar_changefilter))
+         #else
+         (kPlayerSong
+            (helpbar_back helpbar_viewgamercard helpbar_changefilter))
+         (kHTHProRanked
+            (helpbar_back helpbar_viewgamercard helpbar_changefilter))
+         (kHTHRanked
+            (helpbar_back helpbar_viewgamercard helpbar_changefilter))
+         #endif
+         (kBandSong
+            (helpbar_back helpbar_viewband helpbar_changefilter))
+         (kBandFans
+            (helpbar_back helpbar_viewband helpbar_changefilter))})
+   (back
+      {switch
+         {leaderboards get_type}
+         (kPlayerSong leaderboards_selsong_screen)
+         (kBandSong leaderboards_selsong_screen)
+         (kHTHProRanked leaderboards_seltrack_screen)
+         (kHTHRanked leaderboards_seltrack_screen)
+         {gamemode get community_screen}})
+   (update_filter
+      ($type)
+      {leaderboards_lower3rd_panel update_filter $type})
+   (BUTTON_DOWN_MSG
+      {do
+         ($list
+            {leaderboards_panel find leaderboard.lst})
+         {if_else
+            {&&
+               {$list is_scrolling}
+               {'||'
+                  {== $button kPad_DDown}
+                  {== $button kPad_DUp}}}
+            TRUE
+            kDataUnhandled}})}
+{new
+   UIScreen
+   leaderboards_band_profile_screen
+   (panels remote_band_profile_panel)
+   (focus remote_band_profile_panel)
+   LIMIT_TO_SESSION_IF_LEADER
+   (BUTTON_DOWN_MSG
+      {if
+         {== $button kPad_Tri}
+         {ui pop_screen}})}
+{new
+   UIPanel
+   leaderboards_seltrack_panel
+   (file
+      "leaderboards_seltrack.milo")
+   (focus guitar.btn)
+   (login_status kDesirable)
+   LIMIT_TO_SESSION_IF_LEADER
+   (SELECT_MSG
+      {leaderboards
+         set_track_type
+         {switch
+            $component
+            (guitar.btn kTrackGuitar)
+            (bass.btn kTrackBass)
+            (drums.btn kTrackDrum)
+            (vocals.btn kTrackVocals)}}
+      {if_else
+         {==
+            {leaderboards get_type}
+            kPlayerSong}
+         {do
+            {leaderboards set_song_sym ''}
+            {ui goto_screen leaderboards_selsong_screen}}
+         {ui goto_screen leaderboards_screen}})}
+{new
+   UIScreen
+   leaderboards_seltrack_screen
+   (panels meta postsong_sfx_panel movie_panel leaderboards_seltrack_panel leaderboards_netwatcher_panel helpbar)
+   (focus leaderboards_seltrack_panel)
+   (helpbar
+      (back select))
+   (back
+      {gamemode get community_screen})
+   LIMIT_TO_SESSION_IF_LEADER}
+{new
+   UIScreen
+   leaderboards_selsong_screen
+   (panels meta postsong_sfx_panel movie_panel leaderboard_selsong_panel leaderboards_netwatcher_panel selsong_lower3rd_panel helpbar)
+   (focus leaderboard_selsong_panel)
+   (helpbar
+      (helpbar_back helpbar_choosesong helpbar_songfilter))}
+{new
+   SessionPanel
+   community_panel
+   #ifdef HX_PS3
+   (file
+      "community_ps3.milo")
+   (focus getcode.btn)
+   #else
+   (file
+      "community.milo")
+   (focus leaderboards.btn)
+   #endif
+   (motd_done FALSE)
+   (motd_message
+      "")
+   (webcode_done FALSE)
+   (webcode
+      "")
+   (banner_message
+      "")
+   (load
+      {main_panel set mode_focus community.btn})
+   (set_motd
+      ($message)
+      {set
+         [motd_message]
+         $message}
+      {set
+         [banner_message]
+         [motd_message]}
+      {set
+         [motd_done]
+         TRUE}
+      {if
+         {$this is_up}
+         {$this update_motd}})
+   (update_motd
+      {cond
+         ({!
+               {platform_mgr is_connected}}
+            {motd.lbl set text_token motd_not_signed_in}
+            {motd.lbl set_showing TRUE})
+         ({!=
+               {rock_central state}
+               kRCOnline}
+            {motd.lbl set text_token motd_no_rock_central}
+            {motd.lbl set_showing TRUE})
+         ({&&
+               {server is_connected}
+               [motd_done]}
+            {motd.lbl
+               set_localized
+               [banner_message]}
+            {motd.lbl set_showing TRUE})
+         (TRUE
+            {motd.lbl set_showing FALSE})})
+   (set_webcode
+      ($message)
+      #ifdef HX_PS3
+      {set
+         [webcode]
+         $message}
+      {set
+         [webcode_done]
+         TRUE}
+      {if
+         {$this is_up}
+         {$this update_button_status}}
+      #endif)
+   (enter
+      {$this update_motd}
+      {leaderboards clear_type}
+      {session clear}
+      {platform_mgr add_sink $this connection_status_changed}
+      {server add_sink $this server_status_changed}
+      {$this update_button_status})
+   (exit
+      {platform_mgr remove_sink $this connection_status_changed}
+      {server remove_sink $this server_status_changed}
+      {set
+         [banner_message]
+         [motd_message]})
+   (connection_status_changed
+      ($connected)
+      {$this update_button_status}
+      {$this update_motd})
+   (server_status_changed
+      ($connected)
+      {$this update_button_status}
+      {$this update_motd})
+   (update_button_status
+      #ifdef HX_PS3
+      {if_else
+         {platform_mgr is_connected}
+         {$this enable managefriends.btn}
+         {$this disable managefriends.btn}}
+      {if_else
+         {server is_connected}
+         {do
+            {if_else
+               [webcode_done]
+               {$this enable getcode.btn}
+               {$this disable getcode.btn}}
+            {$this enable checkinvites.btn}}
+         {do
+            {$this disable getcode.btn}
+            {$this disable checkinvites.btn}}}
+      #endif
+      {if_else
+         {server is_connected}
+         {$this enable leaderboards.btn}
+         {$this disable leaderboards.btn}})
+   (login_status kDesirable)
+   (SELECT_START_MSG
+      {switch
+         $component
+         (checkinvites.btn
+            {platform_mgr check_mailbox})
+         (managefriends.btn
+            {platform_mgr show_friends -1})
+         (specialfeatures.btn
+            {ui goto_screen community_specialfeatures_screen})
+         #ifdef HX_PS3
+         (getcode.btn
+            {if
+               [webcode_done]
+               {set
+                  [banner_message]
+                  {sprintf
+                     {localize website_code_msg}
+                     [webcode]}}
+               {$this update_motd}})
+         #endif
+         (leaderboards.btn
+            {if_else
+               {!
+                  {platform_mgr is_player_signed_in $player_num}}
+               {do
+                  {main_leaderboard_signin_screen set player_num $player_num}
+                  {ui push_screen main_leaderboard_signin_screen}}
+               {do
+                  {gamemode set_mode community_leaderboards $player_num}
+                  {leaderboards_netwatcher_panel set return_screen main_community_screen}
+                  {$this wait_for_session_ready}
+                  {session_mgr
+                     add_local_player
+                     $player_num
+                     {gamecfg get_controller_type_from_controller $player_num}}}})})
+   (session_ready_complete_msg
+      {gamecfg auto_assign_missing_slots}
+      {goto_after_network_connect main_leaderboard_screen FALSE})}
+{new
+   UIScreen
+   main_community_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel community_panel fx)
+   (focus community_panel)
+   (back main_screen)
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {== main_leaderboard_screen $old_screen}
+         {session clear}
+         {game reset_config}}
+      {main_panel attempt_to_autoload}
+      kDataUnhandled)}
+#define COMMON_LEADERBOARD_PANEL
+((focus solo.btn)
+   LIMIT_TO_SESSION_IF_LEADER
+   (enter
+      {leaderboards clear_type})
+   (login_status kDesirable)
+   (SELECT_MSG
+      {leaderboards set_player_num $player_num}
+      {switch
+         $component
+         (solo.btn
+            {leaderboards set_type kPlayerSong}
+            {ui goto_screen leaderboards_seltrack_screen})
+         (hth_pro_ranked.btn
+            {leaderboards set_type kHTHProRanked}
+            {ui goto_screen leaderboards_seltrack_screen})
+         (hth_ranked.btn
+            {leaderboards set_type kHTHRanked}
+            {ui goto_screen leaderboards_seltrack_screen})
+         (band_song.btn
+            {leaderboards set_type kBandSong}
+            {leaderboards set_band_from_tour}
+            {ui goto_screen leaderboards_selsong_screen})
+         (band_fans.btn
+            {leaderboards set_type kBandFans}
+            {leaderboards set_band_from_tour}
+            {ui goto_screen leaderboards_screen})}))
+{new
+   UIPanel
+   community_leaderboard_panel
+   #ifdef HX_PS3
+   (file
+      "leaderboard_menu_ps3.milo")
+   #else
+   (file
+      "leaderboard_menu.milo")
+   #endif
+   COMMON_LEADERBOARD_PANEL}
+{new
+   UIScreen
+   community_leaderboard_screen
+   (panels meta movie_panel community_leaderboard_panel leaderboards_netwatcher_panel helpbar)
+   (focus community_leaderboard_panel)
+   (back main_community_screen)
+   (helpbar
+      (back select))}
+{new
+   UIPanel
+   main_leaderboard_panel
+   #ifdef HX_PS3
+   (file
+      "main_leaderboard_ps3.milo")
+   #else
+   (file
+      "main_leaderboard.milo")
+   #endif
+   COMMON_LEADERBOARD_PANEL}
+{new
+   UIScreen
+   main_leaderboard_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_leaderboard_panel leaderboards_netwatcher_panel fx)
+   (focus main_leaderboard_panel)
+   (back main_community_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER}
+{new
+   UIPanel
+   community_specialfeatures_panel
+   (file
+      "community_specialfeatures.milo")
+   (focus featurette_0.btn)
+   (enter
+      {leaderboards clear_type})
+   (SELECT_MSG
+      {meta music_stop}
+      {platform_mgr disable_xmp}
+      {switch
+         $component
+         (credits.btn
+            {ui goto_screen credits_movie_screen})
+         (featurette_0.btn
+            {featurette_panel set featurette_num 0}
+            {ui goto_screen featurette_screen})
+         (featurette_1.btn
+            {featurette_panel set featurette_num 1}
+            {ui goto_screen featurette_screen})
+         (featurette_2.btn
+            {featurette_panel set featurette_num 2}
+            {ui goto_screen featurette_screen})
+         (featurette_3.btn
+            {featurette_panel set featurette_num 3}
+            {ui goto_screen featurette_screen})})}
+{new
+   UIScreen
+   community_specialfeatures_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel community_specialfeatures_panel fx)
+   (focus community_specialfeatures_panel)
+   (back main_community_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER}
+{new
+   MoviePanel
+   featurette_panel
+   (featurette_num -1)
+   (preload FALSE)
+   (audio TRUE)
+   (loop FALSE)
+   (update_presence TRUE)
+   (videos
+      {sprintf
+         "featurette_%d"
+         {featurette_panel get featurette_num}})
+   (movie_done
+      {ui goto_screen community_specialfeatures_screen})
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $button kPad_Start}
+            {== $button kPad_X}
+            {== $button kPad_Tri}}
+         {ui goto_screen community_specialfeatures_screen}})}
+{new
+   UIScreen
+   featurette_screen
+   (panels meta featurette_panel)
+   (focus featurette_panel)}
+{new
+   MoviePanel
+   credits_movie_panel
+   (preload FALSE)
+   (audio TRUE)
+   (loop FALSE)
+   (update_presence TRUE)
+   (videos win_credits)
+   (movie_done
+      {ui goto_screen credits_screen})
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $button kPad_Start}
+            {== $button kPad_X}
+            {== $button kPad_Tri}}
+         {ui goto_screen community_specialfeatures_screen}})}
+{new
+   UIScreen
+   credits_movie_screen
+   (panels meta credits_movie_panel)
+   (focus credits_movie_panel)}
+{new
+   UIScreen
+   tour_hub_community_screen
+   (panels meta practice_space_panel community_leaderboard_panel leaderboards_netwatcher_panel tour_band_lower3rd_panel helpbar)
+   (show_char
+      ($player_num)
+      FALSE)
+   (focus community_leaderboard_panel)
+   LIMIT_TO_SESSION_IF_LEADER
+   (back
+      {if_else
+         {gamemode is_solo}
+         tour_solo_hub_screen
+         tour_band_hub_screen})
+   (helpbar
+      (back select))
+   (enter
+      {practice_space_panel
+         select_cam
+         "leaderboards"})}
+{new
+   UIScreen
+   main_leaderboard_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_leaderboard_need_to_signin}
+         {localize main_leaderboard_signin_button}
+         {localize main_leaderboard_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   UIScreen
+   leaderboards_not_available_screen
+   (panels dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {if_else
+            {platform_mgr is_connected}
+            {localize_token leaderboards_not_available_rock_central}
+            {localize_token leaderboards_not_available_connection}}})
+   (SELECT_MSG
+      {ui pop_screen})}
