@@ -1,0 +1,121 @@
+{new
+   ResultsLeaderboardPanel
+   leaderboard_results_panel
+   (file
+      "leaderboard_results.milo")
+   (started_animation FALSE)
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Confirm
+            {shell_sfx play_select}
+            {if_else
+               {trial_mgr get_trial_mode}
+               {ui goto_screen upsell_splash_screen}
+               {ui
+                  goto_screen
+                  {results_shared_panel get next_screen}}}
+            {shell_sfx play_select})
+         (kAction_PageDown)
+         (kAction_Cancel
+            {if_else
+               {trial_mgr get_trial_mode}
+               {transition_to results_breakdown_screen}
+               {transition_to career_results_screen}}
+            {shell_sfx play_back})
+         (kAction_PageUp)})
+   (game_results 0)
+   (set_results
+      ($game_results)
+      {$this set game_results $game_results})
+   (enter
+      {if
+         {!
+            [started_animation]}
+         {$this set started_animation TRUE}}
+      {UIList.lst
+         set_showing
+         [got_leaderboard]}
+      {unavailable.grp
+         set_showing
+         {!
+            [got_leaderboard]}}
+      {if
+         [got_leaderboard]
+         {UIList.lst
+            set_provider
+            {[my_leaderboard]
+               get_mini_leaderboard_provider}}
+         {UIList.lst refresh}
+         {[my_leaderboard]
+            set_highlight_by_online_id
+            UIList.lst
+            leaderboard_results_panel}}
+      {score_text.lbl
+         set
+         showing
+         [beat_high_score]}
+      {switch
+         [lb_mode]
+         (kLeaderboardMode_Challenge
+            {lb_title.lbl set_token_fmt rec_type_desc_challenge}
+            {next_rival.lbl set_token_fmt ''}
+            {switch
+               [challenge_status]
+               (kChallengeStatusWinning
+                  {beat_rival.lbl
+                     set_token_fmt
+                     (results_winning_challenge)})
+               (kChallengeStatusLosing
+                  {beat_rival.lbl
+                     set_token_fmt
+                     (results_losing_challenge
+                        [challenge_opponent])})
+               {beat_rival.lbl set_token_fmt ''}})
+         (kLeaderboardMode_Friend
+            {lb_title.lbl set text_token friend_rank}
+            {if_else
+               {>
+                  [num_friends_beaten]
+                  0}
+               {if_else
+                  {==
+                     [num_friends_beaten]
+                     1}
+                  {beat_rival.lbl
+                     set_token_fmt
+                     (results_beat_one_friend
+                        [friend_you_beat])}
+                  {beat_rival.lbl
+                     set_token_fmt
+                     (results_beat_multiple_friends
+                        [friend_you_beat]
+                        {-
+                           [num_friends_beaten]
+                           1})}}
+               {beat_rival.lbl set text_token results_beat_no_friends}}
+            {if_else
+               {==
+                  [points_to_beat_next_friend]
+                  0}
+               {next_rival.lbl set text_token results_first_among_friends}
+               {next_rival.lbl
+                  set_token_fmt
+                  (results_points_to_beat_next_friend
+                     [points_to_beat_next_friend]
+                     [friend_ahead_of_you])}})
+         {lb_title.lbl set text_token global_rank}
+         {beat_rival.lbl set text_token ''}
+         {next_rival.lbl set text_token ''}})
+   (poll
+      {if
+         {==
+            [lb_mode]
+            kLeaderboardMode_Challenge}
+         {$this update_challenge_time_remaining next_rival.lbl challenge_countdown_format}})}
+{new
+   UIScreen
+   leaderboard_results_screen
+   (panels background_night_panel results_shared_panel results_cache_panel game_panel game_fade_out_panel leaderboard_results_panel)
+   (header_index 14)
+   (focus leaderboard_results_panel)}

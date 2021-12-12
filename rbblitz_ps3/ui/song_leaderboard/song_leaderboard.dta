@@ -1,0 +1,180 @@
+{new
+   LeaderboardPanel
+   song_leaderboard_panel
+   (file
+      "song_leaderboard.milo")
+   (current_lb_mode kLeaderboardMode_Friend)
+   (swap_panel 0)
+   (init_leaderboard_metadata
+      ($album_tex $song_name $artist_name $genre_token $year $is_cover)
+      {$this update_album_tex $album_tex}
+      {song_name.lbl set_song_name_by_str $song_name}
+      {song_artist_name.lbl set_artist_name_with_cover $artist_name $is_cover}
+      {song_genreyear.lbl set_genre_and_year $genre_token $year})
+   (update_album_tex
+      ($album_tex)
+      {album.mat set diffuse_tex $album_tex})
+   (update_header
+      {switch
+         [current_lb_mode]
+         (kLeaderboardMode_Global
+            {$this set_header header_songleaders_global inline_help_toggle_player})
+         (kLeaderboardMode_Player
+            {$this set_header header_songleaders_player inline_help_toggle_friend})
+         (kLeaderboardMode_Friend
+            {$this set_header header_songleaders_friends inline_help_toggle_global})
+         {print
+            "career_leaderboard_panel::update_header - Unknown Leaderboard Mode encountered!\n"}})
+   (set_header
+      ($header_token $inline_help_token)
+      {do
+         ($header_label
+            {background_panel find lb_header.lbl})
+         {$header_label set_token_fmt $header_token}
+         {InlineHelp_leaderboards.ihp set_action_token kAction_ShellOption $inline_help_token}})
+   (reset_album_texture
+      {album.mat set diffuse_tex default_album_keep.tex})
+   (commit_leaderboard_transition
+      ($initial_mode)
+      {$this set current_lb_mode $initial_mode}
+      {$this update_header}
+      {$this
+         retreive_leaderboard
+         [current_lb_mode]})
+   (go_to_leaderboard
+      ($ret_panel $ret_panel_name_token)
+      {$this set swap_panel $ret_panel}
+      {{background_panel find MainMenu.grp}
+         set_showing
+         FALSE}
+      {{background_panel find Leaderboards.grp}
+         set_showing
+         TRUE}
+      {[swap_panel]
+         set_showing
+         FALSE}
+      {$this set_showing TRUE}
+      {{ui current_screen}
+         set_focus_panel
+         $this}
+      {data_mine_mgr
+         add_event
+         view_song_leaderboard
+         (("from_screen"
+               {{ui current_screen}
+                  get
+                  name})
+            ("song_id"
+               {$this get_selected_song_id}))})
+   (return_from_leaderboard
+      {{background_panel find MainMenu.grp}
+         set_showing
+         TRUE}
+      {{background_panel find Leaderboards.grp}
+         set_showing
+         FALSE}
+      {[swap_panel]
+         set_showing
+         TRUE}
+      {$this set_showing FALSE}
+      {[swap_panel]
+         on_return_from_song_leaderboard}
+      {{ui current_screen}
+         set_focus_panel
+         [swap_panel]}
+      {$this set swap_panel 0})
+   (enter
+      {leaderboards.lst
+         set_provider
+         {$this get_leaderboard_provider}}
+      {$this
+         set_focus
+         ""}
+      #ifndef HX_XBOX
+      {InlineHelp_leaderboards.ihp clear_action_token kAction_Confirm}
+      {fb_id.lbl set_showing FALSE}
+      #endif)
+   (exit
+      {{background_panel find Leaderboards.grp}
+         set_showing
+         FALSE})
+   (on_leaderboard_updated
+      ($status)
+      {switch
+         $status
+         (kLeaderboardStatus_Requesting
+            {$this
+               set_focus
+               ""}
+            {leaderboard_mode.ep set display_state loading})
+         (kLeaderboardStatus_Success
+            {if_else
+               {>
+                  {leaderboards.lst num_data}
+                  0}
+               {do
+                  {leaderboard_mode.ep set display_state visible}
+                  {leaderboards.lst refresh}
+                  {if_else
+                     {==
+                        [current_lb_mode]
+                        kLeaderboardMode_Global}
+                     {do
+                        {leaderboards.lst set_selected 0}}
+                     {do
+                        ($center_idx
+                           {-
+                              {round
+                                 {/
+                                    {leaderboards.lst get display_num}
+                                    2}}
+                              1})
+                        ($player_idx
+                           {$this get_player_index})
+                        ($first_showing_raw
+                           {- $player_idx $center_idx})
+                        ($first_showing_idx
+                           {if_else
+                              {< $first_showing_raw 0}
+                              0
+                              $first_showing_raw})
+                        {leaderboards.lst set_selected $player_idx $first_showing_idx}}}
+                  {$this set_focus leaderboards.lst}}
+               {do
+                  {leaderboard_mode.ep set display_state empty}}})
+         (kLeaderboardStatus_Failure
+            {do
+               {leaderboard_mode.ep set display_state unavailable}})})
+   (show_error
+      ($error_token)
+      {error_popup_panel show_popup $error_token song_leaderboard_panel})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {do
+               {$this reset_album_texture}
+               {$this cancel_outstanding_requests}
+               {$this return_from_leaderboard}})
+         (kAction_ShellOption
+            {do
+               {$this
+                  set
+                  current_lb_mode
+                  {mod
+                     {'+'
+                        [current_lb_mode]
+                        1}
+                     3}}
+               {$this update_header}
+               {$this
+                  retreive_leaderboard
+                  [current_lb_mode]}})
+         (kAction_Confirm
+            #ifdef HX_XBOX
+            {$this
+               show_gamercard
+               {leaderboards.lst selected_pos}}
+            #endif)
+         kDataUnhandled})}
+{song_leaderboard_panel set_showing FALSE}

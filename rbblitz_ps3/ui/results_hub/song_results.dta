@@ -1,0 +1,255 @@
+{new
+   UIPanel
+   song_results_panel
+   (file
+      "song_results.milo")
+   (started_animation FALSE)
+   (all_bonuses
+      ())
+   (add_bonus_item
+      ($token $cred $coins $add_to_end)
+      {do
+         ($new_elem
+            {array 3})
+         ($index
+            {if_else
+               $add_to_end
+               {size
+                  [all_bonuses]}
+               0})
+         {set_elem $new_elem 0 $token}
+         {set_elem $new_elem 1 $cred}
+         {set_elem $new_elem 2 $coins}
+         {insert_elem
+            [all_bonuses]
+            $index
+            $new_elem}})
+   (get_bonuses
+      ()
+      {$this
+         set
+         all_bonuses
+         {array 0}}
+      {do
+         ($level_results
+            {{game_panel get_game}
+               get_results})
+         ($bonuses
+            {$level_results get_bonuses})
+         ($cred_for_song_completion
+            {$level_results get_blitz_cred_gained})
+         ($coins_for_song_completion
+            {$level_results get_coins_gained})
+         {$this
+            set
+            current_coins
+            {-
+               {$level_results get_coins_total}
+               $coins_for_song_completion}}
+         {$this
+            set
+            current_cred
+            {-
+               {$level_results get_blitz_cred_total}
+               $cred_for_song_completion}}
+         {foreach
+            $bonus_data
+            $bonuses
+            {do
+               ($bonus_name
+                  {elem
+                     {find $bonus_data bonus_name}
+                     1})
+               ($applied_values
+                  {elem
+                     {find $bonus_data applied_values}
+                     1})
+               ($coins_awarded
+                  {elem
+                     {find $applied_values coins}
+                     1})
+               ($cred_awarded
+                  {elem
+                     {find $applied_values blitz_cred}
+                     1})
+               {if
+                  {'||'
+                     {> $cred_awarded 0}
+                     {> $coins_awarded 0}}
+                  {$this add_bonus_item $bonus_name $cred_awarded $coins_awarded TRUE}
+                  {set
+                     $cred_for_song_completion
+                     {- $cred_for_song_completion $cred_awarded}}
+                  {set
+                     $coins_for_song_completion
+                     {- $coins_for_song_completion $coins_awarded}}}}}
+         {if
+            {'||'
+               {> $cred_for_song_completion 0}
+               {> $coins_for_song_completion 0}}
+            {$this
+               add_bonus_item
+               {localize bonus_song_completion}
+               $cred_for_song_completion
+               $coins_for_song_completion
+               FALSE}}
+         {coins_field.lbl
+            set_int
+            [current_coins]
+            TRUE}
+         {blitz_cred_field.lbl
+            set_int
+            [current_cred]
+            TRUE}
+         {powerup_prog_field.lbl set_percent 100}
+         {bonus_name.lbl set_token_fmt ''}
+         {coins_bonus.lbl set_token_fmt ''}
+         {blitz_cred_bonus.lbl set_token_fmt ''}
+         {results_data.ep
+            set
+            current_cash
+            [current_coins]}
+         {results_data.ep
+            set
+            target_cash
+            [current_coins]}
+         {results_data.ep
+            set
+            current_cred
+            [current_cred]}
+         {results_data.ep
+            set
+            target_cred
+            [current_cred]}
+         {results_data.ep set cash_bonus_name ''}
+         {results_data.ep set cred_bonus_name ''}
+         {results_data.ep
+            set
+            next_cred_threshold
+            {$level_results
+               get_next_cred_threshold
+               [current_cred]}}
+         {results_data.ep
+            set
+            last_cred_threshold
+            {$level_results
+               get_last_cred_threshold
+               [current_cred]}}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Confirm
+            {shell_sfx play_select}
+            {if_else
+               {>
+                  {{{game_panel get_game}
+                        get_results}
+                     get_num_unlocked_powerups}
+                  0}
+               {transition_to results_unlock_screen}
+               {transition_to career_results_screen}})
+         (kAction_Cancel
+            {transition_to results_breakdown_screen}
+            {shell_sfx play_back})})
+   (toggle_panel
+      ($is_visible)
+      {all.grp set showing $is_visible}
+      {results_shared_panel toggle_neon_panel $is_visible})
+   (enter
+      {if
+         {!
+            [started_animation]}
+         {blitz_cred_bonus.lbl set showing FALSE}
+         {coins_bonus.lbl set showing FALSE}
+         {bonus_name.lbl set showing FALSE}
+         {$this get_bonuses}
+         {$this set started_animation TRUE}}
+      {results_data.ep set is_animating FALSE})
+   (exit
+      {$this toggle_panel TRUE})
+   (poll
+      {if
+         {&&
+            {results_shared_panel finished_animation}
+            {&&
+               [started_animation]
+               {!
+                  {results_data.ep get is_animating}}}}
+         {results_data.ep set cash_bonus_name ''}
+         {results_data.ep set cred_bonus_name ''}
+         {if_else
+            {>
+               {size
+                  [all_bonuses]}
+               0}
+            {do
+               ($bonus_item
+                  {elem
+                     [all_bonuses]
+                     0})
+               ($bonus_name
+                  {elem $bonus_item 0})
+               ($bonus_cred
+                  {elem $bonus_item 1})
+               ($bonus_coins
+                  {elem $bonus_item 2})
+               ($new_cred_total
+                  {'+'
+                     $bonus_cred
+                     {results_data.ep get target_cred}})
+               ($new_coin_total
+                  {'+'
+                     $bonus_coins
+                     {results_data.ep get target_cash}})
+               {results_data.ep set target_cred $new_cred_total}
+               {results_data.ep set target_cash $new_coin_total}
+               {bonus_name.lbl
+                  set_token_fmt
+                  (results_bonus_name $bonus_name)}
+               {blitz_cred_bonus.lbl
+                  set_token_fmt
+                  (results_bonus_amount $bonus_cred)}
+               {coins_bonus.lbl
+                  set_token_fmt
+                  (results_bonus_amount $bonus_coins)}
+               {blitz_cred_bonus.lbl
+                  set
+                  showing
+                  {> $bonus_cred 0}}
+               {coins_bonus.lbl
+                  set
+                  showing
+                  {> $bonus_coins 0}}
+               {bonus_name.lbl set showing TRUE}
+               {remove_elem
+                  [all_bonuses]
+                  $bonus_item}
+               {initialize_next_bonus.flow activate}}
+            {do
+               {blitz_cred_bonus.lbl set showing FALSE}
+               {coins_bonus.lbl set showing FALSE}
+               {bonus_name.lbl set showing FALSE}}}}
+      {do
+         ($current_cred
+            {results_data.ep get current_cred})
+         ($level_results
+            {{game_panel get_game}
+               get_results})
+         {if
+            {>
+               $current_cred
+               {results_data.ep get next_cred_threshold}}
+            {results_data.ep
+               set
+               next_cred_threshold
+               {$level_results get_next_cred_threshold $current_cred}}
+            {results_data.ep
+               set
+               last_cred_threshold
+               {$level_results get_last_cred_threshold $current_cred}}}})}
+{new
+   UIScreen
+   song_results_screen
+   (panels background_night_panel results_shared_panel results_cache_panel game_panel game_fade_out_panel song_results_panel)
+   (header_index 11)
+   (focus song_results_panel)}

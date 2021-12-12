@@ -1,0 +1,158 @@
+{new
+   LeaderboardPanel
+   career_leaderboard_panel
+   (file
+      "career_leaderboard.milo")
+   (is_online TRUE)
+   (current_lb_mode kLeaderboardMode_Global)
+   (update_header
+      {switch
+         [current_lb_mode]
+         (kLeaderboardMode_Global
+            {$this set_header header_careerleaders_global inline_help_toggle_player})
+         (kLeaderboardMode_Player
+            {$this set_header header_careerleaders_player inline_help_toggle_friend})
+         (kLeaderboardMode_Friend
+            {$this set_header header_careerleaders_friends inline_help_toggle_global})
+         {print
+            "career_leaderboard_panel::update_header - Unknown Leaderboard Mode encountered!\n"}})
+   (set_header
+      ($header_token $inline_help_token)
+      {do
+         ($header_label
+            {background_panel find lb_header.lbl})
+         {$header_label set_token_fmt $header_token}
+         {InlineHelp_leaderboards.ihp set_action_token kAction_ShellOption $inline_help_token}})
+   (return_from_leaderboard
+      {{background_panel find MainMenu.grp}
+         set_showing
+         TRUE}
+      {{background_panel find Leaderboards.grp}
+         set_showing
+         FALSE}
+      {ui goto_screen splash_screen})
+   (enter
+      {data_mine_mgr add_event view_career_leaderboard}
+      {InlineHelp_leaderboards.ihp set_action_token kAction_Cancel inline_help_back}
+      {set
+         [current_lb_mode]
+         kLeaderboardMode_Friend}
+      {set
+         [is_online]
+         {'||'
+            {rock_central is_login_blocked}
+            {user_mgr is_participating_user_online}}}
+      {leaderboards.lst
+         set_provider
+         {$this get_leaderboard_provider}}
+      {$this update_header}
+      {if_else
+         [is_online]
+         {do
+            {$this
+               retreive_leaderboard
+               [current_lb_mode]}}
+         {do
+            {leaderboard_mode.ep set display_state unavailable}}}
+      #ifndef HX_XBOX
+      {InlineHelp_leaderboards.ihp clear_action_token kAction_Confirm}
+      {fb_id.lbl set_showing FALSE}
+      #endif)
+   (show_error
+      ($error_token)
+      {error_popup_panel show_popup $error_token career_leaderboard_panel})
+   (on_leaderboard_updated
+      ($status)
+      {switch
+         $status
+         (kLeaderboardStatus_Requesting
+            {$this
+               set_focus
+               ""}
+            {leaderboard_mode.ep set display_state loading})
+         (kLeaderboardStatus_Success
+            {if_else
+               {>
+                  {leaderboards.lst num_data}
+                  0}
+               {do
+                  {leaderboard_mode.ep set display_state visible}
+                  {leaderboards.lst refresh}
+                  {if_else
+                     {==
+                        [current_lb_mode]
+                        kLeaderboardMode_Global}
+                     {do
+                        {leaderboards.lst set_selected 0}}
+                     {do
+                        ($center_idx
+                           {-
+                              {round
+                                 {/
+                                    {leaderboards.lst get display_num}
+                                    2}}
+                              1})
+                        ($player_idx
+                           {$this get_player_index})
+                        ($first_showing_raw
+                           {- $player_idx $center_idx})
+                        ($first_showing_idx
+                           {if_else
+                              {< $first_showing_raw 0}
+                              0
+                              $first_showing_raw})
+                        {leaderboards.lst set_selected $player_idx $first_showing_idx}}}
+                  {$this set_focus leaderboards.lst}}
+               {do
+                  {leaderboard_mode.ep set display_state empty}}})
+         (kLeaderboardStatus_Failure
+            {do
+               {leaderboard_mode.ep set display_state unavailable}})})
+   (BUTTON_DOWN_MSG
+      {if_else
+         [is_online]
+         {switch
+            $action
+            (kAction_Cancel
+               {do
+                  {$this cancel_outstanding_requests}
+                  {$this return_from_leaderboard}})
+            (kAction_ShellOption
+               {do
+                  {$this
+                     set
+                     current_lb_mode
+                     {mod
+                        {'+'
+                           [current_lb_mode]
+                           1}
+                        3}}
+                  {$this update_header}
+                  {$this
+                     retreive_leaderboard
+                     [current_lb_mode]}})
+            (kAction_Confirm
+               #ifdef HX_XBOX
+               {$this
+                  show_gamercard
+                  {leaderboards.lst selected_pos}}
+               #endif)
+            kDataUnhandled}
+         {switch
+            $action
+            (kAction_Cancel
+               {$this return_from_leaderboard})
+            kDataUnhandled}})}
+{new
+   UIScreen
+   career_leaderboard_screen
+   (panels shell_music_panel background_panel career_leaderboard_panel error_popup_panel)
+   (focus career_leaderboard_panel)
+   (enter
+      {background_panel jump_to_header -1}
+      {{background_panel find MainMenu.grp}
+         set_showing
+         FALSE}
+      {{background_panel find Leaderboards.grp}
+         set_showing
+         TRUE})}

@@ -1,0 +1,104 @@
+{func
+   setup_game
+   ($song $difficulty)
+   {do
+      ($user
+         {user_mgr get_user_from_pad_num 0})
+      {$user set_difficulty $difficulty}
+      {user_mgr set_participating_user $user}}
+   {loading_screen
+      set_equipped_powerups
+      (none none none)}
+   {content_mgr refresh_synchronously}
+   {do
+      ($song_id
+         {song_mgr get_song_id_from_short_name $song})
+      ($song_data
+         {song_mgr data $song_id})
+      {loading_screen set_song $song_data}}
+   {set $first_screen loading_screen}}
+{func
+   update_participating_user_presence
+   ($presence)
+   {do
+      ($participating_user
+         {user_mgr get_participating_user})
+      {if
+         $participating_user
+         {do
+            ($participating_idx
+               {$participating_user get_pad_num})
+            {platform_mgr set_user_presence $participating_user $presence}
+            {foreach_int
+               $i
+               0
+               4
+               {if
+                  {&&
+                     {!
+                        {== $i $participating_idx}}
+                     {platform_mgr is_pad_signed_in $i}}
+                  {platform_mgr set_pad_presence $i CONTEXT_PRESENCE_RP_IDLE}}}}}}}
+{func
+   get_user_name_from_player
+   ($player)
+   {if_else
+      $player
+      {do
+         ($user
+            {$player get_user})
+         {$user get_user_name}}
+      ""}}
+{func
+   get_player_name_from_slot
+   ($slot)
+   {do
+      ($user
+         {user_mgr get_user_from_slot $slot})
+      {if_else
+         $user
+         {$user get_user_name}
+         ""}}}
+{func
+   frac
+   ($x)
+   {int
+      {'*' $x 256}}}
+{func
+   defrac
+   ($x)
+   {/ $x 256.0}}
+{func
+   forfeit_ranked_game
+   {if
+      {&&
+         {session is_in_game}
+         {gamemode get ranked}}
+      {session_mgr default_ranked_match TRUE}}}
+{func
+   reset_all_callbacks
+   {func hopo_callback}
+   {func swingAtHopo_callback}
+   {func star_phrase_miss_callback}
+   {func star_phrase_captured_callback}
+   {func star_use_begin_callback}
+   {func star_use_end_callback}
+   {func hopo_hit}}
+{reset_all_callbacks}
+{func
+   is_allowed_to_preview_offer
+   ($offer)
+   {if_else
+      {$offer has_data rating}
+      {$offer
+         get_data
+         (rating)}
+      2}}
+#define SCREEN_CONTENT_REFRESH
+((refresh_content
+      {if
+         {content_mgr is_dirty}
+         {content_refresh_panel set_showing TRUE}}
+      {content_mgr start_refresh})
+   (is_content_refresh_done
+      {content_mgr refresh_done}))

@@ -1,0 +1,148 @@
+#define CHEAT_DISPLAY_S
+(5)
+{new
+   Object
+   cheat_display
+   (prio 0)
+   (show_prio
+      ($msg $prio)
+      {if_else
+         {&&
+            {<
+               $prio
+               [prio]}
+            {rnd overlay_showing cheats}}
+         {print
+            $msg
+            "\n"}
+         {if_else
+            $cheat.no_cheat_display
+            {print
+               $msg
+               "\n"}
+            {do
+               {set
+                  [prio]
+                  $prio}
+               {rnd show_overlay cheats TRUE CHEAT_DISPLAY_S}
+               {rnd
+                  reflect
+                  cheats
+                  {print
+                     $msg
+                     "\n"}}}}})
+   (show
+      ($msg)
+      {$this show_prio $msg 10000})
+   (show_bool
+      ($label $val)
+      {$this
+         show
+         {sprint
+            $label
+            ": "
+            {if_else
+               $val
+               "ON"
+               "OFF"}}})}
+{func
+   change_music_speed
+   ($factor)
+   {if
+      {exists audio}
+      {do
+         ($newSpeed
+            {'*'
+               {audio get_music_speed}
+               $factor})
+         {audio set_music_speed $newSpeed}
+         {if_else
+            {>= $newSpeed 1.0}
+            {cheat_display
+               show
+               {sprintf
+                  "Song speed is now %0.0fx."
+                  $newSpeed}}
+            {cheat_display
+               show
+               {sprintf
+                  "Song speed is now %0.3fx."
+                  $newSpeed}}}}}}
+{func
+   set_music_speed
+   ($newSpeed)
+   {if
+      {exists audio}
+      {do
+         {audio set_music_speed $newSpeed}
+         {if_else
+            {>= $newSpeed 1.0}
+            {cheat_display
+               show
+               {sprintf
+                  "Song speed is now %0.0fx."
+                  $newSpeed}}
+            {cheat_display
+               show
+               {sprintf
+                  "Song speed is now %0.3fx."
+                  $newSpeed}}}}}}
+{func
+   cycle_controller_type
+   ($padnum)
+   {do
+      ($user
+         {user_mgr get_user_from_pad_num $padnum})
+      ($newType
+         {switch
+            {$user get_controller_type}
+            (joypad keyboard)
+            (keyboard joypad)})
+      {$user set_controller_type $newType}
+      {cheat_display
+         show
+         {sprintf
+            "Changed controller type for pad %d to %s."
+            {'+' $padnum 1}
+            $newType}}}}
+{func
+   check_force_keyboard_controller
+   ($padnum)
+   {if
+      {==
+         {ui current_screen}
+         "song_select_screen"}
+      {do
+         ($user
+            {user_mgr get_user_from_pad_num $padnum})
+         {$user set_controller_type keyboard}}}}
+{set $mute_cheat FALSE}
+{func
+   toggle_mute_global
+   {set
+      $mute_cheat
+      {! $mute_cheat}}
+   {if_else
+      $mute_cheat
+      {do
+         {synth set_master_vol kDbSilence}
+         {cheat_display
+            show
+            "Mute all: TRUE"}}
+      {do
+         {synth set_master_vol 0}
+         {cheat_display
+            show
+            "Mute all: FALSE"}}}}
+{func
+   set_latency
+   ($audioMs $videoMs)
+   {console_data set_audio_latency_ms $audioMs}
+   {console_data set_video_latency_ms $videoMs}}
+{set $tree_per_pixel TRUE}
+{func
+   toggle_tree_per_pixel
+   {set
+      $tree_per_pixel
+      {! $tree_per_pixel}}
+   {plots_cache set_tree_per_pixel $tree_per_pixel}}
