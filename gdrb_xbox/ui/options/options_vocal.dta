@@ -1,0 +1,466 @@
+#define VOCAL_OPTIONS_PANEL_HANDERS
+((needs_vocals_user FALSE)
+   (signin_change_waiting FALSE)
+   (original_hud kVocalStyleScrolling)
+   (BUTTON_DOWN_MSG
+      {switch
+         {$this focus_name}
+         (vocalhudtype.lst
+            {switch
+               $action
+               (kAction_Confirm
+                  {do
+                     ($vocalhudtypelist
+                        {$this find vocalhudtype.lst})
+                     ($options
+                        {{input_mgr get_user}
+                           get_gameplay_options})
+                     {switch
+                        {$vocalhudtypelist selected_sym}
+                        (vocalstyle_static
+                           {$options set_vocal_style kVocalStyleStatic})
+                        (vocalstyle_scrolling
+                           {$options set_vocal_style kVocalStyleScrolling})}}
+                  {vocalhudtype.lst confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus vocalstyle.btn})
+               (kAction_Cancel
+                  {vocalhudtype.lst undo $user}
+                  {$this set_focus vocalstyle.btn})
+               kDataUnhandled})
+         (mic_gain01.sld
+            {switch
+               $action
+               (kAction_Confirm
+                  {mic_gain01.sld confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus mic_gain01.btn})
+               (kAction_Cancel
+                  {mic_gain01.sld undo $user}
+                  {$this on_slider_change mic_gain01.sld}
+                  {$this set_focus mic_gain01.btn})
+               kDataUnhandled})
+         (mic_gain02.sld
+            {switch
+               $action
+               (kAction_Confirm
+                  {mic_gain02.sld confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus mic_gain02.btn})
+               (kAction_Cancel
+                  {mic_gain02.sld undo $user}
+                  {$this on_slider_change mic_gain02.sld}
+                  {$this set_focus mic_gain02.btn})
+               kDataUnhandled})
+         (mic_gain03.sld
+            {switch
+               $action
+               (kAction_Confirm
+                  {mic_gain03.sld confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus mic_gain03.btn})
+               (kAction_Cancel
+                  {mic_gain03.sld undo $user}
+                  {$this on_slider_change mic_gain03.sld}
+                  {$this set_focus mic_gain03.btn})
+               kDataUnhandled})
+         (mic_level.sld
+            {switch
+               $action
+               (kAction_Confirm
+                  {mic_level.sld confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus mic_level.btn})
+               (kAction_Cancel
+                  {mic_level.sld undo $user}
+                  {$this set_focus mic_level.btn})
+               kDataUnhandled})
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (vocalstyle.btn
+            {{$this find vocalhudtype.lst}
+               store}
+            {$this
+               set_focus
+               {$this find vocalhudtype.lst}})
+         (mic_gain01.btn
+            {mic_gain01.sld store}
+            {$this set_focus mic_gain01.sld})
+         (mic_gain02.btn
+            {mic_gain02.sld store}
+            {$this set_focus mic_gain02.sld})
+         (mic_gain03.btn
+            {mic_gain03.sld store}
+            {$this set_focus mic_gain03.sld})
+         (mic_level.btn
+            {mic_level.sld store}
+            {$this set_focus mic_level.sld})
+         (karaoke.btn
+            {do
+               ($was_on
+                  {profile_mgr get_karaoke_mode})
+               {profile_mgr
+                  set_karaoke_mode
+                  {! $was_on}}
+               {$this update_from_profile check.mesh}})})
+   (FOCUS_MSG
+      {$this update_helpbar $new_focus})
+   (SCROLL_SELECT_MSG
+      {if_else
+         $selected
+         {helpbar
+            set_config
+            ((cancel helpbar_cancel)
+               (confirm helpbar_confirm))}
+         {$this update_helpbar $component}})
+   (update_helpbar
+      ($component)
+      {switch
+         $component
+         (karaoke.btn
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_toggleoption))})
+         ((vocalstyle.btn mic_gain01.btn mic_gain02.btn mic_gain03.btn mic_level.btn)
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_changesetting))})
+         ((vocalhudtype.lst mic_gain01.sld mic_gain02.sld mic_gain03.sld mic_level.sld)
+            {helpbar
+               set_config
+               ((cancel helpbar_cancel)
+                  (confirm helpbar_confirmsetting))})
+         FAIL})
+   (SCROLL_MSG
+      {$this on_slider_change $component})
+   (on_slider_change
+      ($component)
+      {switch
+         $component
+         (mic_gain01.sld
+            {profile_mgr
+               set_mic_gain
+               0
+               {$component current}}
+            {profile_mgr update_mic_gain 0}
+            {$this update_all_from_profile})
+         (mic_gain02.sld
+            {profile_mgr
+               set_mic_gain
+               1
+               {$component current}}
+            {profile_mgr update_mic_gain 1}
+            {$this update_all_from_profile})
+         (mic_gain03.sld
+            {profile_mgr
+               set_mic_gain
+               2
+               {$component current}}
+            {profile_mgr update_mic_gain 2}
+            {$this update_all_from_profile})
+         (mic_level.sld
+            {if
+               {input_mgr get_user}
+               {{{input_mgr get_user}
+                     get_gameplay_options}
+                  set_vocal_volume
+                  {$component current}}
+               {profile_mgr
+                  update_vocal_volume
+                  {input_mgr get_user}}})})
+   (update_all_from_profile
+      {$this
+         iterate
+         UISlider
+         $s
+         {$s set_num_steps 12}
+         {$this update_from_profile $s}}
+      {if
+         {$this exists vocalhudtype.lst}
+         {$this update_from_profile vocalhudtype.lst}}
+      {if
+         {$this exists check.mesh}
+         {$this update_from_profile check.mesh}})
+   (update_from_profile
+      ($component)
+      {switch
+         $component
+         (mic_gain01.sld
+            {$component
+               set_current
+               {profile_mgr get_mic_gain 0}})
+         (mic_gain02.sld
+            {$component
+               set_current
+               {profile_mgr get_mic_gain 1}})
+         (mic_gain03.sld
+            {$component
+               set_current
+               {profile_mgr get_mic_gain 2}})
+         (mic_level.sld
+            {if
+               {input_mgr get_user}
+               {$component
+                  set_current
+                  {{{input_mgr get_user}
+                        get_gameplay_options}
+                     get_vocal_volume}}})
+         (vocalhudtype.lst
+            {if
+               {input_mgr get_user}
+               {do
+                  ($vocalhudtypelist
+                     {$this find vocalhudtype.lst})
+                  ($options
+                     {{input_mgr get_user}
+                        get_gameplay_options})
+                  {set
+                     [original_hud]
+                     {$options get_vocal_style}}
+                  {$vocalhudtypelist
+                     set_data
+                     (vocalstyle_static vocalstyle_scrolling)}
+                  {if_else
+                     {gamemode in_mode tutorial}
+                     {do
+                        {$vocalhudtypelist set_selected vocalstyle_scrolling}
+                        {$this disable vocalstyle.btn}}
+                     {do
+                        {switch
+                           {$options get_vocal_style}
+                           (kVocalStyleStatic
+                              {$vocalhudtypelist set_selected vocalstyle_static})
+                           (kVocalStyleScrolling
+                              {$vocalhudtypelist set_selected vocalstyle_scrolling})}
+                        {$this enable vocalstyle.btn}}}}})
+         (check.mesh
+            {check.mesh
+               set_showing
+               {profile_mgr get_karaoke_mode}})})
+   (setup_mics
+      ($hasmic1 $hasmic2 $hasmic3)
+      {if_else
+         $hasmic1
+         {do
+            {if
+               {&&
+                  {==
+                     {mic_gain01.btn get_state}
+                     kComponentDisabled}
+                  {==
+                     {$this focus_name}
+                     ''}}
+               {$this set_focus mic_gain01.btn}}
+            {$this enable mic_gain01.btn}
+            {$this on_slider_change mic_gain01.sld}}
+         {do
+            {if
+               {==
+                  {$this focus_name}
+                  mic_gain01.sld}
+               {mic_gain01.sld undo ''}
+               {$this set_focus mic_gain01.btn}}
+            {$this disable mic_gain01.btn}}}
+      {if_else
+         $hasmic2
+         {do
+            {if
+               {&&
+                  {==
+                     {mic_gain02.btn get_state}
+                     kComponentDisabled}
+                  {==
+                     {$this focus_name}
+                     ''}}
+               {$this set_focus mic_gain02.btn}}
+            {$this enable mic_gain02.btn}
+            {$this on_slider_change mic_gain02.sld}}
+         {do
+            {if
+               {==
+                  {$this focus_name}
+                  mic_gain02.sld}
+               {mic_gain02.sld undo ''}
+               {$this set_focus mic_gain02.btn}}
+            {$this disable mic_gain02.btn}}}
+      {if_else
+         $hasmic3
+         {do
+            {if
+               {&&
+                  {==
+                     {mic_gain03.btn get_state}
+                     kComponentDisabled}
+                  {==
+                     {$this focus_name}
+                     ''}}
+               {$this set_focus mic_gain03.btn}}
+            {$this enable mic_gain03.btn}
+            {$this on_slider_change mic_gain03.sld}}
+         {do
+            {if
+               {==
+                  {$this focus_name}
+                  mic_gain03.sld}
+               {mic_gain03.sld undo ''}
+               {$this set_focus mic_gain03.btn}}
+            {$this disable mic_gain03.btn}}})
+   (handle_exit
+      {mic_gain01.sld undo_handled_by '' $this}
+      {mic_gain02.sld undo_handled_by '' $this}
+      {mic_gain03.sld undo_handled_by '' $this}
+      {if
+         {$this exists mic_level.sld}
+         {mic_level.sld undo_handled_by '' $this}}))
+{new
+   MicInputPanel
+   vocal_options_panel
+   (file
+      "options_vocal.milo")
+   (focus mic_gain01.btn)
+   (enter
+      {$this update_all_from_profile}
+      {$this
+         update_helpbar
+         {$this focus_name}})
+   (exit
+      {$this handle_exit})
+   VOCAL_OPTIONS_PANEL_HANDERS}
+{new
+   MicInputPanel
+   pause_vocal_options_panel
+   (file
+      "pause_options_vocal.milo")
+   (focus vocalstyle.btn)
+   (enter
+      {session
+         add_sink
+         $this
+         (signin_changed)}
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      SET_UP_GAMERTAG
+      {$this update_all_from_profile}
+      {if_else
+         {gamemode in_mode tutorial}
+         {do
+            {$this set_focus mic_level.btn}
+            {$this disable vocalhudtype.lst}}
+         {do
+            {$this set_focus vocalstyle.btn}
+            {$this enable vocalhudtype.lst}}}
+      {$this
+         update_helpbar
+         {$this focus_name}})
+   (exit
+      {$this handle_exit}
+      {session remove_sink $this signin_changed}
+      {session remove_sink $this game_ended}
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+      {if
+         {input_mgr get_user}
+         {do
+            ($options
+               {{input_mgr get_user}
+                  get_gameplay_options})
+            ($player
+               {{input_mgr get_user}
+                  player})
+            {if
+               $player
+               {$player update_vocal_style}}}})
+   (TRANSITION_COMPLETE_MSG
+      COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT
+      {$this
+         update_helpbar
+         {$this focus_name}}
+      {if
+         {!
+            {session is_local}}
+         {session
+            add_sink
+            $this
+            (game_ended)}
+         {unless
+            {session is_in_game}
+            {input_mgr set_user ''}
+            {ui pop_screen}}})
+   (GAME_ENDED_MSG
+      {input_mgr set_user ''}
+      {ui pop_screen})
+   (save_load_all_complete_msg
+      SET_UP_GAMERTAG
+      {$this update_all_from_profile})
+   (SIGNIN_CHANGED_MSG
+      {if
+         {input_mgr get_user}
+         {if
+            {platform_mgr
+               has_user_signin_changed
+               {input_mgr get_user}}
+            {if_else
+               {'||'
+                  {==
+                     {ui current_screen}
+                     vocal_options_screen}
+                  {==
+                     {ui current_screen}
+                     pause_vocal_options_screen}}
+               {$this process_signin_change}
+               {if
+                  {!
+                     {==
+                        {ui current_screen}
+                        option_profile_change_warning_screen}}
+                  {$this set signin_change_waiting TRUE}}}}})
+   (process_signin_change
+      {if
+         {'||'
+            {==
+               {ui current_screen}
+               vocal_options_screen}
+            {==
+               {ui current_screen}
+               pause_vocal_options_screen}}
+         {ui push_screen option_profile_change_warning_screen}})
+   VOCAL_OPTIONS_PANEL_HANDERS}
+{new
+   BandScreen
+   vocal_options_screen
+   (panels meta background_panel main_popup_bg_panel vocal_options_panel)
+   (focus vocal_options_panel)
+   (back options_console_screen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))}
+{new
+   BandScreen
+   pause_vocal_options_screen
+   (panels pause_bg_panel pause_vocal_options_panel)
+   (focus pause_vocal_options_panel)
+   (back pause_screen)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))
+   (enter
+      {beatmatch
+         foreach_active_player
+         $p
+         {handle
+            ({$p track}
+               set_enable_vocals_options
+               FALSE)}})
+   (exit
+      {beatmatch
+         foreach_active_player
+         $p
+         {handle
+            ({$p track}
+               set_enable_vocals_options
+               TRUE)}})}

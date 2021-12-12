@@ -1,0 +1,2170 @@
+#define UPDATE_CREDITS
+(credits_updated
+   ($new_value)
+   {do
+      ($dynamic_credits_label
+         {find_obj
+            {$this loaded_dir}
+            credits_number.lbl})
+      {if
+         $dynamic_credits_label
+         {$dynamic_credits_label set_token_fmt story_cred_format $new_value}}})
+{new
+   StoryMusicPanel
+   story_music
+   (enter
+      {platform_mgr enable_xmp}
+      {meta music_stop}
+      {$this music_start})
+   (exit
+      {$this music_stop})
+   (start_ambient_sound
+      {$this music_stop}
+      {synth play media_screen.cue})
+   (stop_ambient_sound
+      {synth stop media_screen.cue}
+      {$this music_start})
+   (stop_all_sound
+      {synth stop media_screen.cue}
+      {$this music_stop})
+   (music_start
+      {if
+         {&&
+            {$this is_up}
+            {!
+               {postsong_sfx_panel get active}}
+            {! $mute_shell_music}}
+         {{$this story_music}
+            start}})
+   (music_stop
+      {{$this story_music}
+         stop})}
+{new
+   UIPanel
+   story_hub_panel
+   (file
+      "story_hub.milo")
+   (focus
+      "story.btn")
+   (should_reset_focus TRUE)
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {$this set should_reset_focus TRUE}
+            kDataUnhandled)
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (story.btn
+            {ui
+               goto_screen
+               {get_story_destination_screen story_venue_screen}})
+         (prizes.btn
+            {if_else
+               {session is_local}
+               {ui goto_screen story_prizes_screen}
+               {$this warn_unavailable story_prizes_unavailable}})
+         (memorabilia.btn
+            {if_else
+               {session is_local}
+               {ui goto_screen story_memorabilia_screen}
+               {$this warn_unavailable story_memorabilia_unavailable}})
+         (accomplishments.btn
+            {if_else
+               {session is_local}
+               {view_accomplishments_screen $user 0 story_accomplishments_choose_user_screen story_accomplishments_no_user_screen story_accomplishments_screen story_hub_screen}
+               {$this warn_unavailable story_accomplishments_unavailable}})})
+   (warn_unavailable
+      ($message)
+      {net_sync disable}
+      {story_unavailable_screen set message $message}
+      {ui push_screen story_unavailable_screen})
+   (enter
+      {input_mgr set_limit kLimitSessionLeader}
+      {presence_mgr set_in_story_shell}
+      {story_prizes_panel clear_saved_prize_position}
+      {net_sync enable}
+      {if
+         [should_reset_focus]
+         {$this
+            set_focus
+            "story.btn"}}
+      {$this set should_reset_focus FALSE}
+      {{story progress}
+         clear_last_set_state}
+      {if
+         {is_leader_local}
+         {{story performer}
+            clear_song_set}}
+      {story_new.lbl
+         set_showing
+         {{story progress}
+            is_chapterchallenge_group_new}}
+      {if_else
+         {session is_local}
+         {do
+            {memo_new.lbl
+               set_showing
+               {{story progress}
+                  is_memo_group_new}}
+            {prize_new.lbl
+               set_showing
+               {{story progress}
+                  is_prize_group_new}}}
+         {do
+            {memo_new.lbl set_showing FALSE}
+            {prize_new.lbl set_showing FALSE}}})}
+{new
+   BandScreen
+   story_accomplishments_screen
+   (panels meta story_music background_panel story_hub_panel accomplishment_panel)
+   (focus accomplishment_panel)
+   (helpbar
+      ((cancel helpbar_back)))
+   (back story_hub_screen)}
+{new
+   UIPanel
+   story_accomplishments_choose_user_panel
+   ACCOMPLISHMENTS_CHOOSE_USER_PANEL
+   (on_go_to_accomplishments_screen)}
+{new
+   BandScreen
+   story_accomplishments_choose_user_screen
+   (panels meta background_panel story_hub_panel story_accomplishments_choose_user_panel)
+   (focus story_accomplishments_choose_user_panel)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+{new
+   BandScreen
+   story_accomplishments_no_user_screen
+   (panels meta background_panel story_hub_panel dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_confirm)))
+   (enter
+      {dialog_panel set_ok accomplishments_need_signed_in_user})
+   (SELECT_MSG
+      {ui goto_screen story_hub_screen})}
+{new
+   BandScreen
+   story_unavailable_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (message '')
+   (enter
+      {dialog_panel
+         set_custom
+         [message]
+         ""
+         return
+         opt2.btn}
+      {dialog_panel
+         disable
+         {dialog_panel find opt1.btn}})
+   (exit
+      {dialog_panel
+         enable
+         {dialog_panel find opt1.btn}})
+   (SELECT_MSG
+      {ui pop_screen}
+      {net_sync enable})}
+{new
+   BandScreen
+   story_hub_screen
+   (panels meta story_music background_panel story_hub_panel)
+   (focus story_hub_panel)
+   (helpbar
+      {if_else
+         {is_leader_local}
+         ((cancel helpbar_back)
+            (confirm helpbar_select))
+         ()})
+   (back
+      {gamemode get matchmaking_screen})
+   (background_view story_hub)
+   (enter
+      {with
+         background_panel
+         {do
+            {background_red.trg trigger}
+            {story_hub.trg trigger}}})}
+{new
+   StoryPrizePanel
+   story_prizes_panel
+   (file
+      "story_prizes.milo")
+   (focus
+      "prizes.lst")
+   (enter
+      {story_music start_ambient_sound})
+   (exit
+      {story_music stop_ambient_sound})
+   (SELECT_MSG
+      {if
+         {$this is_up}
+         {if
+            {$this selection_is_playable_video}
+            {$this handle_select_video_watched}
+            {$this set_saved_prize_position}
+            {story_mediaplay_panel
+               set
+               videos
+               {$this get_selected_video}}
+            {story_mediaplay_panel
+               set
+               (last_screen)
+               story_prizes_screen}
+            {ui goto_screen story_mediaplay_screen}}})
+   (SCROLL_MSG
+      {if
+         {$this is_up}
+         {$this refresh_helpbar}})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {if
+         {$this is_up}
+         {if_else
+            {$this is_showing_closeup}
+            {if_else
+               {$this is_showing_zoomed_info}
+               {helpbar
+                  set_config
+                  ((cancel memo_hide_closeup)
+                     (option memo_hide_closeup_text))}
+               {helpbar
+                  set_config
+                  ((cancel memo_hide_closeup)
+                     (option memo_show_closeup_text))}}
+            {do
+               {helpbar
+                  set_config
+                  ((cancel helpbar_back))}
+               {if
+                  {$this selection_is_unlocked}
+                  {if_else
+                     {$this selection_is_playable_video}
+                     {helpbar set_widget confirm memo_view_video}
+                     {helpbar set_widget confirm memo_view_closeup}}}}}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Confirm
+            {if_else
+               {!
+                  {$this selection_is_playable_video}}
+               0
+               kDataUnhandled})
+         kDataUnhandled})}
+{new
+   BandScreen
+   story_prizes_screen
+   (panels meta story_music story_prizes_panel)
+   (focus story_prizes_panel)
+   (back story_hub_screen)
+   (helpbar
+      ((cancel helpbar_back)))}
+{new
+   StoryMemorabiliaPanel
+   story_memorabilia_panel
+   (file
+      "story_memorabilia.milo")
+   (focus
+      "memorabilia.lst")
+   (helpbar
+      ((cancel helpbar_back)
+         (option helpbar_next_chapter)))
+   (enter
+      {platform_mgr enable_xmp}
+      {story_music start_ambient_sound})
+   (exit
+      {story_music stop_ambient_sound})
+   (SCROLL_MSG
+      {$this refresh_helpbar})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {if
+         {$this is_up}
+         {if_else
+            {$this is_showing_closeup}
+            {if_else
+               {$this is_showing_zoomed_info}
+               {helpbar
+                  set_config
+                  ((cancel memo_hide_closeup)
+                     (option memo_hide_closeup_text))}
+               {helpbar
+                  set_config
+                  ((cancel memo_hide_closeup)
+                     (option memo_show_closeup_text))}}
+            {do
+               {helpbar
+                  set_config
+                  ((cancel helpbar_back)
+                     (option helpbar_next_chapter))}
+               {if
+                  {$this selection_is_unlocked}
+                  {if_else
+                     {$this selection_is_playable_video}
+                     {helpbar set_widget confirm memo_view_video}
+                     {helpbar set_widget confirm memo_view_closeup}}}}}})
+   (play_memo_video
+      {story_mediaplay_panel
+         set
+         videos
+         {$this get_selected_video}}
+      {story_mediaplay_panel
+         set
+         (last_screen)
+         story_memorabilia_screen}
+      {ui goto_screen story_mediaplay_screen})
+   (handle_next_category
+      ($user)
+      {play_instr_sfx $user button_toggle})
+   (handle_previous_category
+      ($user)
+      {play_instr_sfx $user button_toggle})
+   (handle_toggle_text
+      ($user)
+      {play_instr_sfx $user button_toggle})
+   (handle_hide_closeup
+      ($user)
+      {play_instr_sfx $user button_back})
+   (handle_scroll_photo
+      ($user)
+      {play_instr_sfx $user button_toggle})}
+{new
+   BandScreen
+   story_memorabilia_screen
+   (panels meta story_music story_memorabilia_panel)
+   (focus story_memorabilia_panel)
+   (helpbar
+      ((cancel helpbar_back)
+         (option helpbar_next_chapter)))
+   (back story_hub_screen)
+   (background_view memorabilia)}
+{new
+   BandScreen
+   story_songselect_photos_screen
+   (panels meta story_music story_memorabilia_panel)
+   (focus story_memorabilia_panel)
+   (back story_songselect_screen)
+   (background_view memorabilia)
+   (song_symbol '')
+   (enter
+      {story_memorabilia_panel
+         select_associated_photo_for_song
+         [song_symbol]})
+   (exit
+      {platform_mgr disable_xmp})}
+{new
+   BandScreen
+   story_challengeselect_photos_screen
+   (panels meta story_music story_memorabilia_panel)
+   (focus story_memorabilia_panel)
+   (back story_chapter_challenges_screen)
+   (background_view memorabilia)
+   (song_symbol '')
+   (enter
+      {story_memorabilia_panel
+         select_associated_photo_for_challenge
+         [song_symbol]})
+   (exit
+      {platform_mgr disable_xmp})}
+{new
+   StoryMediaPanel
+   story_media_panel
+   (file
+      "story_media.milo")
+   (focus
+      "media.lst")
+   (SELECT_MSG
+      {story_mediaplay_panel
+         set
+         videos
+         {$this get_selected_media}}
+      {ui push_screen story_mediaplay_screen})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {helpbar
+         set_config
+         ((confirm prize_video_play)
+            (cancel helpbar_back))})}
+{new
+   BandScreen
+   story_media_screen
+   (panels meta story_music story_media_panel)
+   (focus story_media_panel)
+   (back story_hub_screen)
+   (helpbar
+      ((confirm prize_video_play)
+         (cancel helpbar_back)))}
+{new
+   UIPanel
+   story_hint_panel
+   (file
+      "story_hint.milo")
+   (force_exit TRUE)
+   (hint
+      "")
+   (enter
+      {$this
+         set
+         hint
+         {story get_first_hint}}
+      {name.lbl
+         set_token_fmt
+         {story
+            get_hint_name_token
+            {$this get hint}}
+         #ifndef HX_WII
+         {story get_story_owner_name}
+         #endif}
+      {description.lbl
+         set
+         text_token
+         {story
+            get_hint_description_token
+            {$this get hint}}}
+      {story apply_story_owner_name gamertag.lbl}
+      {story
+         mark_hint_seen
+         {$this get hint}})}
+{new
+   BandScreen
+   story_hint_screen
+   (panels meta story_music story_hint_panel)
+   (focus story_hint_panel)
+   (helpbar
+      {if_else
+         {is_leader_local}
+         ((confirm helpbar_continue))
+         ()})
+   (destination_screen null)
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Confirm}
+         {play_instr_sfx $user button_select}
+         {ui
+            goto_screen
+            {get_story_destination_screen
+               [destination_screen]}
+            TRUE}}
+      kDataUnhandled)}
+{new
+   UIPanel
+   story_venue_hub
+   (file
+      "story_venue_hub.milo")
+   (focus warehouse.btn)
+   (enter
+      {{story progress}
+         clear_last_set_state}
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {$this
+         credits_updated
+         {{story progress}
+            credits_banked}}
+      {$this update_venue_new_labels})
+   (update_venue_new_labels
+      {do
+         ($warehouse_new FALSE)
+         ($arena_new FALSE)
+         ($theater_new FALSE)
+         {foreach
+            $chapter
+            {story get_chapters}
+            {if
+               {==
+                  {{story progress}
+                     chapter_status
+                     $chapter}
+                  kStoryNew}
+               {switch
+                  {$chapter venue}
+                  (dookie
+                     {set $warehouse_new TRUE})
+                  (americanidiot
+                     {set $arena_new TRUE})
+                  (twentyfirst
+                     {set $theater_new TRUE})}}}
+         {unlockable_warehouse.lbl set_showing $warehouse_new}
+         {darken_new01.mesh set_showing $warehouse_new}
+         {unlockable_arena.lbl set_showing $arena_new}
+         {darken_new02.mesh set_showing $arena_new}
+         {unlockable_theater.lbl set_showing $theater_new}
+         {darken_new03.mesh set_showing $theater_new}})
+   (FOCUS_MSG
+      {do
+         ($venue_chap_prog 0)
+         ($venue_chap_complete_prog 0)
+         ($venue_challenge_prog 0)
+         ($venue_challenge_complete_prog 0)
+         {switch
+            {$new_focus name}
+            (warehouse.btn
+               {do
+                  {set
+                     $venue_chap_prog
+                     {{story progress}
+                        get_venue_chapter_count
+                        dookie}}
+                  {set
+                     $venue_chap_complete_prog
+                     {{story progress}
+                        get_venue_chapter_completion_count
+                        dookie}}
+                  {set
+                     $venue_challenge_prog
+                     {{story progress}
+                        get_venue_challenge_count
+                        dookie}}
+                  {set
+                     $venue_challenge_complete_prog
+                     {{story progress}
+                        get_venue_challenge_completion_count
+                        dookie}}
+                  {warehouse_icon.trg trigger}}
+               {with
+                  background_panel
+                  {do
+                     {bg_warehouse.trg trigger}}})
+            (arena.btn
+               {do
+                  {set
+                     $venue_chap_prog
+                     {{story progress}
+                        get_venue_chapter_count
+                        americanidiot}}
+                  {set
+                     $venue_chap_complete_prog
+                     {{story progress}
+                        get_venue_chapter_completion_count
+                        americanidiot}}
+                  {set
+                     $venue_challenge_prog
+                     {{story progress}
+                        get_venue_challenge_count
+                        americanidiot}}
+                  {set
+                     $venue_challenge_complete_prog
+                     {{story progress}
+                        get_venue_challenge_completion_count
+                        americanidiot}}
+                  {miltonkeynes_icon.trg trigger}}
+               {with
+                  background_panel
+                  {do
+                     {bg_miltonkeynes.trg trigger}}})
+            (theater.btn
+               {do
+                  {set
+                     $venue_chap_prog
+                     {{story progress}
+                        get_venue_chapter_count
+                        twentyfirst}}
+                  {set
+                     $venue_chap_complete_prog
+                     {{story progress}
+                        get_venue_chapter_completion_count
+                        twentyfirst}}
+                  {set
+                     $venue_challenge_prog
+                     {{story progress}
+                        get_venue_challenge_count
+                        twentyfirst}}
+                  {set
+                     $venue_challenge_complete_prog
+                     {{story progress}
+                        get_venue_challenge_completion_count
+                        twentyfirst}}
+                  {fox_icon.trg trigger}}
+               {with
+                  background_panel
+                  {do
+                     {bg_fox.trg trigger}}})}
+         {chapter_sets_progress.lbl set_token_fmt venue_select_chapter_set_progress $venue_chap_complete_prog $venue_chap_prog}
+         {chapter_challenges_progress.lbl set_token_fmt venue_select_chapter_challenge_progress $venue_challenge_complete_prog $venue_challenge_prog}}
+      kDataUnhandled)
+   (exit
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (SELECT_MSG
+      {switch
+         $component
+         (warehouse.btn
+            {meta_performer set_venue dookie}
+            {ui
+               goto_screen
+               {get_story_destination_screen story_songselect_screen}})
+         (arena.btn
+            {meta_performer set_venue americanidiot}
+            {ui
+               goto_screen
+               {get_story_destination_screen story_songselect_screen}})
+         (theater.btn
+            {meta_performer set_venue twentyfirst}
+            {ui
+               goto_screen
+               {get_story_destination_screen story_songselect_screen}})})
+   (UPDATE_CREDITS)
+   (scroll_chapter
+      ($user)
+      {play_instr_sfx $user button_toggle})}
+{new
+   BandScreen
+   story_venue_screen
+   (panels meta story_music background_panel story_venue_hub)
+   (focus story_venue_hub)
+   (back story_hub_screen)
+   (background_view venue_hub)
+   (enter
+      {input_mgr set_limit kLimitSessionLeader}
+      {story_music music_start}
+      {if_else
+         {is_leader_local}
+         {helpbar
+            set_config
+            ((cancel helpbar_back)
+               (confirm helpbar_select_venue))}
+         {helpbar
+            set_config
+            ()}}
+      {with
+         background_panel
+         {do
+            {background_blue.trg trigger}}})}
+{new
+   StoryChapterListPanel
+   story_chapter_panel
+   (file
+      "story_chapterlist.milo")
+   (register_for_content TRUE)
+   (enter
+      {{story progress}
+         clear_last_set_state})
+   (SELECT_MSG
+      {ui goto_screen story_songselect_screen})
+   (scroll_chapter
+      ($user)
+      {play_instr_sfx $user button_toggle})}
+{new
+   StoryChapterSongSelectPanel
+   story_songselect_panel
+   (file
+      "story_venue_songselect.milo")
+   (focus
+      "Challenge01.btn")
+   (enter
+      {{story progress}
+         clear_last_set_state}
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {$this
+         credits_updated
+         {{story progress}
+            credits_banked}})
+   (exit
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Confirm
+            {do
+               {play_instr_sfx $user button_select}
+               kDataUnhandled})
+         (kAction_Cancel
+            {$this clear_song}
+            kDataUnhandled)
+         (kAction_Option
+            {if
+               {$this can_view_photos}
+               {story_songselect_photos_screen
+                  set
+                  song_symbol
+                  {$this selected_song}}
+               {play_instr_sfx $user button_shortcut}
+               {$this set_current_song}
+               {ui goto_screen story_songselect_photos_screen}})
+         kDataUnhandled})
+   (SCROLL_MSG
+      {if
+         {$this is_up}
+         {$this refresh_helpbar}})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {if_else
+         {$this can_view_photos}
+         {helpbar set_widget option view_photos}
+         {helpbar set_widget option ''}})
+   (song_selected
+      {{story performer}
+         select_venue}
+      {ui goto_screen story_chapter_seldiff_screen})
+   (UPDATE_CREDITS)}
+{new
+   UIPanel
+   story_song_select_details_panel
+   (file
+      "story_song_select_details.milo")
+   (enter
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {$this
+         credits_updated
+         {{story progress}
+            credits_banked}})
+   (exit
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (UPDATE_CREDITS)
+   (on_change_setlist_mode
+      {story_song_select_panel new_leaderboard_selection})
+   (refresh_details
+      ($item)
+      {if
+         {== $item ''}
+         {set
+            $item
+            {song_offer_provider get_highlight_item}}}
+      {$this refresh_top $item}
+      {do
+         ($type
+            {handle_ret
+               ($item get_node_type)})
+         {details.grp set_showing FALSE}
+         {details_header.grp set_showing FALSE}
+         {switch
+            $type
+            (kNodeHeader
+               {$this refresh_header $item})
+            (kNodeSong
+               {$this refresh_song $item})
+            (kDataUnhandled
+               {$this refresh_header $item})}})
+   (refresh_top
+      ($item)
+      {if
+         {== $item ''}
+         {set
+            $item
+            {song_offer_provider get_highlight_item}}}
+      {album_art.pic
+         set
+         tex_file
+         {$item album_art_path}})
+   (song_data_mounted
+      ($song)
+      {$this refresh_top ''})
+   (refresh_header
+      ($item)
+      {details_header.grp set_showing TRUE}
+      {header_name.lbl
+         set
+         text_token
+         {$item get_token}}
+      {set
+         $show_unlocked_info
+         {handle_ret
+            ($item show_unlocked_info)}}
+      {if
+         {== $show_unlocked_info kDataUnhandled}
+         {set $show_unlocked_info FALSE}}
+      {if_else
+         $show_unlocked_info
+         {do
+            ($cred_threshold
+               {{story progress}
+                  next_cred_threshold})
+            {if_else
+               {$item is_challenge}
+               {if_else
+                  {> $cred_threshold 0}
+                  {chapter_info.lbl
+                     set_token_fmt
+                     challenge_criteria_revealed
+                     {$item get_challenge_criteria}
+                     $cred_threshold}
+                  {chapter_info.lbl
+                     set
+                     text_token
+                     {$item get_challenge_criteria}}}
+               {chapter_info.lbl
+                  set_token_fmt
+                  challenge_unlock_count
+                  {{story progress}
+                     num_cred_challenges}}}}
+         {do
+            ($chapter_for_curr_challenge
+               {handle_ret
+                  ($item chapter_for_curr_challenge)})
+            {if_else
+               {!= kDataUnhandled $chapter_for_curr_challenge}
+               {chapter_info.lbl set_token_fmt challenge_criteria_reveal $chapter_for_curr_challenge}
+               {chapter_info.lbl
+                  set_token_fmt
+                  challenge_unlock_count
+                  {{story progress}
+                     num_cred_challenges}}}}})
+   (refresh_song
+      ($item)
+      {details.grp set_showing TRUE}
+      {song_title.lbl
+         set_song_name
+         {$item get_token}}
+      {do
+         ($song
+            {$item get_token})
+         {band.idd set_song $song}
+         {guitar.idd set_song $song}
+         {bass.idd set_song $song}
+         {drum.idd set_song $song}
+         {vocals.idd set_song $song}})}
+{new
+   UIPanel
+   story_song_select_shortcut_panel
+   (file
+      "story_song_select_shortcut.milo")
+   (old_user none)
+   (focus shortcut.lst)
+   (enter
+      {shortcut.grp set_showing FALSE}
+      {recoil.trg trigger})
+   (exit
+      {$this shortcut_exit})
+   (shortcut_period 1.5)
+   (shortcut_selected '')
+   (shortcut_mode none)
+   (shortcut_enter
+      ($mode $user $highlight_index)
+      {if
+         {==
+            none
+            [shortcut_mode]}
+         {set
+            [shortcut_mode]
+            $mode}
+         {{ui current_screen}
+            set_focus_panel
+            $this}
+         {shortcut.grp set_showing TRUE}
+         {start.trg trigger}
+         {with
+            story_song_select_panel
+            {song.lst set_state kComponentNormal}}
+         {if
+            {==
+               [shortcut_mode]
+               groups}
+            {shortcut.lst
+               set_provider
+               {song_offer_provider get_current_sort}}
+            {shortcut.lst set_selected $highlight_index}}
+         {set
+            [shortcut_selected]
+            {shortcut.lst selected_pos}}
+         {if_else
+            {input_mgr has_user}
+            {set
+               [old_user]
+               {input_mgr get_user}}
+            {set
+               [old_user]
+               none}}
+         {unless
+            {== $user none}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_select))}
+            {play_instr_sfx $user button_shortcut}
+            {input_mgr set_user $user}}})
+   (shortcut_exit
+      {if
+         {!=
+            [shortcut_mode]
+            none}
+         {{ui current_screen}
+            set_focus_panel
+            story_song_select_panel}
+         {with
+            story_song_select_panel
+            {song.lst set_state kComponentFocused}}
+         {recoil.trg trigger}
+         {story_song_select_panel update_helpbar}
+         {if
+            {&&
+               {story_song_select_panel is_user_local}
+               {!
+                  {song_offer_provider get is_leaderboards}}}
+            {session
+               send_msg_to_all
+               {'`'
+                  ({',' $this}
+                     shortcut_exit)}
+               kNetReliable}}
+         {set
+            [shortcut_mode]
+            none}
+         {if_else
+            {==
+               [old_user]
+               none}
+            {input_mgr clear_user}
+            {input_mgr
+               set_user
+               [old_user]}}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {$this shortcut_exit}}
+         kDataUnhandled})
+   (BUTTON_UP_MSG
+      {if_else
+         {'||'
+            {&&
+               {==
+                  groups
+                  [shortcut_mode]}
+               {== $action kAction_Option}}
+            {&&
+               {==
+                  sorts
+                  [shortcut_mode]}
+               {== $action kAction_ViewModify}}}
+         {$this on_select}
+         kDataUnhandled})
+   (SELECT_MSG
+      {$this on_select})
+   (on_select
+      {if
+         {==
+            [shortcut_mode]
+            groups}
+         {$this shortcut_exit}
+         {do
+            ($sort
+               {song_offer_provider get_current_sort})
+            {$sort
+               select_shortcut
+               {shortcut.lst selected_data}}}})
+   (sync_shortcut
+      {if
+         {&&
+            {story_song_select_panel is_user_local}
+            {!
+               {song_offer_provider get is_leaderboards}}}
+         {session
+            send_msg_to_all
+            {'`'
+               ({',' $this}
+                  remote_set_shortcut
+                  {','
+                     [shortcut_selected]})}
+            kNetReliable}})
+   (SCROLL_MSG
+      {set
+         [shortcut_selected]
+         {shortcut.lst selected_pos}}
+      {$this sync_shortcut})
+   (JOYPAD_CONNECT_MSG
+      {if
+         {! $connected}
+         {$this shortcut_exit}})
+   (remote_set_shortcut
+      ($pos)
+      {shortcut.lst set_selected $pos})}
+{new
+   SongSelectPanel
+   story_song_select_panel
+   (file
+      "story_song_select.milo")
+   (focus song.lst)
+   (leaderboard_delay 1.2)
+   (held_buttons
+      (kAction_Option 0.25)
+      (kAction_Confirm
+         {if_else
+            {&&
+               {song_offer_provider are_headers_selectable}
+               {!
+                  {song_offer_provider get_setlist_mode}}}
+            1.5
+            -1.0}))
+   (joypad
+      (hold_ms 100)
+      (repeat_ms 80))
+   (song_data_mounted
+      ($song)
+      {story_song_select_details_panel song_data_mounted $song})
+   (enter
+      {practice_sel_section_panel clear_state}
+      {if_else
+         {song_offer_provider get is_leaderboards}
+         {song_mgr reset_shared_songs}
+         {do
+            ($user
+               {meta_performer song_select_user})
+            {input_mgr set_limit kLimitSessionLeader}
+            {if
+               $user
+               {meta_performer set_song_select_sync TRUE}
+               {input_mgr set_user $user}
+               {input_mgr set_limit kLimitSessionUser}
+               {session
+                  add_sink
+                  $this
+                  (remote_user_left)}}}}
+      {platform_mgr
+         add_sink
+         $this
+         (storage_changed)}
+      {meta music_stop}
+      {platform_mgr disable_xmp}
+      {if
+         {{story progress}
+            has_unlocked_challenge}
+         {song_offer_provider clear_saved_highlight}}
+      {{story progress}
+         clear_unlocked_challenge_flag}
+      {song_offer_provider enter}
+      {song.lst set_provider song_offer_provider}
+      {$this refresh_selected_song}
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {$this
+         credits_updated
+         {{story progress}
+            credits_banked}}
+      {{story performer}
+         clear_song_set})
+   (UPDATE_CREDITS)
+   (exit
+      {mini_leaderboard.mld fade_out}
+      {song_offer_provider exit}
+      {session remove_sink $this}
+      {{story_song_select_shortcut_panel find shortcut.grp}
+         set_showing
+         FALSE}
+      {platform_mgr remove_sink $this storage_changed}
+      {platform_mgr enable_xmp}
+      {meta music_start}
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (unload
+      {song_offer_provider unload}
+      {song_offer_provider set is_leaderboards FALSE})
+   (is_user_local
+      {do
+         ($user
+            {meta_performer song_select_user})
+         {if_else
+            $user
+            {$user is_local}
+            {is_leader_local}}})
+   (REMOTE_USER_LEFT_MSG
+      {story_song_select_shortcut_panel shortcut_exit}
+      {if
+         {&&
+            {!
+               {song_offer_provider get is_leaderboards}}
+            {is_leader_local}
+            {input_mgr get_user}
+            {==
+               {input_mgr get_user}
+               $user}
+            {!
+               {ui_event_mgr has_active_transition_event}}}
+         {ui goto_screen reset_song_select_screen}})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {!
+            {$this is_user_local}}
+         {$this new_leaderboard_selection}}
+      {$this update_helpbar}
+      {net_sync enable})
+   (BUTTON_DOWN_MSG
+      {cond
+         ({&&
+               {== $action kAction_Option}
+               {!
+                  {song.lst is_scrolling}}}
+            {{song_offer_provider get_current_sort}
+               highlight_next_header}
+            {play_instr_sfx $user button_shortcut}
+            {$this
+               skip_to_ix
+               {{song_offer_provider get_highlight_item}
+                  get_index}}
+            {$this refresh_selected_song})
+         ({&&
+               $user
+               {==
+                  {$user connected_controller_type}
+                  kControllerVocals}
+               {== $raw_button kPad_L1}
+               {!
+                  {song.lst is_scrolling}}}
+            {{song_offer_provider get_current_sort}
+               highlight_prev_header}
+            {play_instr_sfx $user button_shortcut}
+            {$this refresh_selected_song})
+         ({== $action kAction_Cancel}
+            {if_else
+               {&&
+                  {!
+                     {is_leader_local}}
+                  {!
+                     {song_offer_provider get is_leaderboards}}
+                  {!
+                     {song_offer_provider get_setlist_mode}}}
+               {song_offer_provider move_back}
+               {if_else
+                  {==
+                     {song_offer_provider on_cancel}
+                     kDataUnhandled}
+                  kDataUnhandled
+                  {play_instr_sfx $user button_back}}})
+         ({&&
+               {== $action kAction_Start}
+               {!
+                  {song.lst is_scrolling}}}
+            {if_else
+               {song_offer_provider get_setlist_mode}
+               {if
+                  {!=
+                     0
+                     {meta_performer next_any_index}}
+                  {play_instr_sfx $user button_select}
+                  {meta_performer finalize_setlist}
+                  {do
+                     ($next_screen
+                        {song_offer_provider move_on})
+                     {if
+                        $next_screen
+                        {ui reset_screen $next_screen}}}}
+               {do
+                  {play_instr_sfx $user button_select}
+                  {$this component_select song.lst $user}}})
+         ({&&
+               {== $action kAction_Confirm}
+               {!
+                  {song.lst is_scrolling}}}
+            {play_instr_sfx $user button_select}
+            {$this component_select song.lst $user})
+         (TRUE kDataUnhandled)})
+   (on_button_held
+      ($user $raw_button $action $pad_num)
+      {if_else
+         {== $action kAction_Confirm}
+         {if
+            {&&
+               {!
+                  {song.lst is_scrolling}}
+               {song_offer_provider are_headers_selectable}}
+            {if
+               {'||'
+                  {song_offer_provider selection_is song}
+                  {==
+                     {{song_offer_provider get_highlight_item}
+                        get_token}
+                     random_song}}
+               {song_offer_provider set_setlist_mode TRUE}}
+            {play_instr_sfx $user button_select}
+            {$this component_select song.lst $user}}
+         {do
+            {story_song_select_shortcut_panel
+               shortcut_enter
+               {if_else
+                  {== $action kAction_Option}
+                  groups
+                  sorts}
+               $user
+               {{song_offer_provider get_current_sort}
+                  get_current_shortcut}}
+            {if
+               {&&
+                  {$this is_user_local}
+                  {!
+                     {song_offer_provider get is_leaderboards}}}
+               {session
+                  send_msg_to_all
+                  {'`'
+                     (story_song_select_shortcut_panel
+                        shortcut_enter
+                        {','
+                           {if_else
+                              {== $action kAction_Option}
+                              groups
+                              sorts}}
+                        none
+                        {','
+                           {{song_offer_provider get_current_sort}
+                              get_current_shortcut}})}
+                  kNetReliable}}}})
+   (SCROLL_MSG
+      {song_offer_provider
+         set_highlighted_ix
+         {song.lst selected_pos}}
+      {$this refresh_selected_song})
+   (skip_to_ix
+      ($ix)
+      {song.lst set_selected $ix})
+   (on_change_setlist_mode
+      {story_song_select_details_panel on_change_setlist_mode}
+      {$this update_helpbar})
+   (refresh_songlist
+      {song.lst refresh})
+   (refresh_selected_song
+      {do
+         ($selitem
+            {song_offer_provider get_highlight_item})
+         {if
+            $selitem
+            {do
+               ($ix
+                  {$selitem get_index})
+               {if_else
+                  {!=
+                     $ix
+                     {song.lst selected_pos}}
+                  {song.lst set_selected_simulate_scroll $ix}
+                  {song.lst refresh}}}
+            {story_song_select_details_panel refresh_details ''}
+            {scroller.mesh
+               set_local_scale
+               1
+               {min
+                  1
+                  {/
+                     {song.lst get display_num}
+                     {song_offer_provider num_data}}}
+               1}
+            {scroll.tnm
+               set_frame
+               {/
+                  {min
+                     {song.lst first_showing}
+                     {max
+                        0
+                        {-
+                           {song_offer_provider num_data}
+                           {song.lst get display_num}}}}
+                  {song_offer_provider num_data}}}
+            {do
+               ($showing
+                  {>
+                     {song_offer_provider num_data}
+                     {song.lst get display_num}})
+               {scroller.mesh set_showing $showing}}}}
+      {$this new_leaderboard_selection}
+      {$this update_helpbar})
+   (refresh
+      {$this refresh_selected_song})
+   (rebuild_song_list
+      {do
+         ($selitem
+            {song_offer_provider get_highlight_item})
+         {if
+            $selitem
+            {do
+               ($ix
+                  {$selitem get_index})
+               {song_offer_provider enter}
+               {song.lst set_provider song_offer_provider}
+               {if_else
+                  {<
+                     $ix
+                     {song_offer_provider num_data}}
+                  {song.lst set_selected_simulate_scroll $ix}
+                  {song.lst
+                     set_selected_simulate_scroll
+                     {-
+                        {song_offer_provider num_data}
+                        1}}}}}})
+   (update_meta_performer
+      {$this refresh_songlist})
+   (SELECT_MSG
+      {unless
+         {ui in_transition}
+         {do
+            ($override_select_behavior FALSE)
+            ($item
+               {song_offer_provider get_highlight_item})
+            ($type
+               {$item get_node_type})
+            {if
+               {== $type kNodeHeader}
+               {set
+                  $override_select_behavior
+                  {handle_ret
+                     ($item show_cred_store)}}}
+            {if_else
+               {&&
+                  $override_select_behavior
+                  {!= $override_select_behavior kDataUnhandled}}
+               {do
+                  {story_cred_store_panel cred_store_enter}}
+               {do
+                  ($next_screen
+                     {song_offer_provider on_select})
+                  {song.lst refresh}
+                  {story_song_select_details_panel refresh_details ''}
+                  {if
+                     $next_screen
+                     {if
+                        {song_offer_provider get is_leaderboards}
+                        {leaderboards set_band_user $user}}
+                     {helpbar
+                        set_config
+                        ()}
+                     {ui goto_screen $next_screen}}}}}})
+   (move_on_quickplay
+      {unless
+         {ui in_transition}
+         {if_else
+            {gamemode in_mode h2h}
+            {h2h_goto_tracksel_screen}
+            {ui
+               sync_screen
+               {gamemode get ready_screen}
+               0}}})
+   (move_back_quickplay
+      {unless
+         {ui in_transition}
+         {ui
+            sync_screen
+            {song_select_get_back_screen}
+            0}})
+   (update_helpbar
+      {if_else
+         {'||'
+            {$this is_user_local}
+            {song_offer_provider get is_leaderboards}}
+         {do
+            ($opt2_symbol '')
+            {if_else
+               {song_offer_provider get_setlist_mode}
+               {if_else
+                  {==
+                     0
+                     {meta_performer next_any_index}}
+                  {helpbar
+                     set_config
+                     ((cancel helpbar_setlist_cancel)
+                        (confirm leader_hb_choosesong)
+                        (view_modify '')
+                        (option helpbar_next_heading helpbar_next_heading_hold)
+                        (option2 $opt2_symbol))}
+                  {helpbar
+                     set_config
+                     ((cancel helpbar_setlist_revert)
+                        (confirm leader_hb_choosesong)
+                        (state_confirm helpbar_play_setlist)
+                        (view_modify '')
+                        (option helpbar_next_heading helpbar_next_heading_hold)
+                        (option2 $opt2_symbol))}}
+               {do
+                  ($selection
+                     {song_offer_provider get_highlight_item})
+                  {helpbar
+                     set_config
+                     ((cancel helpbar_back)
+                        (confirm
+                           {cond
+                              ({song_offer_provider selection_is song}
+                                 leader_hb_choosesong)
+                              ({song_offer_provider selection_is header}
+                                 {$this header_helpbar_confirm_override $selection})
+                              leader_hb_chooseoption}
+                           {if_else
+                              {&&
+                                 {song_offer_provider are_headers_selectable}
+                                 {'||'
+                                    {song_offer_provider selection_is song}
+                                    {&&
+                                       {song_offer_provider get_highlight_item}
+                                       {==
+                                          {{song_offer_provider get_highlight_item}
+                                             get_token}
+                                          random_song}}}}
+                              helpbar_start_setlist_hold
+                              ''})
+                        (view_modify '')
+                        (option helpbar_next_heading helpbar_next_heading_hold)
+                        (option2 $opt2_symbol))}}}}
+         {helpbar
+            set_config
+            ()}})
+   (storage_changed
+      {ui_event_mgr trigger_event storage_changed})
+   (header_helpbar_confirm_override
+      ($selection)
+      {do
+         ($ret '')
+         ($is_unlocked
+            {handle_ret
+               ($selection show_unlocked_info)})
+         {if
+            {&&
+               $is_unlocked
+               {!= $is_unlocked kDataUnhandled}}
+            {if_else
+               {$selection is_challenge}
+               {set $ret story_chapterchallenge_play}
+               {if_else
+                  {$selection is_locked_chapter}
+                  {set $ret helpbar_unlock_chapter}
+                  {if
+                     {$selection is_empty_dlc_chapter}
+                     {set $ret helpbar_more_info}}}}}
+         $ret})}
+{new
+   UIPanel
+   story_cred_store_panel
+   (file
+      "story_cred_store.milo")
+   (focus unlockable_chapters.lst)
+   (enter
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {cred_store.grp set_showing FALSE})
+   (cred_store_enter
+      {do
+         {with
+            story_song_select_panel
+            {do
+               {song.lst set_state kComponentNormal}}}
+         {if
+            {story_song_select_panel is_user_local}
+            {session
+               send_msg_to_all
+               (story_cred_store_panel cred_store_enter)
+               kNetReliable}}
+         {$this refresh_helpbar}
+         {{ui current_screen}
+            set_focus_panel
+            $this}
+         {$this
+            credits_updated
+            {{story progress}
+               credits_banked}}
+         {cred_store.grp set_showing TRUE}
+         {cred_warning.lbl set_showing FALSE}
+         {unlockable_chapters.lst set_provider unlockable_chapter_provider}
+         {unlockable_chapters.lst refresh}
+         {unlockable_chapters.lst set_selected 0}
+         {$this refresh_details}
+         {$this update_scrollbar}})
+   (cred_store_exit
+      {do
+         {if
+            {story_song_select_panel is_user_local}
+            {session
+               send_msg_to_all
+               (story_cred_store_panel cred_store_exit)
+               kNetReliable}}
+         {story_songselect_screen set_focus_panel story_song_select_panel}
+         {cred_store.grp set_showing FALSE}
+         {with
+            story_song_select_panel
+            {do
+               {song.lst set_state kComponentFocused}
+               {$this update_helpbar}}}
+         {story_song_select_panel rebuild_song_list}})
+   (refresh_helpbar
+      {if
+         {story_song_select_panel is_user_local}
+         {if_else
+            {unlockable_chapter_provider is_exit_selected}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm exit))}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_unlock_chapter))}}})
+   (refresh_details
+      {unlockable_chapter_provider
+         set_curr_index
+         {unlockable_chapters.lst selected_pos}}
+      {story_song_select_details_panel refresh_details unlockable_chapter_provider})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {$this cred_store_exit}}
+         kDataUnhandled})
+   (SELECT_MSG
+      {unless
+         {ui in_transition}
+         {$this on_select}})
+   (on_select
+      {if_else
+         {unlockable_chapter_provider
+            select_chapter
+            {unlockable_chapters.lst selected_pos}}
+         {$this selection_successful}
+         {$this selection_failed}})
+   (selection_successful
+      {if_else
+         {!
+            {unlockable_chapter_provider is_exit_selected}}
+         {ui push_screen new_challenge_available_screen}
+         {$this update_after_select}})
+   (update_after_select
+      {do
+         {if_else
+            {'||'
+               {unlockable_chapter_provider
+                  exit_on_select
+                  {unlockable_chapters.lst selected_pos}}
+               {==
+                  {unlockable_chapter_provider num_locked_challenges}
+                  1}}
+            {$this cred_store_exit}
+            {do
+               {unlockable_chapter_provider refresh_chapters}
+               {unlockable_chapters.lst refresh}
+               {$this refresh_details}}}
+         {$this update_scrollbar}})
+   (selection_failed
+      {do
+         {play_instr_sfx_local $user button_back}
+         {$this show_denied_warning}
+         {warning.trg trigger}})
+   (SCROLL_MSG
+      {$this update_selection}
+      kDataUnhandled)
+   (net_component_post_scroll
+      {$this update_selection})
+   (net_component_select
+      {$this on_select}
+      kDataUnhandled)
+   (update_selection
+      {$this hide_denied_warning}
+      {$this refresh_details}
+      {$this refresh_helpbar}
+      {$this update_scrollbar})
+   (update_scrollbar
+      {scroller.mesh
+         set_local_scale
+         1
+         {min
+            1
+            {/
+               {unlockable_chapters.lst get display_num}
+               {unlockable_chapter_provider num_data}}}
+         1}
+      {scroll.tnm
+         set_frame
+         {/
+            {min
+               {unlockable_chapters.lst first_showing}
+               {max
+                  0
+                  {-
+                     {unlockable_chapter_provider num_data}
+                     {unlockable_chapters.lst get display_num}}}}
+            {unlockable_chapter_provider num_data}}}
+      {do
+         ($showing
+            {>
+               {unlockable_chapter_provider num_data}
+               {unlockable_chapters.lst get display_num}})
+         {scroller.mesh set_showing $showing}})
+   (show_denied_warning
+      {cred_warning.lbl
+         set
+         text_token
+         {unlockable_chapter_provider get_denied_token}}
+      {cred_warning.lbl set_showing TRUE})
+   (hide_denied_warning
+      {cred_warning.lbl set_showing FALSE})
+   (exit
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (UPDATE_CREDITS)}
+{new
+   BandScreen
+   story_songselect_screen
+   (panels meta background_panel song_sync_panel postsong_sfx_panel story_song_select_panel story_cred_store_panel story_song_select_details_panel story_song_select_shortcut_panel)
+   (focus story_song_select_panel)
+   (back story_venue_screen)
+   (update_helpbar
+      {story_song_select_panel update_helpbar})
+   (background_view song_select)
+   (net_sync_scroll
+      {with
+         story_cred_store_panel
+         {cred_store.grp get showing}})
+   (enter
+      {song_offer_provider set_sort by_chapter}
+      {$this refresh_selected_song}
+      {with
+         background_panel
+         {do
+            {background_blue.trg trigger}}})
+   (net_component_select
+      ($user $component)
+      {if_else
+         {== $component ok.btn}
+         FALSE
+         kDataUnhandled})}
+{new
+   BandScreen
+   new_challenge_available_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {do
+         ($challenge_name
+            {unlockable_chapter_provider get_token})
+         ($challenge_venue
+            {unlockable_chapter_provider get_venue})
+         {dialog_panel
+            set_ok
+            (challenge_unlocked_venue $challenge_name $challenge_venue)}})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen}
+            {story_cred_store_panel update_after_select}
+            {session
+               send_msg_to_all
+               {'`'
+                  ({',' story_cred_store_panel}
+                     update_after_select)}
+               kNetReliable})
+         kDataUnhandled})}
+{new
+   StoryChapterSongSelectPanel
+   story_chapter_songselect_panel
+   (file
+      "story_chapter_songselect.milo")
+   (focus
+      "songs.lst")
+   (enter
+      {{story progress}
+         clear_last_set_state}
+      {name.lbl
+         set
+         text_token
+         {{story chapter}
+            chapter_name}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Confirm
+            {do
+               {play_instr_sfx $user button_select}
+               kDataUnhandled})
+         (kAction_Cancel
+            {$this clear_song}
+            kDataUnhandled)
+         (kAction_Option
+            {if
+               {$this can_view_photos}
+               {story_songselect_photos_screen
+                  set
+                  song_symbol
+                  {$this selected_song}}
+               {play_instr_sfx $user button_shortcut}
+               {$this set_current_song}
+               {ui goto_screen story_songselect_photos_screen}})
+         kDataUnhandled})
+   (SCROLL_MSG
+      {if
+         {$this is_up}
+         {$this refresh_helpbar}})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {if_else
+         {$this can_view_photos}
+         {helpbar set_widget option view_photos}
+         {helpbar set_widget option ''}})
+   (song_selected
+      {{story performer}
+         select_venue}
+      {ui goto_screen story_chapter_seldiff_screen})}
+{new
+   StoryChapterChallengeSelectPanel
+   story_chapter_challenges_panel
+   (file
+      "story_chapter_challenges.milo")
+   (focus
+      "challenges.lst")
+   (enter
+      {platform_mgr disable_xmp}
+      {{story progress}
+         clear_last_set_state})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {$this clear_challenge}
+            kDataUnhandled)
+         (kAction_Option
+            {if
+               {$this can_view_photos}
+               {story_challengeselect_photos_screen
+                  set
+                  song_symbol
+                  {$this selected_challenge}}
+               {play_instr_sfx $user button_shortcut}
+               {$this set_current_challenge}
+               {ui goto_screen story_challengeselect_photos_screen}})
+         kDataUnhandled})
+   (SCROLL_MSG
+      {if
+         {$this is_up}
+         {$this refresh_helpbar}})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {if_else
+         {$this can_view_photos}
+         {helpbar set_widget option view_photos}
+         {helpbar set_widget option ''}})
+   (challenge_selected
+      {{story performer}
+         select_venue}
+      {ui goto_screen story_chapterchallenge_seldiff_screen})}
+{new
+   BandScreen
+   story_chapter_challenges_screen
+   (panels meta story_chapter_challenges_panel postsong_sfx_panel)
+   (focus story_chapter_challenges_panel)
+   (back story_hub_screen)
+   (enter
+      {input_mgr set_limit kLimitSessionLeader}
+      {if_else
+         {is_leader_local}
+         {helpbar
+            set_config
+            ((cancel helpbar_back)
+               (confirm story_chapterchallenge_play))}
+         {helpbar
+            set_config
+            ()}})}
+{new
+   StoryChapterSetCompletePanel
+   story_chapter_setcomplete_panel
+   (file
+      "story_chapter_setcomplete.milo")
+   (focus
+      "")
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Confirm}
+         {if_else
+            {$this is_ready_to_continue}
+            {do
+               {play_instr_sfx $user button_select}
+               {if_else
+                  {story story_haspostsong_screen}
+                  {ui
+                     goto_screen
+                     {story story_postsong_screen}}
+                  {ui pop_screen meta_loading_continue_screen}}}
+            {$this enable_fast_forward}}}
+      kDataUnhandled)
+   (enter
+      {do
+         ($performer
+            {story performer})
+         ($chapter
+            {story chapter})
+         ($progress
+            {story progress})
+         ($song
+            {$performer indexed_song 0})
+         ($num_unlocks 0)
+         ($earned_stars
+            {$performer chapter_songset_stars})
+         ($total_stars
+            {$performer chapter_songset_total_stars})
+         ($thumbnail_path
+            "ui/story/memo_art/thumbnails/%s_thumbnail_keep.bmp")
+         ($memo3
+            {$this
+               find_memo_for
+               $song
+               "memo_3star"})
+         ($memo3name
+            {$memo3 get_name})
+         ($memo5
+            {$this
+               find_memo_for
+               $song
+               "memo_5star"})
+         ($memo5name
+            {$memo5 get_name})
+         ($chaptermemo
+            {$this
+               find_memo_for
+               {$chapter chapter_name}
+               ""})
+         ($chaptermemoname
+            {$chaptermemo get_name})
+         {stars.sd set_values $earned_stars $total_stars}
+         {score.lbl
+            set_int
+            {$performer chapter_songset_score}
+            TRUE}
+         {chapter_heading.lbl
+            set
+            text_token
+            {$chapter chapter_name}}
+         {gamertag.lbl
+            set_token_fmt
+            (story_setcomplete_gamertag
+               {story get_story_owner_name})}
+         {chapter_challenge.lbl set text_token story_setcomplete_challengeunlocked}
+         {song_progress.lbl
+            set_token_fmt
+            (story_chapter_songprogress
+               {$progress chapter_played_songs $chapter}
+               {$progress chapter_songs $chapter})}
+         {heading.lbl set_song_name $song}
+         {reset.trig trigger}
+         {song_3star_locked.trig trigger}
+         {song_5star_locked.trig trigger}
+         {chapter_photo_locked.trig trigger}
+         {chapter_challenge_locked.trig trigger}
+         {$this queue_trigger song_stuff 1.0 0}
+         {$this
+            queue_trigger
+            {sprintf
+               "show_%dstars"
+               $earned_stars}
+            1.25
+            0}
+         {if
+            {$this get_unlock_state curr $memo3name}
+            {song_3star.pic
+               set
+               tex_file
+               {sprintf
+                  $thumbnail_path
+                  {$memo3 get_image 0}}}}
+         {if
+            {$this get_unlock_state new $memo3name}
+            {$this queue_trigger song_3star_unlock 1.0 1}
+            {'+=' $num_unlocks 1}}
+         {if
+            {$this get_unlock_state prev $memo3name}
+            {song_3star_unlocked.trig trigger}}
+         {if
+            {$this get_unlock_state curr $memo5name}
+            {song_5star.pic
+               set
+               tex_file
+               {sprintf
+                  $thumbnail_path
+                  {$memo5 get_image 0}}}}
+         {if
+            {$this get_unlock_state new $memo5name}
+            {$this queue_trigger song_5star_unlock 1.0 1}
+            {'+=' $num_unlocks 1}}
+         {if
+            {$this get_unlock_state prev $memo5name}
+            {song_5star_unlocked.trig trigger}}
+         {if_else
+            {$chapter is_bonus_chapter}
+            {chapter_stuff.grp set showing FALSE}
+            {do
+               {chapter_stuff.grp set showing TRUE}
+               {$this queue_trigger chapter_stuff 1.0 0}}}
+         {if
+            {$this get_unlock_state curr $chaptermemoname}
+            {chapter_photo.pic
+               set
+               tex_file
+               {sprintf
+                  $thumbnail_path
+                  {$chaptermemo get_image 0}}}}
+         {if
+            {$this get_unlock_state new $chaptermemoname}
+            {$this queue_trigger chapter_photo_unlock 1.0 1}
+            {'+=' $num_unlocks 1}}
+         {if
+            {$this unlocked_new_set}
+            {$this queue_trigger chapter_challenge_unlock 1.0 0}
+            {'+=' $num_unlocks 1}}
+         {if
+            {$this get_unlock_state prev $chaptermemoname}
+            {chapter_photo_unlocked.trig trigger}}
+         {if
+            {> $num_unlocks 0}
+            {something_unlocked.trig trigger}}
+         {$this start_triggers 0}}
+      {$this refresh_helpbar}
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {$this
+         credits_updated
+         {{story progress}
+            credits_banked}})
+   (exit
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (refresh_helpbar
+      {if_else
+         {&&
+            {$this is_ready_to_continue}
+            {is_leader_local}}
+         {helpbar
+            set_config
+            ((confirm helpbar_continue))}
+         {helpbar
+            set_config
+            ()}})
+   (UPDATE_CREDITS)}
+{new
+   StoryChapterSetCompletePanel
+   story_challenge_complete_panel
+   (file
+      "story_challenge_complete.milo")
+   (focus
+      "")
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Confirm}
+         {if_else
+            {$this is_ready_to_continue}
+            {do
+               {play_instr_sfx $user button_select}
+               {if_else
+                  {story story_haspostsong_screen}
+                  {ui
+                     goto_screen
+                     {story story_postsong_screen}}
+                  {ui pop_screen meta_loading_continue_screen}}}
+            {$this enable_fast_forward}}}
+      kDataUnhandled)
+   (enter
+      {do
+         ($performer
+            {story performer})
+         ($chapter
+            {story chapter})
+         ($progress
+            {story progress})
+         ($num_unlocks 0)
+         ($earned_stars
+            {$performer chapter_songset_stars})
+         ($total_stars
+            {$performer chapter_songset_total_stars})
+         ($thumbnail_path
+            "ui/story/memo_art/thumbnails/%s_thumbnail_keep.png")
+         ($chaptermemo
+            {$this
+               find_memo_for
+               {$chapter chapter_name}
+               ""})
+         ($chaptermemoname
+            {$chaptermemo get_name})
+         {stars.sd set_values $earned_stars $total_stars}
+         {score.lbl
+            set_int
+            {$performer chapter_songset_score}
+            TRUE}
+         {heading.lbl
+            set
+            text_token
+            {$chapter chapter_name}}
+         {goal.lbl
+            set
+            text_token
+            {sprintf
+               "%s_goal"
+               {$chapter chapter_name}}}
+         {gamertag.lbl
+            set_token_fmt
+            (story_setcomplete_gamertag
+               {story get_story_owner_name})}
+         {reset.trig trigger}
+         {award_locked.trig trigger}
+         {chapter_challenge_hide_status.trig trigger}
+         {$this queue_trigger song_stuff 1.0 0}
+         {$this queue_trigger show_challengestars 1.25 0}
+         {if
+            {$this get_unlock_state curr $chaptermemoname}
+            {award.pic
+               set
+               tex_file
+               {sprintf
+                  $thumbnail_path
+                  {$chaptermemo get_image 0}}}
+            {challenge_status.lbl set text_token story_challenge_complete}}
+         {if
+            {$this get_unlock_state new $chaptermemoname}
+            {$this queue_trigger chapter_challenge_show_status 1.0 0}
+            {$this queue_trigger award_unlock 1.0 0}
+            {'+=' $num_unlocks 1}}
+         {if
+            {$this get_unlock_state prev $chaptermemoname}
+            {award_unlocked.trig trigger}}
+         {if
+            {$this get_unlock_state not $chaptermemoname}
+            {challenge_status.lbl set text_token story_challenge_failed}
+            {$this queue_trigger chapter_challenge_show_failed_status 1.0 0}}
+         {if
+            {> $num_unlocks 0}
+            {something_unlocked.trig trigger}}
+         {$this start_triggers 0}}
+      {$this refresh_helpbar}
+      {{story progress}
+         add_credits_watcher
+         $this}
+      {$this
+         credits_updated
+         {{story progress}
+            credits_banked}})
+   (exit
+      {{story progress}
+         remove_credits_watcher
+         $this})
+   (refresh_helpbar
+      {if_else
+         {&&
+            {$this is_ready_to_continue}
+            {is_leader_local}}
+         {helpbar
+            set_config
+            ((confirm helpbar_continue))}
+         {helpbar
+            set_config
+            ()}})
+   (UPDATE_CREDITS)}
+{new
+   BandScreen
+   story_chapter_setcomplete_screen
+   (panels story_chapter_setcomplete_panel)
+   (focus story_chapter_setcomplete_panel)
+   (scroll_sfx FALSE)
+   (update_helpbar
+      {story_chapter_setcomplete_panel refresh_helpbar})}
+{new
+   BandScreen
+   story_challenge_complete_screen
+   (panels story_challenge_complete_panel)
+   (focus story_challenge_complete_panel)
+   (scroll_sfx FALSE)
+   (update_helpbar
+      {story_challenge_complete_panel refresh_helpbar})}
+{new
+   MoviePanel
+   story_chaptermovie_panel
+   MOVIE_PANEL_STUFF
+   (videos
+      {story get_chaptervideo})
+   (movie_done
+      {if
+         {is_leader_local}
+         {story handle_current_chaptervideo_seen}
+         {{story performer}
+            select_most_recent_chapter}
+         {ui
+            goto_screen
+            {get_story_destination_screen
+               {story_chaptermovie_screen get destination_screen}}}})}
+{new
+   BandScreen
+   story_chaptermovie_screen
+   (panels meta story_chaptermovie_panel)
+   (send_net_sfx FALSE)
+   (focus story_chaptermovie_panel)
+   (destination_screen null)
+   (helpbar
+      ())
+   (enter
+      {platform_mgr disable_xmp})}
+{new
+   MoviePanel
+   story_endmovie_panel
+   MOVIE_PANEL_STUFF
+   (videos outro)
+   (movie_done
+      {if
+         {is_leader_local}
+         {ui goto_screen credits_screen}})}
+{new
+   BandScreen
+   story_endmovie_screen
+   (panels story_endmovie_panel)
+   (send_net_sfx FALSE)
+   (focus story_endmovie_panel)
+   (helpbar
+      ())
+   (enter
+      {coop_track_panel set_showing FALSE}
+      {achievements set_allow_achievements FALSE}
+      {platform_mgr disable_xmp})
+   (exit
+      {coop_track_panel set_showing TRUE}
+      {achievements set_allow_achievements TRUE})}
+{new
+   MoviePanel
+   story_mediaplay_panel
+   (skip_text story_movie_return)
+   MOVIE_PANEL_STUFF
+   (videos
+      "")
+   (last_screen story_prizes_screen)
+   (movie_done
+      {ui
+         goto_screen
+         [last_screen]}
+      {set
+         [last_screen]
+         story_prizes_screen})}
+{new
+   BandScreen
+   story_mediaplay_screen
+   (panels meta story_mediaplay_panel)
+   (focus story_mediaplay_panel)
+   (helpbar
+      ())
+   (enter
+      {platform_mgr disable_xmp})
+   (exit
+      {platform_mgr enable_xmp})}
+{new
+   BandScreen
+   missing_dlc_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_select)))
+   (enter
+      {dialog_panel set_ok loading_help51})
+   (SELECT_MSG
+      {ui pop_screen})}

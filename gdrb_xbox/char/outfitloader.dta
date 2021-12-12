@@ -1,0 +1,407 @@
+#define BODY_ANIMS
+((proxy TRUE))
+#define P9_AMP_SHARED
+((change_outfit
+      ($async $loading)
+      {if
+         {'||'
+            {&&
+               $loading
+               {exists gamemode}}
+            $char.no_clothes}
+         {$this select_all -1}})
+   (on_outfit_loaded
+      ($cat $dir)
+      {{$this dir}
+         copy_sphere
+         $dir}))
+(types
+   (beatle
+      (category
+         (historical
+            (proxy TRUE)
+            (outfits P9_ALL_OUTFITS))
+         (dreamscape
+            (proxy TRUE)
+            (outfits P9_ALL_OUTFITS))
+         (rigging
+            (path
+               "char/rigging")
+            (outfits
+               (none)
+               (guitar_lh)
+               (guitar_rh)
+               (drum)))
+         (instrument0 INSTRUMENTS)
+         (instrument1 INSTRUMENTS)
+         (instrument2 INSTRUMENTS)
+         (instrument3 INSTRUMENTS)
+         (body_drum
+            (proxy TRUE)
+            (outfits
+               (none)
+               (drum_dream_slow)
+               (drum_dream_medium)
+               (drum_dream_fast)
+               (drum_early_slow)
+               (drum_early_medium)
+               (drum_early_fast)))
+         (body_guitar
+            (proxy TRUE)
+            (outfits
+               (none)
+               (guitar_dream_fast)
+               (guitar_dream_medium)
+               (guitar_dream_slow)
+               (guitar_early_fast)
+               (guitar_early_medium)
+               (guitar_early_slow)))
+         (body_add
+            (proxy TRUE)
+            (outfits
+               (none)
+               (drum_add_dream_slow)
+               (drum_add_dream_medium)
+               (drum_add_dream_fast)
+               (drum_add_early_slow)
+               (drum_add_early_medium)
+               (drum_add_early_fast)))
+         (stick_left
+            (proxy TRUE)
+            (outfits
+               (none)
+               (stick_left_slow)
+               (stick_left_medium)
+               (stick_left_fast)))
+         (stick_right
+            (proxy TRUE)
+            (outfits
+               (none)
+               (stick_right_slow)
+               (stick_right_medium)
+               (stick_right_fast)))
+         (song
+            (proxy TRUE)
+            (outfits P9_SONG_PACKAGES))
+         (venue
+            (proxy TRUE)
+            (outfits VENUES_LIST)))
+      (has_instrument
+         ($name)
+         {do
+            ($has FALSE)
+            ($inst '')
+            {foreach
+               $cat
+               (instrument0 instrument1 instrument2 instrument3)
+               {set
+                  $inst
+                  {$this shown_name $cat}}
+               {if
+                  {==
+                     $name
+                     {cond
+                        ({== $inst none}
+                           none)
+                        ({'||'
+                              {has_substr
+                                 $inst
+                                 "bass_"}
+                              {has_substr
+                                 $inst
+                                 "guitar_"}}
+                           guitar)
+                        drum}}
+                  {set $has TRUE}}}
+            $has})
+      (change_outfit
+         ($async $loading)
+         {cond
+            ({&&
+                  $loading
+                  {exists gamemode}}
+               {$this select_all -1})
+            ($char.no_clothes
+               {$this select_all -1})
+            {do
+               ($char
+                  {$this dir})
+               ($era
+                  {$char get era})
+               ($tempo
+                  {$char get tempo})
+               ($has_drum
+                  {==
+                     {$char name}
+                     trecool})
+               {$this
+                  select
+                  rigging
+                  {switch
+                     {$char name}
+                     (billiejoe guitar_rh)
+                     (mikedirnt guitar_rh)
+                     (trecool drum)}}
+               {if_else
+                  $has_drum
+                  {do
+                     {$this
+                        select
+                        body_drum
+                        {sprint
+                           "drum_"
+                           $era
+                           "_"
+                           $tempo}}
+                     {$this select body_guitar none}
+                     {$this
+                        select
+                        body_add
+                        {sprint
+                           "drum_add_"
+                           $era
+                           "_"
+                           $tempo}}
+                     {$this
+                        select
+                        stick_left
+                        {sprint
+                           "stick_left_"
+                           $tempo}}
+                     {$this
+                        select
+                        stick_right
+                        {sprint
+                           "stick_right_"
+                           $tempo}}}
+                  {do
+                     {$this
+                        select
+                        body_guitar
+                        {if_else
+                           {$this has_instrument guitar}
+                           {sprint
+                              "guitar_"
+                              $era
+                              "_"
+                              $tempo}
+                           none}}
+                     {$this select body_drum none}
+                     {$this select body_add none}
+                     {$this select stick_left none}
+                     {$this select stick_right none}}}
+               {$this
+                  select
+                  song
+                  {$char get song}}
+               {$this
+                  select
+                  venue
+                  {$char get venue}}}})
+      (on_outfit_loaded
+         ($cat $dir)
+         {switch
+            $cat
+            (historical
+               {handle
+                  ($dir set_name hist)})
+            (dreamscape
+               {handle
+                  ($dir set_name dream)})
+            ((body_drum body_guitar song venue)
+               {handle
+                  ($dir set_name body)})
+            ((body_add stick_left stick_right)
+               {handle
+                  ($dir set_name $cat)})
+            ((instrument0 instrument1 instrument2 instrument3)
+               {if
+                  $dir
+                  {$dir set_name $cat}
+                  {{$this dir}
+                     loaded_instrument
+                     $dir}})}
+         {with
+            {$this dir}
+            {if
+               {exists bone_pelvis.mesh}
+               {bone_pelvis.mesh set_trans_parent $this}}
+            {if
+               {exists bone_mic_stand_bottom.mesh}
+               {bone_mic_stand_bottom.mesh set_trans_parent $this}}})
+      (create_path
+         ($outfit $cat)
+         {switch
+            $cat
+            ((historical dreamscape)
+               {sprint
+                  "../outfit/"
+                  $outfit
+                  ".milo"})
+            ((stick_left stick_right)
+               {sprint
+                  "../../rigging/drum/"
+                  $outfit
+                  ".milo"})
+            ((body_guitar body_drum)
+               {sprint
+                  "../body/"
+                  $outfit
+                  ".milo"})
+            kDataUnhandled}))
+   (crowd_anim
+      (change_outfit
+         ($async $loading)
+         {if
+            $loading
+            {$this select tempo none}})
+      (category
+         (tempo
+            (outfits
+               (none)
+               (slow)
+               (medium)
+               (fast))))
+      (load_tempo
+         ($tempo $async $coordinator)
+         {$this select tempo $tempo}
+         {if_else
+            $coordinator
+            {$coordinator add_outfit_loader $this}
+            {$this start_load $async}}))
+   (world
+      (category
+         (songs
+            (path
+               ".")
+            (outfits
+               (song)))
+         (lyric_font
+            (proxy TRUE)
+            (path
+               "world/lyric_font")
+            (outfits
+               (none)
+               (octopuses_garden)
+               (badtyp)
+               (caslonfb)
+               (comrade)
+               (eaglebold)
+               (ironmonger)
+               (skyline)
+               (yellow_submarine)))
+         (venue0
+            (proxy TRUE)
+            (outfits
+               (venue0)))
+         (venue1
+            (proxy TRUE)
+            (outfits
+               (venue1)))
+         (venue2
+            (proxy TRUE)
+            (outfits
+               (venue2)))
+         (venue3
+            (proxy TRUE)
+            (outfits
+               (venue3)))
+         (scene0
+            (proxy TRUE)
+            (outfits
+               (scene0)))
+         (scene1
+            (proxy TRUE)
+            (outfits
+               (scene1)))
+         (scene2
+            (proxy TRUE)
+            (outfits
+               (scene2)))
+         (scene3
+            (proxy TRUE)
+            (outfits
+               (scene3)))
+         (scene4
+            (proxy TRUE)
+            (outfits
+               (scene4)))
+         (scene5
+            (proxy TRUE)
+            (outfits
+               (scene5)))
+         (scene6
+            (proxy TRUE)
+            (outfits
+               (scene6)))
+         (scene7
+            (proxy TRUE)
+            (outfits
+               (scene7))))
+      (on_outfit_loaded
+         ($cat $dir)
+         {if
+            $p9director
+            {if
+               {&&
+                  {exists gamemode}
+                  {gamemode in_mode frame_rate}}
+               {frame_rate_force_venue}}
+            {$p9director on_outfit_loaded $cat $dir}})
+      (on_outfit_load_started
+         ($name)
+         {if
+            $p9director
+            {$p9director on_outfit_load_started $name}})
+      (change_outfit
+         ($async $loading)
+         {if
+            {&& $loading $p9director}
+            {$p9director set outfit $this}})
+      (create_path
+         ($outfit $cat)
+         {with
+            {$this dir}
+            {switch
+               $cat
+               (songs
+                  {cond
+                     ({exists song_mgr}
+                        {sprint
+                           {song_mgr
+                              song_file_path
+                              {meta_performer song}
+                              "_ap.milo"}})
+                     ({&&
+                           $tool_song
+                           {$tool_song song_path}}
+                        {sprint
+                           {$tool_song song_path}
+                           "_ap.milo"})
+                     none})
+               (lyric_font kDataUnhandled)
+               {if_else
+                  $p9director
+                  {$p9director venue_path $outfit}
+                  none}}})
+      (check_sync
+         ($filename $cat)
+         {if
+            {&&
+               {exists milo}
+               {!=
+                  $filename
+                  ""}
+               {!
+                  {has_substr
+                     $filename
+                     "none.milo"}}}
+            {milo p4_checksync $filename}
+            {if
+               {== $cat songs}
+               {milo p4_checklocked $filename TRUE}}}))
+   (extras_clips
+      (category
+         (venues
+            (outfits VENUES_LIST))))
+   #include extras.dta)

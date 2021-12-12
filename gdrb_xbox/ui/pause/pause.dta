@@ -1,0 +1,1156 @@
+#define PAUSE_SCREEN_HANDLERS
+((pause_if_local
+      {{$this find pause_title.lbl}
+         set_showing
+         FALSE}
+      {if
+         {session is_local}
+         {if
+            {!
+               {gamemode in_mode drum_trainer_freestyle}}
+            {game set_paused TRUE}}
+         {{$this find pause_title.lbl}
+            set_showing
+            TRUE}}
+      {if
+         {gamemode in_mode tutorial}
+         {{gamemode get main_panel}
+            set_paused
+            TRUE}
+         {{gamemode get main_panel}
+            pause_tutorial}})
+   (resume
+      {if
+         {session is_local}
+         {set $game_unpause_on_enter TRUE}}
+      {if
+         {gamemode in_mode tutorial}
+         {{gamemode get main_panel}
+            set_paused
+            FALSE}
+         {{gamemode get main_panel}
+            unpause_tutorial}}
+      {ui pop_screen}))
+{new
+   UIPanel
+   pause_bg_panel
+   (file
+      "pause_bg.milo")}
+{new
+   Object
+   pausecommand_resume
+   (should_display TRUE)
+   (on_selected
+      {pause_panel resume})}
+{new
+   Object
+   pausecommand_restart
+   (should_display
+      {if_else
+         {&&
+            {!
+               {gamemode in_mode tutorial}}
+            {!
+               {gamemode in_mode drum_trainer}}
+            {'||'
+               {gamemode get local_network}
+               {&&
+                  {is_leader_local}
+                  {==
+                     {gamemode get player_arrangement}
+                     kArrangeBand}}}}
+         {do
+            {if
+               {<
+                  {session num_users}
+                  {gamemode get min_players}}
+               {pause_panel
+                  disable
+                  {pause_panel
+                     find
+                     {elem
+                        {pause_panel get pause_buttons}
+                        {pause_panel get button_count}}}}}
+            TRUE}
+         FALSE})
+   (on_selected
+      {pause_panel set exit_destination exit_restart}
+      {if_else
+         {gamemode in_mode practice}
+         {pause_panel on_restart}
+         {ui goto_screen confirm_quit_screen}})}
+{new
+   Object
+   pausecommand_lefty_flip
+   (should_display
+      {if_else
+         {&&
+            {gamemode get has_track}
+            {!=
+               vocals
+               {{input_mgr get_user}
+                  get_track_sym}}
+            {!
+               {gamemode in_mode tutorial}}}
+         {do
+            {pause_panel
+               set
+               flip_check_index
+               {pause_panel get button_count}}
+            {pause_panel
+               set
+               original_flip
+               {{{input_mgr get_user}
+                     get_gameplay_options}
+                  get_lefty}}
+            {pause_panel update_lefty_check}
+            TRUE}
+         FALSE})
+   (on_selected
+      {if
+         {!=
+            vocals
+            {{input_mgr get_user}
+               get_track_sym}}
+         {do
+            ($options
+               {{input_mgr get_user}
+                  get_gameplay_options})
+            ($lefty_flipped
+               {$options get_lefty})
+            {$options
+               set_lefty
+               {! $lefty_flipped}}
+            {pause_panel update_lefty_check}}})}
+{new
+   Object
+   pausecommand_vocal_options
+   (should_display
+      {if_else
+         {&&
+            {gamemode get has_track}
+            {==
+               vocals
+               {{input_mgr get_user}
+                  get_track_sym}}}
+         TRUE
+         FALSE})
+   (on_selected
+      {if
+         {==
+            vocals
+            {{input_mgr get_user}
+               get_track_sym}}
+         {do
+            {pause_panel set resync_on_exit FALSE}
+            {pause_panel set reset_input_mgr FALSE}
+            {pause_panel set save_selected_index TRUE}
+            {ui goto_screen pause_vocal_options_screen}}})}
+{new
+   Object
+   pausecommand_accomplishments
+   (should_display
+      {if_else
+         {gamemode in_mode tutorial}
+         FALSE
+         TRUE})
+   (on_selected
+      {view_accomplishments_screen
+         {input_mgr get_user}
+         $this
+         pause_accomplishments_choose_user_screen
+         pause_accomplishments_no_user_screen
+         pause_accomplishments_screen
+         pause_screen})
+   (on_go_to_accomplishments_screen
+      {pause_panel set resync_on_exit FALSE}
+      {pause_panel set reset_input_mgr FALSE}
+      {pause_panel set save_selected_index TRUE})}
+{new
+   Object
+   pausecommand_practice_new_section
+   (should_display
+      {if_else
+         {gamemode in_mode practice}
+         TRUE
+         FALSE})
+   (on_selected
+      {practice_sel_section_panel clear_state}
+      {pause_panel set exit_destination exit_new_section}
+      {pause_panel on_quit})}
+{new
+   Object
+   pausecommand_new_song
+   (should_display
+      {if_else
+         {&&
+            {!
+               {gamemode in_mode tutorial}}
+            {!
+               {gamemode in_mode drum_trainer}}
+            {!
+               {gamemode get ranked}}
+            {!
+               {&&
+                  {gamemode in_mode story}
+                  {story should_return_to_challenges}}}
+            {'||'
+               {gamemode get local_network}
+               {is_leader_local}}}
+         {do
+            {if
+               {<
+                  {session num_users}
+                  {gamemode get min_players}}
+               {pause_panel
+                  disable
+                  {pause_panel
+                     find
+                     {elem
+                        {pause_panel get pause_buttons}
+                        {pause_panel get button_count}}}}}
+            TRUE}
+         FALSE})
+   (on_selected
+      {pause_panel set exit_destination exit_new_song}
+      {if_else
+         {gamemode in_mode practice}
+         {pause_panel on_quit}
+         {ui goto_screen confirm_quit_screen}})}
+{new
+   Object
+   pausecommand_new_challenge
+   (should_display
+      {if_else
+         {&&
+            {gamemode in_mode story}
+            {story should_return_to_challenges}
+            {'||'
+               {gamemode get local_network}
+               {is_leader_local}}}
+         TRUE
+         FALSE})
+   (on_selected
+      {pause_panel set exit_destination exit_new_song}
+      {ui goto_screen confirm_quit_screen})}
+{new
+   Object
+   pausecommand_change_difficulty
+   (should_display
+      {if_else
+         {&&
+            {'||'
+               {gamemode in_mode qp_coop}
+               {gamemode in_mode story}}
+            {'||'
+               {gamemode get local_network}
+               {is_leader_local}}}
+         {do
+            {if
+               {<
+                  {session num_users}
+                  {gamemode get min_players}}
+               {pause_panel
+                  disable
+                  {pause_panel
+                     find
+                     {elem
+                        {pause_panel get pause_buttons}
+                        {pause_panel get button_count}}}}}
+            TRUE}
+         FALSE})
+   (on_selected
+      {pause_panel set exit_destination exit_change_difficulty}
+      {if_else
+         {gamemode in_mode practice}
+         {pause_panel on_quit}
+         {ui goto_screen confirm_quit_screen}})}
+{new
+   Object
+   pausecommand_forfeit
+   (should_display
+      {if_else
+         {gamemode get ranked}
+         TRUE
+         FALSE})
+   (on_selected
+      {pause_panel set exit_destination exit_forfeit}
+      {pause_panel set resync_on_exit FALSE}
+      {ui goto_screen confirm_quit_screen})}
+{new
+   Object
+   pausecommand_metronome
+   (should_display
+      {if_else
+         {gamemode in_mode drum_trainer}
+         {do
+            {pause_panel
+               set
+               metronome_check_index
+               {pause_panel get button_count}}
+            {pause_panel
+               set
+               original_metronome
+               {{gamemode get game_panel}
+                  get_metronome}}
+            {pause_panel update_metronome_check}
+            TRUE}
+         FALSE})
+   (on_selected
+      {do
+         ($met
+            {!
+               {{gamemode get game_panel}
+                  get_metronome}})
+         {{gamemode get game_panel}
+            script_set_metronome
+            $met}
+         {pause_panel update_metronome_check}})}
+{new
+   Object
+   pausecommand_metronome_volume
+   (label
+      "")
+   (should_display
+      {if_else
+         {gamemode in_mode drum_trainer}
+         {do
+            ($index
+               {pause_panel get button_count})
+            {$this
+               set
+               label
+               {elem
+                  {pause_panel get pause_buttons}
+                  $index}}
+            TRUE}
+         FALSE})
+   (on_selected
+      {do
+         ($x 0)
+         ($y 0)
+         ($z 0)
+         ($slider_local_z 0)
+         ($slider_world_z 0)
+         ($label_world_z 0)
+         ($zdiff 0)
+         ($blah 0)
+         ($slider
+            {pause_panel find metronome_volume.sld})
+         ($label
+            {pause_panel
+               find
+               [label]})
+         {$slider get_local_pos $x $y $slider_local_z}
+         {$slider get_world_pos $blah $blah $slider_world_z}
+         {$label get_world_pos $blah $blah $label_world_z}
+         {set
+            $zdiff
+            {- $slider_world_z $label_world_z}}
+         {set
+            $z
+            {- $slider_local_z $zdiff}}
+         {$slider set_local_pos $x $y $z}
+         {$slider set_showing TRUE}
+         {$label set_showing FALSE}
+         {pause_panel set_focus $slider}
+         {$slider set_state kComponentSelected}
+         {$slider
+            set_frame
+            {{gamemode get game_panel}
+               get_metronome_volume}}
+         {$slider store}})}
+{new
+   Object
+   pausecommand_restarttutorial
+   (should_display
+      {if_else
+         {gamemode in_mode tutorial}
+         TRUE
+         FALSE})
+   (on_selected
+      {pause_panel resume}
+      {{gamemode get main_panel}
+         restart_level})}
+{new
+   Object
+   pausecommand_restartlesson
+   (should_display
+      {if_else
+         {gamemode in_mode tutorial}
+         TRUE
+         FALSE})
+   (on_selected
+      {pause_panel resume}
+      {{gamemode get main_panel}
+         restart_lesson})}
+{new
+   Object
+   pausecommand_previouslesson
+   (should_display
+      {if_else
+         {gamemode in_mode tutorial}
+         {do
+            {if
+               {!
+                  {{gamemode get main_panel}
+                     can_goto_prev_lesson}}
+               {pause_panel
+                  disable
+                  {pause_panel
+                     find
+                     {elem
+                        {pause_panel get pause_buttons}
+                        {pause_panel get button_count}}}}}
+            TRUE}
+         FALSE})
+   (on_selected
+      {pause_panel resume}
+      {{gamemode get main_panel}
+         goto_prev_lesson})}
+{new
+   Object
+   pausecommand_nextlesson
+   (should_display
+      {if_else
+         {gamemode in_mode tutorial}
+         {do
+            {if
+               {!
+                  {{gamemode get main_panel}
+                     can_goto_next_lesson}}
+               {pause_panel
+                  disable
+                  {pause_panel
+                     find
+                     {elem
+                        {pause_panel get pause_buttons}
+                        {pause_panel get button_count}}}}}
+            TRUE}
+         FALSE})
+   (on_selected
+      {pause_panel resume}
+      {{gamemode get main_panel}
+         goto_next_lesson})}
+{new
+   Object
+   pausecommand_quit
+   (should_display TRUE)
+   (on_selected
+      {pause_panel set exit_destination exit_quit}
+      {pause_panel set resync_on_exit FALSE}
+      {if_else
+         {'||'
+            {gamemode in_mode drum_trainer}
+            {gamemode in_mode practice}}
+         {pause_panel on_quit}
+         {ui goto_screen confirm_quit_screen}})}
+{new
+   UIPanel
+   pause_panel
+   (file pause.milo)
+   (button_count 0)
+   (original_flip FALSE)
+   (resync_on_exit TRUE)
+   (reset_input_mgr TRUE)
+   (exit_destination exit_quit)
+   (pause_buttons
+      (0.btn 1.btn 2.btn 3.btn 4.btn 5.btn 6.btn))
+   (check_icons
+      (check00.mesh check01.mesh check02.mesh check03.mesh check04.mesh check05.mesh))
+   (check_boxes
+      (check_bg.mesh check_bg01.mesh check_bg02.mesh check_bg03.mesh check_bg04.mesh check_bg05.mesh))
+   (flip_check_index 0)
+   (metronome_check_index 0)
+   (hud_check_index 0)
+   (save_selected_index FALSE)
+   (saved_selected_index -1)
+   (pause_commands
+      (pausecommand_resume pausecommand_restart pausecommand_restartlesson pausecommand_change_difficulty pausecommand_lefty_flip pausecommand_metronome pausecommand_metronome_volume pausecommand_vocal_options pausecommand_accomplishments pausecommand_previouslesson pausecommand_nextlesson pausecommand_restarttutorial pausecommand_practice_new_section pausecommand_new_song pausecommand_new_challenge pausecommand_forfeit pausecommand_quit))
+   (active_commands
+      ())
+   (chose_quit FALSE)
+   PAUSE_SCREEN_HANDLERS
+   (enter
+      {set
+         [chose_quit]
+         FALSE}
+      {if_else
+         {gamemode in_mode drum_trainer}
+         {set
+            [exit_destination]
+            exit_drum_trainer}
+         {set
+            [exit_destination]
+            exit_new_song}}
+      {set
+         [resync_on_exit]
+         TRUE}
+      {set
+         [reset_input_mgr]
+         TRUE}
+      {set
+         [save_selected_index]
+         FALSE}
+      {$this pause_if_local}
+      {if
+         {input_mgr get_user}
+         {play_instr_sfx
+            {input_mgr get_user}
+            button_back}
+         {if
+            {&&
+               {gamemode get has_track}
+               {{input_mgr get_user}
+                  player}}
+            {{{input_mgr get_user}
+                  player}
+               enable_swings
+               FALSE}}
+         {if
+            {exists beatmatch}
+            {beatmatch
+               foreach_active_player
+               $p
+               {handle
+                  ({$p track}
+                     set_enable_vocals_options
+                     FALSE)}}
+            {beatmatch never_allow_input TRUE}}
+         {do
+            ($user
+               {input_mgr get_user})
+            {gamertag.lbl set_intro_name $user}
+            {instrument.lbl
+               set
+               icon
+               {$user get_track_icon}}}
+         {$this set_up_buttons}
+         {session
+            add_sink
+            $this
+            (remote_user_left)}
+         {stagekit_pause TRUE}}
+      kDataUnhandled)
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {!
+            {session is_local}}
+         {session
+            add_sink
+            $this
+            (game_ended)}
+         {unless
+            {session is_in_game}
+            {ui pop_screen}}})
+   (GAME_ENDED_MSG
+      {unless
+         [chose_quit]
+         {ui pop_screen}})
+   (exit
+      {if_else
+         {gamemode get has_track}
+         {do
+            ($band_user
+               {input_mgr get_user})
+            {if
+               [reset_input_mgr]
+               {input_mgr set_user ''}}
+            {if
+               {exists beatmatch}
+               {beatmatch never_allow_input FALSE}}
+            {if
+               {&&
+                  $band_user
+                  {$band_user player}
+                  {!=
+                     [original_flip]
+                     {{$band_user get_gameplay_options}
+                        get_lefty}}}
+               {{$band_user player}
+                  update_lefty_flip}}}
+         {if
+            [reset_input_mgr]
+            {input_mgr set_user ''}}}
+      {session remove_sink $this remote_user_left}
+      {session remove_sink $this game_ended}
+      {stagekit_pause FALSE}
+      {find_elem
+         [pause_buttons]
+         $component
+         $ix_button}
+      {if_else
+         [save_selected_index]
+         {set
+            [saved_selected_index]
+            $ix_button}
+         {set
+            [saved_selected_index]
+            -1}}
+      {if
+         {exists beatmatch}
+         {beatmatch
+            foreach_active_player
+            $p
+            {handle
+               ({$p track}
+                  set_enable_vocals_options
+                  TRUE)}}})
+   (unload
+      {{input_mgr get_user}
+         enable_swings
+         TRUE})
+   (BUTTON_DOWN_MSG
+      {switch
+         {$this focus_name}
+         (metronome_volume.sld
+            {switch
+               $action
+               (kAction_Confirm
+                  {metronome_volume.sld confirm}
+                  {metronome_volume.sld set_showing FALSE}
+                  {{pausecommand_metronome_volume get label}
+                     set_showing
+                     TRUE}
+                  {$this
+                     set_focus
+                     {pausecommand_metronome_volume get label}}
+                  {play_instr_sfx $user button_select})
+               (kAction_Cancel
+                  {metronome_volume.sld undo $user}
+                  {metronome_volume.sld set_showing FALSE}
+                  {{pausecommand_metronome_volume get label}
+                     set_showing
+                     TRUE}
+                  {$this
+                     set_focus
+                     {pausecommand_metronome_volume get label}}
+                  {play_instr_sfx $user button_back})
+               kDataUnhandled})
+         {if
+            {'||'
+               {== $action kAction_Start}
+               {== $action kAction_Cancel}}
+            {set
+               [exit_destination]
+               exit_new_song}
+            {play_instr_sfx
+               $user
+               {if_else
+                  {== $action kAction_Start}
+                  button_select
+                  button_back}}
+            {$this resume}}
+         kDataUnhandled})
+   (SCROLL_MSG
+      {$this on_slider_change $component})
+   (on_slider_change
+      ($component)
+      {switch
+         $component
+         (metronome_volume.sld
+            {{gamemode get game_panel}
+               set_metronome_volume
+               {$component frame}}
+            {{gamemode get game_panel}
+               play_metronome
+               1})})
+   (REMOTE_USER_LEFT_MSG
+      {do
+         ($ix_button -1)
+         {foreach_int
+            $i
+            0
+            {size
+               [pause_buttons]}
+            {do
+               ($state
+                  {{elem
+                        [pause_buttons]
+                        $i}
+                     get_state})
+               {if
+                  {'||'
+                     {== kComponentFocused $state}
+                     {== kComponentSelecting $state}}
+                  {set $ix_button $i}}}}
+         {if
+            {== $ix_button -1}
+            {fail
+               "could not find focused/selecting pause button!"}
+            {set $ix_button 0}}
+         {$this set_up_buttons}
+         {while
+            {==
+               kComponentDisabled
+               {{elem
+                     [pause_buttons]
+                     $ix_button}
+                  get_state}}
+            {-- $ix_button}}
+         {$this
+            set_focus
+            {elem
+               [pause_buttons]
+               $ix_button}}})
+   (SELECT_MSG
+      {set
+         [exit_destination]
+         exit_new_song}
+      {find_elem
+         [pause_buttons]
+         $component
+         $ix_button}
+      {{elem
+            [active_commands]
+            $ix_button}
+         on_selected})
+   (set_up_buttons
+      {set
+         [button_count]
+         0}
+      {resize
+         [active_commands]
+         0}
+      {do
+         ($previous
+            "")
+         {foreach
+            $button
+            [pause_buttons]
+            {$button set_showing FALSE}
+            {$this enable $button}
+            {if
+               {!=
+                  $previous
+                  ""}
+               {$previous set nav_down $button}}
+            {set $previous $button}}}
+      {foreach
+         $check
+         [check_icons]
+         {$check set_showing FALSE}}
+      {foreach
+         $check
+         [check_boxes]
+         {$check set_showing FALSE}}
+      {metronome_volume.sld set_showing FALSE}
+      {foreach
+         $command
+         [pause_commands]
+         {if
+            {$command should_display}
+            {{elem
+                  [pause_buttons]
+                  [button_count]}
+               set_showing
+               TRUE}
+            {{elem
+                  [pause_buttons]
+                  [button_count]}
+               set
+               text_token
+               $command}
+            {push_back
+               [active_commands]
+               $command}
+            {'++'
+               [button_count]}}}
+      {{elem
+            [pause_buttons]
+            {-
+               [button_count]
+               1}}
+         set
+         nav_down
+         ''}
+      {if_else
+         {!=
+            [saved_selected_index]
+            -1}
+         {$this
+            set_focus
+            {elem
+               [pause_buttons]
+               [saved_selected_index]}}
+         {$this set_focus 0.btn}})
+   (update_lefty_check
+      {do
+         {{elem
+               [check_icons]
+               [flip_check_index]}
+            set_showing
+            {{{input_mgr get_user}
+                  get_gameplay_options}
+               get_lefty}}
+         {{elem
+               [check_boxes]
+               [flip_check_index]}
+            set_showing
+            TRUE}})
+   (update_metronome_check
+      {do
+         {{elem
+               [check_icons]
+               [metronome_check_index]}
+            set_showing
+            {{gamemode get game_panel}
+               get_metronome}}
+         {{elem
+               [check_boxes]
+               [metronome_check_index]}
+            set_showing
+            TRUE}})
+   (update_vocal_style
+      {if
+         {{input_mgr get_user}
+            player}
+         {{elem
+               [check_icons]
+               [hud_check_index]}
+            set_showing
+            {!
+               {{{input_mgr get_user}
+                     get_gameplay_options}
+                  get_vocal_style}}}
+         {{elem
+               [check_boxes]
+               [hud_check_index]}
+            set_showing
+            TRUE}
+         {{{input_mgr get_user}
+               player}
+            update_vocal_style}})
+   (on_restart
+      {if
+         {gamemode in_mode practice}
+         {practice_panel set update_best_percent FALSE}}
+      {session end_game kRestart})
+   (on_quit
+      {set
+         [chose_quit]
+         TRUE}
+      {switch
+         [exit_destination]
+         (exit_change_band
+            {if
+               {!
+                  {is_leader_local}}
+               {notify
+                  "WARNING: change band triggered by non-leader"}}
+            {session end_game kQuit}
+            {ui sync_screen meta_loading_matchmaking_screen 0})
+         (exit_forfeit
+            {ui_event_mgr trigger_event forfeit})
+         (exit_new_section
+            {session end_game kQuit}
+            {ui sync_screen meta_loading_pause_new_section_screen 0})
+         (exit_new_song
+            {session end_game kQuit}
+            {ui sync_screen meta_loading_pause_new_song_screen 0})
+         (exit_change_difficulty
+            {session end_game kQuit}
+            {ui sync_screen meta_loading_ready_screen 0})
+         (exit_quit
+            {ui_event_mgr trigger_event quit_early})
+         (exit_restart
+            {$this on_restart})})}
+{new
+   BandScreen
+   pause_screen
+   (panels pause_bg_panel pause_panel)
+   (focus pause_panel)
+   (scroll_sfx FALSE)
+   (helpbar
+      ((cancel pause_hb_returntogame)
+         (confirm helpbar_select)))}
+#define CONFIRM_QUIT_HANDLERS
+((panels pause_bg_panel pause_panel dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_confirm)))
+   (is_good_restart
+      {&&
+         {==
+            {pause_panel get exit_destination}
+            exit_restart}
+         {!
+            {'||'
+               {ui_event_mgr has_active_transition_event}
+               {<
+                  {session num_users}
+                  {gamemode get min_players}}}}
+         {session is_in_game}})
+   (is_not_restart
+      {!
+         {==
+            {pause_panel get exit_destination}
+            exit_restart}}))
+#define QUIT_DIALOG_SET_UP_BUTTONS
+((set_up_buttons
+      {if
+         {<
+            {session num_users}
+            {gamemode get min_players}}
+         {{dialog_panel find no.btn}
+            set_state
+            kComponentDisabled}
+         {dialog_panel
+            set_focus
+            {dialog_panel find yes.btn}}}))
+{new
+   BandScreen
+   confirm_quit_screen
+   CONFIRM_QUIT_HANDLERS
+   (enter
+      {dialog_panel
+         set_yesno
+         {cond
+            ({gamemode get ranked}
+               confirm_forfeit)
+            ({&&
+                  {!=
+                     {pause_panel get exit_destination}
+                     exit_restart}
+                  {gamemode in_mode story}}
+               confirm_quit_story_chapter)
+            (TRUE confirm_quit)}
+         no.btn}
+      {$this set_up_buttons}
+      {session
+         add_sink
+         $this
+         (remote_user_left)})
+   (exit
+      {session remove_sink $this remote_user_left})
+   (REMOTE_USER_LEFT_MSG
+      {$this set_up_buttons})
+   QUIT_DIALOG_SET_UP_BUTTONS
+   (handle_select_msg
+      ($component)
+      {switch
+         $component
+         (yes.btn
+            {pause_panel on_quit})
+         (no.btn
+            {ui goto_screen pause_screen})})
+   (SELECT_MSG
+      {if
+         {'||'
+            {== $component no.btn}
+            {$this is_not_restart}}
+         {$this handle_select_msg $component}})
+   (SELECT_DONE_MSG
+      {if
+         {&&
+            {== $component yes.btn}
+            {$this is_good_restart}}
+         {$this handle_select_msg $component}})}
+{new
+   BandScreen
+   pause_controller_screen
+   PAUSE_SCREEN_HANDLERS
+   (enter
+      {ui_event_mgr
+         add_sink
+         $this
+         (event_dialog_dismiss)}
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {if
+         {session is_local}
+         {game set_paused TRUE}}
+      {stagekit_pause TRUE}
+      {if
+         {gamemode in_mode tutorial}
+         {{gamemode get main_panel}
+            set_paused
+            TRUE}
+         {{gamemode get main_panel}
+            pause_tutorial}})
+   (helpbar
+      ((confirm helpbar_confirm)))
+   (exit
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+      {stagekit_pause FALSE}
+      {ui_event_mgr remove_sink $this event_dialog_dismiss}
+      {if
+         {gamemode in_mode tutorial}
+         {{gamemode get main_panel}
+            set_paused
+            FALSE}
+         {{gamemode get main_panel}
+            unpause_tutorial}})
+   (event_dialog_dismiss
+      {unless
+         {ui_event_mgr has_active_transition_event}
+         {$this on_controllers_ok}})
+   (on_controllers_ok
+      {unless
+         {game paused}
+         {game
+            foreach_local_player
+            $p
+            {$p reset_controller FALSE}}}
+      {$this resume})}
+{new
+   MicInputPanel
+   pause_mics_panel
+   (file pause_mics.milo)
+   (resync_on_exit TRUE)
+   (needs_vocals_user FALSE)
+   PAUSE_SCREEN_HANDLERS
+   (enter
+      {set
+         [resync_on_exit]
+         TRUE}
+      {$this pause_if_local}
+      {$this check_mics}
+      {stagekit_pause TRUE}
+      {if
+         {gamemode in_mode tutorial}
+         {{gamemode get main_panel}
+            set_paused
+            TRUE}
+         {{gamemode get main_panel}
+            pause_tutorial}}
+      {platform_mgr
+         add_sink
+         $this
+         (microphones_changed)})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {!
+            {session is_local}}
+         {session
+            add_sink
+            $this
+            (game_ended)}
+         {unless
+            {session is_in_game}
+            {ui pop_screen}}})
+   (GAME_ENDED_MSG
+      {ui pop_screen})
+   #ifdef HX_XBOX
+   #else
+   (poll
+      {if
+         {gamemode in_mode tutorial}
+         {if_else
+            {are_enough_mics_connected}
+            {$this
+               enable
+               {$this find pause_resume.btn}}
+            {$this
+               disable
+               {$this find pause_resume.btn}}}})
+   #endif
+   (exit
+      {session remove_sink $this game_ended}
+      {synth reset_mics_changed}
+      {stagekit_pause FALSE}
+      {if
+         {gamemode in_mode tutorial}
+         {{gamemode get main_panel}
+            set_paused
+            FALSE}
+         {{gamemode get main_panel}
+            unpause_tutorial}}
+      {platform_mgr remove_sink $this microphones_changed})
+   (check_mics
+      {if_else
+         {are_enough_mics_connected}
+         {do
+            {$this
+               enable
+               {$this find pause_resume.btn}}
+            {$this
+               set_focus
+               {$this find pause_resume.btn}}}
+         {do
+            {$this
+               disable
+               {$this find pause_resume.btn}}
+            {$this
+               set_focus
+               {$this find pause_quit.btn}}}})
+   (microphones_changed
+      ($active_mic_removed)
+      {$this check_mics})
+   (SELECT_MSG
+      {switch
+         $component
+         (pause_resume.btn
+            {$this resume})
+         (pause_quit.btn
+            {set
+               [resync_on_exit]
+               FALSE}
+            {ui goto_screen confirm_quit_mics_screen})})
+   (on_quit
+      {ui_event_mgr trigger_event quit_early})}
+{new
+   BandScreen
+   pause_mics_screen
+   (panels pause_bg_panel pause_mics_panel)
+   (focus pause_mics_panel)
+   (helpbar
+      ((confirm helpbar_select)))}
+{new
+   BandScreen
+   confirm_quit_mics_screen
+   (panels pause_bg_panel pause_mics_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno confirm_quit no.btn}
+      {$this set_up_buttons}
+      {session
+         add_sink
+         $this
+         (remote_user_left)})
+   (exit
+      {session remove_sink $this remote_user_left})
+   (REMOTE_USER_LEFT_MSG
+      {$this set_up_buttons})
+   QUIT_DIALOG_SET_UP_BUTTONS
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {pause_mics_panel on_quit})
+         (no.btn
+            {ui goto_screen pause_mics_screen})})}
+{new
+   BandScreen
+   pause_accomplishments_screen
+   (panels pause_bg_panel accomplishment_panel)
+   (focus accomplishment_panel)
+   (helpbar
+      ((cancel helpbar_back)))
+   (back pause_screen)}
+{new
+   UIPanel
+   pause_accomplishments_choose_user_panel
+   ACCOMPLISHMENTS_CHOOSE_USER_PANEL
+   (on_go_to_accomplishments_screen
+      {pause_panel set resync_on_exit FALSE}
+      {pause_panel set reset_input_mgr FALSE}
+      {pause_panel set save_selected_index TRUE})}
+{new
+   BandScreen
+   pause_accomplishments_choose_user_screen
+   (panels pause_bg_panel pause_panel pause_accomplishments_choose_user_panel)
+   (focus pause_accomplishments_choose_user_panel)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_confirm)))}
+{new
+   BandScreen
+   pause_accomplishments_no_user_screen
+   (panels pause_bg_panel pause_panel dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_confirm)))
+   (enter
+      {dialog_panel set_ok accomplishments_need_signed_in_user})
+   (SELECT_MSG
+      {ui goto_screen pause_screen})}

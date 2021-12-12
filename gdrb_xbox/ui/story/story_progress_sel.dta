@@ -1,0 +1,433 @@
+{new
+   BandSelectPanel
+   story_progress_sel_panel
+   #ifdef HX_XBOX
+   (file
+      "story_progress_sel.milo")
+   #else
+   #ifdef HX_PC
+   (file
+      "story_progress_sel.milo")
+   #else
+   (file
+      "story_progress_sel_ps3_keep.milo")
+   #endif
+   #endif
+   (focus band.lst)
+   (band_provider 0)
+   (player_entry_provider 0)
+   (enter
+      {session clear}
+      {story clear_performer}
+      {set
+         [band_provider]
+         {get_band_provider}}
+      {band.lst
+         set_provider
+         [band_provider]}
+      {set
+         [player_entry_provider]
+         {get_player_entry_provider}}
+      {players.lst
+         set_provider
+         [player_entry_provider]}
+      {$this reset_list_position}
+      {session
+         add_sink
+         $this
+         (signin_changed)}
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      {meta music_start})
+   (TRANSITION_COMPLETE_MSG
+      {$this refresh_helpbar}
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               story_progress_sel_screen}
+            {!
+               {ui_event_mgr has_active_transition_event}}}
+         {autosave}})
+   (exit
+      {session remove_sink $this signin_changed}
+      {memcardmgr remove_sink $this save_load_all_complete_msg})
+   (reset_list_position
+      {do
+         ($default_pos
+            {[band_provider]
+               get_default_pos})
+         {band.lst
+            set_selected
+            $default_pos
+            {max
+               0
+               {- $default_pos 2}}}})
+   (can_show_gamercard
+      ($pos)
+      #ifdef HX_XBOX
+      {&&
+         {[band_provider]
+            is_pos_save
+            $pos}
+         {!
+            {[band_provider]
+               is_band_local
+               $pos}}}
+      #else
+      FALSE
+      #endif)
+   (refresh_helpbar
+      {if_else
+         {[band_provider]
+            is_pos_save
+            {band.lst selected_pos}}
+         {helpbar set_widget view_modify story_hb_delete_progress}
+         {helpbar set_widget view_modify ''}}
+      {if_else
+         {[band_provider]
+            is_pos_save
+            {band.lst selected_pos}}
+         {helpbar set_widget confirm story_hb_selband}
+         {helpbar set_widget confirm helpbar_select}}
+      {if_else
+         {[band_provider]
+            are_all_connected_users_signed_in}
+         {helpbar set_widget option ''}
+         {helpbar set_widget option main_local_story_signin_button}})
+   (SCROLL_MSG
+      {$this refresh_helpbar})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_ViewModify
+            {if
+               {[band_provider]
+                  is_pos_save
+                  {band.lst selected_pos}}
+               {play_instr_sfx $user button_select}
+               {if_else
+                  {[band_provider]
+                     does_user_own_save
+                     $user
+                     {band.lst selected_pos}}
+                  {do
+                     {input_mgr set_user $user}
+                     {ui push_screen story_progress_confirm_progress_delete_screen}}
+                  {ui push_screen story_progress_delete_error_screen}}})
+         #ifdef HX_XBOX
+         (kAction_Option
+            {if_else
+               {[band_provider]
+                  are_all_connected_users_signed_in}
+               kDataUnhandled
+               {do
+                  {play_instr_sfx $user button_select}
+                  {platform_mgr signin 1}}})
+         #endif
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (band.lst
+            {do
+               ($pos
+                  {band.lst selected_pos})
+               {cond
+                  ({[band_provider]
+                        is_pos_create_save
+                        $pos}
+                     {if_else
+                        {[band_provider]
+                           does_user_own_slot
+                           $user
+                           {band.lst selected_pos}}
+                        {do
+                           {story
+                              set_progress
+                              {story
+                                 create_new_progress
+                                 {[band_provider]
+                                    get_pos_user
+                                    $pos}
+                                 {[band_provider]
+                                    get_pos_slot
+                                    $pos}}}
+                           {ui
+                              goto_screen
+                              {gamemode get matchmaking_screen}}}
+                        {ui push_screen story_progress_create_error_screen}})
+                  ({[band_provider]
+                        is_pos_join_online
+                        $pos}
+                     {cond
+                        ({gamecfg is_missing_mic $user FALSE}
+                           {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+                           {ui push_screen vocalist_must_have_mic_screen})
+                        ({!
+                              {platform_mgr user_has_online_privilege $user}}
+                           {ui push_screen story_progress_need_online_profile_screen})
+                        ({platform_mgr is_user_a_guest $user}
+                           {ui push_screen story_progress_guest_cannot_select_screen})
+                        (TRUE
+                           {story set_remote_performer}
+                           {finding_panel set_joining_user $user}
+                           {ui goto_screen finding_screen})})
+                  ({[band_provider]
+                        is_pos_save
+                        $pos}
+                     {if_else
+                        {[band_provider]
+                           is_band_local
+                           $pos}
+                        {do
+                           {story
+                              set_progress
+                              {[band_provider]
+                                 get_progress
+                                 $pos}}
+                           {ui
+                              goto_screen
+                              {gamemode get matchmaking_screen}}}
+                        {cond
+                           ({gamecfg is_missing_mic $user FALSE}
+                              {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+                              {ui push_screen vocalist_must_have_mic_screen})
+                           ({!
+                                 {platform_mgr user_has_online_privilege $user}}
+                              {ui push_screen story_progress_need_online_profile_screen})
+                           ({platform_mgr is_user_a_guest $user}
+                              {ui push_screen story_progress_guest_cannot_select_screen})
+                           (TRUE
+                              {print
+                                 "No more remote bands in proj9"})}})
+                  (TRUE
+                     {ui push_screen band_chooser_non_active_select_screen})}})})
+   (JOYPAD_CONNECT_MSG
+      {band.lst
+         set_provider
+         [band_provider]}
+      {players.lst
+         set_provider
+         [player_entry_provider]}
+      {$this reset_list_position}
+      {$this refresh_helpbar})
+   (signin_changed
+      {band.lst
+         set_provider
+         [band_provider]}
+      {players.lst
+         set_provider
+         [player_entry_provider]}
+      {$this reset_list_position}
+      {$this refresh_helpbar})
+   (save_load_all_complete_msg
+      {band.lst
+         set_provider
+         [band_provider]}
+      {players.lst
+         set_provider
+         [player_entry_provider]}
+      {$this reset_list_position}
+      {$this refresh_helpbar})
+   (presence_info_received
+      {band.lst refresh})}
+{new
+   AutoloadScreen
+   story_progress_sel_screen
+   (panels meta background_panel story_progress_sel_panel)
+   (focus story_progress_sel_panel)
+   #ifdef HX_XBOX
+   (helpbar
+      ((confirm helpbar_select)
+         (cancel helpbar_back)
+         (option main_local_story_signin_button)))
+   #else
+   (helpbar
+      ((confirm helpbar_select)
+         (cancel helpbar_back)))
+   #endif
+   (back MAIN_MENU_RETURN_SCREEN)
+   (enter)
+   (exit)}
+{new
+   BandScreen
+   story_progress_need_online_profile_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok story_progress_need_online_profile})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_guest_cannot_select_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok story_progress_guest_cannot_select})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_display_gamercard_failed_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok on_select_gamertag_error})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_display_gamercard_privilege_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok story_progress_display_gamercard_failed})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   band_chooser_non_active_select_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok band_chooser_non_active_select})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_no_available_owners_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_confirm)))
+   (enter
+      {dialog_panel set_ok story_progress_no_owners_available})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   UIPanel
+   story_progress_confirm_progress_delete_panel
+   (file
+      "story_confirm_progress_delete.milo")
+   (focus no.btn)
+   (reset_focus TRUE)
+   (enter
+      {session
+         add_sink
+         $this
+         (signin_changed)})
+   (exit
+      {session remove_sink $this signin_changed}
+      {input_mgr set_user ''})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {ui pop_screen}}
+         kDataUnhandled})
+   (SELECT_MSG
+      {if
+         {== $component yes.btn}
+         {story_progress_sel_panel delete_selected_progress}}
+      {input_mgr set_user ''}
+      {ui pop_screen})
+   (signin_changed
+      {input_mgr set_user ''}
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_confirm_progress_delete_screen
+   (panels story_progress_confirm_progress_delete_panel)
+   (focus story_progress_confirm_progress_delete_panel)
+   (helpbar
+      ((confirm helpbar_select)
+         (cancel helpbar_cancel)))}
+{new
+   BandScreen
+   story_progress_delete_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (message story_saveselect_deleteprogress_notuser)
+   (enter
+      {dialog_panel
+         set_custom
+         [message]
+         ""
+         return
+         opt2.btn}
+      {dialog_panel
+         disable
+         {dialog_panel find opt1.btn}}
+      {session
+         add_sink
+         $this
+         (signin_changed)})
+   (exit
+      {dialog_panel
+         enable
+         {dialog_panel find opt1.btn}}
+      {session remove_sink $this signin_changed})
+   (SELECT_MSG
+      {ui pop_screen})
+   (JOYPAD_CONNECT_MSG
+      {ui pop_screen})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_create_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (message story_saveselect_createprogress_notuser)
+   (enter
+      {dialog_panel
+         set_custom
+         [message]
+         ""
+         return
+         opt2.btn}
+      {dialog_panel
+         disable
+         {dialog_panel find opt1.btn}}
+      {session
+         add_sink
+         $this
+         (signin_changed)})
+   (exit
+      {dialog_panel
+         enable
+         {dialog_panel find opt1.btn}}
+      {session remove_sink $this signin_changed})
+   (SELECT_MSG
+      {ui pop_screen})
+   (JOYPAD_CONNECT_MSG
+      {ui pop_screen})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   BandScreen
+   story_progress_no_owner_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_select)))
+   (enter
+      {dialog_panel
+         set_ok
+         (story_progress_create_progress_no_owner_fmt
+            {profile_mgr get_max_bands})}
+      {platform_mgr add_sink $this})
+   (exit
+      {platform_mgr remove_sink $this})
+   (SELECT_MSG
+      {ui pop_screen})
+   (signin_changed
+      {ui pop_screen})}

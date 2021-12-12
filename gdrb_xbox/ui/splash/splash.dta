@@ -1,0 +1,283 @@
+{new
+   MoviePanel
+   intro_movie_panel
+   (preload FALSE)
+   (audio TRUE)
+   (loop FALSE)
+   (update_presence TRUE)
+   (videos intro_movie)
+   (movie_done
+      {ui goto_screen splash_screen})
+   (enter
+      {platform_mgr disable_xmp}
+      kDataUnhandled)
+   (exit
+      #ifdef HX_PS3
+      {register_trophy}
+      #endif)
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {ui goto_screen splash_screen}})}
+{new
+   BandScreen
+   intro_movie_screen
+   (panels intro_movie_panel)
+   (focus intro_movie_panel)}
+{new
+   UIPanel
+   splash_panel
+   (file
+      "splash.milo")
+   (focus start.btn)
+   (last_user '')
+   (attract_mode_timeout
+      {elem
+         {find $syscfg attract time_to_enter}
+         1})
+   (enter_time 0.0)
+   (attract_timeout_done FALSE)
+   (enter
+      {set
+         [attract_timeout_done]
+         FALSE}
+      {meta music_start}
+      #ifdef HX_PS3
+      {start.btn
+         set
+         text_token
+         {if_else
+            {trophy_registered}
+            shell_press_start_to_rock
+            trophy_initialization_please_wait}}
+      #endif)
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [enter_time]
+         {taskmgr ui_seconds}})
+   (poll
+      #ifdef HX_PS3
+      {if
+         {&&
+            {!=
+               {start.btn get text_token}
+               shell_press_start_to_rock}
+            {trophy_registered}}
+         {start.btn set text_token shell_press_start_to_rock}}
+      {unless
+         {trophy_registered}
+         {set
+            [enter_time]
+            {taskmgr ui_seconds}}}
+      #endif
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               splash_screen}
+            #ifdef HX_PS3
+            {trophy_registered}
+            #endif}
+         {cond
+            #ifdef HX_PS3
+            ({&&
+                  {!
+                     {trophy_disk_space_error_screen get displayed}}
+                  {trophy_disk_space_error}}
+               {ui push_screen trophy_disk_space_error_screen})
+            #endif
+            ({&&
+                  {!
+                     [attract_timeout_done]}
+                  {>
+                     {-
+                        {taskmgr ui_seconds}
+                        [enter_time]}
+                     [attract_mode_timeout]}}
+               {set
+                  [attract_timeout_done]
+                  TRUE}
+               {meta music_stop}
+               {platform_mgr disable_xmp}
+               {ui goto_screen attract_screen})}})
+   (BUTTON_DOWN_MSG
+      {cond
+         #ifdef HX_PS3
+         ({!
+               {trophy_registered}}
+            TRUE)
+         #endif
+         ({== $action kAction_Start}
+            {$this button_down $user $raw_button kAction_Confirm $pad_num})
+         (TRUE kDataUnhandled)})
+   (SELECT_MSG
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               splash_screen}}
+         {set
+            [attract_timeout_done]
+            TRUE}
+         {set
+            [last_user]
+            $user}
+         {ui goto_screen first_time_autoload_screen}})}
+{new
+   BandScreen
+   splash_screen
+   (panels meta splash_panel)
+   (focus splash_panel)
+   (enter)}
+#ifdef HX_PS3
+{new
+   BandScreen
+   trophy_disk_space_error_screen
+   (displayed FALSE)
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {set
+         [displayed]
+         TRUE}
+      {dialog_panel
+         set_msg
+         (trophy_disk_space_error
+            {trophy_file_size_mb})})}
+#endif
+#define MAYBE_SHOW_NEXT_FIRST_TIME_SCREEN
+({cond
+      ({save_screen show_first_time_drum}
+         {save_screen clear_first_time_drum}
+         {first_time_instrument_panel set controller_type kControllerDrum}
+         {ui goto_screen first_time_instrument_screen})
+      ({save_screen show_first_time_guitar}
+         {save_screen clear_first_time_guitar}
+         {first_time_instrument_panel set controller_type kControllerGuitar}
+         {ui goto_screen first_time_instrument_screen})
+      ({save_screen show_first_time_vocals}
+         {save_screen clear_first_time_vocals}
+         {first_time_instrument_panel set controller_type kControllerVocals}
+         {ui goto_screen first_time_instrument_screen})
+      ({save_screen show_first_time_calibrate}
+         {save_screen clear_first_time_calibrate}
+         {ui goto_screen first_time_screen})
+      (TRUE
+         {ui goto_screen main_popup_swapper})})
+{new
+   BandScreen
+   first_time_autoload_screen
+   (panels meta)
+   (load_finished FALSE)
+   (enter
+      {set
+         [load_finished]
+         FALSE}
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      {autoload})
+   (exit
+      {memcardmgr remove_sink $this save_load_all_complete_msg})
+   (save_load_all_complete_msg
+      {set
+         [load_finished]
+         TRUE}
+      kDataUnhandled)
+   (TRANSITION_COMPLETE_MSG
+      {if_else
+         {&&
+            {$this is_up}
+            [load_finished]}
+         MAYBE_SHOW_NEXT_FIRST_TIME_SCREEN
+         {ui goto_screen main_popup_swapper}})}
+#define FIRST_TIME_SCREEN_HANDLERS
+((exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SIGNIN_CHANGED_MSG
+      {ui goto_screen main_popup_swapper})
+   (SELECT_MSG MAYBE_SHOW_NEXT_FIRST_TIME_SCREEN))
+{new
+   UIPanel
+   first_time_instrument_panel
+   (controller_type none)
+   (file
+      {sprintf
+         "first_time_%s_keep.milo"
+         {elem
+            (CHAR_INSTRUMENT_SYMBOLS)
+            [controller_type]}})
+   (focus ok.btn)
+   (is_loaded
+      {'||'
+         {content_mgr never_refreshed}
+         {content_mgr refresh_done}})
+   (enter
+      {green.lbl
+         set
+         text_token
+         {if_else
+            {platform_mgr is_confirm_cancel_swapped}
+            how_to_back
+            how_to_forward}}
+      {red.lbl
+         set
+         text_token
+         {if_else
+            {platform_mgr is_confirm_cancel_swapped}
+            how_to_forward
+            how_to_back}})}
+{new
+   BandScreen
+   first_time_instrument_screen
+   (panels meta first_time_instrument_panel)
+   (focus first_time_instrument_panel)
+   (helpbar
+      ((confirm helpbar_continue)))
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (signin_changed)})
+   FIRST_TIME_SCREEN_HANDLERS}
+{new
+   BandScreen
+   first_time_screen
+   (panels meta dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_continue)))
+   (enter
+      {dialog_panel set_custom calibration_notice go_to_calibration skip_calibration opt1.btn}
+      {platform_mgr
+         add_sink
+         $this
+         (signin_changed)})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SIGNIN_CHANGED_MSG
+      {ui goto_screen main_popup_swapper})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {ui goto_screen cal_welcome_screen})
+         (opt2.btn
+            {ui goto_screen main_popup_swapper})})}
+{new
+   BandScreen
+   bonus_photo_unlock_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {profile_mgr set_bonus_photos_unlocked TRUE}
+      {dialog_panel set_ok bonus_photo_unlock})
+   (SELECT_MSG
+      {ui pop_screen})}

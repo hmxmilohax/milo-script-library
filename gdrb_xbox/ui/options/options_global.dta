@@ -1,0 +1,184 @@
+{new
+   UIPanel
+   global_options_panel
+   (file
+      "options_global.milo")
+   (focus hyperspeed.btn)
+   (enter
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      {$this update_from_global_settings}
+      {$this
+         update_helpbar
+         {$this focus_name}})
+   (exit
+      {memcardmgr remove_sink $this save_load_all_complete_msg})
+   (TRANSITION_COMPLETE_MSG
+      {$this
+         update_helpbar
+         {$this focus_name}})
+   (save_load_all_complete_msg
+      {$this update_from_global_settings})
+   (BUTTON_DOWN_MSG
+      {switch
+         {$this focus_name}
+         (lbtype.lst
+            {switch
+               $action
+               (kAction_Confirm
+                  {lbtype.lst confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus default_lb.btn})
+               (kAction_Cancel
+                  {lbtype.lst undo $user}
+                  {$this set_focus default_lb.btn})
+               kDataUnhandled})
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (hyperspeed.btn
+            {do
+               ($hyperspeed_on
+                  {profile_mgr get_hyperspeed})
+               {profile_mgr
+                  set_hyperspeed
+                  {! $hyperspeed_on}}
+               {if
+                  {! $hyperspeed_on}
+                  {ui push_screen hyperspeed_info_screen}}
+               {$this update_from_global_settings}})
+         (realistic.btn
+            {do
+               ($realistic_on
+                  {profile_mgr get_realistic_mode})
+               {profile_mgr
+                  set_realistic_mode
+                  {! $realistic_on}}
+               {if
+                  {! $realistic_on}
+                  {ui push_screen realistic_mode_info_screen}}
+               {$this update_from_global_settings}})
+         (performance.btn
+            {do
+               ($performance_on
+                  {profile_mgr get_performance_mode})
+               {profile_mgr
+                  set_performance_mode
+                  {! $performance_on}}
+               {if
+                  {! $performance_on}
+                  {ui push_screen performance_mode_info_screen}}
+               {$this update_from_global_settings}})
+         (default_lb.btn
+            {{$this find lbtype.lst}
+               store}
+            {$this
+               set_focus
+               {$this find lbtype.lst}})})
+   (FOCUS_MSG
+      {$this update_helpbar $new_focus})
+   (SCROLL_SELECT_MSG
+      {if_else
+         $selected
+         {helpbar
+            set_config
+            ((cancel helpbar_cancel)
+               (confirm helpbar_confirm))}
+         {$this update_helpbar $component}})
+   (update_helpbar
+      ($component)
+      {switch
+         $component
+         ((hyperspeed.btn realistic.btn performance.btn)
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_toggleoption))})
+         (default_lb.btn
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_changesetting))})
+         (lbtype.lst
+            {helpbar
+               set_config
+               ((cancel helpbar_cancel)
+                  (confirm helpbar_confirmsetting))})
+         FAIL})
+   (SCROLL_MSG
+      {$this on_slider_change $component})
+   (on_slider_change
+      ($component)
+      {switch
+         $component
+         (lbtype.lst
+            {do
+               ($lbtypelist
+                  {$this find lbtype.lst})
+               {switch
+                  {$lbtypelist selected_sym}
+                  (lbtype_friends
+                     {profile_mgr set_default_lb_type kByFriends})
+                  (lbtype_global
+                     {profile_mgr set_default_lb_type kByAll})}})})
+   (update_from_global_settings
+      {check_hyperspeed.mesh
+         set_showing
+         {profile_mgr get_hyperspeed}}
+      {check_realistic.mesh
+         set_showing
+         {profile_mgr get_realistic_mode}}
+      {check_performance.mesh
+         set_showing
+         {profile_mgr get_performance_mode}}
+      {do
+         ($lbtypelist
+            {$this find lbtype.lst})
+         {$lbtypelist
+            set_data
+            (lbtype_friends lbtype_global)}
+         {switch
+            {profile_mgr get_default_lb_type}
+            (kByFriends
+               {$lbtypelist set_selected lbtype_friends})
+            (kByAll
+               {$lbtypelist set_selected lbtype_global})}})}
+{new
+   BandScreen
+   global_options_screen
+   (panels meta background_panel main_popup_bg_panel global_options_panel)
+   (focus global_options_panel)
+   (back main_screen_2_popup)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))}
+{new
+   BandScreen
+   hyperspeed_info_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok hyperspeed_info})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   realistic_mode_info_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok realistic_mode_info})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   performance_mode_info_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok performance_mode_info})
+   (SELECT_MSG
+      {ui pop_screen})}
