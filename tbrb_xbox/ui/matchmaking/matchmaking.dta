@@ -1,0 +1,1363 @@
+{new
+   MicInputPanel
+   matchmaking_panel
+   (file
+      "matchmaking.milo")
+   (is_start_showing FALSE)
+   (want_to_hide_waiting FALSE)
+   (load
+      {content_mgr start_refresh}
+      {content_loading_panel allowed_to_show TRUE}
+      {background_panel clear_slot_highlights})
+   (finish_load
+      {content_loading_panel allowed_to_show FALSE})
+   (is_loaded
+      {content_mgr refresh_done})
+   (enter
+      {$this set is_start_showing FALSE}
+      {$this set_focus ''}
+      {$this update_no_fail_text}
+      {no_fail.grp
+         set_showing
+         {gamemode in_mode qp_coop}}
+      {if_else
+         {'||'
+            {!
+               {session_mgr has_leader_user}}
+            {is_leader_local}}
+         {no_fail_fade.anim set_frame 0}
+         {no_fail_fade.anim set_frame 30}}
+      {waiting.grp set_showing FALSE}
+      {start_fade.anim set_frame 0}
+      {if_else
+         {gamemode in_mode h2h}
+         {do
+            {band_only_slots.grp set_showing FALSE}
+            {h2h_slot0.tnm set_frame 1}
+            {h2h_slot1.tnm set_frame 1}}
+         {do
+            {band_only_slots.grp set_showing TRUE}
+            {h2h_slot0.tnm set_frame 0}
+            {h2h_slot1.tnm set_frame 0}}}
+      {start_icon.lbl center_with_label start_text.lbl TRUE 0}
+      {$this update_start_banner}
+      {$this update_no_fail_banner}
+      {meta music_stop}
+      {meta_performer
+         add_sink
+         $this
+         (update_no_fail)}
+      {ui_event_mgr
+         add_sink
+         $this
+         (event_dialog_dismiss)})
+   (exit
+      {waiting.grp set_showing FALSE}
+      {meta_performer remove_sink $this update_no_fail}
+      {ui_event_mgr remove_sink $this event_dialog_dismiss})
+   (unload
+      {background_panel clear_slot_highlights})
+   (show_waiting
+      {set
+         [want_to_hide_waiting]
+         FALSE}
+      {if
+         {exists show_waiting_text}
+         {delete show_waiting_text}}
+      {script_task
+         kTaskSeconds
+         (delay 0.5)
+         (name show_waiting_text)
+         (script
+            {$this actually_show_waiting})})
+   (actually_show_waiting
+      {please_wait_in.trg trigger}
+      {if
+         {exists waiting_started_showing}
+         {delete waiting_started_showing}}
+      {script_task
+         kTaskSeconds
+         (delay 0.75)
+         (name waiting_started_showing)
+         (script
+            {$this potentially_stop_showing_waiting})})
+   (hide_waiting
+      {if_else
+         {exists show_waiting_text}
+         {do
+            {delete show_waiting_text}
+            {$this actually_hide_waiting}}
+         {if_else
+            {exists waiting_started_showing}
+            {set
+               [want_to_hide_waiting]
+               TRUE}
+            {$this actually_hide_waiting}}})
+   (actually_hide_waiting
+      {please_wait_out.trg trigger}
+      {set
+         [want_to_hide_waiting]
+         FALSE})
+   (potentially_stop_showing_waiting
+      {if
+         [want_to_hide_waiting]
+         {$this actually_hide_waiting}})
+   (update_start_banner
+      {if_else
+         {&&
+            {is_leader_local}
+            {matchmaking_screen all_ready}
+            {==
+               {ui current_screen}
+               matchmaking_screen}}
+         {$this fade_in_start_banner}
+         {$this fade_out_start_banner}})
+   (fade_in_start_banner
+      {if
+         {&&
+            {!
+               [is_start_showing]}
+            {is_leader_local}
+            {matchmaking_screen all_ready}}
+         {start.grp set_showing TRUE}
+         {start_fade_in.trg trigger}
+         {$this set is_start_showing TRUE}})
+   (fade_out_start_banner
+      {if
+         [is_start_showing]
+         {start_fade_out.trg trigger}
+         {$this set is_start_showing FALSE}})
+   (update_no_fail_banner
+      {if_else
+         {&&
+            {matchmaking_screen all_ready}
+            {==
+               {ui current_screen}
+               matchmaking_screen}}
+         {no_fail_fade_in.trg trigger}
+         {no_fail_fade_out.trg trigger}})
+   (update_no_fail_text
+      {if_else
+         {meta_performer is_no_fail_active}
+         {no_fail_status.lbl set text_token no_fail_active}
+         {no_fail_status.lbl set text_token no_fail_inactive}})
+   (update_no_fail
+      {if_else
+         {meta_performer is_no_fail_active}
+         {enable_no_fail.trg trigger}
+         {disable_no_fail.trg trigger}}
+      {$this update_no_fail_text})
+   (no_fail_enabled
+      ($user)
+      {if
+         $user
+         {play_instr_sfx $user button_select}}
+      {$this update_no_fail})
+   (no_fail_disabled
+      ($user)
+      {if
+         $user
+         {play_instr_sfx $user button_back}}
+      {$this update_no_fail})
+   (TRANSITION_COMPLETE_MSG
+      {$this unhighlight_empty_slots})
+   (event_dialog_dismiss
+      {$this unhighlight_empty_slots})
+   (unhighlight_empty_slots
+      {if_else
+         {gamemode in_mode h2h}
+         {do
+            {unless
+               {user_mgr get_user_from_slot 0}
+               {background_panel unhighlight_slot 0}
+               {background_panel unhighlight_slot 1}}
+            {unless
+               {user_mgr get_user_from_slot 1}
+               {background_panel unhighlight_slot 2}
+               {background_panel unhighlight_slot 3}}}
+         {do
+            {unless
+               {user_mgr get_user_from_slot 0}
+               {background_panel unhighlight_slot 0}}
+            {unless
+               {user_mgr get_user_from_slot 1}
+               {background_panel unhighlight_slot 1}}
+            {unless
+               {user_mgr get_user_from_slot 2}
+               {background_panel unhighlight_slot 2}}
+            {unless
+               {user_mgr get_user_from_slot 3}
+               {background_panel unhighlight_slot 3}}}})}
+{new
+   MatchmakingScreen
+   matchmaking_screen
+   (panels meta background_panel matchmaking_panel)
+   (background_view matchmaking)
+   (focus matchmaking_panel)
+   (helpbar
+      ())
+   (allow_input_while_network_busy TRUE)
+   (back
+      {if_else
+         {gamemode in_mode story}
+         story_progress_sel_screen
+         MAIN_MENU_RETURN_SCREEN})
+   (allow_leader_to_continue TRUE)
+   (on_confirm_abandon
+      {ui push_screen mm_confirm_abandon_screen})
+   (on_confirm_back
+      {ui push_screen mm_confirm_back_screen})
+   (player_panels
+      (panel matchmaking_panel)
+      (slots
+         {if_else
+            {gamemode in_mode h2h}
+            (none none)
+            (COOP_SLOTS_ORDER)})
+      (type
+         (slot_num 0)
+         (slot none)
+         (option '')
+         (icon_enabled FALSE)
+         (ui_single_inst slot_single_inst_icon.grp)
+         (ui_multi_inst slot_multi_inst_icon.grp)
+         (ui_top top.grp)
+         (ui_bottom bottom.grp)
+         (ui_remote_only remote_only.grp)
+         (ui_no_instrument no_instrument.grp)
+         (ui_user_name_list user_name_list.grp)
+         (ui_sign_in sign_in.grp)
+         (ui_guest_not_first guest_not_first.grp)
+         (ui_join join.grp)
+         (ui_user_name_joined user_name_joined.grp)
+         (ui_bottom_choose_part bottom_choose_part.grp)
+         (ui_finding finding.grp)
+         (ui_mic_arrows arrows.grp)
+         (enter
+            {[ui_guest_not_first]
+               set_showing
+               FALSE}
+            {[ui_bottom]
+               set_showing
+               TRUE}
+            {[ui_top]
+               set_showing
+               TRUE})
+         (on_state_changed
+            ($from $to)
+            {switch
+               $from
+               (choose_part
+                  {$this disable part_bass.btn}
+                  {$this disable part_guitar.btn})
+               (ready
+                  {unready.trg trigger}
+                  {if_else
+                     {gamemode in_mode h2h}
+                     {do
+                        ($slot
+                           {'*'
+                              [slot_num]
+                              2})
+                        {background_panel unhighlight_slot $slot}
+                        {background_panel
+                           unhighlight_slot
+                           {'+' $slot 1}}}
+                     {background_panel
+                        unhighlight_slot
+                        [slot_num]}})
+               (guest_not_first
+                  {guest_not_first_out.trg trigger})}
+            {switch
+               $to
+               (choose_part
+                  {$this enable part_bass.btn}
+                  {$this enable part_guitar.btn}
+                  {$this set_focus part_bass.btn}
+                  {$this set_focus part_guitar.btn})
+               (ready
+                  {ready.trg trigger}
+                  {if_else
+                     {gamemode in_mode h2h}
+                     {do
+                        ($slot
+                           {'*'
+                              [slot_num]
+                              2})
+                        {background_panel highlight_slot $slot}
+                        {background_panel
+                           highlight_slot
+                           {'+' $slot 1}}}
+                     {background_panel
+                        highlight_slot
+                        [slot_num]}})
+               (guest_not_first
+                  {guest_not_first_in.trg trigger})})
+         (on_user_joined
+            ($user)
+            {play_instr_sfx $user button_select}
+            {session_mgr
+               add_sink
+               $this
+               (add_local_user_result_msg)}
+            {session_mgr add_local_user $user})
+         (on_join_mic_is_missing
+            {vocalist_must_have_mic_screen
+               set
+               message
+               {if_else
+                  {gamemode in_mode h2h}
+                  h2h_vocalist_needs_mic
+                  band_vocalist_needs_mic}}
+            {ui push_screen vocalist_must_have_mic_screen})
+         (on_join_online_required
+            ($user)
+            {$this preserve_last_button}
+            {input_mgr set_user $user}
+            {ui push_screen mm_signin_net_screen})
+         (on_join_guest_not_first
+            ($user)
+            {$this preserve_last_button}
+            {input_mgr set_user $user}
+            {if_else
+               {gamemode in_mode h2h}
+               {ui push_screen mm_signin_h2h_guest_screen}
+               {ui push_screen mm_signin_guest_not_first_screen}})
+         (on_join_failed
+            ($user)
+            {if_else
+               {!
+                  {platform_mgr
+                     is_user_signed_in
+                     {user_mgr
+                        get_user_from_slot
+                        [slot_num]}}}
+               {platform_mgr
+                  signin
+                  1
+                  {gamemode get online_play_required}}
+               {play_instr_sfx $user button_error}})
+         (on_net_options
+            ($user)
+            {play_instr_sfx $user button_select}
+            {ui push_screen mm_net_options_screen})
+         (update_button_pulse
+            {button_pulse.tnm animate}
+            {button_pulse_joined.tnm animate})
+         (update_names
+            ($user $pad_num $career_score)
+            {user_name.lbl set_user_name $user}
+            {if_else
+               $pad_num
+               {do
+                  {pad_num.lbl set_int $pad_num}
+                  {pad_num.lbl set_showing TRUE}}
+               {pad_num.lbl set_showing FALSE}}
+            {if_else
+               {&&
+                  $career_score
+                  {&&
+                     {!
+                        {gamemode in_mode story}}
+                     {!
+                        {gamemode in_mode practice}}}}
+               {do
+                  {career_score.lbl set_int $career_score TRUE}
+                  {career_score.lbl set_showing TRUE}}
+               {career_score.lbl set_showing FALSE}})
+         (update_instrument_icons
+            ($icon_char $icon_enabled)
+            {user_name_instrument_icon.lbl set icon $icon_char}
+            {slot_instrument_icon.lbl set icon $icon_char}
+            {if
+               {!=
+                  $icon_enabled
+                  [icon_enabled]}
+               {if_else
+                  $icon_enabled
+                  {instrument_icon_enabled.trg trigger}
+                  {instrument_icon_disabled.trg trigger}}}
+            {set
+               [icon_enabled]
+               $icon_enabled})
+         (update_join_icons
+            ($is_guitar $is_drum $is_vocals)
+            {do
+               ($x 0)
+               ($y 0)
+               ($z 0)
+               ($join_token
+                  "")
+               {join.trans get_local_pos $x $y $z}
+               {join.lbl set_local_pos $x $y $z}
+               {if
+                  $is_guitar
+                  {append_str
+                     $join_token
+                     "guitar_"}}
+               {if
+                  $is_drum
+                  {append_str
+                     $join_token
+                     "drum_"}}
+               {if
+                  $is_vocals
+                  {append_str
+                     $join_token
+                     "vocals_"}}
+               {append_str
+                  $join_token
+                  "join_icon"}
+               {if
+                  {platform_mgr is_confirm_cancel_swapped}
+                  {append_str
+                     $join_token
+                     "_ps3confirmcancel"}}
+               {join_icon.lbl set text_token $join_token}
+               {join_icon.lbl center_with_label join.lbl FALSE 10}})
+         (update_online_enabled
+            ($show)
+            {online_enabled.grp set_showing $show})
+         (update_remote_status
+            ($show $net_ui_state)
+            {remote_status.grp set_showing FALSE}))
+      (options
+         (remote_only)
+         (no_instrument)
+         (sign_in)
+         (guest_not_first)
+         (join)
+         (waiting)
+         (choose_part)
+         (ready)))
+   (is_ready
+      {&&
+         {>=
+            {session num_users}
+            {gamemode get min_players}}
+         {<=
+            {session num_users}
+            {gamemode get max_players}}})
+   (BUTTON_DOWN_MSG
+      {play_instr_sfx $user button_error}
+      TRUE)
+   (update
+      {matchmaking_panel update_start_banner}
+      {matchmaking_panel update_no_fail_banner}
+      {matchmaking_panel refresh_mics})
+   (on_start
+      {if_else
+         {!
+            {session_mgr has_leader_user}}
+         {ui push_screen matchmaking_confirm_no_leader_screen}
+         {do
+            {matchmaker cancel_find}
+            {$this start_continue_lock}}})
+   (releasing_lock_step
+      ($success)
+      {if_else
+         $success
+         {ui
+            sync_screen
+            {$this get_post_matchmaking_screen}
+            0}
+         {do
+            {ui push_screen mm_cannot_continue_screen}
+            {gamecfg set_joining_allowed TRUE}}})
+   (get_post_matchmaking_screen
+      {if_else
+         {&&
+            {gamemode in_mode h2h}
+            {==
+               {gamemode get ranked}
+               TRUE}}
+         finding_screen
+         {if_else
+            {gamemode in_mode story}
+            {do
+               {story_hub_panel set should_reset_focus TRUE}
+               story_hub_screen}
+            song_select_screen}})
+   (NEW_REMOTE_USER_MSG
+      {if
+         {==
+            {session num_open_slots}
+            0}
+         {matchmaker cancel_find}}
+      {$this update_all})
+   (settings_changed
+      {$this update_all})
+   (game_changed
+      {$this update_all})
+   (signin_changed
+      {$this update_all})
+   (save_load_all_complete_msg
+      {$this update_all})
+   (JOYPAD_CONNECT_MSG
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               $this}}
+         {$this verify_controllers_and_update}})
+   (verify_controllers_and_update
+      {$this export_all verify_controller_types}
+      {$this update_all})
+   (enter
+      #ifndef _SHIP
+      {if
+         {&&
+            {gamemode in_mode story}
+            {<
+               {story mode}
+               0}}
+         {fail
+            "It's story, but the story mode hasn't been set."}}
+      #endif
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      {gamecfg set_joining_allowed TRUE}
+      {unless
+         {gamemode in_mode story}
+         {ui set_disband_status kDisbandsMessageOnly}}
+      {matchmaking_panel hide_waiting}
+      {presence_mgr set_assembling_band}
+      {net_sync set_ui_state kNetUI_Matchmaking}
+      {input_mgr set_limit kLimitNone}
+      {song_offer_provider clear_saved_highlight})
+   (exit
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+      {matchmaker cancel_find}
+      {gamecfg set_joining_allowed FALSE}
+      {ui set_disband_status kDisbandsEnabled}
+      {presence_mgr set_prepare_to_rock}
+      {synth reset_mics_changed}
+      {input_mgr set_limit kLimitSessionLeader})
+   (allow_input
+      {!
+         {session is_busy}})
+   (session_busy
+      {matchmaking_panel
+         {if_else
+            {session is_busy}
+            {if_else
+               {session_mgr is_preserving_session}
+               actually_show_waiting
+               show_waiting}
+            hide_waiting}})
+   (wait_for_session
+      {$this update_all})
+   (session_ready_complete_msg
+      ($user)
+      {net_sync set_ui_state kNetUI_Matchmaking}
+      {if
+         {gamemode in_mode h2h}
+         {do
+            ($controller_sym none)
+            {user_mgr
+               foreach_local_user
+               $user_local
+               {if
+                  {$user_local is_participating}
+                  {set
+                     $controller_sym
+                     {$user_local get_controller_sym}}}}}}
+      {$this export_all verify_controller_types}
+      {meta_performer use_no_fail FALSE}
+      {matchmaking_panel update_no_fail_text}
+      {$this update_all})
+   (session_disabled
+      {$this update_all})}
+#define MATCHMAKING_SCREEN_ERROR_HANDLERS
+((JOYPAD_CONNECT_MSG
+      {handle
+         ({ui bottom_screen}
+            verify_controllers_and_update)}))
+#define MATCHMAKING_OPTIONS_SUBSCREEN_HANDLERS
+((helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_confirm)))
+   (leave
+      {ui goto_screen mm_net_options_screen}))
+{new
+   BandScreen
+   mm_confirm_back_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (allow_leader_to_continue TRUE)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_custom mm_confirm_back_msg yes no opt2.btn}
+      {session
+         add_sink
+         $this
+         (session_disabled)})
+   (exit
+      {session remove_sink $this session_disabled})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {ui
+               pop_screen
+               {matchmaking_screen get back}})
+         (opt2.btn
+            {ui pop_screen})})
+   (session_disabled
+      {unless
+         {'||'
+            {ui_event_mgr has_active_transition_event}
+            {ui in_transition}}
+         {ui pop_screen}}
+      kDataUnhandled)}
+{new
+   BandScreen
+   mm_confirm_abandon_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (allow_leader_to_continue TRUE)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_custom mm_confirm_back_msg yes no opt2.btn}
+      {session
+         add_sink
+         $this
+         (session_disabled)})
+   (exit
+      {session remove_sink $this session_disabled})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {ui pop_screen}
+            {matchmaking_screen abandon_session})
+         (opt2.btn
+            {ui pop_screen})})
+   (session_disabled
+      {unless
+         {'||'
+            {ui_event_mgr has_active_transition_event}
+            {ui in_transition}}
+         {ui pop_screen}}
+      kDataUnhandled)}
+{new
+   BandScreen
+   matchmaking_confirm_no_leader_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_yesno matchmaker_confirm_no_leader yes.btn})
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {ui
+               pop_screen
+               {matchmaking_screen get_post_matchmaking_screen}})
+         (no.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   mm_cannot_continue_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_ok mm_cannot_continue})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   SigninScreen
+   mm_signin_net_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (allow_leader_to_continue TRUE)
+   (must_not_be_a_guest FALSE)
+   (must_be_online TRUE)
+   (must_be_multiplayer_capable TRUE)
+   (handle_sign_outs FALSE)
+   (limit_user_signin TRUE)
+   (enter
+      {dialog_panel set_custom mm_need_a_profile_net_msg mm_need_a_profile_signin mm_need_a_profile_cancel opt1.btn}
+      {session add_sink $this})
+   (NEW_REMOTE_USER_MSG
+      {if
+         {==
+            $user
+            {input_mgr get_user}}
+         {matchmaking_screen clear_button_press}
+         {ui pop_screen}})
+   (exit
+      {session remove_sink $this}
+      {input_mgr clear_user})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr
+               signin
+               1
+               {gamemode get online_play_required}})
+         (opt2.btn
+            {matchmaking_screen clear_button_press}
+            {ui pop_screen})})
+   (on_not_online)
+   (on_not_multiplayer_capable)
+   (on_signed_in
+      {ui pop_screen})}
+{new
+   SigninScreen
+   mm_signin_guest_not_first_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (must_not_be_a_guest TRUE)
+   (must_be_online FALSE)
+   (must_be_multiplayer_capable FALSE)
+   (handle_sign_outs TRUE)
+   (limit_user_signin TRUE)
+   (enter
+      {dialog_panel set_custom mm_need_a_profile_band_guest_msg mm_need_a_profile_signin mm_need_a_profile_cancel opt1.btn}
+      {session add_sink $this})
+   (NEW_REMOTE_USER_MSG
+      {if
+         {==
+            $user
+            {input_mgr get_user}}
+         {matchmaking_screen clear_button_press}
+         {ui pop_screen}})
+   (exit
+      {session remove_sink $this}
+      {input_mgr clear_user})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr
+               signin
+               1
+               {gamemode get online_play_required}})
+         (opt2.btn
+            {matchmaking_screen clear_button_press}
+            {ui pop_screen})})
+   (on_signed_into_guest)
+   (on_signed_in
+      {ui pop_screen})
+   (on_signed_out
+      {ui pop_screen})}
+{new
+   SigninScreen
+   mm_signin_h2h_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (must_not_be_a_guest TRUE)
+   (must_be_online TRUE)
+   (must_be_multiplayer_capable TRUE)
+   (handle_sign_outs FALSE)
+   (limit_user_signin TRUE)
+   (enter
+      {dialog_panel set_custom mm_need_a_profile_h2h_net_guest_msg mm_need_a_profile_signin mm_need_a_profile_cancel opt1.btn}
+      {session add_sink $this})
+   (NEW_REMOTE_USER_MSG
+      {if
+         {==
+            $user
+            {input_mgr get_user}}
+         {matchmaking_screen clear_button_press}
+         {ui pop_screen}})
+   (exit
+      {session remove_sink $this}
+      {input_mgr clear_user})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr
+               signin
+               1
+               {gamemode get online_play_required}})
+         (opt2.btn
+            {matchmaking_screen clear_button_press}
+            {ui pop_screen})})
+   (on_signed_into_guest)
+   (on_not_online)
+   (on_not_multiplayer_capable)
+   (on_signed_in
+      {ui pop_screen})}
+{new
+   UIPanel
+   mm_net_options_panel
+   (file
+      "mm_net_options.milo")
+   (focus opt1.btn)
+   (allow_leader_to_continue TRUE)
+   (TRANSITION_COMPLETE_MSG
+      {session add_sink $this}
+      {$this refresh_buttons}
+      {if
+         {session is_disabled}
+         {ui pop_screen}})
+   (session_disabled
+      {unless
+         {'||'
+            {ui_event_mgr has_active_transition_event}
+            {ui in_transition}}
+         {ui pop_screen}})
+   (REMOTE_USER_LEFT_MSG
+      {$this refresh_buttons})
+   (NEW_REMOTE_USER_MSG
+      {$this refresh_buttons})
+   (refresh_buttons
+      {if_else
+         {'||'
+            {matchmaking_screen is_full}
+            {!
+               {is_leader_local}}}
+         {$this disable opt1.btn}
+         {$this enable opt1.btn kMaybeFocus}}
+      #ifdef HX_XBOX
+      {if_else
+         {!
+            {platform_mgr is_in_party}}
+         {$this disable opt2.btn}
+         {$this enable opt2.btn kMaybeFocus}}
+      #endif
+      #ifdef HX_PS3
+      {$this enable opt2.btn kMaybeFocus}
+      #endif
+      {if_else
+         {'||'
+            {session is_local}
+            {!
+               {is_leader_local}}}
+         {$this disable opt3.btn}
+         {$this enable opt3.btn kMaybeFocus}}
+      #ifdef HX_XBOX
+      {$this enable opt4.btn kMaybeFocus}
+      #endif
+      #ifdef HX_PS3
+      {if_else
+         {session is_local}
+         {$this disable opt4.btn}
+         {$this enable opt4.btn kMaybeFocus}}
+      #endif)
+   (enter
+      {input_mgr set_limit kLimitSession}
+      {matchmaking_panel fade_out_start_banner})
+   (exit
+      {session remove_sink $this}
+      {input_mgr set_limit kLimitNone}
+      {matchmaking_panel fade_in_start_banner})
+   (fade_out
+      {fade_out.trg trigger})
+   (fade_in
+      {fade_in.trg trigger})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {play_instr_sfx $user button_back}
+            {ui pop_screen})
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            #ifdef HX_XBOX
+            {platform_mgr show_user_friends $user}
+            {ui pop_screen}
+            #endif
+            #ifdef HX_PS3
+            {ui goto_screen invite_friends_screen}
+            #endif)
+         (opt2.btn
+            #ifdef HX_XBOX
+            {if_else
+               {platform_mgr show_user_party $user}
+               {ui pop_screen}
+               {ui goto_screen error_showing_party_ui_dialog_screen}}
+            #endif
+            #ifdef HX_PS3
+            {main_panel
+               set
+               invited_user_pad
+               {$user get_pad_num}}
+            {platform_mgr check_mailbox}
+            {ui pop_screen}
+            #endif)
+         (opt3.btn
+            {ui goto_screen kick_player_screen})
+         (opt4.btn
+            #ifdef HX_XBOX
+            {if
+               {&&
+                  {>
+                     {session num_users}
+                     0}
+                  {gamemode get online_play_required}
+                  {!
+                     {gamemode get ranked}}
+                  {$user is_participating}}
+               {ui goto_screen more_details_screen}}
+            #endif
+            #ifdef HX_PS3
+            {ui goto_screen mute_player_screen}
+            #endif)})}
+{new
+   BandScreen
+   mm_net_options_screen
+   (panels mm_net_options_panel)
+   (focus mm_net_options_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_confirm)))
+   MATCHMAKING_SCREEN_ERROR_HANDLERS}
+{new
+   UIPanel
+   kick_player_panel
+   (file
+      "player_names_dialog.milo")
+   (focus players.lst)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {{ui current_screen}
+               leave}}
+         kDataUnhandled})
+   (SELECT_MSG
+      {remote_players_provider
+         kick_player
+         {players.lst selected_pos}}
+      {ui pop_screen})
+   (REMOTE_USER_LEFT_MSG
+      {if_else
+         {session is_local}
+         {ui pop_screen}
+         {do
+            {players.lst set_provider remote_players_provider}}})
+   (NEW_REMOTE_USER_MSG
+      {remote_players_provider refresh_player_list}
+      {players.lst refresh})
+   (enter
+      {title.lbl set text_token kick_player}
+      {players.lst set_provider remote_players_provider})
+   (TRANSITION_COMPLETE_MSG
+      {session add_sink $this}
+      {if
+         {session is_local}
+         {ui pop_screen}})
+   (exit
+      {session remove_sink $this}
+      {remote_players_provider cleanup})}
+{new
+   BandScreen
+   kick_player_screen
+   (panels mm_net_options_panel kick_player_panel)
+   (focus kick_player_panel)
+   MATCHMAKING_OPTIONS_SUBSCREEN_HANDLERS
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (allow_leader_to_continue TRUE)}
+{new
+   UIPanel
+   mute_player_panel
+   (file
+      "player_names_dialog.milo")
+   (focus players.lst)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {{ui current_screen}
+               leave}}
+         kDataUnhandled})
+   (SELECT_MSG
+      {remote_players_provider
+         toggle_mute_status
+         {players.lst selected_pos}}
+      {players.lst refresh})
+   (REMOTE_USER_LEFT_MSG
+      {if_else
+         {session is_local}
+         {ui pop_screen}
+         {do
+            {players.lst set_provider remote_players_provider}}})
+   (NEW_REMOTE_USER_MSG
+      {remote_players_provider refresh_player_list}
+      {players.lst refresh})
+   (enter
+      {title.lbl set text_token mute_player}
+      {remote_players_provider set_show_mute_status TRUE}
+      {players.lst set_provider remote_players_provider})
+   (TRANSITION_COMPLETE_MSG
+      {session add_sink $this}
+      {if
+         {session is_local}
+         {ui pop_screen}})
+   (exit
+      {session remove_sink $this}
+      {remote_players_provider cleanup})}
+{new
+   BandScreen
+   mute_player_screen
+   (panels mm_net_options_panel mute_player_panel)
+   (focus mute_player_panel)
+   MATCHMAKING_OPTIONS_SUBSCREEN_HANDLERS
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (allow_leader_to_continue TRUE)}
+{new
+   UIPanel
+   more_details_panel
+   (file
+      "player_names_dialog.milo")
+   (focus players.lst)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm endgame_hb_details)))
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {{ui current_screen}
+               leave}}
+         kDataUnhandled})
+   (SELECT_MSG
+      {session_players_provider
+         show_gamercard
+         {players.lst selected_pos}
+         $user})
+   (session_disabled
+      {unless
+         {'||'
+            {ui_event_mgr has_active_transition_event}
+            {ui in_transition}}
+         {{ui current_screen}
+            leave}})
+   (REMOTE_USER_LEFT_MSG
+      {session_players_provider refresh_player_list}
+      {players.lst set_provider session_players_provider})
+   (NEW_REMOTE_USER_MSG
+      {session_players_provider refresh_player_list}
+      {players.lst refresh})
+   (enter
+      {title.lbl set text_token more_details_panel_title}
+      {players.lst set_provider session_players_provider})
+   (TRANSITION_COMPLETE_MSG
+      {session add_sink $this}
+      {if
+         {session is_disabled}
+         {{ui current_screen}
+            leave}})
+   (exit
+      {session remove_sink $this}
+      {session_players_provider cleanup})}
+{new
+   BandScreen
+   more_details_screen
+   (panels mm_net_options_panel more_details_panel)
+   (focus more_details_panel)
+   MATCHMAKING_OPTIONS_SUBSCREEN_HANDLERS
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (allow_leader_to_continue TRUE)}
+#define kFindingPanelSubstitute
+(0)
+#define kFindingPanelFindLeader
+(1)
+#define kFindingPanelFindOpponent
+(2)
+#define kFindingPanelAcceptInvite
+(3)
+{new
+   SessionFindingPanel
+   finding_panel
+   (file
+      "finding_players.milo")
+   (finding_type -1)
+   (backing_out FALSE)
+   (enter
+      {cond
+         ({ui get_invite_accepted}
+            {set
+               [finding_type]
+               kFindingPanelAcceptInvite}
+            {if
+               {gamemode in_mode story}
+               {story set_remote_performer}}
+            {finding.lbl set text_token finding_invite})
+         ({gamemode get ranked}
+            {set
+               [finding_type]
+               kFindingPanelFindOpponent}
+            {gamecfg set_joining_allowed TRUE}
+            {finding.lbl set text_token finding_opponent})
+         ({==
+               {story mode}
+               kMetaStory_BrowsingRemote}
+            {set
+               [finding_type]
+               kFindingPanelFindLeader}
+            {finding.lbl set text_token finding_band})
+         ({==
+               {story mode}
+               kMetaStory_UnknownRemote}
+            {set
+               [finding_type]
+               kFindingPanelSubstitute}
+            {finding.lbl set text_token finding_band})
+         (TRUE
+            {fail
+               "Shouldn't be on the finding screen in this mode"})}
+      {$this set_focus retry.btn}
+      {retry.btn
+         set_showing
+         {$this manual_retry}}
+      {$this disable retry.btn}
+      {$this update_helpbar}
+      {set
+         [backing_out]
+         FALSE})
+   (exit
+      {matchmaker cancel_find}
+      {gamecfg set_joining_allowed FALSE}
+      {ui set_invite_accepted FALSE})
+   (TRANSITION_COMPLETE_MSG
+      {$this update_helpbar})
+   (matchmaker_update
+      {if
+         {session is_joining}
+         {$this set_joining_presence}}
+      {helpbar set_widget cancel helpbar_back})
+   (check_disconnect
+      {unless
+         {ui_event_mgr has_active_transition_event}
+         #ifdef HX_XBOX
+         {if
+            {!
+               {platform_mgr is_connected}}
+            {ui_event_mgr
+               trigger_event
+               lost_connection
+               (dummy init kLostConnection)}}
+         #else
+         {if
+            {!
+               {server is_connected}}
+            {ui_event_mgr
+               trigger_event
+               lost_connection
+               (dummy init kLostServer)}}
+         #endif})
+   (update_helpbar
+      {if_else
+         {!=
+            {$this focus_name}
+            ''}
+         {helpbar set_widget confirm helpbar_select}
+         {helpbar set_widget confirm ''}})
+   (enable_retry
+      {matchmaker cancel_find}
+      {session clear}
+      {$this enable retry.btn}
+      {$this set_focus retry.btn}
+      {$this update_helpbar})
+   (set_presence
+      ($token)
+      {presence.lbl set text_token $token})
+   (SELECT_MSG
+      {switch
+         $component
+         (retry.btn
+            {$this disable retry.btn}
+            {$this set_joining_user $user}
+            {$this start_building_session}
+            {$this update_helpbar})})
+   (BUTTON_DOWN_MSG
+      {cond
+         ({!= $action kAction_Cancel}
+            kDataUnhandled)
+         (TRUE
+            {set
+               [backing_out]
+               TRUE}
+            {matchmaker cancel_find}
+            {if
+               {'||'
+                  {!=
+                     [finding_type]
+                     kFindingPanelFindOpponent}
+                  {!
+                     {session is_local}}
+                  {session is_busy}}
+               {session clear}}
+            kDataUnhandled)})
+   (advance
+      {if
+         {==
+            [finding_type]
+            kFindingPanelAcceptInvite}
+         {$this set_session_mgr_auto_join_candidates}}
+      {if_else
+         {==
+            [finding_type]
+            kFindingPanelFindOpponent}
+         {ui goto_screen h2h_ranked_preload_screen}
+         {ui goto_screen matchmaking_screen}})
+   (exit_due_to_error
+      ($error_token)
+      {unless
+         [backing_out]
+         {ui_event_mgr
+            trigger_event
+            finding_error
+            (dummy init $error_token)}})
+   (back_screen
+      {cond
+         ({==
+               [finding_type]
+               kFindingPanelFindOpponent}
+            matchmaking_screen)
+         ({==
+               [finding_type]
+               kFindingPanelAcceptInvite}
+            MAIN_MENU_RETURN_SCREEN)
+         (TRUE story_progress_sel_screen)})
+   (detailed_presence
+      {'||'
+         {==
+            [finding_type]
+            kFindingPanelFindLeader}
+         {==
+            [finding_type]
+            kFindingPanelAcceptInvite}})
+   (manual_retry
+      {'||'
+         {==
+            [finding_type]
+            kFindingPanelFindLeader}
+         {==
+            [finding_type]
+            kFindingPanelAcceptInvite}})
+   (skippable
+      {==
+         [finding_type]
+         kFindingPanelFindLeader})
+   (force_non_leader
+      {!=
+         [finding_type]
+         kFindingPanelFindOpponent})
+   (save_user_settings
+      {==
+         [finding_type]
+         kFindingPanelFindOpponent})
+   (advance_when_joined
+      {==
+         [finding_type]
+         kFindingPanelFindOpponent})
+   (join_invited_session
+      {==
+         [finding_type]
+         kFindingPanelAcceptInvite})}
+{new
+   BandScreen
+   finding_screen
+   (panels meta finding_panel)
+   (back
+      {finding_panel back_screen})
+   (focus finding_panel)
+   (allow_input_while_network_busy TRUE)
+   (helpbar
+      ((cancel helpbar_back)))}
+{new
+   UIPanel
+   selchannel_panel
+   (file
+      "selchanneldialog.milo")
+   (enter
+      {channels.lst
+         set_data
+         (Default A B C D E F G)}
+      {$this set_focus channels.lst}
+      {channels.lst
+         set_selected
+         {matchmaker get_channel}})
+   (SELECT_MSG
+      {matchmaker
+         set_channel
+         {channels.lst selected_pos}}
+      {ui pop_screen})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {ui pop_screen}}
+         kDataUnhandled})}
+{new
+   BandScreen
+   selchannel_screen
+   (panels selchannel_panel)
+   (focus selchannel_panel)}
+{new
+   UIPanel
+   dev_lobby_panel
+   (file
+      "devlobby.milo")
+   (session_size -1)
+   (enter
+      {session
+         add_sink
+         $this
+         (new_remote_user)}
+      {session
+         add_sink
+         $this
+         (processed_join_request)}
+      {$this update_text}
+      {gamecfg set_joining_allowed TRUE}
+      {matchmaker set searching_interval 5000}
+      {matchmaker find_players})
+   (exit
+      {matchmaker cancel_find}
+      {gamecfg set_joining_allowed FALSE}
+      {session remove_sink $this new_remote_user}
+      {session remove_sink $this processed_join_request})
+   (NEW_REMOTE_USER_MSG
+      {$this update_text})
+   (PROCESSED_JOIN_REQUEST_MSG
+      {if
+         {==
+            [session_size]
+            {session num_users}}
+         {ui goto_screen loading_screen}})
+   (update_text
+      {channel.lbl
+         set_int
+         {gamecfg get channel}}
+      {nummax.lbl
+         set_int
+         [session_size]}
+      {numplayers.lbl
+         set_int
+         {session num_users}}
+      {if_else
+         {is_leader_local}
+         {leader.lbl set_showing TRUE}
+         {leader.lbl set_showing FALSE}})}
+{new
+   BandScreen
+   dev_lobby_screen
+   (panels meta dev_lobby_panel)
+   (focus dev_lobby_panel)}

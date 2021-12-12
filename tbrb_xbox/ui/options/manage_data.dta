@@ -1,0 +1,152 @@
+{new
+   UIPanel
+   manage_data_panel
+   (file
+      "manage_data.milo")
+   (signin_change_waiting FALSE)
+   (my_user '')
+   (enter
+      SET_UP_GAMERTAG
+      {platform_mgr
+         add_sink
+         $this
+         (signin_changed)}
+      {ui_event_mgr
+         add_sink
+         $this
+         (event_dialog_dismiss)}
+      {$this update_checks}
+      {$this set_focus save.btn}
+      {set
+         [my_user]
+         {input_mgr get_user}})
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+      {ui_event_mgr remove_sink $this event_dialog_dismiss})
+   (SIGNIN_CHANGED_MSG
+      {if
+         {platform_mgr
+            has_user_signin_changed
+            [my_user]}
+         {if_else
+            {==
+               {ui current_screen}
+               manage_data_screen}
+            {$this process_signin_change}
+            {if
+               {!
+                  {==
+                     {ui current_screen}
+                     option_profile_change_warning_screen}}
+               {$this set signin_change_waiting TRUE}}}})
+   (TRANSITION_COMPLETE_MSG
+      COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT
+      {$this update_checks}
+      {$this
+         update_helpbar
+         {$this focus_name}})
+   (event_dialog_dismiss
+      {$this update_checks}
+      {$this
+         update_helpbar
+         {$this focus_name}})
+   (process_signin_change
+      {if
+         {==
+            {ui current_screen}
+            manage_data_screen}
+         {ui goto_screen option_profile_change_warning_screen}})
+   (FOCUS_MSG
+      {$this
+         update_helpbar
+         {$new_focus name}})
+   (update_helpbar
+      ($component)
+      {switch
+         $component
+         (autosave.btn
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_toggleoption))})
+         {helpbar
+            set_config
+            ((cancel helpbar_back)
+               (confirm helpbar_select))}})
+   (update_checks
+      {autosave_check.mesh
+         set_showing
+         {profile_mgr
+            is_autosave_enabled
+            [my_user]}})
+   (SELECT_MSG
+      {switch
+         $component
+         (save.btn
+            {if_else
+               {platform_mgr is_user_signed_in $user}
+               {manual_save $user}
+               {do
+                  {manual_save_load_sign_in_screen set action manual_save_goto}
+                  {ui push_screen manual_save_load_sign_in_screen}}})
+         (load.btn
+            {if_else
+               {platform_mgr is_user_signed_in $user}
+               {manual_load $user}
+               {do
+                  {manual_save_load_sign_in_screen set action manual_load_goto}
+                  {ui push_screen manual_save_load_sign_in_screen}}})
+         (autosave.btn
+            {if_else
+               {profile_mgr is_autosave_enabled $user}
+               {do
+                  {if_else
+                     {platform_mgr is_user_signed_in $user}
+                     {disable_autosave $user}
+                     {do
+                        {manual_save_load_sign_in_screen set action disable_autosave}
+                        {ui push_screen manual_save_load_sign_in_screen}}}}
+               {do
+                  {if_else
+                     {platform_mgr is_user_signed_in $user}
+                     {manual_save $user}
+                     {do
+                        {manual_save_load_sign_in_screen set action manual_save_goto}
+                        {ui push_screen manual_save_load_sign_in_screen}}}}})})}
+{new
+   BandScreen
+   manage_data_screen
+   (panels meta background_panel main_popup_bg_panel manage_data_panel)
+   (focus manage_data_panel)
+   (back main_screen_2_popup)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_select)))}
+{new
+   SigninScreen
+   manual_save_load_sign_in_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (signing_in_user '')
+   (action '')
+   (must_not_be_a_guest FALSE)
+   (must_be_online FALSE)
+   (must_be_multiplayer_capable FALSE)
+   (handle_sign_outs FALSE)
+   (limit_user_signin FALSE)
+   (enter
+      {dialog_panel set_custom mc_manual_load_not_signed_in options_managedata_signin_button options_managedata_cancel_button opt1.btn})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {set
+               [signing_in_user]
+               $user}
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (on_signed_in
+      {[action]
+         [signing_in_user]
+         manage_data_screen})}
