@@ -1,0 +1,117 @@
+{new
+   UIPanel
+   tutorial_level_menu_panel
+   (file
+      "tutorial_level_menu_keep.milo")
+   (enter
+      {tutorial_type.lbl
+         set
+         text_token
+         {{gamemode get main_panel}
+            get
+            tutorial_type}}
+      {tutorial_levels.lst set_provider tutorial_level_provider}
+      {$this set_focus tutorial_levels.lst}
+      {$this update_leftyflip_label})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               tutorials_level_menu_screen}
+            {!
+               {ui_event_mgr has_active_transition_event}}}
+         {autosave}}
+      {helpbar
+         set_config
+         ((cancel helpbar_back)
+            (confirm helpbar_select))}
+      {input_mgr check_controllers})
+   (SELECT_MSG
+      {helpbar
+         set_config
+         ()}
+      {$this
+         goto_level
+         {tutorial_levels.lst selected_pos}})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {== $action kAction_ViewModify}
+            {'||'
+               {==
+                  {$user get_controller_type}
+                  kControllerGuitar}
+               {==
+                  {$user get_controller_type}
+                  kControllerDrum}}}
+         {$this toggle_leftyflip}}
+      kDataUnhandled)
+   (goto_level
+      ($num)
+      {{gamemode get main_panel}
+         set
+         level_num
+         $num}
+      {{gamemode get main_panel}
+         set_lesson_data
+         {{{gamemode get main_panel}
+               get_level
+               $num}
+            get
+            min_lesson}}
+      {ui goto_screen tutorials_loading_screen})
+   (toggle_leftyflip
+      {do
+         ($my_user
+            {{gamemode get main_panel}
+               get_tutorial_user})
+         ($opts
+            {$my_user get_gameplay_options})
+         {if_else
+            {$opts get_lefty}
+            {$opts set_lefty FALSE}
+            {$opts set_lefty TRUE}}
+         {$this update_leftyflip_label}
+         {play_instr_sfx $my_user button_toggle}
+         {style_pulse.tnm animate}})
+   (update_leftyflip_label
+      {do
+         ($my_user
+            {{gamemode get main_panel}
+               get_tutorial_user})
+         {cond
+            ({'||'
+                  {==
+                     {$my_user get_controller_type}
+                     kControllerGuitar}
+                  {==
+                     {$my_user get_controller_type}
+                     kControllerDrum}}
+               {style.grp set_showing TRUE}
+               {do
+                  ($opts
+                     {$my_user get_gameplay_options})
+                  {style.lbl
+                     set
+                     text_token
+                     {if_else
+                        {$opts get_lefty}
+                        lefty
+                        righty}}})
+            ({==
+                  {$my_user get_controller_type}
+                  kControllerVocals}
+               {style.grp set_showing FALSE})
+            {fail
+               "user has no controller_type"}}})}
+{new
+   BandScreen
+   tutorial_level_menu_screen
+   (panels meta background_panel main_popup_bg_panel tutorial_level_menu_panel)
+   (focus tutorial_level_menu_panel)
+   (back main_screen_2_popup)
+   (enter
+      {meta music_start})}
