@@ -1,0 +1,415 @@
+#define kBandNameLength
+(15)
+#define NAMING_PANEL_HANDLERS
+((naming_chars
+      ("A"
+         "B"
+         "C"
+         "D"
+         "E"
+         "F"
+         "G"
+         "H"
+         "I"
+         "J"
+         "K"
+         "L"
+         "M"
+         "N"
+         "O"
+         "P"
+         "Q"
+         "R"
+         "S"
+         "T"
+         "U"
+         "V"
+         "W"
+         "X"
+         "Y"
+         "Z"
+         "0"
+         "1"
+         "2"
+         "3"
+         "4"
+         "5"
+         "6"
+         "7"
+         "8"
+         "9"
+         " "
+         "!"
+         "?"
+         "."
+         "'"))
+   (prohibit_chars
+      (" "))
+   (current_name
+      (""))
+   (current_char
+      "")
+   (current_pos 0)
+   (current_char_num 0)
+   (blink FALSE)
+   (blink_delay 0.2)
+   (kill FALSE)
+   (random_active FALSE)
+   (canceled_exit FALSE)
+   (just_continue FALSE)
+   (init_name
+      {$this clear_name}
+      {script_task
+         kTaskUISeconds
+         (delay
+            [blink_delay])
+         (script
+            {$this blink_char})}
+      {$this reset_helpbar})
+   (clear_name
+      {resize
+         [current_name]
+         0}
+      {push_back
+         [current_name]
+         ""}
+      {set
+         [current_char_num]
+         0}
+      {set
+         [current_char]
+         {elem
+            [naming_chars]
+            [current_char_num]}}
+      {set
+         [current_pos]
+         0}
+      {set
+         [kill]
+         FALSE}
+      {set
+         [random_active]
+         FALSE}
+      {$this update_name})
+   (exit
+      {set
+         [just_continue]
+         FALSE}
+      {set
+         [kill]
+         TRUE})
+   (update_band
+      {$this update_name})
+   (blink_char
+      {if
+         {!
+            [kill]}
+         {set
+            [blink]
+            {!
+               [blink]}}
+         {$this update_name}
+         {script_task
+            kTaskUISeconds
+            (delay
+               [blink_delay])
+            (script
+               {$this blink_char})}})
+   (TRANSITION_COMPLETE_MSG
+      {$this reset_helpbar})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            [name_active]
+            {!
+               [kill]}}
+         {do
+            {switch
+               $button
+               (kPad_DUp
+                  {if
+                     [random_active]
+                     {do
+                        {$this clear_name}
+                        {set
+                           [random_active]
+                           FALSE}}}
+                  {if
+                     {<
+                        [current_pos]
+                        kBandNameLength}
+                     {$this decrement_char}})
+               (kPad_DDown
+                  {if
+                     [random_active]
+                     {do
+                        {$this clear_name}
+                        {set
+                           [random_active]
+                           FALSE}}}
+                  {if
+                     {<
+                        [current_pos]
+                        kBandNameLength}
+                     {$this increment_char}})
+               (kPad_X
+                  {if
+                     [random_active]
+                     {do
+                        {$this clear_name}
+                        {set
+                           [random_active]
+                           FALSE}}}
+                  {if
+                     {!
+                        {&&
+                           {==
+                              [current_pos]
+                              0}
+                           {find_elem
+                              [prohibit_chars]
+                              [current_char]}}}
+                     {$this next_char}})
+               (kPad_Tri
+                  {if_else
+                     [random_active]
+                     {do
+                        {$this clear_name}
+                        {set
+                           [random_active]
+                           FALSE}}
+                     {$this prev_char}})
+               (kPad_R1
+                  {$this extra_function})
+               (kPad_Start
+                  {if
+                     {!
+                        [kill]}
+                     {if_else
+                        {>
+                           {size
+                              [current_name]}
+                           0}
+                        {do
+                           {set
+                              [kill]
+                              TRUE}
+                           {$this accept_name}}
+                        {ui push_screen name_error_screen}}})
+               kDataUnhandled}}
+         {if
+            {'||'
+               {== $button kPad_Start}
+               {== $button kPad_Tri}
+               {== $button kPad_X}}
+            {$this button_press}}})
+   (update_name
+      {do
+         ($render_cursor
+            {<
+               [current_pos]
+               kBandNameLength})
+         ($extra_char ' ')
+         {if
+            {&&
+               $render_cursor
+               [blink]}
+            {set
+               $extra_char
+               [current_char]}}
+         {[name_label]
+            set
+            text_non_local_token
+            {sprintf
+               "%s%s"
+               {$this get_name}
+               $extra_char}}})
+   (next_char
+      {if
+         {<
+            [current_pos]
+            kBandNameLength}
+         {'++'
+            [current_pos]}
+         {push_back
+            [current_name]
+            [current_char]}
+         {$this reset_helpbar}}
+      {$this update_name})
+   (prev_char
+      {if_else
+         {==
+            [current_pos]
+            0}
+         {if
+            [back_button_exits]
+            {$this cancel_name}}
+         {do
+            {remove_elem
+               [current_name]
+               {elem
+                  [current_name]
+                  [current_pos]}}
+            {--
+               [current_pos]}
+            {$this update_name}
+            {$this reset_helpbar}}})
+   (reset_helpbar
+      {do
+         ($helpbar_config
+            ())
+         {resize $helpbar_config 0}
+         {if_else
+            {>
+               [current_pos]
+               0}
+            {push_back $helpbar_config helpbar_delete}
+            {push_back
+               $helpbar_config
+               {$this get back_button}}}
+         {if_else
+            {<
+               [current_pos]
+               kBandNameLength}
+            {push_back $helpbar_config helpbar_select}
+            {push_back $helpbar_config ''}}
+         {push_back
+            $helpbar_config
+            {$this get randomize_button}}
+         {if_else
+            {'||'
+               {!
+                  [back_button_exits]}
+               {>
+                  [current_pos]
+                  0}}
+            {push_back $helpbar_config helpbar_confirm}
+            {push_back $helpbar_config ''}}
+         {if
+            {==
+               [just_continue]
+               TRUE}
+            {set
+               $helpbar_config
+               ('' helpbar_continue)}}
+         {helpbar set_config $helpbar_config}})
+   (increment_char
+      {set
+         [current_char_num]
+         {'+'
+            [current_char_num]
+            1}}
+      {if
+         {>=
+            [current_char_num]
+            {size
+               [naming_chars]}}
+         {set
+            [current_char_num]
+            0}}
+      {set
+         [current_char]
+         {elem
+            [naming_chars]
+            [current_char_num]}}
+      {$this update_name})
+   (decrement_char
+      {set
+         [current_char_num]
+         {-
+            [current_char_num]
+            1}}
+      {if
+         {<
+            [current_char_num]
+            0}
+         {set
+            [current_char_num]
+            {-
+               {size
+                  [naming_chars]}
+               1}}}
+      {set
+         [current_char]
+         {elem
+            [naming_chars]
+            [current_char_num]}}
+      {$this update_name})
+   (get_name
+      {do
+         ($name
+            "")
+         {foreach
+            $char
+            [current_name]
+            {set
+               $name
+               {sprintf
+                  "%s%s"
+                  $name
+                  $char}}}
+         $name})
+   (stop_naming
+      {helpbar
+         set_config
+         ()}
+      {set
+         [kill]
+         TRUE}
+      {set
+         [blink]
+         FALSE}
+      {set
+         [current_char]
+         ""}
+      {$this update_name})
+   (random_name
+      {do
+         {$this clear_name}
+         {set
+            $rname
+            ""}
+         {while
+            {'||'
+               {==
+                  $rname
+                  ""}
+               {>
+                  {strlen $rname}
+                  kBandNameLength}}
+            {set
+               $rname
+               {$this random_band_name}}}
+         {foreach_int
+            $i
+            0
+            {strlen $rname}
+            {push_back
+               [current_name]
+               {str_elem $rname $i}}
+            {set
+               [current_pos]
+               {'+' $i 1}}}
+         {set
+            [current_char]
+            "A"}
+         {$this update_name}
+         {$this reset_helpbar}}))
+{new
+   UIScreen
+   name_error_screen
+   (panels dialog_panel helpbar_dialog)
+   (helpbar
+      ('' helpbar_continue))
+   (focus dialog_panel)
+   (enter
+      {helpbar_dialog
+         set_config
+         (""
+            helpbar_continue)}
+      {helpbar_dialog set_use_all_controllers TRUE}
+      {dialog_panel
+         set_ok
+         {localize_token shell_no_band_name_error}})
+   (SELECT_MSG
+      {ui pop_screen})}
