@@ -1,0 +1,238 @@
+{new
+   UIPanel
+   tutorials_pause_mic_panel
+   (file
+      "tutorial_pause_mic_og.milo")
+   (enter
+      {$this set_focus pause_resume.btn}
+      {talk01.mnm set_frame 1}
+      {$this enable mics_player_name01.lbl}
+      {mics_player_name01.lbl
+         set_localized
+         {localize tutorial_pause_mic_name}}
+      {$this on_mics_change})
+   #ifdef HX_XBOX
+   (poll
+      {talk01.mnm
+         set_frame
+         {if_else
+            {tutorials_state_panel is_mic_talking}
+            1
+            0}})
+   #endif
+   (on_mics_change
+      {if_else
+         {tutorials_state_panel is_mic_disconnected}
+         {do
+            {$this disable pause_resume.btn}
+            {$this set_focus pause_quit.btn}}
+         {do
+            {$this enable pause_resume.btn}
+            {$this set_focus pause_resume.btn}}})}
+{new
+   UIScreen
+   tutorials_pause_mic_screen
+   (panels tutorials_pause_mic_panel helpbar)
+   (focus tutorials_pause_mic_panel)
+   (helpbar
+      ('' helpbar_select))
+   (allow_back FALSE)
+   (animate_transition FALSE)
+   (microphones_changed
+      ($vocalists_mic_changed)
+      {tutorials_pause_mic_panel on_mics_change})
+   (pre_enter
+      {set
+         [is_quitting]
+         FALSE}
+      {tutorials_state_panel pause})
+   (enter
+      {set
+         [is_quitting]
+         FALSE}
+      {set
+         [is_done]
+         FALSE})
+   (exit
+      {if
+         {!
+            [is_quitting]}
+         {tutorials_state_panel unpause}})
+   (resume_tutorial
+      {ui pop_screen})
+   (quit_tutorial
+      {set
+         [is_quitting]
+         TRUE}
+      {tutorials_state_panel reset_tutorial}
+      {gamemode set main_screen main_screen}
+      {ui goto_screen meta_loading_tutorial_main_screen})
+   (SELECT_MSG
+      {if_else
+         {&&
+            {==
+               $player_num
+               {{gamemode get main_panel}
+                  get_tutorial_player}}
+            {!
+               [is_done]}}
+         {do
+            {set
+               [is_done]
+               TRUE}
+            {switch
+               $component
+               (pause_resume.btn
+                  {script_task
+                     kTaskUISeconds
+                     (delay 0.8)
+                     (script
+                        {$this resume_tutorial})})
+               (pause_quit.btn
+                  {script_task
+                     kTaskUISeconds
+                     (delay 0.8)
+                     (script
+                        {$this quit_tutorial})})}
+            kDataUnhandled}
+         TRUE})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               $player_num
+               {{gamemode get main_panel}
+                  get_tutorial_player}}
+            {!
+               [is_done]}}
+         {do kDataUnhandled}
+         TRUE})
+   (BUTTON_UP_MSG
+      {if_else
+         {&&
+            {==
+               $player_num
+               {{gamemode get main_panel}
+                  get_tutorial_player}}
+            {!
+               [is_done]}}
+         {do kDataUnhandled}
+         TRUE})
+   (is_quitting FALSE)
+   (is_done FALSE)}
+{new
+   UIPanel
+   tutorials_pause_controller_panel
+   (file ../ui/pause_discon_og.milo)
+   (enter
+      {do
+         {$this
+            disable
+            {$this find pause_resume.btn}}
+         {$this on_joypad_change}})
+   QUIT_DIALOG_SET_UP_BUTTONS
+   (BUTTON_DOWN_MSG
+      {do
+         {if
+            {&&
+               {!
+                  {game missing_controllers}}
+               {== $button kPad_Start}}
+            {ui pop_screen}}
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (pause_resume.btn
+            {ui pop_screen})
+         (pause_quit.btn
+            {$this on_quit})})
+   (JOYPAD_CONNECT_MSG
+      {$this on_joypad_change})
+   (on_joypad_change
+      {if_else
+         {game missing_controllers}
+         {do
+            {$this update_labels}
+            {$this
+               disable
+               {$this find pause_resume.btn}}}
+         {do
+            {$this
+               set_focus
+               {$this find pause_resume.btn}}}})
+   (update_labels
+      {do
+         ($missing_controllers
+            {game missing_controllers})
+         ($who
+            "")
+         ($i 0)
+         ($total 0)
+         ($vocals FALSE)
+         {foreach
+            $j
+            (1 2 4 8 16 32 64 128)
+            {if
+               {& $j $missing_controllers}
+               {set
+                  $who
+                  {if_else
+                     {==
+                        ""
+                        $who}
+                     {set
+                        $who
+                        {{game get_player_config $i}
+                           get
+                           player_name}}
+                     {sprintf
+                        {localize controller_who}
+                        $who
+                        {{game get_player_config $i}
+                           get
+                           player_name}}}}
+               {if
+                  {==
+                     {{game get_player_config $i}
+                        get_controller_type}
+                     kControllerVocals}
+                  {set $vocals TRUE}}
+               {'++' $total}}
+            {'++' $i}}
+         {if
+            {== $total 1}
+            {set
+               $who
+               {sprintf
+                  {localize controller_possessive}
+                  $who}}}
+         {{$this find pause_controller_title.lbl}
+            set
+            text_token
+            no_controller}
+         #ifdef HX_WII
+         {{$this find pause_controller_msg.lbl}
+            set_localized
+            {if_else
+               $vocals
+               {localize controller_loss_vocals_msg}
+               {sprintf
+                  {localize controller_loss_msg}
+                  $who}}}
+         #else
+         {{$this find pause_controller_msg.lbl}
+            set_localized
+            {sprintf
+               {localize controller_loss_msg}
+               $who}}
+         #endif})
+   (on_quit
+      {ui goto_screen meta_loading_quit_early_screen})}
+{new
+   UIScreen
+   tutorials_pause_controller_screen
+   (panels tutorials_pause_controller_panel helpbar)
+   (focus tutorials_pause_controller_panel)
+   (helpbar
+      ('' helpbar_continue))}
