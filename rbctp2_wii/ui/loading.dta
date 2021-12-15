@@ -1,0 +1,107 @@
+#ifndef _SHIP
+{new
+   UIScreen
+   loading_multi_screen
+   (enter
+      {ui goto_screen loading_multi_content_screen})}
+{new
+   UIPanel
+   loading_multi_content_panel
+   (is_loaded
+      {content_mgr refresh_done})}
+{new
+   UIScreen
+   loading_multi_content_screen
+   (panels loading_multi_content_panel)
+   (enter
+      {tour create_test_event}
+      {game
+         set_song
+         {{tour performer}
+            next_song}}
+      {ui goto_screen loading_screen})}
+#endif
+{new
+   UIPanel
+   wait_on_content_mgr_panel
+   (load
+      {content_mgr start_refresh})
+   (is_loaded
+      {content_mgr refresh_done})}
+{new
+   UIScreen
+   loading_screen
+   (panels wait_on_content_mgr_panel)
+   (enter
+      {band_ui_sink set block_mode kBlockLoadingGame}
+      {band_ui_sink set_net_sync FALSE}
+      {ui goto_screen real_loading_screen})}
+{new
+   UIScreen
+   real_loading_screen
+   (enter
+      {song_provider
+         add_recent_song
+         {gamecfg get_song}}
+      {band_ui_sink hide_error_dialog}
+      {ui goto_screen loading_tip_screen})}
+{new
+   UIPanel
+   loading_tip_panel
+   (file loading_og.milo)
+   #ifndef _SHIP
+   (is_loaded
+      {content_mgr refresh_done})
+   #endif
+   (enter
+      {tip.lbl set_showing TRUE}
+      {tip.lbl
+         set_localized
+         {localize
+            {if_else
+               $force_loading_tip
+               $force_loading_tip
+               {random_context
+                  {elem
+                     {find $syscfg tips}
+                     1}}}}})}
+{new
+   UIScreen
+   loading_tip_screen
+   (panels loading_tip_panel)
+   (enter
+      {synth stop_all_sfx})
+   (TRANSITION_COMPLETE_MSG
+      {game load_all_chars TRUE}
+      {ui
+         goto_screen
+         {gamemode get game_screen}}
+      {band_ui_sink set_net_sync TRUE}
+      {band_ui_sink set block_mode kBlockNone})}
+{new
+   UIPanel
+   loading_image_panel
+   (file loading_og.milo)
+   (enter
+      {tip.lbl set_showing FALSE}
+      {set
+         $picture
+         {random_int 1 4}}
+      {set
+         $characters
+         {song_mgr
+            get_characters
+            {game get_song}}})}
+{new
+   UIScreen
+   loading_image_screen
+   (panels loading_image_panel)
+   (enter
+      {synth stop_all_sfx})
+   (TRANSITION_COMPLETE_MSG
+      {game load_all_chars TRUE}
+      {ui
+         goto_screen
+         {gamemode get game_screen}}
+      {band_ui_sink set_net_sync TRUE}
+      {band_ui_sink set block_mode kBlockNone})}
