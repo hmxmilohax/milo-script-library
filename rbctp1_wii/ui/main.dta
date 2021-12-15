@@ -1,0 +1,1271 @@
+{new
+   UIPanel
+   fx
+   (file
+      "fx_standard_og.milo")
+   (fix_for_ratio
+      {switch
+         {rnd aspect}
+         (kRegularAspect
+            {movie_09.mesh set_showing TRUE}
+            {movie_15.mesh set_showing TRUE}
+            {movie_17.mesh set_showing TRUE}
+            {movie_09_wide.mesh set_showing FALSE}
+            {movie_15_wide.mesh set_showing FALSE}
+            {movie_17_wide.mesh set_showing FALSE})
+         (kWidescreenAspect
+            {movie_09.mesh set_showing FALSE}
+            {movie_15.mesh set_showing FALSE}
+            {movie_17.mesh set_showing FALSE}
+            {movie_09_wide.mesh set_showing TRUE}
+            {movie_15_wide.mesh set_showing TRUE}
+            {movie_17_wide.mesh set_showing TRUE})})
+   (fx_enter
+      {$this fix_for_ratio}
+      {movie_09.mnm animate}
+      {movie_15.mnm animate})
+   (fx_exit
+      {$this fix_for_ratio}
+      {movie_17.mnm animate}
+      {movie_09.mnm animate})}
+{new
+   UIPanel
+   build_number
+   (file
+      "build_number.milo")
+   (enter
+      {{$this find build.txt}
+         set_text
+         {game get_build_text}})}
+{new
+   UIPanel
+   demiurge_splash_panel
+   (file
+      "startup_demiurge.milo")}
+{new
+   UIScreen
+   demiurge_splash_screen
+   (panels demiurge_splash_panel)
+   (TRANSITION_COMPLETE_MSG
+      {script_task
+         kTaskUISeconds
+         (delay 2)
+         (script
+            {ui goto_screen ea_splash_screen})})}
+{new
+   UIPanel
+   ea_splash_panel
+   (file
+      "startup_ea.milo")}
+{new
+   UIScreen
+   ea_splash_screen
+   (panels meta fx ea_splash_panel)
+   (enter
+      {meta music_stop})
+   (TRANSITION_COMPLETE_MSG
+      {script_task
+         kTaskUISeconds
+         (delay 4)
+         (script
+            #ifdef HX_EE
+            {ui goto_screen auto_load_intro_screen}
+            #else
+            #ifdef HX_WII
+            {hmb_allow TRUE}
+            {ui goto_screen auto_load_intro_screen}
+            #else
+            {ui goto_screen $first_screen}
+            #endif
+            #endif)})}
+{new
+   UIPanel
+   intro_empty_panel
+   (file empty.milo)}
+{new
+   UIScreen
+   intro_to_splash_screen
+   (panels fx)
+   #ifdef HX_WII
+   (load
+      {disc_error_do_test FALSE}
+      {disc_error_check TRUE})
+   #endif
+   (TRANSITION_COMPLETE_MSG
+      #ifdef HX_WII
+      {disc_error_check FALSE}
+      #endif
+      {ui goto_screen splash_screen})}
+#ifdef HX_WII
+{new
+   UIPanel
+   movie_panel
+   (file video_main_menu_wii.milo)
+   (enter
+      {video_file.mov
+         set
+         movie_file
+         {sprintf
+            "videos/mainmenumovie.bik"}}
+      {video_file.mov animate})}
+#else
+{new
+   UIPanel
+   movie_panel
+   (file video_main_menu.milo)
+   (enter
+      {video_file.mov animate})}
+#endif
+#define ATTRACT_TIMEOUT
+((enter_time 0.0)
+   (attract_timeout_done FALSE)
+   (enter
+      {set
+         [enter_time]
+         {taskmgr ui_seconds}}
+      {set
+         [attract_timeout_done]
+         FALSE}
+      #ifdef HX_WII
+      {start_button.lbl set_showing TRUE}
+      {do
+         {switch
+            {system_language}
+            (deu
+               {start_button.tnm set_frame 0})
+            (eng
+               {start_button.tnm set_frame 1})
+            (esl
+               {start_button.tnm set_frame 2})
+            (fre
+               {start_button.tnm set_frame 3})
+            (ita
+               {start_button.tnm set_frame 4})}}
+      #endif
+      {meta music_start})
+   (poll
+      {if
+         {&&
+            {!
+               [attract_timeout_done]}
+            {>
+               {-
+                  {taskmgr ui_seconds}
+                  [enter_time]}
+               [attract_mode_timeout]}}
+         {if_else
+            {==
+               {ui current_screen}
+               splash_screen}
+            {do
+               {set
+                  [attract_timeout_done]
+                  TRUE}
+               {ui
+                  goto_screen
+                  [attract_goto_screen]}}
+            {do
+               {set
+                  [enter_time]
+                  {taskmgr ui_seconds}}
+               {set
+                  [attract_timeout_done]
+                  FALSE}}}}))
+{new
+   UIPanel
+   splash_panel
+   (file
+      "splash.milo")
+   (focus start.btn)
+   (player_num -1)
+   (last_player_num -1)
+   (is_loaded
+      {content_mgr refresh_done})
+   (attract_mode_timeout
+      {elem
+         {find $syscfg attract time_to_enter}
+         1})
+   (attract_goto_screen splash_to_attract_screen)
+   ATTRACT_TIMEOUT
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $button kPad_Start}
+         {$this button_down kPad_X $player_num}
+         kDataUnhandled})
+   (SELECT_START_MSG
+      {set
+         [attract_timeout_done]
+         TRUE}
+      {set
+         [last_player_num]
+         $player_num}
+      {ui goto_screen main_screen}
+      kDataUnhandled)}
+{new
+   UIScreen
+   splash_screen
+   (panels meta movie_panel splash_panel fx)
+   (focus splash_panel)
+   (enter
+      {{meta meta_music}
+         start}
+      {if
+         {attract_screen is_loaded}
+         {attract_screen unload}}
+      {if
+         {attract_movie_panel is_loaded}
+         {attract_movie_panel unload}})}
+{new
+   UIScreen
+   unlock_all_screen
+   (panels dialog_panel helpbar)
+   (focus dialog_panel)
+   (player_num -1)
+   (helpbar
+      ('' helpbar_continue))
+   (enter
+      {dialog_panel
+         set_ok
+         {localize_token unlock_all_msg}})
+   (SELECT_MSG
+      {ui pop_screen})}
+#define COMMON_FIRST_TIME_STUFF
+({if
+      {!
+         {ui in_transition}}
+      {do
+         ($dest_screen
+            {get_intro_screen})
+         {if_else
+            {!= '' $dest_screen}
+            {if_else
+               {==
+                  main_screen
+                  {ui current_screen}}
+               {ui push_screen $dest_screen}
+               {ui goto_screen $dest_screen}}
+            {if
+               {find_elem
+                  (auto_load_screen first_time_screen first_time_vocals_screen first_time_guitar_screen first_time_drum_screen)
+                  {ui current_screen}}
+               {ui pop_screen}}}}})
+{func
+   get_intro_screen
+   {do
+      ($result '')
+      {if_else
+         {!
+            {main_panel is_up}}
+         ''
+         {do
+            ($controllers
+               (drum guitar vocals))
+            ($screens
+               (first_time_drum_screen first_time_guitar_screen first_time_vocals_screen))
+            {foreach_int
+               $i
+               0
+               3
+               {if
+                  {&&
+                     {==
+                        {gamecfg
+                           get_instrument_from_controller
+                           {splash_panel get last_player_num}}
+                        {elem $controllers $i}}
+                     {!
+                        {{elem $screens $i}
+                           get
+                           considered}}
+                     {profile_mgr
+                        first_timer
+                        {elem $controllers $i}}}
+                  {set
+                     $result
+                     {elem $screens $i}}}
+               {{elem $screens $i}
+                  set
+                  considered
+                  TRUE}
+               {if
+                  {!= $result ''}
+                  {set $i 3}}}
+            {if
+               {== $result ''}
+               {if
+                  {&&
+                     {!
+                        {first_time_screen get considered}}
+                     {profile_mgr first_timer}}
+                  {set $result first_time_screen}}
+               {first_time_screen set considered TRUE}}}}
+      $result}}
+#define FIRST_TIME_SCREEN_HANDLERS
+((considered FALSE)
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen})
+   (SELECT_MSG COMMON_FIRST_TIME_STUFF))
+{new
+   UIPanel
+   first_time_drum_panel
+   #ifdef HX_EE
+   (file
+      "first_time_drum_ps2.milo")
+   #else
+   (file
+      "first_time_drum.milo")
+   #endif
+   (focus ok.btn)}
+{new
+   UIScreen
+   first_time_drum_screen
+   (panels first_time_drum_panel helpbar)
+   (focus first_time_drum_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {profile_mgr set_not_first_timers drum}
+      {platform_mgr add_sink $this signin_changed})}
+{new
+   UIPanel
+   first_time_guitar_panel
+   #ifdef HX_EE
+   (file
+      "first_time_guitar_ps2.milo")
+   #else
+   (file
+      "first_time_guitar.milo")
+   #endif
+   (focus ok.btn)}
+{new
+   UIScreen
+   first_time_guitar_screen
+   (panels first_time_guitar_panel helpbar)
+   (focus first_time_guitar_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {profile_mgr set_not_first_timers guitar}
+      {platform_mgr add_sink $this signin_changed})}
+{new
+   UIPanel
+   first_time_vocals_panel
+   #ifdef HX_EE
+   (file
+      "first_time_vocals_ps2.milo")
+   #else
+   #ifdef HX_WII
+   (file
+      "first_time_vocals_wii.milo")
+   #else
+   (file
+      "first_time_vocals.milo")
+   #endif
+   #endif
+   (focus ok.btn)}
+{new
+   UIScreen
+   first_time_vocals_screen
+   (panels first_time_vocals_panel helpbar)
+   (focus first_time_vocals_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {profile_mgr set_not_first_timers vocals}
+      {platform_mgr add_sink $this signin_changed})}
+{new
+   UIScreen
+   first_time_screen
+   (panels dialog_panel helpbar)
+   (focus dialog_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {dialog_panel
+         set_ok
+         {localize_token calibration_notice}}
+      {profile_mgr set_not_first_timers}
+      {platform_mgr add_sink $this signin_changed})}
+#define MAIN_SCREEN_TRANSITION_HANDLER
+((TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+      kDataUnhandled))
+{new
+   UIPanel
+   main_panel
+   #ifndef HX_XBOX
+   (file
+      "main_og.milo")
+   #else
+   (file
+      "main.milo")
+   #endif
+   (mode_focus solo.btn)
+   (msg_last_frame 0)
+   (finished_loading FALSE)
+   (enter
+      {{meta meta_music}
+         start}
+      {$this
+         set_focus
+         [mode_focus]}
+      {session add_sink $this signin_changed}
+      {profile_mgr add_sink $this profile_activated_msg}
+      {memcardmgr add_sink $this save_load_all_complete_msg}
+      {session clear}
+      {tour clear_performer}
+      {gamemode set_mode init}
+      {set
+         [msg_last_frame]
+         0}
+      {game reset_config}
+      {band_ui_sink set post_matchmaking FALSE}
+      {synth release_mics}
+      {ui hide_error_dialog}
+      {game set leader_num -1}
+      #ifdef HX_WII
+      {{movie_panel find background_video.mesh}
+         set_showing
+         TRUE}
+      #endif)
+   (TRANSITION_COMPLETE_MSG
+      {band_ui_sink set post_matchmaking FALSE}
+      {if
+         {options_panel get options_dirty}
+         {options_panel set options_dirty FALSE}
+         {autosave}})
+   (exit
+      {session remove_sink $this signin_changed}
+      {profile_mgr remove_sink $this profile_activated_msg}
+      #ifndef HX_XBOX
+      {if
+         {==
+            {ui current_screen}
+            main_screen}
+         {fx fx_exit}}
+      #endif)
+   #ifdef HX_EE
+   (poll
+      {if
+         {==
+            {ui current_screen}
+            main_screen}
+         COMMON_FIRST_TIME_STUFF
+         {set
+            [finished_loading]
+            FALSE}})
+   #endif
+   #ifdef HX_WII
+   (poll
+      {if
+         {==
+            {ui current_screen}
+            main_screen}
+         COMMON_FIRST_TIME_STUFF
+         {set
+            [finished_loading]
+            FALSE}})
+   #endif
+   #ifdef HX_PC
+   (poll
+      {if
+         {&&
+            [finished_loading]
+            {==
+               {ui current_screen}
+               main_screen}}
+         COMMON_FIRST_TIME_STUFF
+         {set
+            [finished_loading]
+            FALSE}})
+   #endif
+   (signin_changed
+      {$this attempt_to_autoload})
+   (profile_activated_msg
+      {$this attempt_to_autoload})
+   (attempt_to_autoload)
+   (save_load_all_complete_msg
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+      {set
+         [finished_loading]
+         TRUE}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if_else
+         {content_mgr refresh_done}
+         kDataUnhandled
+         TRUE})
+   (FOCUS_MSG
+      {if
+         $new_focus
+         {set
+            [mode_focus]
+            {$new_focus name}}})
+   (SELECT_START_MSG
+      {switch
+         $component
+         (solo.btn
+            {ui goto_screen main_solomode_screen})
+         (multi.btn
+            {ui goto_screen main_multimode_screen})
+         (tutorial.btn
+            {synth reset_mics_changed}
+            {ui goto_screen training_menu_screen})
+         (options.btn
+            {ui goto_screen options_screen})
+         (community.btn
+            {ui goto_screen community_specialfeatures_screen})}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_lower3rd_panel
+   (file
+      "pat_rock_3_og.milo")}
+{new
+   UIScreen
+   main_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel fx build_number)
+   (focus main_panel)
+   (back splash_screen)
+   (access_all
+      {$this
+         enable
+         {main_panel find solo.btn}}
+      {$this
+         enable
+         {main_panel find multi.btn}}
+      {$this
+         enable
+         {main_panel find tutorial.btn}})
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (enter
+      {meta music_start}
+      {if
+         {==
+            {ui previous_screen}
+            splash_screen}
+         {fx fx_enter}}
+      {helpbar set_limit_to_player_num -1})}
+{new
+   UIScreen
+   main_solo_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_solo_tour_need_to_signin}
+         {localize main_solo_tour_signin_button}
+         {localize main_solo_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   UIScreen
+   main_solo_qp_signin_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_solo_qp_signin_not_guest}
+         {localize main_solo_tour_signin_button}
+         {localize main_solo_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   UIScreen
+   main_solo_signin_not_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_solo_tour_signin_not_guest}
+         {localize main_solo_tour_signin_button}
+         {localize main_solo_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   SessionPanel
+   main_solomode_panel
+   #ifdef HX_XBOX
+   (file
+      "main_solomode.milo")
+   #else
+   (file
+      "main_solomode_og.milo")
+   #endif
+   (focus quickplay.btn)
+   (load
+      {main_panel set mode_focus solo.btn})
+   (enter
+      {meta music_start}
+      {session clear}
+      {song_mgr set mPlayer FALSE})
+   (exit
+      {synth reset_mics_changed})
+   (SELECT_START_MSG
+      {if_else
+         {gamecfg is_missing_mic $player_num FALSE}
+         {do
+            {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+            {ui push_screen vocalist_must_have_mic_screen}}
+         {do
+            {switch
+               $component
+               (quickplay.btn
+                  #ifndef HX_XBOX
+                  {band_ui_sink set post_matchmaking TRUE}
+                  {gamemode set_mode qp_solo $player_num}
+                  {$this wait_for_session_ready}
+                  {game set leader_num $player_num}
+                  {session_mgr
+                     add_local_player
+                     $player_num
+                     {gamecfg get_controller_type_from_controller $player_num}}
+                  #else
+                  {cond
+                     ({&&
+                           {platform_mgr is_player_signed_in $player_num}
+                           {platform_mgr is_player_a_guest $player_num}}
+                        {main_solo_qp_signin_guest_screen set player_num $player_num}
+                        {ui push_screen main_solo_qp_signin_guest_screen})
+                     (TRUE
+                        {gamemode set_mode qp_solo $player_num}
+                        {$this wait_for_session_ready}
+                        {session_mgr
+                           add_local_player
+                           $player_num
+                           {gamecfg get_controller_type_from_controller $player_num}})}
+                  #endif)
+               #ifdef HX_XBOX
+               (tour.btn
+                  {cond
+                     ({!
+                           {platform_mgr is_player_signed_in $player_num}}
+                        {main_solo_signin_screen set player_num $player_num}
+                        {ui push_screen main_solo_signin_screen})
+                     ({&&
+                           {platform_mgr is_player_signed_in $player_num}
+                           {platform_mgr is_player_a_guest $player_num}}
+                        {main_solo_signin_not_guest_screen set player_num $player_num}
+                        {ui push_screen main_solo_signin_not_guest_screen})
+                     (TRUE
+                        {gamemode set_mode tour_solo $player_num}
+                        {$this wait_for_session_ready}
+                        {session_mgr
+                           add_local_player
+                           $player_num
+                           {gamecfg get_controller_type_from_controller $player_num}})})
+               #else
+               (tour.btn
+                  {band_ui_sink set post_matchmaking TRUE}
+                  {gamemode set_mode tour_solo $player_num}
+                  {$this wait_for_session_ready}
+                  {game set leader_num $player_num}
+                  {session_mgr
+                     add_local_player
+                     $player_num
+                     {gamecfg get_controller_type_from_controller $player_num}})
+               #endif}}})
+   (session_ready
+      {gamecfg auto_assign_missing_slots}
+      {do
+         ($player_num
+            {gamemode get player_num})
+         {helpbar set_limit_to_player_num $player_num}
+         {if_else
+            {gamemode get auto_choose_char}
+            {do
+               {set_char_from_controller $player_num}
+               {ui goto_screen qp_selsong_screen FALSE}}
+            {ui
+               goto_screen
+               {gamemode get matchmaking_screen}
+               FALSE}}})}
+{new
+   UIScreen
+   main_solomode_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_solomode_panel fx build_number)
+   (focus main_solomode_panel)
+   (back main_screen)
+   #ifndef HX_XBOX
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+      {set
+         $last
+         {ui previous_screen}}
+      kDataUnhandled)
+   #else
+   MAIN_SCREEN_TRANSITION_HANDLER
+   #endif}
+{new
+   SessionPanel
+   main_multimode_panel
+   #ifdef HX_XBOX
+   (file
+      "main_multimode.milo")
+   #else
+   (file
+      "eng/main_multimode_og.milo")
+   #endif
+   (focus bandqp.btn)
+   (load
+      {main_panel set mode_focus multi.btn})
+   (enter
+      {session clear}
+      {meta music_start})
+   (SELECT_START_MSG
+      {switch
+         $component
+         (bandtour.btn
+            {band_ui_sink set post_matchmaking TRUE}
+            {song_mgr set mPlayer TRUE}
+            {$this wait_for_session_ready}
+            {gamemode set_mode tour_band $player_num}
+            {game set leader_num $player_num}
+            {session_mgr
+               add_local_player
+               $player_num
+               {gamecfg get_controller_type_from_controller $player_num}})
+         (headtohead.btn
+            {gamemode set_mode qp_hth_local_split}
+            {set
+               $dest_screen
+               {gamemode get matchmaking_screen}}
+            {ui goto_screen $dest_screen})
+         (headtohead_pro.btn
+            {gamemode set_mode qp_hth_local}
+            {set
+               $dest_screen
+               {gamemode get matchmaking_screen}}
+            {ui goto_screen $dest_screen})
+         (bandqp.btn
+            {gamemode set_mode qp_coop_local}
+            {ui
+               goto_screen
+               {gamemode get matchmaking_screen}})
+         kDataUnhandled})
+   (session_ready
+      {gamecfg auto_assign_missing_slots}
+      {do
+         ($player_num
+            {gamemode get player_num})
+         {helpbar set_limit_to_player_num $player_num}}
+      {ui goto_screen tour_band_char_screen})}
+{new
+   UIScreen
+   main_multimode_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_multimode_panel fx build_number)
+   (focus main_multimode_panel)
+   (back main_screen)
+   #ifndef HX_XBOX
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+      {set
+         $last
+         {ui previous_screen}}
+      kDataUnhandled)
+   #else
+   MAIN_SCREEN_TRANSITION_HANDLER
+   #endif}
+#define MAIN_HTH_PANEL_HANDLERS
+(#ifdef HX_XBOX
+   (file
+      "main_hth.milo")
+   #else
+   (file
+      "main_hth_og.milo")
+   #endif
+   (focus local.btn)
+   (enter
+      {if
+         {profile_mgr get_all_unlocked}
+         {$this set_focus local.btn}
+         {unranked.btn set_state kDisabled}
+         #ifndef HX_PS3
+         {ranked.btn set_state kDisabled}
+         #endif})
+   (SELECT_START_MSG
+      {do
+         ($dest_screen
+            {if_else
+               {gamemode get ranked}
+               {gamemode get main_mode_screen}
+               {gamemode get matchmaking_screen}})
+         {if_else
+            {!
+               {gamemode get local_network}}
+            {ui goto_screen $dest_screen TRUE}
+            {ui goto_screen $dest_screen}}}
+      kDataUnhandled))
+{new
+   UIPanel
+   main_hth_split_panel
+   MAIN_HTH_PANEL_HANDLERS
+   (mode_focus local.btn)
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus headtohead.btn})}
+#ifndef HX_XBOX
+{new
+   UIScreen
+   main_hth_split_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_split_panel fx)
+   (focus main_hth_split_panel)
+   (back main_multimode_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_hth_local_split)
+            (unranked.btn qp_hth_unranked_split)
+            (ranked.btn qp_hth_ranked_split)}
+         $player_num}
+      kDataUnhandled)}
+#else
+{new
+   UIScreen
+   main_hth_split_screen
+   (panels meta movie_panel main_panel main_hth_split_panel fx)
+   (focus main_hth_split_panel)
+   (back main_multimode_screen)
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_hth_local_split)
+            (unranked.btn qp_hth_unranked_split)
+            (ranked.btn qp_hth_ranked_split)}
+         $player_num}
+      kDataUnhandled)}
+#endif
+{new
+   UIPanel
+   main_hth_panel
+   MAIN_HTH_PANEL_HANDLERS
+   (mode_focus local.btn)
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus headtohead_pro.btn})}
+{new
+   UIScreen
+   main_hth_pro_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_panel fx)
+   (focus main_hth_panel)
+   (back main_multimode_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_hth_local)
+            (unranked.btn qp_hth_unranked)
+            (ranked.btn qp_hth_ranked)}
+         $player_num}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_hth_seldiff_panel
+   (file
+      "main_hth_seldiff.milo")
+   (difficulty
+      {elem
+         (DIFF_SYMBOLS)
+         {elem
+            {find $syscfg tour solo default_difficulty}
+            1}})
+   (enter
+      {$this
+         set_focus
+         {sprint
+            [difficulty]
+            ".btn"}})
+   (SELECT_START_MSG
+      {set
+         [difficulty]
+         {basename
+            {$component name}}}
+      {ui
+         goto_screen
+         {gamemode get matchmaking_screen}})}
+{new
+   UIScreen
+   main_hth_split_ranked_seldiff_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel)
+   (focus main_hth_seldiff_panel)
+   (back main_hth_split_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode set_mode qp_hth_ranked_split $player_num}
+      kDataUnhandled)}
+{new
+   UIScreen
+   main_hth_unsplit_ranked_seldiff_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel)
+   (focus main_hth_seldiff_panel)
+   (back main_hth_pro_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode set_mode qp_hth_ranked $player_num}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_bandcoop_panel
+   (file
+      "main_bandcoop.milo")
+   (focus local.btn)
+   (enter
+      {if
+         {profile_mgr get_all_unlocked}
+         {if
+            {==
+               kFocused
+               {online.btn get_state}}
+            {$this set_focus local.btn}}
+         {online.btn set_state kDisabled}})
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus bandqp.btn})
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_coop_local)
+            (online.btn qp_coop_online)}
+         $player_num}
+      {ui
+         goto_screen
+         {gamemode get matchmaking_screen}}
+      kDataUnhandled)}
+{new
+   UIScreen
+   main_bandcoop_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_bandcoop_panel fx)
+   (focus main_bandcoop_panel)
+   (back main_multimode_screen)
+   #ifndef HX_XBOX
+   (TRANSITION_COMPLETE_MSG
+      {main_panel attempt_to_autoload}
+      kDataUnhandled)
+   #else
+   MAIN_SCREEN_TRANSITION_HANDLER
+   #endif}
+{new
+   UIPanel
+   main_worldtour_panel
+   #ifdef HX_XBOX
+   (file
+      "main_worldtour.milo")
+   #else
+   (file
+      "main_worldtour_og.milo")
+   #endif
+   (focus local.btn)
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus bandtour.btn})
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn tour_world_local)
+            (online.btn tour_world_online)}
+         $player_num}
+      {ui goto_screen tour_band_sel_screen}
+      kDataUnhandled)}
+{new
+   CreditsPanel
+   credits_panel
+   (file
+      "credits.milo")
+   (BUTTON_DOWN_MSG
+      {if
+         {== $button kPad_Tri}
+         {ui goto_screen credits_to_community_specialfeatures_screen}
+         #ifdef HX_WII
+         {disc_error_set_stop_movie FALSE}
+         #endif})
+   (poll
+      {if
+         {!
+            {credits.lst is_scrolling}}
+         #ifdef HX_WII
+         {disc_error_set_stop_movie FALSE}
+         #endif
+         {if
+            {!
+               {ui in_transition}}
+            {handle
+               (ui credits_done)}}})}
+{new
+   UIScreen
+   credits_screen
+   (panels meta credits_panel helpbar)
+   (focus credits_panel)
+   (back community_specialfeatures_screen)
+   (scroll_sfx FALSE)
+   (helpbar
+      (helpbar_back))
+   (enter
+      {helpbar
+         set_config
+         (helpbar_back)}
+      {{meta meta_music}
+         stop})
+   (credits_done
+      {ui goto_screen community_specialfeatures_screen})
+   (exit
+      {{meta meta_music}
+         start})}
+{new
+   UIScreen
+   pi_to_credits_screen
+   (panels meta_loading)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen credits_screen})}
+{new
+   UIScreen
+   credits_to_community_specialfeatures_screen
+   (panels meta_loading)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen community_specialfeatures_screen}
+      {meta music_stop})}
+{new
+   UIPanel
+   attract_movie_panel
+   (file
+      "world/transition_video.milo")
+   (moviefinished FALSE)
+   (prev_idx -1)
+   (enter
+      #ifdef HX_EE
+      {set $moviefinished FALSE}
+      {set
+         $rand_idx
+         {random_int 0 3}}
+      {while
+         {== $rand_idx $prev_idx}
+         {set
+            $rand_idx
+            {random_int 0 3}}}
+      {switch
+         $rand_idx
+         (0
+            {video_file.mov
+               set
+               movie_file
+               {sprintf
+                  "videos/hillbillydeluxe_attract.pss"}})
+         (1
+            {video_file.mov
+               set
+               movie_file
+               {sprintf
+                  "videos/sinwagon_attract.pss"}})
+         (2
+            {video_file.mov
+               set
+               movie_file
+               {sprintf
+                  "videos/thegambler_attract.pss"}})}
+      {set $prev_idx $rand_idx}
+      {video_file.mov animate}
+      #endif
+      #ifdef HX_WII
+      {set $moviefinished FALSE}
+      {set $moviefinished FALSE}
+      {set
+         $rand_idx
+         {random_int 0 3}}
+      {while
+         {== $rand_idx $prev_idx}
+         {set
+            $rand_idx
+            {random_int 0 3}}}
+      {switch
+         $rand_idx
+         (0
+            {video_file.mov
+               set
+               movie_file
+               {sprintf
+                  "videos/hillbillydeluxe_attract.bik"}})
+         (1
+            {video_file.mov
+               set
+               movie_file
+               {sprintf
+                  "videos/sinwagon_attract.bik"}})
+         (2
+            {video_file.mov
+               set
+               movie_file
+               {sprintf
+                  "videos/thegambler_attract.bik"}})}
+      {set $prev_idx $rand_idx}
+      {video_file.mov animate}
+      {disc_error_set_stop_movie TRUE}
+      #endif)
+   (poll
+      {if
+         {&&
+            {! $moviefinished}
+            {video_file.mov is_movie_done}}
+         {do
+            {set $moviefinished TRUE}
+            {ui goto_screen attract_to_splash_screen}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {'||'
+               {== $button kPad_Start}
+               {== $button kPad_X}}
+            {! $moviefinished}}
+         {do
+            {set $moviefinished TRUE}
+            {ui goto_screen attract_to_splash_screen}}})
+   #ifdef HX_WII
+   (exit
+      {disc_error_set_stop_movie FALSE})
+   #endif}
+{new
+   UIPanel
+   attract_overlay_panel
+   (file
+      "attract_overlay.milo")
+   (enter
+      {if_else
+         {==
+            {rnd aspect}
+            kWidescreenAspect}
+         {do
+            {widescreen_left.tnm set_frame 1}
+            {widescreen_right.tnm set_frame 1}}
+         {do
+            {widescreen_left.tnm set_frame 0}
+            {widescreen_right.tnm set_frame 0}}}
+      #ifdef HX_WII
+      {start_button.lbl set_showing TRUE}
+      {do
+         {switch
+            {system_language}
+            (deu
+               {start_button.tnm set_frame 0})
+            (eng
+               {start_button.tnm set_frame 1})
+            (esl
+               {start_button.tnm set_frame 2})
+            (fre
+               {start_button.tnm set_frame 3})
+            (ita
+               {start_button.tnm set_frame 4})}}
+      #endif)}
+{new
+   UIScreen
+   attract_screen
+   (panels meta attract_movie_panel attract_overlay_panel fx)
+   (focus attract_movie_panel)
+   {enter
+      {{meta meta_music}
+         stop}}}
+{new
+   UIScreen
+   splash_to_attract_screen
+   (panels meta_loading fx)
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {splash_panel is_loaded}
+         {splash_panel unload}}
+      {if
+         {splash_screen is_loaded}
+         {splash_screen unload}}
+      {ui goto_screen attract_screen})}
+{new
+   UIScreen
+   attract_to_splash_screen
+   (panels meta_loading fx)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen splash_screen})}
+{new
+   UIScreen
+   vocalist_must_have_mic_screen
+   (panels dialog_panel helpbar_dialog)
+   (helpbar
+      ('' helpbar_select))
+   (focus dialog_panel)
+   (message band_vocalist_needs_mic)
+   (enter
+      {helpbar_dialog set_limit_to_player_num -1}
+      {helpbar_dialog set_use_all_controllers TRUE}
+      {dialog_panel
+         set_custom
+         {localize_token
+            [message]}
+         ""
+         {localize_token RETURN}
+         opt2.btn}
+      {dialog_panel
+         disable
+         {dialog_panel find opt1.btn}}
+      {platform_mgr add_sink $this signin_changed}
+      {helpbar hide_helpbar})
+   (exit
+      {helpbar_dialog set_use_all_controllers FALSE}
+      {helpbar unhide_helpbar}
+      {platform_mgr remove_sink $this signin_changed}
+      {dialog_panel
+         enable
+         {dialog_panel find opt1.btn}})
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen})}
