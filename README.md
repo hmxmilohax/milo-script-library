@@ -17,10 +17,10 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (DTA) | Not available<br>Extracted |
 | **Karaoke Revolution Volume 2** | PS2 | Unknown | Not available |
 | **Karaoke Revolution Volume 3** | PS2 | Unknown | Not available |
-| **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | Available<br>Available<br>Available |
+| **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | Extracted<br>Available<br>Available |
 | **Eyetoy: Antigrav** | PS2 | TBD | TBD |
 | **Guitar Hero** | PS2 | Known (old-style DTB) | Extracted |
-| **Guitar Hero II** | PS2<br>Xbox 360 | Known (old-style DTB)<br>Known (new-style DTB) | Extracted<br>Available |
+| **Guitar Hero II** | PS2<br>Xbox 360 | Known (old-style DTB)<br>Known (new-style DTB) | Extracted<br>Extracted |
 | **Guitar Hero Encore: Rocks the 80's** | PS2 | Known (old-style DTB) | Extracted |
 | **Rock Band** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB)<br>*(DTAs for the<br>PS2 version available)* | Extracted<br>Extracted<br>Extracted<br>Extracted |
 | **Rock Band Track Pack Volume 1** | PS2<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | Extracted<br>Extracted |
@@ -47,9 +47,9 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Karaoke Revolution** | Deluge prototype 1 | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 2 | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 3 | PS2 | Unknown | Not available |
-| **Karaoke Revolution Volume 2** | Deluge prototype 1 | PS2 | TBD | TBD |
-| **Karaoke Revolution Volume 2** | Deluge prototype 2 | PS2 | TBD | TBD |
-| **Karaoke Revolution Volume 3** | Deluge prototype | PS2 | TBD | TBD |
+| **Karaoke Revolution Volume 2** | Deluge prototype 1 | PS2 | Unknown | Not available |
+| **Karaoke Revolution Volume 2** | Deluge prototype 2 | PS2 | Unknown | Not available |
+| **Karaoke Revolution Volume 3** | Deluge prototype | PS2 | Unknown | Not available |
 | **Karaoke Revolution Party** | Deluge prototype | PS2 | Known (old-style DTB) | Available |
 | **Guitar Hero** | Deluge prototype | PS2 | Known (old-style DTB) | Extracted |
 | **Guitar Hero II** | OPM prototype | PS2 | Known (old-style DTB) | Extracted |
