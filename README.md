@@ -4,7 +4,7 @@ This is a repository for the raw scripts in as many Harmonix titles as we have r
 
 Some games (namely *Rock Band* for the PS2 and the *Amplitude* PS2 OPM demo) feature these scripts in their raw DTA format, and thus contain Harmonix's original comments, an invaluable insight into their development process. Most other games have had their DTBs (the tokenized and encrypted script format the game actually reads) converted to DTA; these are therefore missing comments.
 
-If you need this stuff, you should also join the MiloHax Discord, where people can help you out and we can all chat about modding Milo and whatnot: https://discord.gg/TPycZbVeqY
+If you need this stuff, you should also join the MiloHax Discord, where people can help you out and we can all chat about modding Milo and whatnot: https://discord.gg/WWmsQvHSC6
 
 ## Extraction status
 Here are some tables for games that fit within our scope and where they're at as far as being added to the repo. **Extracted** means they're in the repo, **Available** means we have them, but they're not yet added, and **Not available** means we don't have raw scripts for that game, usually because they haven't yet been cracked or because no one has a dump of the disc.
