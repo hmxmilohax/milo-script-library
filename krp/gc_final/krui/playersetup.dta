@@ -1,0 +1,441 @@
+{new_kr_panel
+   param_playersetup
+   (focus param_playersetup.btn)
+   (fade_mats TRUE)
+   (force_fade TRUE)
+   (enter
+      {param_playersetup_but.mesh
+         set_mat
+         {platform button_mat select}}
+      {if_else
+         {mode_mgr is_team_mode}
+         {do
+            {if_else
+               {mode_mgr is_duet_compete_mode}
+               {param_playersetup.roll set_text player_setup}
+               {param_playersetup.roll set_text team_setup}}
+            {param_playersetup.btn set_arrows FALSE}
+            {param_playersetup.lbl set_text param_setup_team}}
+         {do
+            {param_playersetup.roll set_text player_setup}
+            {user_provider set_enter_new FALSE}
+            {user_provider sync}
+            {param_playersetup.btn set_provider user_provider}
+            {param_playersetup.btn
+               set_selected_pos
+               {the_db get_active_user_index}}
+            {param_playersetup.btn set_arrows TRUE}
+            {param_playersetup.lbl set_text param_setup_user_char}}}
+      {param_playersetup.btn
+         set_localized_text
+         {mode_mgr get_round_name}})
+   (param_expand
+      {char_model_mgr enter_creator TRUE})
+   (SCROLL_MSG
+      {if
+         {!
+            {mode_mgr is_team_mode}}
+         {if
+            {!=
+               {param_playersetup.btn selected_pos}
+               {the_db get_active_user_index}}
+            {the_db
+               set_cur_user_index
+               {param_playersetup.btn selected_pos}}
+            {char_model_mgr sync_player_models}}}
+      {{ui current_screen}
+         update_char_pics})}
+#define CHARSETUP_PANEL_HANDLERS
+((init
+      {$this set refocus FALSE})
+   (reset_focus
+      {$this set refocus TRUE})
+   (enter
+      {if
+         {$this get refocus}
+         {$this
+            set_focus
+            {$this focus}}
+         {$this set refocus FALSE}}
+      {char_select.btn set_provider char_def_mgr}
+      {char_select.btn
+         set_selected_pos
+         {char_def_mgr
+            button_char_index
+            {$this char_index}}}
+      {$this update_char_edit})
+   (TRANSITION_COMPLETE_MSG
+      {$this
+         update_status
+         {$this focus_component}})
+   (SELECT_MSG
+      {switch
+         $component
+         (char_edit.btn
+            {if_else
+               {'||'
+                  {char_def_mgr
+                     is_custom_char
+                     {$this char_index}}
+                  {char_def_mgr has_free_space}}
+               {do
+                  {char_model_mgr
+                     start_edit
+                     {$this char_index}}
+                  {{ui screen CHARCREATE_SCREEN}
+                     enter_charcreate
+                     {ui current_screen}}}
+               {ui push_screen error_chars_full}})
+         (char_create.btn
+            {if_else
+               {char_def_mgr has_free_space}
+               {{ui screen CHARGENDER_SCREEN}
+                  enter_chargender
+                  {$this char_index}}
+               {ui push_screen error_chars_full}})})
+   (FOCUS_MSG
+      {$this update_status $new_focus}
+      {if
+         {== $new_focus char_select.btn}
+         {char_model_mgr
+            handle_char_focus
+            {char_select.btn selected_pos}}})
+   (REMOVE_MSG
+      {switch
+         $component
+         (char_select.btn
+            {if
+               {char_def_mgr
+                  is_custom_char
+                  {$this char_index}}
+               {{ui screen charremove}
+                  enter_charremove
+                  {$this char_index}}})})
+   (SCROLL_MSG
+      {switch
+         $component
+         (char_select.btn
+            {$this
+               set_char_index
+               {char_select.btn selected_pos}}
+            {char_model_mgr
+               sync_editor_model
+               {$this char_index}}
+            {char_model_mgr
+               handle_cache_next_char
+               {char_select.btn selected_pos}}
+            {$this update_status char_select.btn})}
+      {$this update_char_edit})
+   (handle_new_char
+      {$this
+         set_char_index
+         {-
+            {char_def_mgr num_chars}
+            1}})
+   (handle_char_remove
+      ($removed_idx)
+      {$this
+         set_char_index
+         {char_def_mgr
+            button_char_index
+            {- $removed_idx 1}}}
+      {char_model_mgr
+         sync_editor_model
+         {$this char_index}}
+      {char_model_mgr sync_player_models})
+   (update_char_edit
+      {if_else
+         {char_def_mgr
+            is_editable_char
+            {$this char_index}}
+         {if
+            {==
+               {char_edit.btn state}
+               kDisabled}
+            {char_edit.btn set_state kNormal}}
+         {do
+            {if
+               {==
+                  {char_edit.btn state}
+                  kFocused}
+               {$this navigate_next}}
+            {char_edit.btn set_state kDisabled}}}
+      TRUE)
+   (update_status
+      ($btn)
+      {do
+         (($status
+               {ui panel status}))
+         {switch
+            $btn
+            (playersetup_user.btn
+               {$status
+                  set_display
+                  {if_else
+                     {playersetup_user.btn selected_pos}
+                     ((button back)
+                        (text back)
+                        (button select)
+                        (text edit_user)
+                        (button remove)
+                        (text remove_user))
+                     ((button back)
+                        (text back)
+                        (button select)
+                        (text create_user))}})
+            (char_select.btn
+               {$status
+                  set_display
+                  {if_else
+                     {char_def_mgr
+                        is_custom_char
+                        {$this char_index}}
+                     ((button back)
+                        (text back)
+                        (button select)
+                        (text next_option)
+                        (button remove)
+                        (text remove_char))
+                     ((button back)
+                        (text back)
+                        (button select)
+                        (text next_option))}})
+            (char_edit.btn
+               {$status
+                  set_display
+                  ((button back)
+                     (text back)
+                     (button select)
+                     (text select))})
+            (char_create.btn
+               {$status
+                  set_display
+                  ((button back)
+                     (text back)
+                     (button select)
+                     (text select))})
+            (char_continue.btn
+               {$status
+                  set_display
+                  ((button back)
+                     (text back)
+                     (button select)
+                     (text select))})}}
+      TRUE))
+{new_kr_panel
+   playersetup
+   (navigator
+      (vertical playersetup_user.btn char_select.btn char_edit.btn char_create.btn char_continue.btn))
+   (focus playersetup_user.btn)
+   CHARSETUP_PANEL_HANDLERS
+   (char_index
+      {the_db
+         get_char_index
+         {the_db get_active_player}})
+   (set_char_index
+      ($button_index)
+      {the_db
+         set_char_index
+         {the_db get_active_player}
+         {char_def_mgr db_char_index $button_index}})
+   (SCREEN_CHANGE_MSG
+      {if
+         {'||'
+            {== $old_screen blankplayersetup}
+            {== $old_screen param}}
+         {$this set replace_focus playersetup_user.btn}})}
+#define PLAYERSETUP_SCREEN_HANDLERS
+((enter
+      {$this update_param_button}
+      {force_param_expand param_playersetup}
+      {if_else
+         {$this has_next_player}
+         {char_continue.btn set_text next_player}
+         {char_continue.btn set_text continue}}
+      {user_provider set_enter_new TRUE}
+      {user_provider sync}
+      {playersetup_user.btn set_provider user_provider}
+      {playersetup_user.btn
+         set_selected_pos
+         {the_db get_active_user_index}})
+   (SELECT_MSG
+      {cond
+         ({== $component playersetup_user.btn}
+            {{ui screen keyboard_user}
+               enter_keyboard_user
+               playersetup_user.btn
+               {the_db get_active_player}
+               user_provider})
+         ({== $component char_continue.btn}
+            {if_else
+               {$this has_next_player}
+               {do
+                  {the_db set_active_player 1}
+                  {ui goto_screen BLANKPLAYERSETUP_SCREEN}}
+               {do
+                  {the_db set_active_player 0}
+                  {$this goto_param FALSE}}})
+         (TRUE kDataUnhandled)})
+   (SCROLL_MSG
+      {switch
+         $component
+         (playersetup_user.btn
+            {if
+               {!=
+                  {playersetup_user.btn selected_pos}
+                  {the_db get_active_user_index}}
+               {the_db
+                  set_cur_user_index
+                  {playersetup_user.btn selected_pos}}
+               {char_select.btn
+                  set_selected_pos
+                  {char_def_mgr
+                     button_char_index
+                     {the_db
+                        get_char_index
+                        {the_db get_active_player}}}}
+               {$this
+                  set_char_index
+                  {char_select.btn selected_pos}}
+               {char_model_mgr
+                  sync_editor_model
+                  {$this char_index}}
+               {$this update_status playersetup_user.btn}
+               {$this update_param_button}})}
+      kDataUnhandled)
+   (REMOVE_MSG
+      {switch
+         $component
+         (playersetup_user.btn
+            {if
+               {playersetup_user.btn selected_pos}
+               {{ui screen userremove}
+                  enter_userremove
+                  {the_db get_active_player}}})}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button back $button}
+         {if_else
+            {'||'
+               {!
+                  {mode_mgr is_team_mode}}
+               {$this has_next_player}}
+            {$this goto_param TRUE}
+            {do
+               {the_db set_active_player 0}
+               {go_back BLANKPLAYERSETUP_SCREEN}}}})
+   (update_param_button
+      {param_playersetup.btn
+         set_localized_text
+         {if_else
+            {&&
+               {mode_mgr is_team_mode}
+               {!
+                  {mode_mgr is_duet_compete_mode}}}
+            {sprint
+               {mode_mgr get_cur_team_name}
+               ": "
+               {the_db
+                  get_player_name
+                  {the_db get_active_player}}}
+            {mode_mgr get_round_name}}})
+   (has_next_player
+      {&&
+         {mode_mgr is_team_mode}
+         {!
+            {mode_mgr challenge_team_solo_event}}
+         {!
+            {the_db get_active_player_idx}}})
+   (goto_param
+      ($going_back)
+      {char_model_mgr exit_creator}
+      {if
+         {!
+            {mode_mgr is_team_mode}}
+         {user_provider set_enter_new FALSE}
+         {param_playersetup.btn
+            set_selected_pos
+            {the_db get_active_user_index}}}
+      {param_playersetup.btn
+         set_localized_text
+         {mode_mgr get_round_name}}
+      {if_else
+         $going_back
+         {go_back PARAM_SCREEN}
+         {ui goto_screen PARAM_SCREEN}}))
+{new_kr_screen
+   playersetup0
+   (panels bg status left param_playersetup playersetup charloading_editor)
+   (focus playersetup)
+   (auto_back FALSE)
+   (char
+      {char_model_mgr
+         creator_char_state
+         "full"})
+   PLAYERSETUP_SCREEN_HANDLERS}
+{new_kr_screen
+   playersetup1
+   (panels bg status left param_playersetup playersetup charloading_editor)
+   (focus playersetup)
+   (auto_back FALSE)
+   (char
+      {char_model_mgr
+         creator_char_state
+         "full"})
+   PLAYERSETUP_SCREEN_HANDLERS}
+{new_kr_screen
+   blankplayersetup
+   (panels bg status left param_playersetup blankplayersetup)
+   (focus blankplayersetup)
+   (auto_back FALSE)
+   (char none)}
+{new_kr_panel
+   charsetup
+   (navigator
+      (vertical char_select.btn char_edit.btn char_create.btn char_continue.btn))
+   (focus char_select.btn)
+   (char_index
+      {char_def_mgr
+         db_char_index
+         {$this get btn_idx}})
+   (set_char_index
+      ($button_char_index)
+      {$this set btn_idx $button_char_index})
+   CHARSETUP_PANEL_HANDLERS
+   (exit
+      {$this
+         set
+         btn_idx
+         {char_select.btn selected_pos}})}
+{new_kr_screen
+   charsetup
+   (panels bg status left charrollout charsetup charloading_editor)
+   (focus charsetup)
+   (flow charcreator)
+   (auto_back FALSE)
+   (char
+      {char_model_mgr
+         creator_char_state
+         "full"})
+   (enter_charsetup
+      {char_model_mgr enter_creator FALSE}
+      {$this set_char_index 0}
+      {char_model_mgr
+         sync_editor_model
+         {$this char_index}}
+      {ui goto_screen $this})
+   (exit_charsetup
+      {char_model_mgr exit_creator}
+      {char_model_mgr sync_player_models}
+      {ui goto_screen MAIN_SCREEN})
+   (SELECT_MSG
+      {switch
+         $component
+         (char_continue.btn
+            {$this exit_charsetup})})
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button back $button}
+         {$this exit_charsetup}}
+      kDataUnhandled)}

@@ -1,0 +1,141 @@
+#define CHOOSEPART_PANEL_HANDLERS
+((fade_mats TRUE)
+   (focus choosepart_ready.btn)
+   (retain_back_focus TRUE)
+   (enter
+      {choosepart0.btn
+         set_list
+         {the_db get_song_vox_lines}}
+      {choosepart1.btn
+         set_list
+         {the_db get_song_vox_lines}}
+      {choosepart0.btn
+         set_selected_pos
+         {the_db
+            get_vox_line
+            {the_db get_cur_player 0}}}
+      {choosepart1.btn
+         set_selected_pos
+         {the_db
+            get_vox_line
+            {the_db get_cur_player 1}}}
+      {mic_utl start_mic 0}
+      {mic_utl start_mic 1}
+      {choosepart_team.btn set_selected}
+      {choosepart_team.btn
+         set_localized_text
+         {mode_mgr get_cur_team_name}}
+      {choosepart_playername0.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 0}}}
+      {choosepart_playername1.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 1}}}
+      {meta_music_stop})
+   (exit
+      {mic_utl stop_mic 0}
+      {mic_utl stop_mic 1}
+      {song_preview ''})
+   (poll
+      {choosepart0.mtr
+         set_pos
+         {mic_utl get_mic_energy 0}}
+      {choosepart1.mtr
+         set_pos
+         {mic_utl get_mic_energy 1}})
+   (SCROLL_MSG
+      {do
+         (($first_player
+               {the_db get_cur_player 0})
+            ($second_player
+               {the_db get_cur_player 1}))
+         {switch
+            $component
+            (choosepart0.btn
+               {$this set_vox_line $first_player choosepart0.btn $second_player choosepart1.btn})
+            (choosepart1.btn
+               {$this set_vox_line $second_player choosepart1.btn $first_player choosepart0.btn})}}
+      {if
+         {!=
+            {the_db get_duet_mode}
+            kDuetMedleyCoop}
+         {$this update_song_preview $component}})
+   (FOCUS_MSG
+      {if_else
+         {&&
+            {!=
+               {the_db get_duet_mode}
+               kDuetMedleyCoop}
+            {'||'
+               {== $new_focus choosepart0.btn}
+               {== $new_focus choosepart1.btn}}}
+         {$this update_song_preview $new_focus}
+         {song_preview ''}})
+   (set_vox_line
+      ($player $btn $other_player $other_btn)
+      {the_db
+         set_vox_line
+         $player
+         {$btn selected_pos}}
+      {the_db
+         set_vox_line
+         $other_player
+         {!
+            {the_db get_vox_line $player}}}
+      {$other_btn
+         set_selected_pos
+         {the_db get_vox_line $other_player}})
+   (update_song_preview
+      ($btn)
+      {song_preview
+         {the_db get_song_name}
+         {$btn selected_pos}}))
+{new_kr_panel
+   choosepart
+   (navigator
+      (vertical choosepart0.btn choosepart1.btn choosepart_mic.btn choosepart_sound.btn choosepart_ready.btn))
+   CHOOSEPART_PANEL_HANDLERS}
+{new_kr_panel
+   choosepart_nogain
+   (navigator
+      (vertical choosepart0.btn choosepart1.btn choosepart_sound.btn choosepart_ready.btn))
+   CHOOSEPART_PANEL_HANDLERS}
+#define CHOOSEPART_SCREEN_HANDLERS
+((char main)
+   (status
+      (choosepart0.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)))
+      (choosepart1.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)))
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select))))
+   (char_pics
+      ((0 choosepart_p0.pic)
+         (1 choosepart_p1.pic)))
+   (goto
+      (choosepart_mic.btn CHECKMIC_SCREEN)
+      (choosepart_sound.btn SOUNDSETUP_SCREEN)
+      (choosepart_ready.btn LOADING_SCREEN)))
+{new_kr_screen
+   choosepart
+   (panels bg status left choosepart)
+   (focus choosepart)
+   CHOOSEPART_SCREEN_HANDLERS}
+{new_kr_screen
+   choosepart_nogain
+   (panels bg status left choosepart_nogain)
+   (focus choosepart_nogain)
+   CHOOSEPART_SCREEN_HANDLERS}

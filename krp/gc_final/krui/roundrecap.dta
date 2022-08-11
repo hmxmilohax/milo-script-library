@@ -1,0 +1,80 @@
+#define ROUNDRECAP_PANEL_HANDLERS
+((fade_mats TRUE)
+   (enter
+      {score_tracker update_round}
+      {if
+         {score_tracker is_last_round}
+         {score_tracker load_winner_chars}}
+      {$this
+         show_scores
+         {score_tracker cur_round}
+         {score_tracker num_rounds}})
+   (BUTTON_DOWN_MSG
+      {cond
+         ({platform is_button exit $button}
+            {{ui screen exitprompt}
+               enter_exitprompt})
+         ({platform is_button select $button}
+            {play_sfx select}
+            {if_else
+               {the_db is_challenge}
+               {$this handle_next_event}
+               {if_else
+                  {score_tracker next_round}
+                  {{ui screen PARAM_SCREEN}
+                     enter_playersetup}
+                  {ui goto_screen WIN_SCREEN}}})
+         ({== $button kPad_Circle}
+            {$this toggle_scores})})
+   (handle_next_event
+      {if_else
+         {score_tracker next_round}
+         {do
+            {print
+               "init next challenge\n"}
+            {challenge_mgr
+               init_next_challenge
+               {score_tracker cur_round}}
+            {mode_mgr reset_cur_team}
+            {ui goto_screen CHALLENGE_EVENTS_SCREEN}}
+         {ui goto_screen WIN_SCREEN}}
+      TRUE))
+{new_recap_panel onemic_recap8 ROUNDRECAP_PANEL_HANDLERS}
+{new_recap_panel twomic_teamduets_recap ROUNDRECAP_PANEL_HANDLERS}
+{new_comprecap_panel twomic_compduet_recap ROUNDRECAP_PANEL_HANDLERS}
+#define ROUND_RECAP_SCREEN_HANDLERS
+((char none)
+   (auto_back FALSE)
+   (enter
+      {{ui panel status}
+         set_display
+         {if_else
+            {&&
+               {mode_mgr is_duet_compete_mode}
+               {!
+                  {the_db is_challenge}}}
+            ((button exit)
+               (text exit_mode)
+               (button select)
+               (text continue))
+            ((button exit)
+               (text exit_mode)
+               (button select)
+               (text continue)
+               (button toggle)
+               (text toggle_data))}}))
+{new_kr_screen
+   roundrecap
+   (panels bg status onemic_recap8)
+   (focus onemic_recap8)
+   ROUND_RECAP_SCREEN_HANDLERS}
+{new_kr_screen
+   coop_duet_recap
+   (panels bg status twomic_teamduets_recap)
+   (focus twomic_teamduets_recap)
+   ROUND_RECAP_SCREEN_HANDLERS}
+{new_kr_screen
+   comp_duet_recap
+   (panels bg status twomic_compduet_recap)
+   (focus twomic_compduet_recap)
+   ROUND_RECAP_SCREEN_HANDLERS}

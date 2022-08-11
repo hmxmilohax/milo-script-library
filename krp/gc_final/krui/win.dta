@@ -1,0 +1,148 @@
+{new_kr_panel
+   winner_onemic
+   (enter
+      {winnername.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {score_tracker winner}}})}
+{new_kr_panel
+   winner_knockout
+   (enter
+      {winnername.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {score_tracker winner}}}
+      {glow0.view
+         set_showing
+         {==
+            {score_tracker winner}
+            {the_db get_cur_player 0}}}
+      {glow1.view
+         set_showing
+         {==
+            {score_tracker winner}
+            {the_db get_cur_player 1}}})}
+{new_kr_panel
+   winner_twomic
+   (enter
+      {winnername0.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {score_tracker winner}}}
+      {winnername1.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {'+'
+               {score_tracker winner}
+               1}}})}
+#define WIN_TIE_SCREEN_HANDLERS
+((auto_back FALSE)
+   (status
+      (default
+         ((button select)
+            (text continue))))
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button select $button}
+         {play_sfx select}
+         {ui goto_screen exit_meta_mode}}))
+#define WIN_SCREEN_HANDLERS
+(WIN_TIE_SCREEN_HANDLERS
+   (enter
+      {$this start_anim})
+   (poll
+      {if
+         {==
+            {winner_anim.view frame}
+            40000}
+         {$this start_anim}})
+   (start_anim
+      {$this anim_task winner_anim.view 200000 0 40000}))
+{new_kr_screen
+   winner_onemic
+   (panels bg status winner_onemic)
+   (focus winner_onemic)
+   (char winner_onemic)
+   WIN_SCREEN_HANDLERS}
+{new_kr_screen
+   winner_twomic_vs
+   (panels bg status winner_knockout)
+   (focus winner_knockout)
+   (char winner_twomic_vs)
+   WIN_SCREEN_HANDLERS}
+{new_kr_screen
+   winner_twomic_coop
+   (panels bg status winner_twomic)
+   (focus winner_twomic)
+   (char winner_twomic_coop)
+   WIN_SCREEN_HANDLERS}
+{new_kr_panel
+   tie
+   (enter
+      {do
+         (($idx 0)
+            ($num_winners
+               {score_tracker num_winners}))
+         {while
+            {<
+               $idx
+               {$this num_labels}}
+            {do
+               (($lbl
+                     {$this label $idx}))
+               {if_else
+                  {< $idx $num_winners}
+                  {$lbl
+                     set_localized_text
+                     {$this winner_name $idx}}
+                  {$lbl set_showing FALSE}}
+               {'++' $idx}}}})
+   (num_labels 8)
+   (num_names
+      {if_else
+         {mode_mgr is_team_mode}
+         {mode_mgr get_num_teams}
+         {the_db get_num_players}})
+   (label
+      ($idx)
+      {sprint
+         "tie"
+         $idx
+         ".lbl"})
+   (winner_name
+      ($idx)
+      {do
+         (($player
+               {score_tracker tie_winner $idx}))
+         {sprint
+            {'+' $idx 1}
+            ". "
+            {cond
+               ({the_db is_challenge_duet_compete}
+                  {$this player_name $player})
+               ({'||'
+                     {mode_mgr is_two_mic_challenge}
+                     {&&
+                        {the_db is_duet}
+                        {!
+                           {the_db is_duet_compete}}}}
+                  {$this team_name $player})
+               (TRUE
+                  {$this player_name $player})}}})
+   (team_name
+      ($player)
+      {mode_mgr
+         get_team_name
+         {int
+            {/ $player 2}}})
+   (player_name
+      ($player)
+      {the_db get_player_name $player})}
+{new_kr_screen
+   tie
+   (panels bg status tie)
+   WIN_TIE_SCREEN_HANDLERS}

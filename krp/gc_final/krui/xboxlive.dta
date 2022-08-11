@@ -1,0 +1,112 @@
+{new_kr_panel
+   xboxlive
+   (navigator
+      (vertical xlive_signin.btn xlive_status.btn xlive_change.btn xlive_friends.btn xlive_download.btn))
+   (focus xlive_signin.btn)}
+#define XBOXLIVE_SCREEN_HANDLERS
+((panels bg status left xboxlive)
+   (focus xboxlive)
+   (flow xboxlive)
+   (status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select)))
+      (xlive_status.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)))))
+#ifdef HX_XBOX
+{new_xboxlive_screen
+   xboxlive
+   XBOXLIVE_SCREEN_HANDLERS
+   (init
+      {$this set last_logon_state FALSE}
+      {$this set last_online_state FALSE})
+   (enter
+      {$this update TRUE})
+   (poll
+      {$this update FALSE})
+   (ARROW_MSG
+      {switch
+         $component
+         (xlive_status.btn
+            {$this toggle_online})})
+   (SELECT_MSG
+      {switch
+         $component
+         (xlive_signin.btn
+            {if_else
+               {$this is_signed_in}
+               {$this sign_out}
+               {$this sign_in}})
+         (xlive_status.btn
+            {$this navigate_next})
+         (xlive_change.btn
+            {$this sign_in})
+         (xlive_friends.btn
+            {$this show_friends})
+         (xlive_download.btn
+            {if_else
+               {live_mgr valid_port}
+               {ui push_screen prompt_xboxlive_download}
+               {ui push_screen error_xboxlive_download}})}
+      {$this update TRUE})
+   (update
+      ($force)
+      {if
+         {'||'
+            $force
+            {!=
+               {$this get last_logon_state}
+               {$this is_signed_in}}
+            {!=
+               {$this get last_online_state}
+               {$this is_online}}}
+         {if_else
+            {$this is_signed_in}
+            {do
+               {xlive_signin.btn set_text sign_out}
+               {$this enable xlive_change.btn}
+               {$this enable xlive_friends.btn}
+               {$this enable xlive_download.btn}
+               {$this enable xlive_status.btn}
+               {xlive_status.btn
+                  set_text
+                  {if_else
+                     {$this is_online}
+                     online
+                     offline}}}
+            {do
+               {$this set_focus xlive_signin.btn}
+               {xlive_signin.btn set_text sign_in}
+               {xlive_change.btn set_state kDisabled}
+               {xlive_friends.btn set_state kDisabled}
+               {xlive_download.btn set_state kDisabled}
+               {xlive_status.btn set_state kDisabled}
+               {xlive_status.btn set_text offline}}}
+         {$this
+            set
+            last_logon_state
+            {$this is_signed_in}}
+         {$this
+            set
+            last_online_state
+            {$this is_online}}
+         {xlive_state.lbl
+            set_localized_text
+            {$this live_status}}}
+      TRUE)
+   (enable
+      ($component)
+      {if
+         {==
+            {$component state}
+            kDisabled}
+         {$component set_state kNormal}}
+      TRUE)}
+#else
+{new_kr_screen xboxlive XBOXLIVE_SCREEN_HANDLERS}
+#endif

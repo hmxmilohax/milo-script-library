@@ -1,0 +1,237 @@
+CAMERA_COMMON
+CAMERA_DUET_COMMON
+{func
+   update_shots
+   ($shots)
+   {do
+      ($shot)
+      {set
+         $camera.next_tick
+         {'+' $db.music_tick 960}}
+      {set
+         $shot
+         {random_elem $shots}}
+      {eval $shot}
+      {remove_elem $shots $shot}
+      {if
+         {!
+            {size $shots}}
+         {cond
+            ({== $shots $camera.r_char_shots}
+               {insert_elems $camera.r_char_shots 0 $camedit.r_char_shots})
+            ({== $shots $camera.l_char_shots}
+               {insert_elems $camera.l_char_shots 0 $camedit.l_char_shots})
+            ({== $shots $camera.r_char_closeup_shots}
+               {insert_elems $camera.r_char_closeup_shots 0 $camedit.r_char_closeup_shots})
+            ({== $shots $camera.l_char_closeup_shots}
+               {insert_elems $camera.l_char_closeup_shots 0 $camedit.l_char_closeup_shots})
+            ({== $shots $camera.r_corner_shots}
+               {insert_elems $camera.r_corner_shots 0 $camedit.r_corner_shots})
+            ({== $shots $camera.l_corner_shots}
+               {insert_elems $camera.l_corner_shots 0 $camedit.l_corner_shots})
+            ({== $shots $camera.stage_shots}
+               {insert_elems $camera.stage_shots 0 $camedit.stage_shots})
+            ({== $shots $camera.crowd_shots}
+               {insert_elems $camera.crowd_shots 0 $camedit.crowd_shots})}
+         {if
+            {>
+               1
+               {size $shots}}
+            {remove_elem $shots $shot}}}}}
+{func
+   pick_singer_shot
+   {do
+      ($shots $shot)
+      {if_else
+         {== $camera.singer 1}
+         {if_else
+            {== $camera.current_shots $camera.l_char_shots}
+            {set $shots $camera.stage_shots}
+            {set $shots $camera.l_char_shots}}
+         {if_else
+            {== $camera.current_shots $camera.r_char_shots}
+            {set $shots $camera.stage_shots}
+            {set $shots $camera.r_char_shots}}}
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $shots}
+      {if_else
+         {&&
+            {== $shots $camera.stage_shots}
+            {<
+               {random_float}
+               0.25}}
+         {do
+            {set $shots $camera.crowd_shots}
+            {set $camera.singer_stage_index 3}}
+         {do
+            {set $camera.singer_stage_index 1}}}
+      {if
+         {== $shots $camera.r_char_shots}
+         {switch
+            $camera.singer_right_index
+            (0
+               {set $shots $camera.r_char_shots}
+               {set $camera.singer_right_index 1})
+            (1
+               {set $shots $camera.r_char_closeup_shots}
+               {set $camera.singer_right_index 2})
+            (2
+               {set $shots $camera.r_char_shots}
+               {set $camera.singer_right_index 3})
+            (3
+               {set $shots $camera.r_corner_shots}
+               {set $camera.singer_right_index 0}
+               {set $camera.singer_stage_index 2})}}
+      {if
+         {== $shots $camera.l_char_shots}
+         {switch
+            $camera.singer_left_index
+            (0
+               {set $shots $camera.l_char_shots}
+               {set $camera.singer_left_index 1})
+            (1
+               {set $shots $camera.l_char_closeup_shots}
+               {set $camera.singer_left_index 2})
+            (2
+               {set $shots $camera.l_char_shots}
+               {set $camera.singer_left_index 3})
+            (3
+               {set $shots $camera.l_corner_shots}
+               {set $camera.singer_left_index 0}
+               {set $camera.singer_stage_index 0})}}
+      {update_shots $shots}}}
+{func
+   pick_two_singer_shot
+   {do
+      ($shots $shot)
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $camera.stage_shots}
+      {switch
+         $camera.singer_stage_index
+         (0
+            {set $shots $camera.stage_shots}
+            {set $camera.singer_stage_index 1})
+         (1
+            {set $shots $camera.r_corner_shots}
+            {set $camera.singer_stage_index 2}
+            {set $camera.current_shots $camera.r_char_shots})
+         (2
+            {set $shots $camera.crowd_shots}
+            {set $camera.singer_stage_index 3})
+         (3
+            {set $shots $camera.l_corner_shots}
+            {set $camera.singer_stage_index 0}
+            {set $camera.current_shots $camera.l_char_shots})}
+      {update_shots $shots}}}
+{func
+   pick_unison_shot
+   {do
+      ($shots $rand_factor)
+      {cond
+         ({== $camera.current_shots $camera.stage_shots}
+            {if_else
+               {== $camera.last_shots $camera.l_char_shots}
+               {set $shots $camera.r_char_shots}
+               {set $shots $camera.l_char_shots}})
+         ({== $camera.current_shots $camera.r_char_shots}
+            {if_else
+               {<
+                  {random_float}
+                  0.8}
+               {set $shots $camera.stage_shots}
+               {set $shots $camera.l_char_shots}})
+         ({== $camera.current_shots $camera.l_char_shots}
+            {if_else
+               {<
+                  {random_float}
+                  0.8}
+               {set $shots $camera.stage_shots}
+               {set $shots $camera.r_char_shots}})}
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $shots}
+      {set
+         $rand_factor
+         {random_float}}
+      {if
+         {== $shots $camera.stage_shots}
+         {if
+            {< $rand_factor 0.25}
+            {set $shots $camera.crowd_shots}}}
+      {if
+         {== $shots $camera.r_char_shots}
+         {switch
+            $camera.singer_right_index
+            (0
+               {set $shots $camera.r_char_shots}
+               {set $camera.singer_right_index 1})
+            (1
+               {set $shots $camera.r_char_closeup_shots}
+               {set $camera.singer_right_index 2})
+            (2
+               {set $shots $camera.r_corner_shots}
+               {set $camera.singer_right_index 0})}}
+      {if
+         {== $shots $camera.l_char_shots}
+         {switch
+            $camera.singer_left_index
+            (0
+               {set $shots $camera.l_char_shots}
+               {set $camera.singer_left_index 1})
+            (1
+               {set $shots $camera.l_char_closeup_shots}
+               {set $camera.singer_left_index 2})
+            (2
+               {set $shots $camera.l_corner_shots}
+               {set $camera.singer_left_index 0})}}
+      {update_shots $shots}}}
+{func
+   check_shot
+   {if
+      {&&
+         {>= $db.music_tick $camera.next_tick}
+         {! $arena.game_over}}
+      {arena set_fade 0}
+      {if_else
+         {&&
+            $camera.excitement_change
+            {== $arena.excitement kExcitementBoot}}
+         {do
+            {arena set_fade 240}
+            {cam_boot}
+            {set $camera.excitement_change FALSE}
+            {set
+               $camera.next_tick
+               {'+' $db.music_tick 960}}}
+         {if_else
+            {!= $camera.singer -1}
+            {pick_singer_shot}
+            {if_else
+               {== $camera.unison_section TRUE}
+               {pick_two_singer_shot}
+               {pick_unison_shot}}}}
+      {update_crowd}}}
+{arena
+   add_handlers
+   (init
+      {set $camera.singer_left_index 0}
+      {set $camera.singer_right_index 0}
+      {set $camera.singer_stage_index 1}
+      {set
+         $camera.l_char_closeup_shots
+         {array 0}}
+      {set
+         $camera.r_char_closeup_shots
+         {array 0}}
+      {insert_elems $camera.l_char_closeup_shots 0 $camedit.l_char_closeup_shots}
+      {insert_elems $camera.r_char_closeup_shots 0 $camedit.r_char_closeup_shots}
+      {arena set_fade 240}
+      {cam_begin}
+      {set $camera.last_shots $camera.l_char_shots}
+      {set $camera.current_shots $camera.stage_shots}
+      {set $camera.excitement_change FALSE}
+      {set
+         $camera.next_tick
+         {'+' $db.music_tick 5760}})
+   (terminate
+      {set $camera.l_char_closeup_shots 0}
+      {set $camera.r_char_closeup_shots 0})}

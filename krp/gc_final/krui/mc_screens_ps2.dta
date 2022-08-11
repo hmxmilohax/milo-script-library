@@ -1,0 +1,875 @@
+{new_kr_screen
+   bootup_load
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_NOINPUT
+   (enter
+      {{ui screen bootup_post_load}
+         set_first_screen
+         {if_else
+            {==
+               {platform get_name}
+               xbox}
+            MAIN_SCREEN
+            TITLE_SCREEN}}
+      {set $autosave_enable TRUE}
+      {switch
+         {memcard get_info}
+         (kMCNoCard
+            {ui goto_screen bootup_nocard})
+         {MC_DIALOG setup '' '' none load_loading mc_title_loading}
+         {$this
+            delay_task
+            1000
+            (preserve $this)
+            {memcard load_data $this}}})
+   (MEMCARD_RESULT_MSG
+      {switch
+         $result
+         (kMCNoError
+            {MC_DIALOG setup '' '' none load_success mc_title_loading}
+            {set $mc_overwrite TRUE}
+            {$this
+               delay_task
+               1000
+               {ui goto_screen bootup_post_load}})
+         (kMCNoCard
+            {ui goto_screen bootup_card_removed})
+         (kMCNotFormatted
+            {set $mc_overwrite FALSE}
+            {ui goto_screen bootup_create_save_check})
+         (kMCCorrupt
+            {set $mc_overwrite TRUE}
+            {ui goto_screen bootup_corrupt_data})
+         (kMCDamaged
+            {set $mc_retry_screen $this}
+            {set $mc_continue_screen autosave_disable_check}
+            {set $mc_retry_continue_text card_damaged_error_load}
+            {ui goto_screen retry_continue})
+         {set $mc_overwrite FALSE}
+         {ui goto_screen bootup_check_space}})}
+{new_kr_panel
+   bootup_char_load
+   (init
+      {$this
+         set
+         loading_labels
+         (l.lbl o.lbl a.lbl d.lbl i.lbl n.lbl g.lbl dot_1.lbl dot_2.lbl dot_3.lbl dot_4.lbl dot_5.lbl dot_6.lbl dot_7.lbl dot_8.lbl)})
+   (pre_load)
+   ENTER_PANEL_HANDLERS}
+{new_kr_screen
+   bootup_post_load
+   (panels bg bootup_char_load)
+   (focus bootup_char_load)
+   MC_SCREEN_NOINPUT
+   (set_first_screen
+      ($screen)
+      {$this set first_screen $screen})
+   (enter
+      {char_model_mgr sync_player_models}
+      {nintendo.lbl
+         set_showing
+         {==
+            gc
+            {platform get_name}}})
+   (poll
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {char_model_mgr are_player_models_loaded}
+            {char_model_mgr are_anims_loaded}}
+         {ui
+            goto_screen
+            {$this get first_screen}}})}
+{new_kr_screen
+   bootup_check_space
+   (panels bg status)
+   MC_SCREEN_NOINPUT
+   (enter
+      {ui
+         goto_screen
+         {if_else
+            {>=
+               {memcard space_available}
+               {memcard space_needed}}
+            bootup_create_save_check
+            bootup_nospace}})}
+{new_kr_screen
+   bootup_create_save_check
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes right bootup_create_save_check mc_title_nosave})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen bootup_caution})
+         (mc_dialog_right.btn
+            {ui goto_screen bootup_create_save})})}
+#ifdef HX_GC
+{new_kr_screen
+   bootup_corrupt_data
+   (panels bg status mc_dialog_3)
+   (focus mc_dialog_3)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG_3 setup continue_wo_save retry delete_file 3 bootup_corrupt_data mc_title_fileerror})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_1.btn
+            {ui goto_screen bootup_caution})
+         (mc_dialog_2.btn
+            {ui goto_screen bootup_load})
+         (mc_dialog_3.btn
+            {ui goto_screen bootup_create_save})})}
+#else
+{new_kr_screen
+   bootup_corrupt_data
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left bootup_corrupt_data mc_title_fileerror})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen bootup_caution})
+         (mc_dialog_right.btn
+            {ui goto_screen bootup_create_save})})}
+#endif
+{new_kr_screen
+   bootup_nocard
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup yes no left bootup_nocard mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen bootup_load})
+         (mc_dialog_right.btn
+            {ui goto_screen bootup_caution})})}
+{new_kr_screen
+   bootup_card_removed
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup yes no left mc_card_removed_error mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen bootup_load})
+         (mc_dialog_right.btn
+            {ui goto_screen bootup_caution})})}
+{new_kr_screen
+   bootup_save_card_removed
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup retry continue right bootup_save_card_removed mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen bootup_create_save})
+         (mc_dialog_right.btn
+            {ui goto_screen bootup_caution})})}
+{new_kr_screen
+   bootup_format_check
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left unformatted_card mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_no_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_yes_screen})})}
+{new_kr_screen
+   bootup_create_save
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_NOINPUT
+   (enter
+      {MC_DIALOG setup '' '' none bootup_create_save mc_title_saving}
+      {$this
+         delay_task
+         1000
+         (preserve $this)
+         {memcard save_data $this $mc_overwrite}})
+   (MEMCARD_RESULT_MSG
+      {switch
+         $result
+         (kMCNoError
+            {set $mc_overwrite TRUE}
+            {the_db save_done}
+            {MC_DIALOG setup '' '' none bootup_create_success mc_title_saving}
+            {$this
+               delay_task
+               1000
+               {ui goto_screen bootup_post_load}})
+         (kMCNoCard
+            {ui goto_screen bootup_save_card_removed})
+         (kMCNotEnoughSpace
+            {ui goto_screen bootup_nospace})
+         (kMCFileExists
+            {set $mc_replace_screen $this}
+            {set $mc_load_screen bootup_load}
+            {ui goto_screen bootup_replace_save_check})
+         (kMCNotFormatted
+            {set $mc_overwrite FALSE}
+            {set $nfw_retry_screen $this}
+            {set $nfw_continue_screen bootup_caution_format_cancelled}
+            {set $mc_format_start bootup_load}
+            {set $mc_format_done bootup_create_save}
+            {set $mc_post_save_screen bootup_load}
+            {set $mc_no_screen bootup_caution_format_cancelled}
+            {set $mc_yes_screen mc_format}
+            {ui goto_screen bootup_format_check})
+         (kMCDifferentCard
+            {set $mc_overwrite FALSE}
+            {memcard save_data $this $mc_overwrite})
+         (kMCDamaged
+            {set $mc_overwrite FALSE}
+            {set $mc_retry_screen $this}
+            {set $mc_continue_screen bootup_caution}
+            {set $mc_retry_continue_text card_damaged_error}
+            {ui goto_screen retry_continue})
+         {set $mc_retry_screen $this}
+         {set $mc_continue_screen bootup_caution}
+         {set $mc_retry_continue_text save_error}
+         {ui goto_screen retry_continue}})}
+#define GC_XBOX_BOOTUP_NOSPACE
+({new_kr_screen
+      bootup_nospace
+      (panels bg status mc_dialog)
+      (focus mc_dialog)
+      MC_SCREEN_DEFAULTS
+      (enter
+         {MC_DIALOG setup no yes left bootup_nospace mc_title_error})
+      (SELECT_MSG
+         {switch
+            $component
+            (mc_dialog_right.btn
+               {memcard launch_ipl})
+            (mc_dialog_left.btn
+               {ui goto_screen autosave_disable_check})})})
+#define PS2_BOOTUP_NOSPACE
+({new_kr_screen
+      bootup_nospace
+      (panels bg status mc_dialog)
+      (focus mc_dialog)
+      MC_SCREEN_DEFAULTS
+      (enter
+         {MC_DIALOG setup no yes left bootup_nospace mc_title_error})
+      (SELECT_MSG
+         {switch
+            $component
+            (mc_dialog_left.btn
+               {ui goto_screen bootup_load})
+            (mc_dialog_right.btn
+               {ui goto_screen autosave_disable_check})})})
+#ifdef HX_GC
+GC_XBOX_BOOTUP_NOSPACE
+#endif
+#ifdef HX_XBOX
+GC_XBOX_BOOTUP_NOSPACE
+#endif
+#ifdef HX_PC
+PS2_BOOTUP_NOSPACE
+#endif
+#ifdef HX_EE
+PS2_BOOTUP_NOSPACE
+#endif
+{new_kr_screen
+   bootup_replace_save_check
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup load replace left bootup_replace_save_check mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {set $mc_overwrite FALSE}
+            {ui goto_screen $mc_load_screen})
+         (mc_dialog_right.btn
+            {set $mc_overwrite TRUE}
+            {ui goto_screen $mc_replace_screen})})}
+{new_kr_screen
+   bootup_caution
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left bootup_caution mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {set $mc_overwrite FALSE}
+            {ui goto_screen bootup_create_save})
+         (mc_dialog_right.btn
+            {ui goto_screen autosave_disable_check})})}
+{new_kr_screen
+   bootup_caution_format_cancelled
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left bootup_caution_format_cancelled mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {set $mc_overwrite FALSE}
+            {ui goto_screen bootup_create_save})
+         (mc_dialog_right.btn
+            {ui goto_screen autosave_disable_check})})}
+{new_kr_screen
+   autosave_disable_check
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left autosave_disable_check mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {set $autosave_enable TRUE})
+         (mc_dialog_right.btn
+            {set $autosave_enable FALSE})}
+      {ui goto_screen bootup_post_load})}
+{new_kr_screen
+   autosave
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_NOINPUT
+   (enter
+      {MC_DIALOG setup '' '' none save_saving mc_title_saving}
+      {$this
+         delay_task
+         1000
+         (preserve $this)
+         {memcard save_data $this $mc_overwrite}})
+   (MEMCARD_RESULT_MSG
+      {switch
+         $result
+         (kMCNoError
+            {MC_DIALOG setup '' '' none save_success mc_title_saving}
+            {the_db save_done}
+            {set $mc_overwrite TRUE}
+            {$this
+               delay_task
+               1000
+               {ui goto_screen $mc_post_save_screen}})
+         (kMCDifferentCard
+            {set $mc_overwrite FALSE}
+            {set $mc_no_screen $mc_post_save_screen}
+            {set $mc_yes_screen $this}
+            {ui goto_screen save_different_card})
+         (kMCNoCard
+            {set $mc_overwrite FALSE}
+            {set $mc_no_screen $this}
+            {set $mc_yes_screen $mc_post_save_screen}
+            {ui goto_screen save_nocard})
+         (kMCNotEnoughSpace
+            {set $mc_overwrite FALSE}
+            {set $mc_no_screen $this}
+            {set $mc_yes_screen $mc_post_save_screen}
+            {ui goto_screen save_nospace})
+         (kMCFileExists
+            {set $mc_no_screen $mc_post_save_screen}
+            {set $mc_yes_screen $this}
+            {ui goto_screen replace_save_check})
+         (kMCNotFormatted
+            {set $mc_overwrite FALSE}
+            {set $nfw_retry_screen $this}
+            {set $nfw_continue_screen $mc_post_save_screen}
+            {set $mc_format_start $this}
+            {set $mc_format_done $this}
+            {set $mc_no_screen mc_no_format_warn}
+            {set $mc_yes_screen mc_format}
+            {ui goto_screen save_unformatted})
+         (kMCDamaged
+            {set $mc_overwrite FALSE}
+            {set $mc_retry_screen $this}
+            {set $mc_continue_screen $mc_post_save_screen}
+            {set $mc_retry_continue_text card_damaged_error}
+            {ui goto_screen retry_continue})
+         {set $mc_retry_screen $this}
+         {set $mc_continue_screen $mc_post_save_screen}
+         {set $mc_retry_continue_text save_error}
+         {ui goto_screen retry_continue}})}
+{new_kr_screen
+   save_different_card
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes right different_card_error mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_no_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_yes_screen})})}
+{new_kr_screen
+   save_nocard
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup retry cancel left no_card_error mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_no_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_yes_screen})})}
+#define XBOX_GC_NOSPACE
+({new_kr_screen
+      save_nospace
+      (panels bg status mc_dialog)
+      (focus mc_dialog)
+      MC_SCREEN_DEFAULTS
+      (enter
+         {MC_DIALOG setup no yes left no_space_error mc_title_error})
+      (SELECT_MSG
+         {switch
+            $component
+            (mc_dialog_left.btn
+               {ui goto_screen $mc_no_screen})
+            (mc_dialog_right.btn
+               {memcard launch_ipl})})})
+#define PS2_NOSPACE
+({new_kr_screen
+      save_nospace
+      (panels bg status mc_dialog)
+      (focus mc_dialog)
+      MC_SCREEN_DEFAULTS
+      (enter
+         {MC_DIALOG setup no yes left no_space_error mc_title_error})
+      (SELECT_MSG
+         {switch
+            $component
+            (mc_dialog_left.btn
+               {ui goto_screen $mc_no_screen})
+            (mc_dialog_right.btn
+               {ui goto_screen $mc_yes_screen})})})
+#ifdef HX_GC
+XBOX_GC_NOSPACE
+#endif
+#ifdef HX_XBOX
+XBOX_GC_NOSPACE
+#endif
+#ifdef HX_PC
+PS2_NOSPACE
+#endif
+#ifdef HX_EE
+PS2_NOSPACE
+#endif
+{new_kr_screen
+   replace_save_check
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left file_exists_error mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {set $mc_overwrite FALSE}
+            {ui goto_screen $mc_no_screen})
+         (mc_dialog_right.btn
+            {set $mc_overwrite TRUE}
+            {ui goto_screen $mc_yes_screen})})}
+{new_kr_screen
+   save_unformatted
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left unformatted_card mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_no_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_yes_screen})})}
+{new_kr_screen
+   mc_format
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_NOINPUT
+   (enter
+      {MC_DIALOG setup '' '' none format_card mc_title_caution}
+      {$this
+         delay_task
+         1000
+         (preserve $this)
+         {memcard format $this}})
+   (MEMCARD_RESULT_MSG
+      {switch
+         $result
+         (kMCNoError
+            {ui goto_screen $mc_format_done})
+         (kMCDifferentCard
+            {memcard format $this})
+         (kMCNoCard
+            {set $mc_retry_screen $this}
+            {set $mc_cancel_screen $mc_post_save_screen}
+            {set $mc_retry_cancel_text format_no_card_error}
+            {ui goto_screen retry_cancel})
+         (kMCAlreadyFormatted
+            {set $mc_retry_screen $mc_format_done}
+            {set $mc_cancel_screen $mc_post_save_screen}
+            {set $mc_retry_cancel_text already_formatted_error}
+            {ui goto_screen retry_cancel})
+         (kMCDamaged
+            {set $mc_overwrite FALSE}
+            {set $mc_retry_screen $mc_format_done}
+            {set $mc_cancel_screen $mc_post_save_screen}
+            {set $mc_retry_cancel_text card_damaged_error}
+            {ui goto_screen retry_cancel})
+         {set $mc_retry_screen $this}
+         {set $mc_cancel_screen mc_no_format_warn}
+         {set $mc_retry_cancel_text format_card_error}
+         {ui goto_screen retry_cancel}})}
+{new_kr_screen
+   mc_no_format_warn
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup retry continue left no_format_warn mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $nfw_retry_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $nfw_continue_screen})})}
+{new_kr_screen
+   memcard_load_confirm
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG
+         setup
+         no
+         yes
+         left
+         {if_else
+            {the_db needs_save}
+            memcard_load_confirm_unsaved
+            memcard_load_confirm}
+         mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_post_load_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen memcard_load})})}
+{new_kr_screen
+   memcard_save_confirm
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup no yes left memcard_save_confirm mc_title_caution})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_post_save_screen})
+         (mc_dialog_right.btn
+            {memcard get_info}
+            {set $mc_overwrite TRUE}
+            {goto_autosave})})}
+{new_kr_screen
+   memcard_load_error
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup yes no right $mc_load_text mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_post_load_screen})
+         (mc_dialog_left.btn
+            {ui goto_screen memcard_load})})}
+#ifdef HX_GC
+{new_kr_screen
+   memcard_corrupt_error_gc
+   (panels bg status mc_dialog_3)
+   (focus mc_dialog_3)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG_3 setup continue_wo_load retry delete_file 3 mc_corrupt_error mc_title_fileerror})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_1.btn
+            {ui goto_screen $mc_post_load_screen})
+         (mc_dialog_2.btn
+            {ui goto_screen memcard_load})
+         (mc_dialog_3.btn
+            {ui goto_screen memcard_delete_gc})})}
+{new_kr_screen
+   memcard_delete_gc
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_NOINPUT
+   (enter
+      {MC_DIALOG setup '' '' none deleting_file mc_title_deleting}
+      {$this
+         delay_task
+         1000
+         (preserve $this)
+         {memcard delete $this}})
+   (MEMCARD_RESULT_MSG
+      {switch
+         $result
+         (kMCNoError
+            {{ui screen memcard_post_delete_gc}
+               set
+               result_text
+               delete_success}
+            {ui goto_screen memcard_post_delete_gc})
+         {{ui screen memcard_post_delete_gc}
+            set
+            result_text
+            delete_failed}
+         {ui goto_screen memcard_post_delete_gc}})}
+{new_kr_screen
+   memcard_post_delete_gc
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG
+         setup
+         continue
+         ''
+         left
+         {$this get result_text}
+         mc_title_deleting})
+   (SELECT_MSG
+      {ui goto_screen $mc_post_load_screen})}
+#endif
+{new_kr_screen
+   memcard_load
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_NOINPUT
+   (enter
+      {MC_DIALOG setup '' '' none load_loading mc_title_loading}
+      {switch
+         {memcard get_info}
+         (kMCNoCard
+            {set $mc_load_text mc_nocard_error}
+            {ui goto_screen memcard_load_error})}
+      {$this
+         delay_task
+         1000
+         (preserve $this)
+         {memcard load_data $this}})
+   (MEMCARD_RESULT_MSG
+      {switch
+         $result
+         (kMCNoError
+            {MC_DIALOG setup '' '' none load_success mc_title_loading}
+            {set $mc_overwrite TRUE}
+            {$this
+               delay_task
+               1000
+               {ui goto_screen $mc_post_load_screen}})
+         (kMCNoCard
+            {set $mc_load_text mc_card_removed_error}
+            {ui goto_screen memcard_load_error})
+         (kMCCorrupt
+            #ifdef HX_GC
+            {ui goto_screen memcard_corrupt_error_gc}
+            #else
+            {set $mc_load_text mc_corrupt_error}
+            {ui goto_screen memcard_load_error}
+            #endif)
+         (kMCDifferentCard
+            {memcard load_data $this})
+         (kMCDamaged
+            {set $mc_retry_screen $this}
+            {set $mc_continue_screen $mc_post_load_screen}
+            {set $mc_retry_continue_text card_damaged_error_load}
+            {ui goto_screen retry_continue})
+         {set $mc_load_text mc_nodata_error}
+         {ui goto_screen memcard_load_error}})}
+{new_kr_screen
+   retry_cancel
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup retry cancel right $mc_retry_cancel_text mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_retry_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_cancel_screen})})}
+{new_kr_screen
+   retry_continue
+   (panels bg status mc_dialog)
+   (focus mc_dialog)
+   MC_SCREEN_DEFAULTS
+   (enter
+      {MC_DIALOG setup retry continue left $mc_retry_continue_text mc_title_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (mc_dialog_left.btn
+            {ui goto_screen $mc_retry_screen})
+         (mc_dialog_right.btn
+            {ui goto_screen $mc_continue_screen})})}
+#define CHAREYETOY_UI_POPUPS
+({new_kr_screen
+      load_digimask_list
+      (panels bg status mc_dialog)
+      (focus mc_dialog)
+      (char none)
+      (popup TRUE)
+      MC_SCREEN_NOINPUT
+      (enter
+         {MC_DIALOG setup '' '' none cameo_loading_head mc_title_loading}
+         {$this
+            delay_task
+            1000
+            (preserve $this)
+            {memcard load_digimask_list $this}})
+      (MEMCARD_RESULT_MSG
+         {if_else
+            {== $result kMCNoError}
+            {ui goto_screen charselecthead}
+            {do
+               {set
+                  $mc_retry_continue_text
+                  {switch
+                     $result
+                     (kMCNoCard cameo_list_failed_nomc)
+                     (kMCNotFormatted cameo_list_failed_unformatted)
+                     cameo_list_failed_generic}}
+               {ui goto_screen digimask_list_error}}})}
+   {new_kr_screen
+      digimask_list_error
+      (panels bg status mc_dialog)
+      (focus mc_dialog)
+      (char none)
+      (popup TRUE)
+      MC_SCREEN_DEFAULTS
+      (enter
+         {MC_DIALOG setup retry cancel left $mc_retry_continue_text mc_title_error})
+      (SELECT_MSG
+         {switch
+            $component
+            (mc_dialog_left.btn
+               {ui goto_screen load_digimask_list})
+            (mc_dialog_right.btn
+               {ui goto_screen CHARHEAD_SCREEN})})}
+   {new_kr_screen
+      digimask_loading
+      (panels error_bg mc_dialog)
+      (focus mc_dialog)
+      (popup TRUE)
+      MC_SCREEN_NOINPUT
+      (poll
+         {if
+            {&&
+               {$this get trans_complete}
+               {!
+                  {meta_music_ramping_down}}}
+            {$this set trans_complete FALSE}
+            {{$this get loader}
+               load_head}})
+      (TRANSITION_COMPLETE_MSG
+         {if
+            {== $new_screen digimask_loading}
+            {$this set trans_complete TRUE}})
+      (enter
+         {MC_DIALOG setup '' '' none cameo_loading_head mc_title_loading})
+      (start
+         ($loader)
+         {$this set loader $loader}
+         {$this set trans_complete FALSE}
+         {ui push_screen digimask_loading}
+         {meta_music_stop})
+      (handle_error
+         ($error $head)
+         {memcard set_head_name $head}
+         {set
+            $mc_retry_continue_text
+            {switch
+               $error
+               (kMCNoCard cameo_load_failed_nomc)
+               (kMCNotFormatted cameo_load_failed_unformatted)
+               (kMCCorrupt cameo_load_failed_corrupt)
+               (kMCReadWriteFailed cameo_load_failed_nofile)
+               cameo_load_failed_nofile_ps2}}
+         {set $digiload_success FALSE}
+         {ui goto_screen digimask_error})
+      (cancel
+         {{$this get loader}
+            cancel}
+         {char_def_mgr
+            disable_digimasks
+            {memcard head_name}}
+         {ui pop_screen}
+         {meta_music_start})
+      (success
+         {ui pop_screen}
+         {meta_music_start}
+         {set $digiload_success TRUE})}
+   {new_kr_screen
+      digimask_error
+      (panels error_bg mc_dialog)
+      (focus mc_dialog)
+      MC_SCREEN_DEFAULTS
+      (enter
+         {MC_DIALOG setup retry cancel left $mc_retry_continue_text mc_title_error})
+      (SELECT_MSG
+         {switch
+            $component
+            (mc_dialog_left.btn
+               {ui goto_screen digimask_loading})
+            (mc_dialog_right.btn
+               {{ui screen digimask_loading}
+                  cancel})})})
+#ifdef HX_PC
+CHAREYETOY_UI_POPUPS
+#endif
+#ifdef HX_EE
+CHAREYETOY_UI_POPUPS
+#endif

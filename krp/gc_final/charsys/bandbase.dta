@@ -1,0 +1,64 @@
+(namespace 256 2048)
+(lod_screen_sizes 0.4)
+(handlers
+   (start_game
+      {$this set anim_state kStageIdle}
+      {if_else
+         {$this has dancer}
+         {$this play_clip kStageIdle kAnimReset}
+         {with_namespace
+            {$this anim_space}
+            {main.drv set_starved $this starved}}})
+   (set_state
+      ($clip_flags)
+      {do
+         ($old)
+         {set
+            $old
+            {$this get anim_state}}
+         {if
+            {&&
+               {!= $old kStageWin}
+               {!= $old kStageLose}}
+            {switch
+               $clip_flags
+               (kStageWin
+                  {if_else
+                     {== $old kStageIdle}
+                     {$this play_clip $clip_flags kAnimFirst}
+                     {$this set request_win 1}})
+               (kStageIdle
+                  {if_else
+                     {$this has request_win}
+                     {$this play_clip kStageWin kAnimFirst}
+                     {$this play_clip $clip_flags kAnimFirst}})
+               {$this play_clip $clip_flags kAnimFirst}}}})
+   (starved
+      {$this
+         play_clip
+         {$this get anim_state}
+         kAnimLongest})
+   (play_clip
+      ($clip_flags $trans_flags)
+      {set
+         $trans_flags
+         {'|' $trans_flags kAnimGraphLoop}}
+      {with_namespace
+         {$this anim_space}
+         {do
+            ($old)
+            {set
+               $old
+               {$this get anim_state}}
+            {$this set anim_state $clip_flags}
+            {if
+               {&&
+                  {== $clip_flags kStagePlay}
+                  {== $arena.excitement kExcitementPeak}
+                  {!= $old kStageIdle}
+                  {!= $old kStageSolo1}
+                  {!= $old kStageSolo2}}
+               {set
+                  $clip_flags
+                  (kStagePlay kStageSpecial)}}
+            {main.drv play $clip_flags $trans_flags}}}))

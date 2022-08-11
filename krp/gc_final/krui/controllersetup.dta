@@ -1,0 +1,418 @@
+#define CTRLSETUP_NUM_CONTROLLERS
+(4)
+#define CTRLSETUP_NOPLAYER
+(1.0)
+#define CTRLSETUP_PLAYER0
+(0.0)
+#define CTRLSETUP_PLAYER1
+(2.0)
+#define CTRLSETUP_MAT_SELECTED
+("slot_selected.mat")
+#define CTRLSETUP_MAT_FOCUSED
+("slot_assigned.mat")
+#define CTRLSETUP_MAT_OPEN
+("slot_open.mat")
+#define CONTROLLERSETUP_PANEL_HANDLERS
+((fade_mats TRUE)
+   (set_exit_screen
+      ($screen)
+      {$this set exit_screen $screen})
+   (init
+      {$this
+         set
+         ctrl_meshes
+         (ctrl0.mesh ctrl1.mesh ctrl2.mesh ctrl3.mesh)}
+      {$this
+         set
+         ctrl_anims
+         (ctrl0.tnm ctrl1.tnm ctrl2.tnm ctrl3.tnm)}
+      {$this
+         set
+         slot_meshes
+         ((slot0-0.mesh slot0-1.mesh)
+            (slot1-0.mesh slot1-1.mesh)
+            (slot2-0.mesh slot2-1.mesh)
+            (slot3-0.mesh slot3-1.mesh))}
+      {$this
+         set
+         mic_selections
+         (-1 -1)})
+   (enter
+      {$this set selecting FALSE}
+      {do
+         (($idx 0))
+         {while
+            {< $idx CTRLSETUP_NUM_CONTROLLERS}
+            {{$this ctrl_anim $idx}
+               set_frame
+               {cond
+                  ({==
+                        {controller_mgr get_mic_port 0}
+                        $idx}
+                     CTRLSETUP_PLAYER0)
+                  ({&&
+                        {==
+                           {$this num_mics}
+                           2}
+                        {==
+                           {controller_mgr get_mic_port 1}
+                           $idx}}
+                     CTRLSETUP_PLAYER1)
+                  (TRUE CTRLSETUP_NOPLAYER)}}
+            {'++' $idx}}}
+      {set
+         {elem_var
+            {$this get mic_selections}
+            0}
+         -1}
+      {set
+         {elem_var
+            {$this get mic_selections}
+            1}
+         -1}
+      {if_else
+         {==
+            {$this num_mics}
+            2}
+         {do
+            {controllersetup_player0.lbl
+               set_localized_text
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 0}}}
+            {controllersetup_player1.lbl
+               set_localized_text
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 1}}}}
+         {do
+            {playername.btn set_selected}
+            {playername.btn
+               set_localized_text
+               {the_db
+                  get_player_name
+                  {the_db get_active_player}}}}})
+   (poll
+      {if
+         {!
+            {$this get selecting}}
+         {do
+            (($idx 0)
+               ($selectable FALSE))
+            {while
+               {< $idx CTRLSETUP_NUM_CONTROLLERS}
+               {if_else
+                  {$this is_controller_selectable $idx}
+                  {{$this ctrl_mesh $idx}
+                     set_mat
+                     {$this ctrl_mat $idx}}
+                  {$this disconnect_controller $idx}}
+               {$this move_if_selected $idx 0 CTRLSETUP_PLAYER0}
+               {if
+                  {==
+                     {$this num_mics}
+                     2}
+                  {$this move_if_selected $idx 1 CTRLSETUP_PLAYER1}}
+               {do
+                  (($mic 0))
+                  {while
+                     {<
+                        $mic
+                        {$this num_mics}}
+                     {{$this slot_mesh $idx $mic}
+                        set_mat
+                        {cond
+                           ({==
+                                 $idx
+                                 {$this mic_selection $mic}}
+                              CTRLSETUP_MAT_SELECTED)
+                           ({$this is_slot_focused $idx $mic}
+                              CTRLSETUP_MAT_FOCUSED)
+                           (TRUE CTRLSETUP_MAT_OPEN)}}
+                     {if
+                        {$this is_slot_focused $idx $mic}
+                        {set $selectable TRUE}}
+                     {'++' $mic}}}
+               {'++' $idx}}
+            {{ui current_screen}
+               set_controllersetup_help
+               $selectable}}})
+   (is_slot_focused
+      ($port $mic)
+      {==
+         {{$this ctrl_anim $port}
+            frame}
+         {if_else
+            {== $mic 0}
+            CTRLSETUP_PLAYER0
+            CTRLSETUP_PLAYER1}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {$this get selecting}
+         TRUE
+         {if_else
+            {$this is_controller_selectable $player_num}
+            {switch
+               $button
+               (kPad_DLeft
+                  {$this move_controller $player_num -1})
+               (kPad_DRight
+                  {$this move_controller $player_num 1})
+               (kPad_X
+                  {do
+                     (($frame
+                           {{$this ctrl_anim $player_num}
+                              frame}))
+                     {cond
+                        ({== $frame CTRLSETUP_PLAYER0}
+                           {$this select_mic 0 $player_num})
+                        ({== $frame CTRLSETUP_PLAYER1}
+                           {$this select_mic 1 $player_num})}}
+                  {if
+                     {$this are_mics_selected}
+                     {controller_mgr
+                        set_mic_port
+                        0
+                        {$this mic_selection 0}}
+                     {if_else
+                        {==
+                           {$this num_mics}
+                           2}
+                        {controller_mgr
+                           set_mic_port
+                           1
+                           {$this mic_selection 1}}
+                        {controller_mgr set_mic_port 1 -1}}
+                     {$this set selecting TRUE}
+                     {$this
+                        delay_task
+                        500
+                        (preserve $this)
+                        {ui
+                           goto_screen
+                           {$this get exit_screen}}}})
+               (kPad_Tri
+                  {cond
+                     ({==
+                           {$this mic_selection 0}
+                           $player_num}
+                        {$this cancel_mic 0 $player_num})
+                     ({==
+                           {$this mic_selection 1}
+                           $player_num}
+                        {$this cancel_mic 1 $player_num})})}
+            kDataUnhandled}})
+   (are_mics_selected
+      {&&
+         {$this is_mic_selected 0}
+         {'||'
+            {==
+               {$this num_mics}
+               1}
+            {$this is_mic_selected 1}}})
+   (is_mic_selected
+      ($mic)
+      {!=
+         {$this mic_selection $mic}
+         -1})
+   (mic_selection
+      ($mic)
+      {elem
+         {$this get mic_selections}
+         $mic})
+   (select_mic
+      ($mic $port)
+      {play_sfx select}
+      {set
+         {elem_var
+            {$this get mic_selections}
+            $mic}
+         $port}
+      {{$this slot_mesh $port $mic}
+         set_mat
+         CTRLSETUP_MAT_SELECTED})
+   (cancel_mic
+      ($mic $port)
+      {play_sfx back}
+      {set
+         {elem_var
+            {$this get mic_selections}
+            $mic}
+         -1}
+      {{$this slot_mesh $port $mic}
+         set_mat
+         CTRLSETUP_MAT_OPEN})
+   (move_controller
+      ($idx $amt)
+      {if
+         {&&
+            {!=
+               {$this mic_selection 0}
+               $idx}
+            {!=
+               {$this mic_selection 1}
+               $idx}}
+         {do
+            (($ctrl_anim
+                  {$this ctrl_anim $idx})
+               ($min_frame
+                  {if_else
+                     {$this is_mic_selected 0}
+                     CTRLSETUP_NOPLAYER
+                     CTRLSETUP_PLAYER0})
+               ($max_frame
+                  {if_else
+                     {'||'
+                        {==
+                           {$this num_mics}
+                           1}
+                        {$this is_mic_selected 1}}
+                     CTRLSETUP_NOPLAYER
+                     CTRLSETUP_PLAYER1})
+               ($new_frame
+                  {'+'
+                     {$ctrl_anim frame}
+                     $amt}))
+            {if
+               {&&
+                  {>= $new_frame $min_frame}
+                  {<= $new_frame $max_frame}}
+               {play_sfx dpad}
+               {$ctrl_anim set_frame $new_frame}
+               {if
+                  {!= $new_frame CTRLSETUP_NOPLAYER}
+                  {do
+                     (($other_idx 0))
+                     {while
+                        {< $other_idx CTRLSETUP_NUM_CONTROLLERS}
+                        {do
+                           (($anim
+                                 {$this ctrl_anim $other_idx}))
+                           {if
+                              {&&
+                                 {!= $other_idx $idx}
+                                 {==
+                                    {$anim frame}
+                                    $new_frame}}
+                              {$anim set_frame CTRLSETUP_NOPLAYER}}}
+                        {'++' $other_idx}}}}}}}
+      TRUE)
+   (move_if_selected
+      ($controller_idx $mic $mic_frame)
+      {do
+         (($selection
+               {$this mic_selection $mic})
+            ($ctrl_anim
+               {$this ctrl_anim $controller_idx}))
+         {if
+            {&&
+               {!= $selection -1}
+               {!= $controller_idx $selection}
+               {==
+                  {$ctrl_anim frame}
+                  $mic_frame}}
+            {$ctrl_anim set_frame CTRLSETUP_NOPLAYER}}}
+      TRUE)
+   (is_controller_selectable
+      ($idx)
+      #ifdef HX_XBOX
+      {&&
+         {controller_mgr joypad_connected $idx}
+         {'||'
+            {the_db is_karaoke}
+            {controller_mgr is_mic_in_port $idx}}}
+      #else
+      TRUE
+      #endif)
+   (disconnect_controller
+      ($idx)
+      {if
+         {==
+            {$this mic_selection 0}
+            $idx}
+         {$this cancel_mic 0 $idx}}
+      {if
+         {==
+            {$this mic_selection 1}
+            $idx}
+         {$this cancel_mic 1 $idx}}
+      {{$this ctrl_mesh $idx}
+         set_mat
+         {$this ctrl_mat $idx}}
+      {{$this ctrl_anim $idx}
+         set_frame
+         CTRLSETUP_NOPLAYER})
+   (ctrl_mesh
+      ($idx)
+      {elem
+         {$this get ctrl_meshes}
+         $idx})
+   (ctrl_anim
+      ($idx)
+      {elem
+         {$this get ctrl_anims}
+         $idx})
+   (slot_mesh
+      ($port $mic)
+      {elem
+         {elem
+            {$this get slot_meshes}
+            $port}
+         $mic})
+   (ctrl_mat
+      ($idx)
+      {cond
+         ({!
+               {$this is_controller_selectable $idx}}
+            disconnected.mat)
+         ({controller_mgr is_dancepad $idx}
+            {if_else
+               {controller_mgr is_mic_in_port $idx}
+               dancemat_mic.mat
+               dancemat.mat})
+         (TRUE
+            {if_else
+               {controller_mgr is_mic_in_port $idx}
+               connected_mic.mat
+               connected.mat})}))
+{new_kr_panel
+   controllersetup_onemic
+   (num_mics 1)
+   CONTROLLERSETUP_PANEL_HANDLERS}
+{new_kr_panel
+   controllersetup_twomic
+   (num_mics 2)
+   CONTROLLERSETUP_PANEL_HANDLERS}
+#define CONTROLLERSETUP_SCREEN_HANDLERS
+((set_controllersetup_help
+      ($selectable)
+      {{ui panel status}
+         set_display
+         {if_else
+            $selectable
+            ((button back)
+               (text back)
+               (button select)
+               (text select))
+            ((button back)
+               (text back))}}))
+{new_kr_screen
+   controllersetup_onemic
+   (panels bg status left controllersetup_onemic)
+   (focus controllersetup_onemic)
+   (char controllersetup_onemic)
+   CONTROLLERSETUP_SCREEN_HANDLERS
+   (enter
+      {{ui panel controllersetup_onemic}
+         set_exit_screen
+         NEXT_OR_JUDGING_SCREEN})}
+{new_kr_screen
+   controllersetup_twomic
+   (panels bg status left controllersetup_twomic)
+   (focus controllersetup_twomic)
+   (char controllersetup_twomic)
+   CONTROLLERSETUP_SCREEN_HANDLERS
+   (enter
+      {{ui panel controllersetup_twomic}
+         set_exit_screen
+         NEXT_OR_JUDGING_SCREEN})}

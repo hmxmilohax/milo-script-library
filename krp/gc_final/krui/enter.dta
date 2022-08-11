@@ -1,0 +1,576 @@
+#define ENTER_PANEL_HANDLERS
+((fade_mats TRUE)
+   (enter
+      {$this pre_load}
+      {$this set ticks 0}
+      {do
+         (($alpha 0.3))
+         {foreach
+            $label
+            {$this get loading_labels}
+            {$label set_alpha_override $alpha}
+            {set
+               $alpha
+               {$this next_loading_alpha $alpha}}
+            {set
+               $alpha
+               {$this next_loading_alpha $alpha}}}}
+      {$this set exited FALSE})
+   (next_loading_alpha
+      ($cur_alpha)
+      {cond
+         ({== $cur_alpha 1}
+            0.6)
+         ({== $cur_alpha 0.6}
+            0.3)
+         ({== $cur_alpha 0.3}
+            1)})
+   (poll
+      {if
+         {&&
+            {!
+               {$this entering}}
+            {!
+               {$this get exited}}}
+         {$this
+            set
+            ticks
+            {'+'
+               1
+               {$this get ticks}}}
+         {if
+            {!
+               {mod
+                  {$this get ticks}
+                  10}}
+            {foreach
+               $label
+               {$this get loading_labels}
+               {$label
+                  set_alpha_override
+                  {$this
+                     next_loading_alpha
+                     {$label get_alpha_override}}}}}})
+   (exit
+      {$this set exited TRUE}))
+#define ENTER_SCREEN_HANDLERS
+((auto_back FALSE)
+   (allow_reset FALSE)
+   (allow_timeout FALSE)
+   (enter
+      {$this set started_load FALSE}
+      {$this set started_post_load FALSE})
+   (poll
+      {cond
+         ({&&
+               {!
+                  {$this get started_load}}
+               {!
+                  {ui in_transition}}}
+            {$this start_load}
+            {$this set started_load TRUE})
+         ({&&
+               {$this get started_load}
+               {!
+                  {$this get started_post_load}}
+               {$this is_load_done}}
+            {$this post_load}
+            {$this set started_post_load TRUE})}))
+{new_kr_panel
+   meta_loading
+   (init
+      {$this
+         set
+         loading_labels
+         (l.lbl o.lbl a.lbl d.lbl i.lbl n.lbl g.lbl)})
+   (pre_load)
+   ENTER_PANEL_HANDLERS}
+{func
+   enter_meta_loading
+   ($screen)
+   {{ui screen meta_loading}
+      set
+      first_screen
+      $screen}
+   {ui goto_screen meta_music_loading}}
+{new_kr_screen
+   meta_music_loading
+   (panels meta_loading)
+   (char none)
+   ENTER_SCREEN_HANDLERS
+   (start_load TRUE)
+   (is_load_done
+      {meta_music_done_loading})
+   (post_load
+      {ui goto_screen meta_loading})}
+{new_kr_screen
+   meta_loading
+   (panels meta_loading)
+   (char none)
+   ENTER_SCREEN_HANDLERS
+   (start_load
+      {char_model_mgr sync_player_models}
+      {meta
+         preload_screen
+         {$this get first_screen}})
+   (is_load_done
+      {&&
+         {char_model_mgr are_player_models_loaded}
+         {char_model_mgr are_anims_loaded}
+         {!
+            {ui in_transition}}
+         {meta is_active}
+         {meta
+            is_screen_loaded
+            {$this get first_screen}}})
+   (post_load
+      {autosave_point
+         {$this get first_screen}}
+      {meta
+         unload_screen
+         {$this get first_screen}})}
+#define ENTER_GAME_PANEL_HANDLERS
+((init
+      {$this
+         set
+         loading_labels
+         (l.lbl o.lbl a.lbl d.lbl i.lbl n.lbl g.lbl dot_1.lbl dot_2.lbl dot_3.lbl dot_4.lbl dot_5.lbl dot_6.lbl dot_7.lbl dot_8.lbl)})
+   ENTER_PANEL_HANDLERS)
+#define ENTER_GAME_SCREEN_HANDLERS
+(ENTER_SCREEN_HANDLERS
+   (start_load
+      {if
+         {&&
+            {!
+               {the_db is_tutorial}}
+            {! $is_finale}
+            {!
+               {the_db is_attractmode}}}
+         {venue_provider sync_venue}}
+      #ifdef HX_EE
+      {{ui screen IN_GAME_SCREEN}
+         set_eyetoy_check
+         {&&
+            {platform has_eyetoy_video}
+            {game_eyetoy use_eyetoy}}}
+      #endif
+      {{ui screen IN_GAME_SCREEN}
+         set_karaoke_mic_check
+         FALSE}
+      {meta preload_screen PAUSE_SCREEN}
+      TRUE)
+   (is_load_done
+      {meta is_screen_loaded PAUSE_SCREEN})
+   (post_load
+      {meta quit}
+      TRUE))
+#define ENTER_PANEL_CD_SETUP
+({selsong_cd.view
+      set_showing
+      {&&
+         {!
+            {the_db is_karaoke}}
+         {!
+            {the_db is_duet_compete}}}})
+#define ENTER_GAME_PANEL_INIT
+({do
+      (($player
+            {the_db get_active_player})
+         ($song_pos
+            {the_db get_song_pos}))
+      {enter_p1_name.lbl
+         set_localized_text
+         {the_db get_player_name $player}}
+      {enter_songtitle.lbl
+         set_localized_text
+         {the_db get_song_title $song_pos}}
+      {enter_judging_p1.lbl
+         set_localized_text
+         {if_else
+            {the_db is_karaoke}
+            ""
+            {sprint
+               {localize judging}
+               ": "
+               {the_db
+                  get_skill_name
+                  {the_db get_skill $player}}}}}
+      {enter_dance_p1.lbl
+         set_showing
+         {the_db is_singdance}}
+      {enter_dance_p1.lbl
+         set_localized_text
+         {sprint
+            {localize dance_difficulty}
+            ": "
+            {the_db
+               get_skill_name
+               {the_db get_dance_skill $player}}}}})
+{new_kr_panel
+   enter_cds
+   (enter
+      {enter_highscore.lbl
+         set_localized_text
+         "12500"}
+      {enter_highscore1.lbl
+         set_localized_text
+         "20000"})
+   (poll
+      {enter_cds.view
+         set_frame
+         {ui frame}})}
+{new_kr_panel
+   enter_game
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      ENTER_GAME_PANEL_INIT
+      ENTER_PANEL_CD_SETUP
+      {enter_tip.lbl
+         set_text
+         {get_random_tip}})}
+{new_kr_screen
+   enter_game
+   (panels bg enter_game enter_cds)
+   (char onemic_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_game_demo
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      ENTER_GAME_PANEL_INIT
+      {enter_game_demo.env
+         set_ambient_color
+         {meta get_color_value bg 0}
+         {meta get_color_value bg 1}
+         {meta get_color_value bg 2}})}
+{new_kr_screen
+   enter_game_demo
+   (panels enter_game_demo)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_practice
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      ENTER_GAME_PANEL_INIT
+      {enter_tip.lbl
+         set_text
+         {get_random_tip}})}
+{new_kr_screen
+   enter_practice
+   (panels bg enter_practice)
+   (char onemic_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_attractmode
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      {meta_music_stop}
+      {enter_attract_tip.lbl
+         set_text
+         {get_random_tip}})}
+{new_kr_screen
+   enter_attractmode
+   (panels bg enter_attractmode)
+   (char none)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_finale
+   ENTER_GAME_PANEL_HANDLERS
+   (rnd_name enter_duet)
+   (pre_load
+      {meta_music_stop}
+      {attract_mgr save_settings}
+      {the_db set_venue beach}
+      {the_db set_song ivehad}
+      {the_db set_duet_ruleset kDuetKaraoke}
+      {the_db set_num_players 2}
+      {the_db set_vox_line 0 0}
+      {the_db set_vox_line 1 1}
+      {the_db set_show_lyrics 0}
+      {the_db set_show_music_staff 0}
+      {the_db reset_volume_levels}
+      {set $is_finale TRUE}
+      {enter_duet_p1.lbl
+         set_localized_text
+         ""}
+      {enter_duet_p2.lbl
+         set_localized_text
+         ""}
+      {enter_duet_judging_p1.lbl
+         set_localized_text
+         ""}
+      {enter_duet_judging_p2.lbl
+         set_localized_text
+         ""}
+      {enter_songtitle.lbl set_text finale_text}
+      {enter_tip.lbl
+         set_localized_text
+         ""})}
+{new_kr_screen
+   enter_finale
+   (panels bg enter_finale)
+   (char twomic_coop_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_training
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      {meta_music_stop}
+      {the_db set_ruleset kRuleTutorial}
+      {mode_mgr set_num_teams 0}
+      {score_tracker init 0}
+      {the_db set_num_players 1})}
+{new_kr_screen
+   enter_training
+   (panels bg enter_training)
+   (char none)
+   ENTER_GAME_SCREEN_HANDLERS}
+#define ENTER_DUET_HANDLERS
+(ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      {enter_duet_p1.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 0}}}
+      {enter_duet_p2.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 1}}}
+      {enter_duet_judging_p1.lbl
+         set_localized_text
+         {if_else
+            {the_db is_karaoke}
+            ""
+            {sprint
+               {localize judging}
+               ": "
+               {the_db
+                  get_skill_name
+                  {the_db
+                     get_skill
+                     {the_db get_cur_player 0}}}}}}
+      {enter_duet_judging_p2.lbl
+         set_localized_text
+         {if_else
+            {the_db is_karaoke}
+            ""
+            {sprint
+               {localize judging}
+               ": "
+               {the_db
+                  get_skill_name
+                  {the_db
+                     get_skill
+                     {the_db get_cur_player 1}}}}}}
+      {enter_songtitle.lbl
+         set_localized_text
+         {the_db
+            get_song_title
+            {the_db get_song_pos}}}
+      {enter_tip.lbl
+         set_text
+         {get_random_tip}}
+      ENTER_PANEL_CD_SETUP))
+{new_kr_panel enter_duet ENTER_DUET_HANDLERS}
+{new_kr_screen
+   enter_duet
+   (panels bg enter_duet enter_cds)
+   (char twomic_coop_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel enter_practice_duet ENTER_DUET_HANDLERS}
+{new_kr_screen
+   enter_practice_duet
+   (panels bg enter_practice_duet)
+   (char twomic_coop_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+#define ENTER_MEDLEY_PANEL_HANDLERS
+((set_medley_song
+      ($lbl $song_idx $random)
+      {if_else
+         {<
+            $song_idx
+            {{ui panel medleyselsong}
+               num_medley_songs}}
+         {do
+            {$lbl set_showing TRUE}
+            {$lbl
+               set_localized_text
+               {if_else
+                  $random
+                  {sprint
+                     {'+' $song_idx 1}
+                     ". "
+                     {localize random_song}}
+                  {sprint
+                     {'+' $song_idx 1}
+                     ". "
+                     {the_db
+                        get_song_title
+                        {the_db get_medley_song_pos $song_idx}}}}}}
+         {$lbl set_showing FALSE}})
+   (set_medley_songs
+      ($title_label $song_labels)
+      {do
+         (($idx 0)
+            ($random_medley
+               {{ui panel medleyselsong}
+                  is_medley_random}))
+         {$title_label set_text medley_playlist}
+         {while
+            {<
+               $idx
+               {size $song_labels}}
+            {do
+               (($lbl
+                     {elem $song_labels $idx}))
+               {$this set_medley_song $lbl $idx $random_medley}}
+            {'++' $idx}}}))
+{new_kr_panel
+   enter_duetmedley
+   ENTER_GAME_PANEL_HANDLERS
+   ENTER_MEDLEY_PANEL_HANDLERS
+   (pre_load
+      {enter_duet_p1.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 0}}}
+      {enter_duet_p2.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 1}}}
+      {enter_judging_p1.lbl
+         set_localized_text
+         {sprint
+            {localize judging}
+            ": "
+            {the_db
+               get_skill_name
+               {the_db
+                  get_skill
+                  {the_db get_cur_player 0}}}}}
+      {enter_judging_p2.lbl
+         set_localized_text
+         {sprint
+            {localize judging}
+            ": "
+            {the_db
+               get_skill_name
+               {the_db
+                  get_skill
+                  {the_db get_cur_player 1}}}}}
+      {$this
+         set_medley_songs
+         enter_medleysongs.lbl
+         (enter_songtitle_0.lbl enter_songtitle_1.lbl enter_songtitle_2.lbl enter_songtitle_3.lbl enter_songtitle_4.lbl)}
+      {enter_tip.lbl
+         set_text
+         {get_random_tip}})}
+{new_kr_screen
+   enter_duetmedley
+   (panels bg enter_duetmedley)
+   (char twomic_coop_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_medley
+   ENTER_GAME_PANEL_HANDLERS
+   ENTER_MEDLEY_PANEL_HANDLERS
+   (pre_load
+      {enter_p1_name.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_active_player}}}
+      {enter_judging_p1.lbl
+         set_localized_text
+         {sprint
+            {localize judging}
+            ": "
+            {the_db
+               get_skill_name
+               {the_db
+                  get_skill
+                  {the_db get_cur_player 0}}}}}
+      {$this
+         set_medley_songs
+         enter_medleysongs.lbl
+         (enter_songtitle_0.lbl enter_songtitle_1.lbl enter_songtitle_2.lbl enter_songtitle_3.lbl enter_songtitle_4.lbl)}
+      {enter_tip.lbl
+         set_text
+         {get_random_tip}})}
+{new_kr_screen
+   enter_medley
+   (panels bg enter_medley)
+   (char onemic_loading)
+   ENTER_GAME_SCREEN_HANDLERS}
+#define ENTER_MINIGAME_SCREEN_HANDLERS
+(ENTER_SCREEN_HANDLERS
+   (start_load
+      {meta start_minigame})
+   (is_load_done
+      {meta
+         is_screen_loaded
+         {minigame_mgr pause_screen}})
+   (post_load TRUE))
+{new_kr_panel
+   enter_minigame_onemic
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      {username0.lbl
+         set_localized_text
+         {the_db
+            get_player_name
+            {the_db get_cur_player 0}}}
+      {minigame.lbl
+         set_text
+         {minigame_mgr game_name}}
+      {description.lbl
+         set_text
+         {minigame_mgr loading_description}})}
+{new_kr_screen
+   enter_minigame_onemic
+   (panels bg enter_minigame_onemic)
+   (focus enter_minigame_onemic)
+   ENTER_MINIGAME_SCREEN_HANDLERS}
+{new_kr_panel
+   enter_minigame_twomic
+   ENTER_GAME_PANEL_HANDLERS
+   (pre_load
+      {vs.view
+         set_showing
+         {!
+            {minigame_mgr is_coop}}}
+      {coop.view
+         set_showing
+         {minigame_mgr is_coop}}
+      {do
+         (($player0
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 0}})
+            ($player1
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 1}}))
+         {if_else
+            {minigame_mgr is_coop}
+            {do
+               {coop_username0.lbl set_localized_text $player0}
+               {coop_username1.lbl set_localized_text $player1}}
+            {do
+               {vs_username0.lbl set_localized_text $player0}
+               {vs_username1.lbl set_localized_text $player1}}}}
+      {minigame.lbl
+         set_text
+         {minigame_mgr game_name}}
+      {description.lbl
+         set_text
+         {minigame_mgr loading_description}})}
+{new_kr_screen
+   enter_minigame_twomic
+   (panels bg enter_minigame_twomic)
+   (focus enter_minigame_twomic)
+   ENTER_MINIGAME_SCREEN_HANDLERS}

@@ -1,0 +1,177 @@
+#define SOUNDSETUP_PANEL_HANDLERS
+((focus soundsetup_music.sld)
+   (retain_last_focus FALSE)
+   (init
+      {$this
+         set
+         sound_syms
+         ((soundsetup_music.sld music)
+            (soundsetup_vox.sld vox)
+            (soundsetup_sfx.sld sfx)
+            (soundsetup_mic.sld mic)
+            (soundsetup_earpiece.sld earpiece))})
+   (enter
+      {$this init_sliders}
+      {sound_setup_enter})
+   (exit
+      {sound_setup_exit})
+   (SCROLL_MSG
+      {$this
+         update_sound
+         $component
+         {$this get_sound_sym $slider}}
+      {if_else
+         {==
+            sfx
+            {$this get_sound_sym $component}}
+         {play_sfx
+            'volume test'
+            (volume
+               {the_db get_sfx_volume})
+            (stop TRUE)}
+         {sound_setup_update}})
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button reset $button}
+         {the_db reset_volume_levels}
+         {$this init_sliders}
+         {play_sfx reset}
+         {sound_setup_update}})
+   (update_sound
+      ($slider $sym)
+      {the_db
+         set_volume_level
+         $sym
+         {'+'
+            {$slider selected_pos}
+            {the_db get_min_volume_level $sym}}})
+   (init_sliders
+      {$this init_slider soundsetup_music.sld music}
+      {$this init_slider soundsetup_vox.sld vox}
+      {$this init_slider soundsetup_sfx.sld sfx}
+      {$this init_slider soundsetup_mic.sld mic}
+      {if
+         {platform has_earpiece}
+         {$this init_slider soundsetup_earpiece.sld earpiece}}
+      TRUE)
+   (init_slider
+      ($slider $sym)
+      {$slider
+         set_num_steps
+         {'+'
+            1
+            {-
+               {the_db get_max_volume_level $sym}
+               {the_db get_min_volume_level $sym}}}}
+      {$slider
+         set_selected_pos
+         {-
+            {the_db get_cur_volume_level $sym}
+            {the_db get_min_volume_level $sym}}})
+   (get_sound_sym
+      ($slider)
+      {elem
+         {find
+            {$this get sound_syms}
+            $slider}
+         1}))
+#define SOUNDSETUP_PANEL_EAR_HANDLERS
+(SOUNDSETUP_PANEL_HANDLERS
+   (navigator
+      (vertical soundsetup_music.sld soundsetup_vox.sld soundsetup_sfx.sld soundsetup_mic.sld soundsetup_earpiece.sld soundsetup_continue.btn)))
+#define SOUNDSETUP_PANEL_NOEAR_HANDLERS
+(SOUNDSETUP_PANEL_HANDLERS
+   (navigator
+      (vertical soundsetup_music.sld soundsetup_vox.sld soundsetup_sfx.sld soundsetup_mic.sld soundsetup_continue.btn)))
+#define SOUNDSETUP_SCREEN_HANDLERS
+((status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button reset)
+            (text reset)))))
+{new_kr_panel soundsetup_onemic SOUNDSETUP_PANEL_EAR_HANDLERS}
+{new_kr_panel soundsetup_onemic_noear SOUNDSETUP_PANEL_NOEAR_HANDLERS}
+#define SOUNDSETUP_ONEMIC_SCREEN_HANDLERS
+(SOUNDSETUP_SCREEN_HANDLERS
+   (enter
+      {soundsetup_player.btn set_selected}
+      {soundsetup_player.btn
+         set_localized_text
+         {mode_mgr get_round_name}})
+   (goto
+      (soundsetup_continue.btn
+         {{ui current_screen}
+            prev_screen})))
+{new_kr_screen
+   soundsetup_onemic
+   (panels bg status left soundsetup_onemic)
+   (focus soundsetup_onemic)
+   SOUNDSETUP_ONEMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   soundsetup_onemic_noear
+   (panels bg status left soundsetup_onemic_noear)
+   (focus soundsetup_onemic_noear)
+   SOUNDSETUP_ONEMIC_SCREEN_HANDLERS}
+{new_kr_panel soundsetup_twomic SOUNDSETUP_PANEL_EAR_HANDLERS}
+{new_kr_panel soundsetup_twomic_noear SOUNDSETUP_PANEL_NOEAR_HANDLERS}
+#define SOUNDSETUP_TWOMIC_SCREEN_HANDLERS
+(SOUNDSETUP_SCREEN_HANDLERS
+   (enter
+      {soundsetup_player.btn set_selected}
+      {soundsetup_player.btn
+         set_localized_text
+         {mode_mgr get_round_name}})
+   (goto
+      (soundsetup_continue.btn
+         {{ui current_screen}
+            prev_screen})))
+{new_kr_screen
+   soundsetup_twomic
+   (panels bg status left soundsetup_twomic)
+   (focus soundsetup_twomic)
+   SOUNDSETUP_TWOMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   soundsetup_twomic_noear
+   (panels bg status left soundsetup_twomic_noear)
+   (focus soundsetup_twomic_noear)
+   SOUNDSETUP_TWOMIC_SCREEN_HANDLERS}
+{new_kr_panel soundsetup_options SOUNDSETUP_PANEL_EAR_HANDLERS}
+{new_kr_panel soundsetup_options_noear SOUNDSETUP_PANEL_NOEAR_HANDLERS}
+#define SOUNDSETUP_OPTIONS_SCREEN_HANDLERS
+(SOUNDSETUP_SCREEN_HANDLERS
+   (dockable TRUE)
+   (goto
+      (soundsetup_continue.btn OPTIONS_SCREEN)))
+{new_kr_screen
+   soundsetup_options
+   (panels bg status left options_rollout soundsetup_options)
+   (focus soundsetup_options)
+   SOUNDSETUP_OPTIONS_SCREEN_HANDLERS}
+{new_kr_screen
+   soundsetup_options_noear
+   (panels bg status left options_rollout soundsetup_options_noear)
+   (focus soundsetup_options_noear)
+   SOUNDSETUP_OPTIONS_SCREEN_HANDLERS}
+{new_kr_panel soundsetup_pause SOUNDSETUP_PANEL_EAR_HANDLERS}
+{new_kr_panel soundsetup_pause_noear SOUNDSETUP_PANEL_NOEAR_HANDLERS}
+#define SOUNDSETUP_PAUSE_SCREEN_HANDLERS
+(SOUNDSETUP_SCREEN_HANDLERS
+   (goto
+      (soundsetup_continue.btn PAUSE_SCREEN))
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button back $button}
+         {go_back PAUSE_SCREEN}}))
+{new_kr_screen
+   soundsetup_pause
+   (panels pause_bg status soundsetup_pause)
+   (focus soundsetup_pause)
+   SOUNDSETUP_PAUSE_SCREEN_HANDLERS}
+{new_kr_screen
+   soundsetup_pause_noear
+   (panels pause_bg status soundsetup_pause_noear)
+   (focus soundsetup_pause_noear)
+   SOUNDSETUP_PAUSE_SCREEN_HANDLERS}

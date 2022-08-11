@@ -1,0 +1,275 @@
+#define PARAM_BACK_HELP_TEXT
+({if_else
+      {{ui screen param}
+         allow_exit}
+      exit_mode
+      back})
+{new_param_screen
+   param
+   (panels bg status left param_playersetup param_selsong param_selvenue param_pics param_continue)
+   (focus param_playersetup)
+   (char none)
+   (enter_playersetup
+      {$this set_focus_param_panel param_playersetup}
+      {ui goto_screen $this})
+   (PARAM_INIT_MSG
+      {the_db
+         ensure_valid_user
+         {the_db get_cur_player 0}}
+      {the_db
+         ensure_valid_user
+         {the_db get_cur_player 1}}
+      {char_model_mgr sync_player_models})
+   (enter
+      {char_model_mgr clear_outfit_cache}
+      {if_else
+         {score_tracker cur_round}
+         {$this disable_panel param_playersetup}
+         {$this enable_panel param_playersetup}}
+      {if_else
+         {mode_mgr is_random_round}
+         {do
+            {$this disable_panel param_selsong}
+            {param_selsong.btn set_text random}
+            {if_else
+               {!
+                  {the_db is_medley}}
+               {the_db
+                  set_song
+                  {random_int
+                     0
+                     {the_db num_songs}}}
+               {do
+                  {{ui panel medleyselsong}
+                     set_num_medley_songs
+                     {the_db num_medley_songs}}
+                  {{ui panel medleyselsong}
+                     choose_random_medley_songs
+                     FALSE}}}}
+         {$this enable_panel param_selsong}}
+      {if
+         {the_db is_demo}
+         {$this disable_panel param_selvenue}}
+      {if_else
+         {&&
+            {the_db is_medley}
+            {!
+               {mode_mgr is_random_round}}
+            {!
+               {{ui panel medleyselsong}
+                  is_medley_choosen}}}
+         {$this disable_panel param_continue}
+         {$this enable_panel param_continue}}
+      {{ui panel playersetup}
+         reset_focus}
+      {param_pics_venue.pic
+         set_tex_file
+         {venue_provider
+            get_venue_preview_tex
+            {venue_provider venue_pos}}}
+      {meta_music_start}
+      {if_else
+         {mode_mgr is_team_mode}
+         {do
+            {param_char_left.pic set_showing TRUE}
+            {param_char_right.pic set_showing TRUE}}
+         {do
+            {param_char_left.pic set_showing FALSE}
+            {param_char_right.pic set_showing TRUE}}})
+   (char_pics
+      {if_else
+         {mode_mgr is_team_mode}
+         ((0 param_char_left.pic)
+            (1 param_char_right.pic))
+         ((0 param_char_right.pic))})
+   (param_panels
+      (param_playersetup
+         (goto PLAYERSETUP_SCREEN)
+         (status
+            {if_else
+               {mode_mgr is_team_mode}
+               ((button back)
+                  (text PARAM_BACK_HELP_TEXT)
+                  (button select)
+                  (text select))
+               ((button back)
+                  (text PARAM_BACK_HELP_TEXT)
+                  (button select)
+                  (text select))}))
+      (param_selsong
+         (goto SELSONG_SCREEN)
+         (button_text choose_song)
+         (status
+            {if_else
+               {the_db is_medley}
+               ((button back)
+                  (text PARAM_BACK_HELP_TEXT)
+                  (button select)
+                  (text select)
+                  (button random)
+                  (text random_medley))
+               ((button back)
+                  (text PARAM_BACK_HELP_TEXT)
+                  (button select)
+                  (text select)
+                  (button random)
+                  (text random_song))}))
+      (param_selvenue
+         (goto SELVENUE_SCREEN)
+         (button_text choose_venue)
+         (status
+            ((button back)
+               (text PARAM_BACK_HELP_TEXT)
+               (button select)
+               (text select)
+               (button random)
+               (text random_venue))))
+      (param_continue
+         (goto
+            {if_else
+               {platform use_controller_setup}
+               CONTROLLERSETUP_SCREEN
+               NEXT_OR_JUDGING_SCREEN})
+         (status
+            ((button back)
+               (text PARAM_BACK_HELP_TEXT)
+               (button select)
+               (text select)))))
+   (allow_exit
+      {&&
+         {score_tracker is_multi_round}
+         {'||'
+            {score_tracker cur_round}
+            {the_db get_active_player}}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {platform is_button back $button}
+            {$this allow_exit}}
+         {{ui screen exitprompt}
+            enter_exitprompt}
+         kDataUnhandled})}
+#define CHAREDIT_HANDLERS
+((dockable TRUE)
+   (status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text next_option)
+            (button random)
+            (text randomize)
+            (button rotate_left)
+            (button rotate_right)
+            (text rotate)))
+      (charhead_eyetoy.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text select)
+            (button random)
+            (text randomize)
+            (button rotate_left)
+            (button rotate_right)
+            (text rotate)))
+      (char_continue.btn
+         ((button back)
+            (text back)
+            (button select)
+            (text select)
+            (button random)
+            (text randomize)
+            (button rotate_left)
+            (button rotate_right)
+            (text rotate))))
+   (SELECT_MSG
+      {switch
+         $component
+         (char_continue.btn
+            {ui goto_screen CHARCREATE_SCREEN})}))
+#define CHAREDIT_HEAD_SCREEN_HANDLERS
+(CHAREDIT_HANDLERS
+   (char
+      {char_model_mgr
+         creator_char_state
+         "head"}))
+{new_kr_screen
+   charhead_female
+   (panels bg status left charrollout charhead_female charloading_editor)
+   (focus charhead_female)
+   CHAREDIT_HEAD_SCREEN_HANDLERS}
+{new_kr_screen
+   charhead_male
+   (panels bg status left charrollout charhead_male charloading_editor)
+   (focus charhead_male)
+   CHAREDIT_HEAD_SCREEN_HANDLERS}
+{new_kr_screen
+   charhead_female_ps2
+   (panels bg status left charrollout charhead_female_ps2 charloading_editor)
+   (focus charhead_female_ps2)
+   CHAREDIT_HEAD_SCREEN_HANDLERS}
+{new_kr_screen
+   charhead_male_ps2
+   (panels bg status left charrollout charhead_male_ps2 charloading_editor)
+   (focus charhead_male_ps2)
+   CHAREDIT_HEAD_SCREEN_HANDLERS}
+{new_kr_screen
+   charoutfit
+   (panels bg status left charrollout charoutfit charloading_editor)
+   (focus charoutfit)
+   CHAREDIT_HANDLERS}
+{new_kr_screen
+   characc
+   (panels bg status left charrollout characc charloading_editor)
+   (focus characc)
+   (char
+      {char_model_mgr
+         creator_char_state
+         "acc"})
+   CHAREDIT_HANDLERS}
+#define SELSONG_HANDLERS
+((auto_back FALSE)
+   (char none)
+   (status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select)
+            (button random)
+            (text random_song)))))
+{new_kr_screen
+   selsong
+   (panels bg status left param_selsong selsong)
+   (focus selsong)
+   SELSONG_HANDLERS}
+{new_kr_screen
+   selsongsingdance
+   (panels bg status left param_selsong selsongsingdance)
+   (focus selsongsingdance)
+   SELSONG_HANDLERS}
+{new_kr_screen
+   medleyselsong
+   (panels bg status left param_selsong medleyselsong)
+   (focus medleyselsong)
+   (auto_back FALSE)
+   (char none)}
+{new_kr_screen
+   medleycheat
+   (panels bg status left medleycheat)
+   (focus medleycheat)
+   (auto_back FALSE)}
+{new_kr_screen
+   selvenue
+   (panels bg status left param_selvenue selvenue)
+   (focus selvenue)
+   (auto_back FALSE)
+   (char none)
+   (status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select)
+            (button random)
+            (text random_venue))))}

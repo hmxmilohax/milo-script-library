@@ -1,0 +1,146 @@
+{new_challenge_event_panel
+   challenge_events
+   (fade_mats TRUE)
+   (enter
+      {$this
+         update_events
+         (challenge_events1.lbl challenge_events2.lbl challenge_events3.lbl challenge_events4.lbl challenge_events5.lbl)
+         challenge_events_eventname.lbl
+         challenge_events_helptext.lbl
+         challenge_events_rounds.lbl
+         (challenge_events_versus0.lbl challenge_events_versus1.lbl challenge_events_versus2.lbl challenge_events_versus3.lbl)})
+   (focus challenge_events_continue.btn)
+   (SELECT_MSG
+      {switch
+         $component
+         (challenge_events_continue.btn
+            {if_else
+               {challenge_mgr is_minigame_current}
+               {do
+                  {print
+                     "minigame, go to first minigame setup screen\n"}
+                  {ui
+                     goto_screen
+                     {minigame_mgr first_setup_screen}}}
+               {{ui screen PARAM_SCREEN}
+                  enter_playersetup}})})
+   (BUTTON_DOWN_MSG
+      {if
+         {platform is_button exit $button}
+         {if_else
+            {&&
+               {score_tracker num_rounds}
+               {score_tracker cur_round}}
+            {{ui screen exitprompt}
+               enter_exitprompt}
+            {challenge_mgr clean_up_challenge}}})}
+#define CHALLENGE_ENTER_SCREEN_HANDLER
+((enter
+      {$this
+         set_auto_back
+         {!
+            {score_tracker cur_round}}}
+      {{ui panel status}
+         set_display
+         {if_else
+            {score_tracker cur_round}
+            ((button select)
+               (text continue)
+               (button exit)
+               (text exit_mode))
+            ((button back)
+               (text back)
+               (button select)
+               (text continue))}}))
+{new_kr_screen
+   challenge_events_onemic
+   (panels bg status left challenge_events)
+   (focus challenge_events)
+   (char none)
+   CHALLENGE_ENTER_SCREEN_HANDLER}
+{new_kr_screen
+   challenge_events_twomic
+   (panels bg status left challenge_events)
+   (focus challenge_events)
+   (char none)
+   CHALLENGE_ENTER_SCREEN_HANDLER}
+#define DEBUG_EVENT_LIST
+((krc_quickplay krc_medley krc_dance krc_minigame krc_duet_medley krc_battle krc_singoff krc_minigame_comp krc_minigame_coop))
+{new_kr_panel
+   challenge_debug
+   (navigator
+      (vertical challenge_event1.btn challenge_event2.btn challenge_event3.btn challenge_event4.btn challenge_event5.btn challenge_debug_continue.btn))
+   (focus challenge_debug_continue.btn)
+   (enter_challenge_debug
+      {$this
+         set
+         return_screen
+         {ui current_screen}}
+      {ui goto_screen challenge_debug})
+   (enter
+      {foreach_int
+         $idx
+         1
+         6
+         {if_else
+            {<=
+               $idx
+               {score_tracker num_rounds}}
+            {do
+               {{sprintf
+                     "challenge_event%d.btn"
+                     $idx}
+                  set_list
+                  DEBUG_EVENT_LIST}
+               {{sprintf
+                     "challenge_event%d.btn"
+                     $idx}
+                  set_showing
+                  TRUE}
+               {{sprintf
+                     "challenge_event%d.btn"
+                     $idx}
+                  set_state
+                  kNormal}}
+            {do
+               {{sprintf
+                     "challenge_event%d.btn"
+                     $idx}
+                  set_showing
+                  FALSE}
+               {{sprintf
+                     "challenge_event%d.btn"
+                     $idx}
+                  set_state
+                  kDisabled}}}})
+   (debug_event_name
+      ($idx)
+      {elem
+         DEBUG_EVENT_LIST
+         {{sprintf
+               "challenge_event%d.btn"
+               $idx}
+            selected_pos}})
+   (SELECT_MSG
+      {switch
+         $component
+         (challenge_debug_continue.btn
+            {do
+               {foreach_int
+                  $idx
+                  0
+                  {score_tracker num_rounds}
+                  {challenge_mgr
+                     set_debug_event
+                     $idx
+                     {$this
+                        debug_event_name
+                        {'+' $idx 1}}}}
+               {challenge_mgr init_next_challenge 0}
+               {go_back
+                  {$this get return_screen}}})})}
+{new_kr_screen
+   challenge_debug
+   (panels bg status left twomic_rollout challenge_debug)
+   (focus challenge_debug)
+   SETUP_SCREEN_HANDLERS}

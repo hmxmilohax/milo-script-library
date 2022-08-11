@@ -1,0 +1,387 @@
+#define MINIGAME_SELECT_PANEL_HANLDERS
+((fade_mats TRUE)
+   (enter
+      {$this
+         update
+         {$this focus_component}})
+   (FOCUS_MSG
+      {$this update $new_focus})
+   (SELECT_MSG
+      {ui
+         goto_screen
+         {minigame_mgr username_screen}})
+   (update
+      ($focused)
+      {do
+         (($new_game
+               {minigame_mgr find_game $focused}))
+         {if
+            {!= $new_game ''}
+            {minigame_mgr set_ui_game $new_game}
+            {title.lbl
+               set_text
+               {minigame_mgr game_name}}
+            {description.lbl
+               set_text
+               {minigame_mgr description}}
+            {minigame.pic
+               set_tex_file
+               {minigame_mgr preview_image}}}}
+      TRUE))
+#define MINIGAME_SELECT_SCREEN_HANDLERS
+((dockable TRUE)
+   (char none)
+   (status
+      (default
+         ((button back)
+            (text back)
+            (button select)
+            (text select)))))
+{new_kr_panel
+   minigame_select_onemic
+   (navigator
+      (vertical pong.btn yodude.btn))
+   (focus pong.btn)
+   MINIGAME_SELECT_PANEL_HANLDERS}
+{new_kr_panel
+   minigame_select_twomic
+   (navigator
+      (vertical pong2p.btn yodude2p.btn collector.btn))
+   (focus pong2p.btn)
+   MINIGAME_SELECT_PANEL_HANLDERS}
+{new_kr_screen
+   minigame_select_onemic
+   (panels bg status left onemic_rollout minigame_select_onemic)
+   (focus minigame_select_onemic)
+   MINIGAME_SELECT_SCREEN_HANDLERS}
+{new_kr_screen
+   minigame_select_twomic
+   (panels bg status left twomic_rollout minigame_select_twomic)
+   (focus minigame_select_twomic)
+   MINIGAME_SELECT_SCREEN_HANDLERS}
+#define MINIGAME_USERNAME_PANEL_HANDLERS
+((fade_mats TRUE)
+   (retain_back_focus TRUE)
+   (enter_minigame_username
+      ($num_players)
+      {$this set num_players $num_players}
+      {if_else
+         {> $num_players 1}
+         {do
+            {the_db
+               ensure_valid_user
+               {the_db get_cur_player 1}}
+            {minigame_user_provider0
+               set_other_player
+               {the_db get_cur_player 1}}
+            {minigame_user_provider1
+               set_other_player
+               {the_db get_cur_player 0}}
+            {username0.btn set_provider minigame_user_provider0}
+            {$this sync_username_button0}
+            {username1.btn set_provider minigame_user_provider1}
+            {$this sync_username_button1}}
+         {do
+            {minigame_user_provider0 set_other_player -1}
+            {username0.btn set_provider minigame_user_provider0}
+            {$this sync_username_button0}}}
+      {$this
+         update_status
+         {$this focus_component}}
+      {meta_music_start})
+   (sync_username_button0
+      {$this
+         sync_username_button
+         {the_db get_cur_player 0}
+         username0.btn
+         minigame_user_provider0})
+   (sync_username_button1
+      {$this
+         sync_username_button
+         {the_db get_cur_player 1}
+         username1.btn
+         minigame_user_provider1})
+   (sync_username_button
+      ($player $btn $provider)
+      {$provider sync}
+      {$btn
+         set_selected_pos
+         {the_db get_user_index $player $provider}})
+   (update_status
+      ($focus)
+      {do
+         (($status
+               {ui panel status}))
+         {switch
+            $focus
+            (username0.btn
+               {$this update_username_status $status $focus})
+            (username1.btn
+               {$this update_username_status $status $focus})
+            (continue.btn
+               {$status
+                  set_display
+                  ((button back)
+                     (text back)
+                     (button select)
+                     (text select))})}}
+      TRUE)
+   (update_username_status
+      ($status $btn)
+      {$status
+         set_display
+         {if_else
+            {$btn selected_pos}
+            ((button back)
+               (text back)
+               (button select)
+               (text edit_user)
+               (button remove)
+               (text remove_user))
+            ((button back)
+               (text back)
+               (button select)
+               (text create_user))}})
+   (FOCUS_MSG
+      {$this update_status $new_focus})
+   (REMOVE_MSG
+      {switch
+         $component
+         (username0.btn
+            {if
+               {username0.btn selected_pos}
+               {{ui screen userremove}
+                  enter_userremove
+                  {the_db get_cur_player 0}}})
+         (username1.btn
+            {if
+               {username1.btn selected_pos}
+               {{ui screen userremove}
+                  enter_userremove
+                  {the_db get_cur_player 1}}})})
+   (SELECT_MSG
+      {switch
+         $component
+         (username0.btn
+            {{ui screen keyboard_user}
+               enter_keyboard_user
+               username0.btn
+               {the_db get_cur_player 0}
+               minigame_user_provider0})
+         (username1.btn
+            {{ui screen keyboard_user}
+               enter_keyboard_user
+               username1.btn
+               {the_db get_cur_player 1}
+               minigame_user_provider1})
+         (continue.btn
+            {ui
+               goto_screen
+               {minigame_mgr first_setup_screen}})})
+   (SCROLL_MSG
+      {switch
+         $component
+         (username0.btn
+            {$this
+               handle_username_scroll
+               {the_db get_cur_player 0}
+               username0.btn
+               minigame_user_provider0})
+         (username1.btn
+            {$this
+               handle_username_scroll
+               {the_db get_cur_player 1}
+               username1.btn
+               minigame_user_provider1})
+         (continue.btn
+            {ui
+               goto_screen
+               {cond
+                  ({platform use_controller_setup}
+                     {minigame_mgr controller_setup_screen})
+                  ({minigame_mgr has_difficulty}
+                     {minigame_mgr difficulty_screen})
+                  (TRUE
+                     {minigame_mgr ready_screen})}})})
+   (handle_username_scroll
+      ($player $btn $provider)
+      {the_db
+         set_user_index
+         $player
+         {$btn selected_pos}
+         $provider}
+      {$this update_status $btn}
+      {if
+         {>
+            {$this get num_players}
+            1}
+         {if_else
+            {==
+               $player
+               {the_db get_cur_player 0}}
+            {$this sync_username_button1}
+            {$this sync_username_button0}}}
+      TRUE))
+#define MINIGAME_USERNAME_SCREEN_HANDLERS
+((char none)
+   (enter
+      {minigame_username_game.btn set_selected}
+      {minigame_username_game.btn
+         set_text
+         {minigame_mgr game_name}}))
+{new_kr_panel
+   minigame_username_onemic
+   (navigator
+      (vertical username0.btn continue.btn))
+   (focus username0.btn)
+   MINIGAME_USERNAME_PANEL_HANDLERS
+   (enter
+      {$this enter_minigame_username 1})}
+{new_kr_panel
+   minigame_username_twomic
+   (navigator
+      (vertical username0.btn username1.btn continue.btn))
+   (focus username0.btn)
+   MINIGAME_USERNAME_PANEL_HANDLERS
+   (enter
+      {$this enter_minigame_username 2})}
+{new_kr_screen
+   minigame_username_onemic
+   (panels bg status left minigame_username_onemic)
+   (focus minigame_username_onemic)
+   MINIGAME_USERNAME_SCREEN_HANDLERS}
+{new_kr_screen
+   minigame_username_twomic
+   (panels bg status left minigame_username_twomic)
+   (focus minigame_username_twomic)
+   MINIGAME_USERNAME_SCREEN_HANDLERS}
+#define MINIGAME_CONTROLLER_SETUP_HANDLERS
+((char none)
+   (enter
+      {{ui focus_panel}
+         set_exit_screen
+         {if_else
+            {minigame_mgr has_difficulty}
+            {minigame_mgr difficulty_screen}
+            {minigame_mgr ready_screen}}})
+   (set_controllersetup_help
+      ($selectable)
+      {{ui panel status}
+         set_display
+         {if_else
+            $selectable
+            ((button back)
+               (text
+                  {$this back_button_text})
+               (button select)
+               (text select))
+            ((button back)
+               (text
+                  {$this back_button_text}))}})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {platform is_button back $button}
+            {score_tracker cur_round}}
+         {{ui screen exitprompt}
+            enter_exitprompt}})
+   (back_button_text
+      {if_else
+         {score_tracker cur_round}
+         exit_mode
+         back}))
+{new_kr_screen
+   minigame_controllersetup_onemic
+   (panels bg status left controllersetup_onemic)
+   (focus controllersetup_onemic)
+   MINIGAME_CONTROLLER_SETUP_HANDLERS}
+{new_kr_screen
+   minigame_controllersetup_twomic
+   (panels bg status left controllersetup_twomic)
+   (focus controllersetup_twomic)
+   MINIGAME_CONTROLLER_SETUP_HANDLERS}
+{new_kr_panel
+   minigame_difficulty
+   (navigator
+      (vertical easy.btn medium.btn hard.btn expert.btn))
+   (enter
+      {$this
+         set_focus
+         {switch
+            {minigame_mgr difficulty}
+            (0 easy.btn)
+            (1 medium.btn)
+            (2 hard.btn)
+            (3 expert.btn)}}
+      {minigame_difficulty_docked.btn set_selected}
+      {minigame_difficulty_docked.btn
+         set_text
+         {minigame_mgr game_name}}
+      {minigame_playernames.lbl
+         set_localized_text
+         {if_else
+            {==
+               {minigame_mgr num_players}
+               1}
+            {the_db
+               get_player_name
+               {the_db get_cur_player 0}}
+            {sprint
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 0}}
+               " "
+               {localize vs.}
+               " "
+               {the_db
+                  get_player_name
+                  {the_db get_cur_player 1}}}}}
+      {meta_music_start})
+   (SELECT_MSG
+      {minigame_mgr
+         set_difficulty
+         {switch
+            $component
+            (easy.btn 0)
+            (medium.btn 1)
+            (hard.btn 2)
+            (expert.btn 3)}}
+      {ui
+         goto_screen
+         {minigame_mgr ready_screen}})}
+#define MINIGAME_DIFFICULTY_EXIT_CHECK
+({&&
+      {score_tracker cur_round}
+      {==
+         {minigame_mgr first_setup_screen}
+         {minigame_mgr difficulty_screen}}})
+#define MINIGAME_DIFFICULTY_HANDLERS
+((focus minigame_difficulty)
+   (status
+      (default
+         ((button back)
+            (text
+               {if_else MINIGAME_DIFFICULTY_EXIT_CHECK exit_mode back})
+            (button select)
+            (text select))))
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {platform is_button back $button}
+            MINIGAME_DIFFICULTY_EXIT_CHECK}
+         {{ui screen exitprompt}
+            enter_exitprompt}}))
+{new_kr_screen
+   minigame_difficulty_onemic
+   (panels bg status left minigame_difficulty)
+   {$this
+      set_auto_back
+      {! MINIGAME_DIFFICULTY_EXIT_CHECK}}
+   MINIGAME_DIFFICULTY_HANDLERS}
+{new_kr_screen
+   minigame_difficulty_twomic
+   (panels bg status left minigame_difficulty)
+   {$this
+      set_auto_back
+      {! MINIGAME_DIFFICULTY_EXIT_CHECK}}
+   MINIGAME_DIFFICULTY_HANDLERS}

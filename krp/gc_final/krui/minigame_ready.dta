@@ -1,0 +1,202 @@
+#define MINIGAME_READY_PANEL_HANDLERS
+((focus startminigame.btn)
+   (fade_mats TRUE)
+   (retain_back_focus TRUE)
+   (enter_ready
+      ($num_players)
+      {$this set num_players $num_players}
+      {meta_music_stop}
+      {minigame.btn set_selected}
+      {minigame.btn
+         set_text
+         {minigame_mgr game_name}}
+      {$this
+         init_player
+         0
+         {the_db get_cur_player 0}
+         level0.btn
+         minigame_username0.lbl}
+      {if
+         {> $num_players 1}
+         {$this
+            init_player
+            1
+            {the_db get_cur_player 1}
+            level1.btn
+            minigame_username1.lbl}}
+      {calibration_sound_enter
+         {minigame_mgr calibration_samples}})
+   (init_player
+      ($mic_idx $player_idx $calibration_btn $username_lbl)
+      {print
+         "***calling minigame init_player with "
+         $player_idx
+         "\n"}
+      {$calibration_btn
+         set_list
+         {minigame_mgr calibration_ranges}}
+      {$calibration_btn
+         set_selected_pos
+         {-
+            {size
+               {minigame_mgr calibration_ranges}}
+            {the_db
+               get_minigame_range
+               $player_idx
+               {minigame_mgr game_name}}}}
+      {$username_lbl
+         set_localized_text
+         {the_db get_player_name $player_idx}}
+      {mic_utl start_mic $mic_idx})
+   (poll
+      {vumeter0.mtr
+         set_pos
+         {mic_utl get_mic_energy 0}}
+      {if
+         {>
+            {$this get num_players}
+            1}
+         {vumeter1.mtr
+            set_pos
+            {mic_utl get_mic_energy 1}}}
+      {calibration_sound_poll
+         {$this calibration_sample}})
+   (calibration_sample
+      {do
+         (($focus
+               {$this focus_component}))
+         {if_else
+            {'||'
+               {== $focus level0.btn}
+               {== $focus level1.btn}}
+            {$focus selected_pos}
+            -1}})
+   (exit
+      {mic_utl stop_mic 0}
+      {if
+         {>
+            {$this get num_players}
+            1}
+         {mic_utl stop_mic 1}}
+      {calibration_sound_exit}))
+#define MINIGAME_READY_ONEMIC_PANEL_HANDLERS
+(MINIGAME_READY_PANEL_HANDLERS
+   (enter
+      {$this enter_ready 1}))
+#define MINIGAME_READY_TWOMIC_PANEL_HANDLERS
+(MINIGAME_READY_PANEL_HANDLERS
+   (enter
+      {$this enter_ready 2}))
+{new_kr_panel
+   minigame_ready_onemic
+   (navigator
+      (vertical level0.btn mic.btn startminigame.btn))
+   MINIGAME_READY_ONEMIC_PANEL_HANDLERS}
+{new_kr_panel
+   minigame_ready_nogain_onemic
+   (navigator
+      (vertical level0.btn startminigame.btn))
+   MINIGAME_READY_ONEMIC_PANEL_HANDLERS}
+{new_kr_panel
+   minigame_ready_twomic
+   (navigator
+      (vertical level0.btn level1.btn mic.btn startminigame.btn))
+   MINIGAME_READY_TWOMIC_PANEL_HANDLERS}
+{new_kr_panel
+   minigame_ready_nogain_twomic
+   (navigator
+      (vertical level0.btn level1.btn startminigame.btn))
+   MINIGAME_READY_TWOMIC_PANEL_HANDLERS}
+#define MINIGAME_READY_EXIT_CHECK
+({&&
+      {score_tracker cur_round}
+      {==
+         {minigame_mgr first_setup_screen}
+         {minigame_mgr ready_screen}}})
+#define MINIGAME_READY_BACK_TEXT
+({if_else MINIGAME_READY_EXIT_CHECK exit_mode back})
+#define MINIGAME_READY_DEFAULT_STATUS
+(((button back)
+      (text MINIGAME_READY_BACK_TEXT)
+      (button select)
+      (text select)))
+#define MINIGAME_READY_LEVEL_STATUS
+(((button back)
+      (text MINIGAME_READY_BACK_TEXT)
+      (button select)
+      (text next_option)))
+#define MINIGAME_READY_SCREEN_HANDLERS
+((calibration_level
+      ($btn)
+      {-
+         {size
+            {minigame_mgr calibration_ranges}}
+         {$btn selected_pos}})
+   (status
+      (level0.btn MINIGAME_READY_LEVEL_STATUS)
+      (level1.btn MINIGAME_READY_LEVEL_STATUS)
+      (default MINIGAME_READY_DEFAULT_STATUS))
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {platform is_button back $button}
+            MINIGAME_READY_EXIT_CHECK}
+         {{ui screen exitprompt}
+            enter_exitprompt}}))
+#define MINIGAME_READY_ONEMIC_SCREEN_HANDLERS
+(MINIGAME_READY_SCREEN_HANDLERS
+   (SELECT_MSG
+      {the_db
+         set_minigame_range
+         {the_db get_cur_player 0}
+         {minigame_mgr game_name}
+         {$this calibration_level level0.btn}}
+      {switch
+         $component
+         (mic.btn
+            {ui goto_screen checkmic_minigame_onemic})
+         (startminigame.btn
+            {ui
+               goto_screen
+               {minigame_mgr loading_screen}})}))
+#define MINIGAME_READY_TWOMIC_SCREEN_HANDLERS
+(MINIGAME_READY_SCREEN_HANDLERS
+   (SELECT_MSG
+      {the_db
+         set_minigame_range
+         {the_db get_cur_player 0}
+         {minigame_mgr game_name}
+         {$this calibration_level level0.btn}}
+      {the_db
+         set_minigame_range
+         {the_db get_cur_player 1}
+         {minigame_mgr game_name}
+         {$this calibration_level level1.btn}}
+      {switch
+         $component
+         (mic.btn
+            {ui goto_screen checkmic_minigame_twomic})
+         (startminigame.btn
+            {ui
+               goto_screen
+               {minigame_mgr loading_screen}})}))
+{new_kr_screen
+   minigame_ready_onemic
+   (panels bg status left minigame_ready_onemic)
+   (focus minigame_ready_onemic)
+   MINIGAME_READY_ONEMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   minigame_ready_nogain_onemic
+   (panels bg status left minigame_ready_nogain_onemic)
+   (focus minigame_ready_nogain_onemic)
+   MINIGAME_READY_ONEMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   minigame_ready_twomic
+   (panels bg status left minigame_ready_twomic)
+   (focus minigame_ready_twomic)
+   MINIGAME_READY_TWOMIC_SCREEN_HANDLERS}
+{new_kr_screen
+   minigame_ready_nogain_twomic
+   (panels bg status left minigame_ready_nogain_twomic)
+   (focus minigame_ready_nogain_twomic)
+   MINIGAME_READY_TWOMIC_SCREEN_HANDLERS}
