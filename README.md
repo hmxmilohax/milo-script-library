@@ -13,7 +13,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | Game | Platform | Script Format | Status |
 | ---- | -------- | ------------- | ------ |
 | **FreQuency** | PS2 | Known (Python 1) | Extracted |
-| **Amplitude** | PS2 | Unknown | Not available |
+| **Amplitude** | PS2 | Known (Amp-style DTB) | Extracted |
 | **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (DTA) | Not available<br>Extracted |
 | **Karaoke Revolution Volume 2** | PS2 | Unknown | Not available |
 | **Karaoke Revolution Volume 3** | PS2 | Unknown | Not available |
@@ -42,7 +42,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | ---- | ----- | -------- | ------------- | ------ |
 | **FreQuency** | R179 prototype | PS2 | Known (Python 1) | Extracted |
 | **Amplitude** | OPM prototype | PS2 | Known (DTA) | Extracted |
-| **Amplitude** | Deluge prototype | PS2 | Unknown | Not available |
+| **Amplitude** | Deluge prototype | PS2 | Known (Amp-style DTB) | Available |
 | **Amplitude** | Space demo | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 1 | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 2 | PS2 | Unknown | Not available |
