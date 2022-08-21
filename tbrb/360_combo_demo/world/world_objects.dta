@@ -1,0 +1,1767 @@
+#include ../config/macros.dta
+#include crowd_audio.dta
+#define LIGHTING_CATEGORIES
+((BRIGHT SILHOUETTE))
+#define CAMSHOT_CATEGORIES
+((#include camera_cats.dta))
+#include worldbase.dta
+(Tex
+   (types
+      (sticker
+         (editor
+            (sizex
+               float
+               (help
+                  "scaling in x"))
+            (sizey
+               float
+               (help
+                  "scaling in y"))
+            (display_name
+               symbol
+               (help
+                  "display name"))
+            (palette_index
+               int
+               (help
+                  "default palette index in the colors list for this sticker"))
+            (allow_color
+               bool
+               (help
+                  "can the user apply color to this image?")))
+         (sizex 1)
+         (sizey 1)
+         (display_name '')
+         (palette_index 0)
+         (allow_color TRUE))))
+(TexRenderer
+   (types
+      (snapshot
+         (editor
+            (camshot
+               symbol
+               (list
+                  {do
+                     ($array
+                        {array 0})
+                     {push_back $array none}
+                     {if
+                        [proxy]
+                        {[proxy]
+                           iterate
+                           BandCamShot
+                           $obj
+                           {push_back
+                              $array
+                              {symbol
+                                 {$obj name}}}}}
+                     {sort $array}
+                     $array})
+               (help
+                  "camshot to use for this render to texture")))
+         (camshot none)
+         (pre_render
+            {if
+               [camshot]
+               {if
+                  {!=
+                     [camshot]
+                     none}
+                  {[proxy]
+                     force_shot
+                     {[proxy]
+                        find
+                        [camshot]}}}}))))
+(CamShot
+   (allowed_dirs PanelDir)
+   (init
+      {$this set category NORMAL})
+   (editor
+      (category
+         symbol
+         (list CAMSHOT_CATEGORIES)
+         (help
+            "Category of the shot"))))
+(EventTrigger
+   (supported_events
+      (start p0_hit p1_hit p2_hit p3_hit excitement_bad excitement_okay excitement_great excitement_peak intro_start intro_end kick_drum snare_drum crash_hit bass_hit post_switch_cam music_start game_lost game_won game_won_band0 game_won_band1 game_won_tie game_won_finale verse chorus bre_success mode_coop mode_h2hb mode_h2hd mode_h2hg mode_h2hv))
+   (types
+      (toggler
+         (editor
+            (disable
+               object
+               (class EventTrigger)
+               (help
+                  "disable this event trigger when I'm triggered"))
+            (enable
+               object
+               (class EventTrigger)
+               (help
+                  "enable this event trigger when I'm triggered")))
+         (disable '')
+         (enable '')
+         (trigger
+            {if
+               [disable]
+               {script_task
+                  kTaskBeats
+                  (delay 1.0e-2)
+                  (script
+                     {[disable]
+                        disable})}}
+            {if
+               [enable]
+               {script_task
+                  kTaskBeats
+                  (delay 1.0e-2)
+                  (script
+                     {[enable]
+                        enable})}}))
+      (endgame_action
+         (supported_events
+            (endgame_swing_drum_0 endgame_swing_drum_1 endgame_swing_drum_2 endgame_swing_drum_3 endgame_swing_drum_4 endgame_swing_bass_0 endgame_swing_bass_1 endgame_swing_bass_2 endgame_swing_bass_3 endgame_swing_bass_4 endgame_swing_guitar_0 endgame_swing_guitar_1 endgame_swing_guitar_2 endgame_swing_guitar_3 endgame_swing_guitar_4 endgame_vocals_none endgame_vocals_low endgame_vocals_medium endgame_vocals_high)))
+      (backlight
+         (editor
+            (tex1
+               object
+               (class Tex)
+               (help
+                  "texture for first moving layer"))
+            (tex2
+               object
+               (class Tex)
+               (help
+                  "texture for second moving layer"))
+            (part_tex1
+               object
+               (class Tex)
+               (help
+                  "texture for first particle system"))
+            (part_tex2
+               object
+               (class Tex)
+               (help
+                  "texture for second particle system")))
+         (tex1 '')
+         (tex2 '')
+         (part_tex1 '')
+         (part_tex2 '')
+         (trigger
+            {if
+               {exists mat02.mat}
+               {mat02.mat
+                  set
+                  diffuse_tex
+                  [tex1]}}
+            {if
+               {exists mat03.mat}
+               {mat03.mat
+                  set
+                  diffuse_tex
+                  [tex2]}}
+            {if
+               {exists part_mat02.mat}
+               {part_mat02.mat
+                  set
+                  diffuse_tex
+                  [part_tex1]}}
+            {if
+               {exists part_mat03.mat}
+               {part_mat03.mat
+                  set
+                  diffuse_tex
+                  [part_tex2]}}))))
+(LightPreset
+   (init
+      {$this set category VERSE})
+   (editor
+      (category
+         symbol
+         (list LIGHTING_CATEGORIES)
+         (help
+            "Category of the preset")))
+   (views
+      (flags
+         ("category"
+            [category])
+         ("platform_only"
+            [platform_only])))
+   (types
+      (target_animator
+         (editor
+            (backlight
+               object
+               (class RndDir)
+               (help
+                  "backlight object to animate"))
+            (backlight_event
+               symbol
+               (list
+                  {do
+                     ($array
+                        {array 0})
+                     {push_back $array none}
+                     {if
+                        [backlight]
+                        {[backlight]
+                           iterate
+                           EventTrigger
+                           $obj
+                           {push_back
+                              $array
+                              {symbol
+                                 {$obj name}}}}}
+                     {sort $array}
+                     $array})
+               (help
+                  "event trigger to fire for this keyframe"))
+            (target_1
+               (indent
+                  (target1
+                     object
+                     (class Character)
+                     (help
+                        "target object to animate"))
+                  (base1_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (base1_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (base1_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (base1_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))
+                  (add1_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (add1_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (add1_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (add1_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))))
+            (target_2
+               (indent
+                  (target2
+                     object
+                     (class Character)
+                     (help
+                        "target object to animate"))
+                  (base2_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (base2_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (base2_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (base2_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))
+                  (add2_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (add2_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (add2_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (add2_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))))
+            (target_3
+               (indent
+                  (target3
+                     object
+                     (class Character)
+                     (help
+                        "target object to animate"))
+                  (base3_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (base3_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (base3_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (base3_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))
+                  (add3_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (add3_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (add3_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (add3_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))))
+            (target_4
+               (indent
+                  (target4
+                     object
+                     (class Character)
+                     (help
+                        "target object to animate"))
+                  (base4_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (base4_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (base4_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (base4_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))
+                  (add4_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (add4_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (add4_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (add4_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))))
+            (target_5
+               (indent
+                  (target5
+                     object
+                     (class Character)
+                     (help
+                        "target object to animate"))
+                  (base5_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (base5_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (base5_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (base5_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))
+                  (add5_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (add5_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (add5_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (add5_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))))
+            (target_6
+               (indent
+                  (target6
+                     object
+                     (class Character)
+                     (help
+                        "target object to animate"))
+                  (base6_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (base6_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (base6_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (base6_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))
+                  (add6_anim
+                     symbol
+                     (list
+                        {$this get_clip_names}))
+                  (add6_amplitude
+                     float
+                     (range 0 1)
+                     (help
+                        "physical scale of animation loop"))
+                  (add6_speed
+                     float
+                     (help
+                        "speed multiplier"))
+                  (add6_phase
+                     float
+                     (range 0 1)
+                     (help
+                        "0 to 1, 0.5 would start the loop half way through"))))
+            (test
+               script
+               (script
+                  {$this start_anim})))
+         (backlight
+            {object ''})
+         (backlight_event none)
+         (target1
+            {object ''})
+         (base1_anim still)
+         (base1_amplitude 1)
+         (base1_speed 1)
+         (base1_phase 0)
+         (add1_anim still)
+         (add1_amplitude 1)
+         (add1_speed 1)
+         (add1_phase 0)
+         (target2
+            {object ''})
+         (base2_anim still)
+         (base2_amplitude 1)
+         (base2_speed 1)
+         (base2_phase 0)
+         (add2_anim still)
+         (add2_amplitude 1)
+         (add2_speed 1)
+         (add2_phase 0)
+         (target3
+            {object ''})
+         (base3_anim still)
+         (base3_amplitude 1)
+         (base3_speed 1)
+         (base3_phase 0)
+         (add3_anim still)
+         (add3_amplitude 1)
+         (add3_speed 1)
+         (add3_phase 0)
+         (target4
+            {object ''})
+         (base4_anim still)
+         (base4_amplitude 1)
+         (base4_speed 1)
+         (base4_phase 0)
+         (add4_anim still)
+         (add4_amplitude 1)
+         (add4_speed 1)
+         (add4_phase 0)
+         (target5
+            {object ''})
+         (base5_anim still)
+         (base5_amplitude 1)
+         (base5_speed 1)
+         (base5_phase 0)
+         (add5_anim still)
+         (add5_amplitude 1)
+         (add5_speed 1)
+         (add5_phase 0)
+         (target6
+            {object ''})
+         (base6_anim still)
+         (base6_amplitude 1)
+         (base6_speed 1)
+         (base6_phase 0)
+         (add6_anim still)
+         (add6_amplitude 1)
+         (add6_speed 1)
+         (add6_phase 0)
+         (get_clip_names
+            {if_else
+               [target1]
+               {[target1]
+                  get_clip_names}
+               (still)})
+         (enter
+            {if
+               [backlight]
+               {if
+                  {!=
+                     [backlight_event]
+                     none}
+                  {unless
+                     {[backlight]
+                        exists
+                        [backlight_event]}
+                     {set
+                        [backlight_event]
+                        none}
+                     {notify
+                        "invalid backlight event on "
+                        {$this name}
+                        ", clearing!"}}}})
+         (start_anim
+            {if
+               {&&
+                  [backlight]
+                  {!=
+                     [backlight_event]
+                     none}}
+               {[backlight]
+                  trigger
+                  [backlight_event]}}
+            {if
+               [target1]
+               {[target1]
+                  play_anim
+                  [base1_anim]
+                  [base1_amplitude]
+                  [base1_speed]
+                  [base1_phase]
+                  [add1_anim]
+                  [add1_amplitude]
+                  [add1_speed]
+                  [add1_phase]}}
+            {if
+               [target2]
+               {[target2]
+                  play_anim
+                  [base2_anim]
+                  [base2_amplitude]
+                  [base2_speed]
+                  [base2_phase]
+                  [add2_anim]
+                  [add2_amplitude]
+                  [add2_speed]
+                  [add2_phase]}}
+            {if
+               [target3]
+               {[target3]
+                  play_anim
+                  [base3_anim]
+                  [base3_amplitude]
+                  [base3_speed]
+                  [base3_phase]
+                  [add3_anim]
+                  [add3_amplitude]
+                  [add3_speed]
+                  [add3_phase]}}
+            {if
+               [target4]
+               {[target4]
+                  play_anim
+                  [base4_anim]
+                  [base4_amplitude]
+                  [base4_speed]
+                  [base4_phase]
+                  [add4_anim]
+                  [add4_amplitude]
+                  [add4_speed]
+                  [add4_phase]}}
+            {if
+               [target5]
+               {[target5]
+                  play_anim
+                  [base5_anim]
+                  [base5_amplitude]
+                  [base5_speed]
+                  [base5_phase]
+                  [add5_anim]
+                  [add5_amplitude]
+                  [add5_speed]
+                  [add5_phase]}}
+            {if
+               [target6]
+               {[target6]
+                  play_anim
+                  [base6_anim]
+                  [base6_amplitude]
+                  [base6_speed]
+                  [base6_phase]
+                  [add6_anim]
+                  [add6_amplitude]
+                  [add6_speed]
+                  [add6_phase]}})
+         (on_set_frame
+            {if
+               [backlight]
+               {if
+                  {exists backlight_color1.env}
+                  {[backlight]
+                     set
+                     color1
+                     {backlight_color1.env get ambient_color}}}
+               {if
+                  {exists backlight_color2.env}
+                  {[backlight]
+                     set
+                     color2
+                     {backlight_color2.env get ambient_color}}}
+               {if
+                  {exists backlight_color3.env}
+                  {[backlight]
+                     set
+                     color3
+                     {backlight_color3.env get ambient_color}}}
+               {[backlight]
+                  update}}))))
+(ObjectDir
+   (types
+      (song
+         #ifdef HX_PC
+         #else
+         (change_subdir
+            ($file)
+            {if_else
+               {&&
+                  {exists game}
+                  {has_substr
+                     $file
+                     ":"}}
+               {cond
+                  ({has_substr
+                        $file
+                        "/world/shared/director.milo"}
+                     "world/shared/director.milo")
+                  ({has_substr
+                        $file
+                        "/world/shared/camera.milo"}
+                     "world/shared/camera.milo")
+                  "stream_cache"}
+               kDataUnhandled})
+         #endif)))
+(RndDir
+   (types
+      (chars
+         (enter WORLD_SETUP_CHARACTERS))
+      (lighting
+         (outfit cavern)
+         (editor
+            (outfit
+               symbol
+               (list
+                  (P9_OUTFITS))
+               (help
+                  "character outfit to wear when authoring cameras")
+               (post_sync
+                  {$this set_outfits})))
+         WORLD_SET_OUTFITS
+         (enter
+            WORLD_SETUP_CHARACTERS
+            {$this set_outfits}))
+      (amps
+         (presave
+            {char_clear_outfit_loaders $this})
+         (postsave
+            ($cached)
+            {char_restore_outfit_loaders $this $cached}))
+      (venue_lyric
+         (set_text
+            ($str)
+            {if_else
+               {exists lyric.txt}
+               {lyric.txt set_text $str}
+               {notify
+                  {path_name $this}
+                  " requires a 'lyric.txt'"}})
+         (set_font
+            ($font)
+            {if_else
+               {exists lyric.txt}
+               {lyric.txt set_font $font}
+               {notify
+                  {path_name $this}
+                  " requires a 'lyric.txt'"}})
+         (play_transition
+            ($transition)
+            {if
+               {exists reset.anim}
+               {reset.anim set frame 0}}
+            {if
+               {==
+                  $transition
+                  ""}
+               {set $transition default.anim}}
+            {if_else
+               {$this exists $transition}
+               {do
+                  ($anim
+                     {$this find $transition})
+                  {$anim set frame 0}
+                  {$anim animate}}
+               {notify
+                  "Venue Lyric has no transition animation called "
+                  $transition}}))
+      (crowd
+         (editor
+            (test_excitement
+               int
+               (list P9_EXCITEMENT_ENUM)
+               (help
+                  "Crowd excitement to test"))
+            (test
+               script
+               (script
+                  {$this test_crowd_excitement})
+               (help
+                  "Set crowd excitement and animate crowd")))
+         (test_excitement kExcitementOkay)
+         (test_crowd_excitement
+            {set $crowd.authored_excitement kNumExcitements}
+            {set $crowd.authored_action ''}
+            {set
+               $crowd.game_excitement
+               [test_excitement]}
+            {{$this dir}
+               iterate_self
+               WorldCrowd
+               $wc
+               {if
+                  {$wc showing}
+                  {$wc set old_excitement kExcitementInvalid}
+                  {$wc crowd_update}}})
+         (enter
+            {{if_else
+                  $world
+                  $world
+                  {$this dir}}
+               add_sink
+               $this
+               (excitement game_over game_lost game_won game_won_finale game_won_band0 game_won_band1 game_won_tie playing_final_cam crowd_realtime crowd_won crowd_mellow crowd_normal crowd_intense)
+               kSinkModeType}
+            {set $crowd.game_excitement kExcitementOkay}
+            {set $crowd.authored_excitement kExcitementIdle}
+            {set $crowd.authored_action ''}
+            {set
+               $crowd.idle_flags
+               {'|' kPlayNoBlend kPlayGraphLoop kPlayRealTime}}
+            {set
+               $crowd.play_flags
+               {'|' kPlayNoBlend kPlayGraphLoop}})
+         (game_over
+            {{if_else
+                  $world
+                  $world
+                  {$this dir}}
+               remove_sink
+               $this
+               excitement
+               crowd_realtime
+               crowd_won
+               crowd_mellow
+               crowd_normal
+               crowd_intense})
+         (game_outro
+            {{$this dir}
+               remove_sink
+               $this})
+         (game_lost
+            {set $crowd.game_excitement kExcitementLost})
+         (game_won
+            {set $crowd.game_excitement kExcitementWon})
+         (game_won_band0
+            {set $crowd.game_excitement kExcitementWon})
+         (game_won_band1
+            {set $crowd.game_excitement kExcitementWon})
+         (game_won_tie
+            {set $crowd.game_excitement kExcitementWon})
+         (game_won_finale
+            {set $crowd.game_excitement kExcitementWon})
+         (playing_final_cam
+            {set
+               $crowd.play_flags
+               {'|' kPlayNoBlend kPlayGraphLoop kPlayRealTime}})
+         (excitement
+            ($level)
+            {set $crowd.game_excitement $level})
+         (crowd_won
+            {set $crowd.authored_excitement kExcitementWon})
+         (crowd_realtime
+            {set $crowd.authored_excitement kExcitementIdle})
+         (crowd_mellow
+            {set $crowd.authored_excitement kExcitementBad})
+         (crowd_normal
+            {set $crowd.authored_excitement kExcitementOkay})
+         (crowd_intense
+            {set $crowd.authored_excitement kExcitementGreat})
+         (crowd_fists_on
+            {set $crowd.authored_action fists})
+         (crowd_fists_off
+            {set $crowd.authored_action ''}))))
+(Fur
+   (init
+      {do
+         ($ww
+            {find_obj
+               {$this dir}
+               world.wind})
+         {if
+            $ww
+            {set
+               [wind]
+               $ww}}}))
+(WorldCrowd
+   (init
+      {$this set_type band})
+   (types
+      (band
+         #include crowd.dta)))
+(WorldDir
+   (types
+      (world
+         WORLD_OBJECT_BASE
+         (autosave FALSE)
+         (select_camera
+            {if
+               $p9director
+               {handle
+                  ($p9director select_camera)}})
+         (presave
+            {char_clear_outfit_loaders $this})
+         (postsave
+            ($cached)
+            {char_restore_outfit_loaders $this $cached}
+            {$this enter})
+         (sync_objects
+            {if
+               {exists gamecfg}
+               {$this
+                  camera_random_seed
+                  {gamecfg get net_random_seed}}})
+         (post_tool_sync
+            {$this presave}
+            {$this postsave 0}))
+      (venue
+         (outfit cavern)
+         (lookat_cameras 1)
+         (editor
+            (outfit
+               symbol
+               (list
+                  (P9_OUTFITS))
+               (help
+                  "character outfit to wear when authoring cameras")
+               (post_sync
+                  {$this set_outfits}))
+            (lookat_cameras
+               bool
+               (help
+                  "Do the guys look at the cameras in this venue?  if false, they can still be forced to look at the camera through song anim keyframes or shot-specific lookats"))
+            WORLD_OBJECT_EDITOR_COMMON)
+         (enter
+            WORLD_SETUP_CHARACTERS
+            {if
+               {&&
+                  $edit_mode
+                  {! $p9director}}
+               {foreach
+                  $char
+                  {object_list $this P9Character}
+                  {if
+                     {exists $char}
+                     {$char find_interest_objects $this}}}})
+         WORLD_OBJECT_VALIDATE
+         WORLD_SET_OUTFITS
+         (sync_objects SET_CHAR_ENVS))
+      (scene
+         (outfit sixtyeight)
+         (editor
+            (outfit
+               symbol
+               (list
+                  (P9_OUTFITS))
+               (help
+                  "character outfit to wear when authoring cameras")
+               (post_sync
+                  {$this set_outfits}
+                  {script_task
+                     kTaskSeconds
+                     (delay 0.1)
+                     (script
+                        {milo
+                           tool_script
+                           {'`'
+                              {$this set_outfits}}
+                           $this})})))
+         (enter
+            WORLD_SETUP_CHARACTERS
+            {if
+               {&&
+                  {! $p9director}
+                  {exists world.cam}}
+               {world.cam reset_xfm}})
+         WORLD_SET_OUTFITS
+         (sync_objects SET_CHAR_ENVS))
+      (shell
+         (editor
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use when this panel is on screen")
+               (post_sync
+                  {$this update_postproc}))
+            (refresh_postproc
+               script
+               (script
+                  {$this update_postproc})
+               (help
+                  "Refresh postprocessor selection on the tool")))
+         (postprocess '')
+         (update_postproc
+            {if
+               $edit_mode
+               {if_else
+                  [postprocess]
+                  {[postprocess]
+                     select}
+                  {rnd reset_postproc}}}))
+      (facetest
+         (outfit cavern)
+         (editor
+            (outfit
+               symbol
+               (list
+                  (P9_OUTFITS))
+               (help
+                  "character outfit to wear when viewing lipsync")
+               (post_sync
+                  {$this set_outfits})))
+         WORLD_SET_OUTFITS
+         (enter
+            {$this set_outfits}
+            {do
+               ($song
+                  {if_else
+                     $tool_song
+                     {$tool_song song_name}
+                     ""})
+               {if_else
+                  $song
+                  {foreach
+                     $name
+                     (george john paul ringo)
+                     {do
+                        ($lip
+                           {$this
+                              find
+                              {sprint
+                                 $name
+                                 "_lip"}})
+                        ($lipsync
+                           "")
+                        {$lip
+                           set
+                           proxy_file
+                           {sprint
+                              "songs/"
+                              $song
+                              "/"
+                              $name
+                              ".milo"}}
+                        {set
+                           $lipsync
+                           {$lip
+                              find
+                              {sprint
+                                 $name
+                                 ".lipsync"}}}
+                        {{{object $name}
+                              find
+                              song.lipdrv}
+                           set
+                           lipsync
+                           $lipsync}}}
+                  {notify
+                     "To preview lipsync: pick a song to preview in the Anim bar"}}}))
+      (georgetest
+         (enter
+            {$this
+               iterate_self
+               P9Character
+               $char
+               {$char teleport Waypoint.way}
+               {$char set group_name stand}
+               {$char play}
+               {set $char.mic_head TRUE}}))))
+(P9SongPref
+   (init
+      {set
+         [studio_outfit]
+         cavern}
+      {set
+         [dreamscape_outfit]
+         sgtpepper})
+   (editor
+      (minivenues
+         (array
+            symbol
+            (list
+               {$this
+                  get_scenes
+                  "world/dreamscape/*/*.milo"
+                  0}))
+         (help
+            "list of minivenues to load, you can have 4")
+         (no_test))
+      (scenes
+         (array
+            symbol
+            (list
+               {$this
+                  get_scenes
+                  "world/dreamscape/greenscreen/scene/*.milo"
+                  1}))
+         (help
+            "list of scenes to load, you can have 8")
+         (no_test))
+      (scene_groups
+         (array
+            (struct
+               (name
+                  symbol
+                  (help
+                     "name of the scene group"))
+               (scenetriggers
+                  (array
+                     symbol
+                     (list
+                        {if_else
+                           {{$this dir}
+                              exists
+                              P9Director}
+                           {{{$this dir}
+                                 find
+                                 P9Director}
+                              get_scene_triggers}
+                           ()}))
+                  (help
+                     "array of random scene triggers to choose from"))))
+         (read_only
+            {!
+               {{$this dir}
+                  is_a
+                  WorldDir}}))
+      (george_instrument
+         (array
+            symbol
+            (list
+               {do
+                  ($array
+                     {array 0})
+                  {foreach
+                     $inst
+                     {find
+                        (INSTRUMENTS)
+                        outfits}
+                     {unless
+                        {'||'
+                           {== $inst outfits}
+                           {has_any_substr
+                              {elem $inst 0}
+                              (none
+                                 "_lh_"
+                                 "drum_")}}
+                        {push_back
+                           $array
+                           {elem $inst 0}}}}
+                  $array})))
+      (john_instrument
+         (array
+            symbol
+            (list
+               {do
+                  ($array
+                     {array 0})
+                  {foreach
+                     $inst
+                     {find
+                        (INSTRUMENTS)
+                        outfits}
+                     {unless
+                        {'||'
+                           {== $inst outfits}
+                           {has_any_substr
+                              {elem $inst 0}
+                              (none
+                                 "_lh_"
+                                 "sitar"
+                                 "drum_")}}
+                        {push_back
+                           $array
+                           {elem $inst 0}}}}
+                  $array})))
+      (paul_instrument
+         (array
+            symbol
+            (list
+               {do
+                  ($array
+                     {array 0})
+                  {foreach
+                     $inst
+                     {find
+                        (INSTRUMENTS)
+                        outfits}
+                     {unless
+                        {'||'
+                           {== $inst outfits}
+                           {has_any_substr
+                              {elem $inst 0}
+                              (none
+                                 "_rh_"
+                                 "sitar"
+                                 "drum_")}}
+                        {push_back
+                           $array
+                           {elem $inst 0}}}}
+                  $array})))
+      (ringo_instrument
+         (array
+            symbol
+            (list
+               {do
+                  ($array
+                     {array 0})
+                  {foreach
+                     $inst
+                     {find
+                        (INSTRUMENTS)
+                        outfits}
+                     {if
+                        {&&
+                           {!= $inst outfits}
+                           {has_substr
+                              {elem $inst 0}
+                              "drum_"}}
+                        {push_back
+                           $array
+                           {elem $inst 0}}}}
+                  $array})))))
+(BandCamShot
+   (init
+      {$this set_type proj9}
+      {set
+         [category]
+         TEST_CAM}
+      {set
+         [flags]
+         {'|' 1023 kP9DreamAllConfigs}}
+      {do
+         ($count 0)
+         {foreach
+            $char
+            (george john paul ringo)
+            {if
+               {exists $char}
+               {$this
+                  add_target
+                  {object $char}}
+               {set
+                  [targets $count teleport]
+                  FALSE}
+               {set
+                  [targets $count return]
+                  TRUE}
+               {'++' $count}}}})
+   (views
+      (facing
+         ("facing"
+            {p9_facing_string
+               [flags]})
+         ("cfgs"
+            {p9_configuration_string
+               [flags]})))
+   (types
+      (proj9
+         (editor
+            (flags
+               (struct
+                  (BIT_kP9CamLeft
+                     bool
+                     (post_sync
+                        {$this radio kP9CamLeft kP9CamAllFacings})
+                     (help
+                        "is this a left facing camera")
+                     (refresh flags)
+                     (alias CamLeft))
+                  (BIT_kP9CamRight
+                     bool
+                     (post_sync
+                        {$this radio kP9CamRight kP9CamAllFacings})
+                     (help
+                        "is this a right facing camera")
+                     (refresh flags)
+                     (alias CamRight))
+                  (BIT_kP9CamCenter
+                     bool
+                     (post_sync
+                        {$this radio kP9CamCenter kP9CamAllFacings})
+                     (help
+                        "is this a center facing camera")
+                     (refresh flags)
+                     (alias CamCenter))
+                  (BIT_kP9CamBehind
+                     bool
+                     (post_sync
+                        {$this radio kP9CamBehind kP9CamAllFacings})
+                     (help
+                        "is this a behind facing camera")
+                     (refresh flags)
+                     (alias CamBehind))
+                  (BIT_kP9JohnPaul
+                     bool
+                     (alias JohnPaul)
+                     (help
+                        "george no mic, paul + john have mics"))
+                  (BIT_kP9Paul
+                     bool
+                     (alias Paul)
+                     (help
+                        "paul singing solo, george backup with john"))
+                  (BIT_kP9GeorgeJohnPaul
+                     bool
+                     (alias GeorgeJohnPaul)
+                     (help
+                        "trio at mic"))
+                  (BIT_kP9George
+                     bool
+                     (alias George)
+                     (help
+                        "george singing solo, john + paul backup"))
+                  (BIT_kP9John
+                     bool
+                     (alias John)
+                     (help
+                        "john singing solo, george + paul backup"))
+                  (BIT_kP9Ringo
+                     bool
+                     (alias Ringo)
+                     (help
+                        "in ARS, all three sitting"))
+                  (BIT_kP9KeyboardJohn
+                     bool
+                     (alias KeyboardJohn)
+                     (help
+                        "John alone at keyboard, george + paul at mics"))
+                  (BIT_kP9KeyboardPaul
+                     bool
+                     (alias KeyboardPaul)
+                     (help
+                        "Paul alone at keyboard, john + paul at mics"))
+                  (BIT_kP9KeyboardGeorge
+                     bool
+                     (alias KeyboardGeorge)
+                     (help
+                        "George alone at keyboard, john + paul at mics"))
+                  (BIT_kP9Sitar
+                     bool
+                     (alias Sitar)
+                     (help
+                        "George has a sitar, whole band seated"))
+                  (BIT_kP9RingoSolo
+                     bool
+                     (alias RingoSolo)
+                     (help
+                        "Ringo is standing at a mic"))
+                  (BIT_kP9DreamSlow
+                     bool
+                     (alias DreamSlow)
+                     (help
+                        "This camera good for slow dreamscape songs"))
+                  (BIT_kP9DreamFast
+                     bool
+                     (alias DreamFast)
+                     (help
+                        "This camera good for fast dreamscape songs"))
+                  (BIT_kP9DreamPsych
+                     bool
+                     (alias DreamPsych)
+                     (help
+                        "This camera good for psysch dreamscape songs")))
+               (help
+                  "The camera facing (can only be one) and which configurations are valid."))
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use for this shot"))
+            (crowd_density
+               float
+               (range 0 1)
+               (help
+                  "density of crowd"))
+            (crowd_lod
+               int
+               (range 0 2)
+               (help
+                  "LOD of crowd texture (0 =  256x512) (1 = 128x256) (2 = 64x128)"))
+            (crowd_face_camera
+               bool
+               (help
+                  "Whether the crowd should face the camera"))
+            (crowd_anim
+               symbol
+               (list
+                  ('' bad great pepperwave win))
+               (help
+                  "Crowd animation to play, overrides normal excitement level"))
+            (lighting_preset
+               object
+               (class LightPreset)
+               (help
+                  "light preset to fire for this camera only, only use in special cases, lighting override must be on, goes back to normal lighting when the shot is done!"))
+            (worst
+               bool
+               (help
+                  "When using -worst_only with venuetest, only looks at these shots"))
+            (play_anim
+               object
+               (class Anim)
+               (help
+                  "animation to play with camshot"))
+            (play_shot
+               script
+               (help
+                  "play this shot (useful for testing next shots)")
+               (script
+                  {$world force_shot $this}))
+            (stop_shot
+               script
+               (help
+                  "stop the current shot from playing")
+               (script
+                  {$world force_shot ''}))
+            (start_movie
+               object
+               (class TexMovie)
+               (help
+                  "start movie render-to-texture"))
+            (stop_movie
+               object
+               (class TexMovie)
+               (help
+                  "stop movie render-to-texture")))
+         (worst FALSE)
+         (postprocess
+            {object
+               ""})
+         (crowd_density 1)
+         (crowd_lod 0)
+         (crowd_face_camera FALSE)
+         (crowd_anim '')
+         (lighting_preset '')
+         (play_anim '')
+         (start_movie '')
+         (stop_movie '')
+         (radio
+            ($bit $mask)
+            {if
+               {&
+                  [flags]
+                  $bit}
+               {mask_eq
+                  [flags]
+                  $mask}
+               {'|='
+                  [flags]
+                  $bit}})
+         (shot_over
+            {if
+               {&&
+                  $p9director
+                  {exists game}}
+               {switch
+                  [category]
+                  ((LOSE WIN OUTRO_VENUE)
+                     {handle
+                        (game game_outro)})
+                  (OUTRO_MULTI
+                     {$p9director set shot OUTRO_MULTI}
+                     {$p9director pick_new_shot})
+                  (INTRO_VENUE
+                     {$p9director pick_new_shot})}})
+         (play_group
+            ($char $grp $fwd $units $event)
+            {if_else
+               {==
+                  {$char get_type}
+                  extras}
+               {if
+                  $grp
+                  {{$char find main.drv}
+                     play_group
+                     $grp
+                     {'|' kPlayNoBlend kPlayNodeLoop}}}
+               {$char override_group $grp TRUE FALSE $fwd $units $event}})
+         (teleport_char
+            ($char $ret)
+            {unless
+               {==
+                  {$char get_type}
+                  extras}
+               {$char cam_teleport $ret}})
+         (update_overlay
+            #ifndef _SHIP
+            {rnd
+               reflect
+               camera
+               {print
+                  "BandCamShot:"
+                  {$this name}
+                  " category:"
+                  [category]
+                  "\n"}
+               {print
+                  " cfgs: "
+                  {p9_configuration_string
+                     [flags]}
+                  "\n"}
+               {print
+                  " facing: "
+                  {p9_facing_string
+                     [flags]}
+                  "\n"}
+               {print
+                  " min_time: "
+                  [min_time]
+                  "\n"}}
+            #endif)
+         (play_movie
+            ($texmovie $start)
+            {$texmovie set showing $start}
+            {$texmovie play_movie $start})
+         (start_shot
+            {if
+               $p9director
+               {$p9director
+                  set
+                  cam_postproc
+                  [postprocess]}
+               {if
+                  {has_substr
+                     [category]
+                     "dc_lyrics"}
+                  {$p9director set lyric_lead_time 0.5}
+                  {$p9director display_lyrics_start}}
+               {if
+                  {find_elem
+                     (INTRO_VENUE WIN OUTRO_VENUE OUTRO_FINALE)
+                     [category]}
+                  {$p9director
+                     iterate_chars
+                     $char
+                     {handle_type
+                        ($char play_smile)}}}}
+            #ifndef _SHIP
+            {$this update_overlay}
+            #endif
+            {if
+               [play_anim]
+               {[play_anim]
+                  animate}}
+            {if
+               [start_movie]
+               {$this
+                  play_movie
+                  [start_movie]
+                  TRUE}}
+            {unless
+               {&&
+                  $p9director
+                  {$p9director get disable_picking}}
+               {if
+                  [lighting_preset]
+                  {$p9director
+                     force_preset
+                     [lighting_preset]}}
+               {if
+                  {find_elem
+                     (LOSE WIN OUTRO_VENUE OUTRO_FINALE)
+                     [category]}
+                  {handle
+                     ($world playing_final_cam)}}}
+            {foreach_int
+               $idx
+               0
+               {size
+                  [crowds]}
+               {do
+                  ($crowd
+                     [crowds $idx crowd])
+                  {if
+                     $crowd
+                     {$crowd
+                        override_anim
+                        [crowd_anim]}
+                     {$crowd crowd_update}
+                     {$crowd
+                        set
+                        rotate
+                        [crowd_face_camera]}
+                     {$crowd
+                        set_fullness
+                        [crowd_density]
+                        [crowd_density]}
+                     {$crowd
+                        set
+                        lod
+                        [crowd_lod]}}}})
+         (stop_shot
+            {if
+               $p9director
+               {$p9director
+                  set
+                  cam_postproc
+                  {object
+                     ""}}
+               {if
+                  {has_substr
+                     [category]
+                     "dc_lyrics"}
+                  {$p9director display_lyrics_stop}}
+               {if
+                  {'||'
+                     {==
+                        [category]
+                        INTRO_OVER}
+                     {&&
+                        {==
+                           [category]
+                           INTRO_VENUE}
+                        {==
+                           {$this
+                              size
+                              (next_shots)}
+                           0}}}
+                  {$p9director
+                     iterate_chars
+                     $char
+                     {handle_type
+                        ($char play_song)}}}}
+            {if
+               [stop_movie]
+               {$this
+                  play_movie
+                  [stop_movie]
+                  FALSE}}
+            {if
+               $world
+               {foreach_int
+                  $idx
+                  0
+                  {size
+                     [crowds]}
+                  {do
+                     ($crowd
+                        [crowds $idx crowd])
+                     {if
+                        $crowd
+                        {$crowd override_anim ''}}}}
+               {if
+                  [lighting_preset]
+                  {$p9director force_preset ''}}})
+         (validate
+            {if
+               {find_elem
+                  (REQUIRED_CAM_CATS)
+                  [category]}
+               {foreach_int
+                  $i
+                  0
+                  {$this
+                     size
+                     (targets)}
+                  {do
+                     ($t
+                        [targets $i target])
+                     {if
+                        {&&
+                           $t
+                           {find_elem
+                              ("george"
+                                 "john"
+                                 "paul"
+                                 "ringo")
+                              {$t name}}
+                           [targets $i anim]}
+                        {if
+                           {fix_or_notify
+                              {sprint
+                                 {path_name $this}
+                                 " "
+                                 [category]
+                                 " camera should not animate "
+                                 $t
+                                 " ("
+                                 [targets $i anim]
+                                 ")"}}
+                           {set
+                              [targets $i anim]
+                              ""}}}}}}
+            {if
+               {&&
+                  {find_elem
+                     (LOSE WIN)
+                     [category]}
+                  [postprocess]}
+               {notify
+                  {path_name $this}
+                  "must specify no postprocess to show"}})
+         (shot_ok
+            ($prev_shot)
+            TRUE))))
+(P9Director
+   (test_singleton)
+   (types
+      (proj9
+         (pick_intro_shot
+            ($dir)
+            {do
+               ($intro_shot '')
+               {if
+                  {exists beatmatch}
+                  {do
+                     ($intro_category
+                        {$world get_intro_category})
+                     {if
+                        {== $intro_category INTRO_VENUE}
+                        {set
+                           $intro_shot
+                           {$dir find_shot $intro_category}}}}
+                  {beatmatch
+                     set_intro_real_time
+                     {if_else
+                        $intro_shot
+                        {-
+                           {$intro_shot duration_seconds}}
+                        0}}}
+               $intro_shot})
+         (pick_venue
+            {if_else
+               {exists meta_performer}
+               {meta_performer get_venue}
+               {{$this get_songpref}
+                  get
+                  venue}})
+         (venue_outfit
+            {do
+               ($bonus 0)
+               {if
+                  {exists meta_performer}
+                  {set
+                     $bonus
+                     {meta_performer use_bonus_outfit}}}
+               {elem
+                  {switch
+                     [venue]
+                     (budokan
+                        (budokan01 budokan02))
+                     (cavern
+                        (cavern cavern02))
+                     (rooftop
+                        (rooftop rooftop))
+                     (shea
+                        (shea shea))
+                     (sullivan
+                        (sullivan sullivan))
+                     ((none blank)
+                        (none none))
+                     {notify
+                        "unhandled venue "
+                        [venue]}
+                     (cavern cavern)}
+                  $bonus}})
+         (venue_drums
+            {switch
+               [venue]
+               (budokan drum_budokan)
+               (cavern drum_cavern)
+               (rooftop drum_rooftop)
+               (shea drum_shea)
+               (sullivan drum_sullivan)
+               (none none)
+               (blank none)
+               {notify
+                  "unhandled venue "
+                  [venue]}
+               drum_cavern})
+         (venue_era
+            {switch
+               [venue]
+               ((budokan cavern shea sullivan)
+                  early)
+               dream}))))
+(P9WaypointConfiguration
+   (types
+      (proj9
+         (on_view_configuration
+            {if
+               {&&
+                  $edit_mode
+                  {! $p9director}}
+               {$world set_outfits}}))))
