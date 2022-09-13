@@ -13,7 +13,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | Game | Platform | Script Format | Status |
 | ---- | -------- | ------------- | ------ |
 | **FreQuency** | PS2 | Known (Python 1) | Extracted |
-| **Amplitude** | PS2 | Known (Amp-style DTB) | Extracted |
+| **Amplitude 2003** | PS2 | Known (Amp-style DTB) | Extracted |
 | **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (DTA) | Not available<br>Extracted |
 | **Karaoke Revolution Volume 2** | PS2 | Unknown | Not available |
 | **Karaoke Revolution Volume 3** | PS2 | Unknown | Not available |
@@ -36,14 +36,17 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Extracted<br>Available |
 | **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Extracted<br>Extracted |
 | **Rock Band Blitz** | PS3<br>Xbox 360 | Known (new-style DTB) | Extracted<br>Available |
+| **Rock Band 4** | PS4/5<br>Xbox One/Series | Known (new-style DTA-DTA) | Available |
+| **Rock Band VR** | PC | Known (new-style DTA-DTA) | Available |
+| **Amplitude 2016** | PS4/5 | Known (new-style DTA-DTA) | Available |
 
 ### Prototypes and Demos
 | Game | Build | Platform | Script Format | Status |
 | ---- | ----- | -------- | ------------- | ------ |
 | **FreQuency** | R179 prototype | PS2 | Known (Python 1) | Extracted |
-| **Amplitude** | OPM prototype | PS2 | Known (DTA) | Extracted |
-| **Amplitude** | Deluge prototype | PS2 | Known (Amp-style DTB) | Available |
-| **Amplitude** | Space demo | PS2 | Unknown | Not available |
+| **Amplitude 2003** | OPM prototype | PS2 | Known (DTA) | Extracted |
+| **Amplitude 2003** | Deluge prototype | PS2 | Known (Amp-style DTB) | Available |
+| **Amplitude 2003** | Space demo | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 1 | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 2 | PS2 | Unknown | Not available |
 | **Karaoke Revolution** | Deluge prototype 3 | PS2 | Unknown | Not available |
