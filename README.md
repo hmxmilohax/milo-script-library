@@ -37,7 +37,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Extracted<br>Extracted |
 | **Rock Band Blitz** | PS3<br>Xbox 360 | Known (new-style DTB) | Extracted<br>Available |
 | **Rock Band 4** | PS4/5<br>Xbox One/Series | Known (v3 DTA-DTA) | Extracted[^1][^2] |
-| **Rock Band VR** | PC | Known (v3 DTA-DTA) | Extracted[2^][^3] |
+| **Rock Band VR** | PC | Known (v3 DTA-DTA) | Extracted[^2][^3] |
 | **Amplitude 2016** | PS3/4/5 | Known (v3 DTA-DTA) | Available |
 
 ### Prototypes and Demos
