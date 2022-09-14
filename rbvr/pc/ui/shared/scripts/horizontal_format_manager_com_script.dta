@@ -1,0 +1,162 @@
+(define horizontal_format_manager_com 
+   (description "q") 
+   (props 
+      (alignment int 
+         (allowed_values 
+            (
+               (0 "Left" "Extends to the right") 
+               (1 "Center" "Center Justified") 
+               (2 "Right" "Extends to the left")))) 
+      (pivot_offset float 
+         (help "The pivot point from which the group will extend")) 
+      (element_objects array 
+         (item object)) 
+      (requires_position_update bool) 
+      (total_width_offset_scalar float 
+         (view_on_instance TRUE) 
+         (help "private. distance that everything is offset at the end")) 
+      (current_total_width float 
+         (view_on_instance TRUE)) 
+      (suppress_edit_poll_updates bool) 
+      (suppress_edit_poll_offset_refresh bool)))
+(enter 
+   {$this calculate_full_offset_scalar } 
+   {$this calculate_offsets })
+(edit_poll 
+   {if 
+      {! 
+         [$this suppress_edit_poll_updates ]}
+      {$this edit_poll_work }})
+(edit_poll_work 
+   {$this calculate_full_offset_scalar } 
+   {if 
+      {! 
+         [$this suppress_edit_poll_offset_refresh ]}
+      {$this calculate_offsets }} 
+   {$this refresh_positions })
+(poll 
+   {if 
+      [$this requires_position_update ]
+      {set 
+         [$this requires_position_update ]FALSE }
+      {$this refresh_positions }})
+(calculate_full_offset_scalar 
+   {if 
+      {== 
+         [$this alignment ]0 }
+      {set 
+         [$this total_width_offset_scalar ]0 }} 
+   {if 
+      {== 
+         [$this alignment ]1 }
+      {set 
+         [$this total_width_offset_scalar ]0.5 }} 
+   {if 
+      {== 
+         [$this alignment ]2 }
+      {set 
+         [$this total_width_offset_scalar ]1 }})
+(calculate_offsets 
+   {foreach_int $i 0 
+      {size 
+         [$this element_objects ]}
+      {if 
+         {&& 
+            [$this element_objects $i ]}
+         {set 
+            [
+               (
+                  [$this element_objects $i ] horizontal_format_item_com)offset_from_next ]
+            {if_else 
+               {&& 
+                  {< 
+                     {+ $i 1 }
+                     {size 
+                        [$this element_objects ]}}
+                  [$this element_objects 
+                     {+ $i 1 }]}
+               {do 
+                  {- 
+                     [
+                        (
+                           [$this element_objects 
+                              {+ $i 1 }] Transform)x ]
+                     {+ 
+                        [
+                           (
+                              [$this element_objects $i ] Transform)x ]
+                        {
+                           (
+                              [$this element_objects $i ] horizontal_format_item_com)get_current_width }}}}
+               {do 0 }}}}})
+(refresh_positions 
+   {set 
+      [$this current_total_width ]0 } 
+   {local $next_position 0 } 
+   {foreach_int $i 0 
+      {size 
+         [$this element_objects ]}
+      {if 
+         [$this element_objects $i ]
+         {if 
+            {! 
+               [
+                  (
+                     [$this element_objects $i ] horizontal_format_item_com)is_disabled ]}
+            {set 
+               [
+                  (
+                     [$this element_objects $i ] Transform)x ]$next_position }
+            {+= $next_position 
+               {
+                  (
+                     [$this element_objects $i ] horizontal_format_item_com)get_current_width }}
+            {+= $next_position 
+               [
+                  (
+                     [$this element_objects $i ] horizontal_format_item_com)offset_from_next ]}
+            {set 
+               [$this current_total_width ]
+               {+ 
+                  [
+                     (
+                        [$this element_objects $i ] Transform)x ]
+                  {
+                     (
+                        [$this element_objects $i ] horizontal_format_item_com)get_current_width }}}}
+         {if 
+            {== 
+               [
+                  (
+                     [$this element_objects $i ] horizontal_format_item_com)skip_hide_when_disabled ]FALSE }
+            {set 
+               [
+                  (
+                     [$this element_objects $i ] DrawNode)showing ]
+               {! 
+                  [
+                     (
+                        [$this element_objects $i ] horizontal_format_item_com)is_disabled ]}}}}} 
+   {foreach_int $i 0 
+      {size 
+         [$this element_objects ]}
+      {if 
+         {&& 
+            [$this element_objects $i ]
+            {! 
+               [
+                  (
+                     [$this element_objects $i ] horizontal_format_item_com)is_disabled ]}}
+         {set 
+            [
+               (
+                  [$this element_objects $i ] Transform)x ]
+            {+ 
+               [$this pivot_offset ]
+               {- 
+                  [
+                     (
+                        [$this element_objects $i ] Transform)x ]
+                  {* 
+                     [$this total_width_offset_scalar ]
+                     [$this current_total_width ]}}}}}})

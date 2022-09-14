@@ -1,0 +1,146 @@
+(define Interface 
+   (description "This handles the setting of Text and resizing of the Scale 9 Quad wrapper to fit accordingly") 
+   (props 
+      (button_text symbol 
+         (set_on_instance TRUE) 
+         (default ) 
+         (help "Use token names please!")) 
+      (last_button_text symbol 
+         (default )) 
+      (disabled bool 
+         (set_on_instance TRUE) 
+         (default FALSE)) 
+      (focused bool 
+         (view_on_instance TRUE) 
+         (default FALSE)) 
+      (select_to_focus bool 
+         (set_on_instance TRUE) 
+         (default FALSE)) 
+      (button_textobj object 
+         (help "The text object we are using.") 
+         (required_coms 
+            (Text))) 
+      (button_quad object 
+         (help "The quad object we are using.") 
+         (required_coms 
+            (Scale9Quad))) 
+      (attn_quad object 
+         (help "The flag object we may want to hide/show.") 
+         (required_coms 
+            (TexturedQuad))) 
+      (gaze_target object 
+         (help "The gaze hit target to resize to match quad.") 
+         (required_coms 
+            (VRGazeTarget))) 
+      (x_padding float 
+         (default 1.0)) 
+      (y_padding float 
+         (default 1.0)) 
+      (show_attention_flag bool 
+         (help "Show a flag that draws attention to this item?") 
+         (default FALSE) 
+         (set_on_instance TRUE)) 
+      (is_disabled_by_install bool 
+         (help "Should the button show a disabled state because it isn't installed yet?") 
+         (default FALSE)) 
+      (gaze_selected bool 
+         (help "Should the button look selected?") 
+         (default FALSE) 
+         (set_on_instance TRUE)) 
+      (gaze_target_disabled bool 
+         (help "Should the gaze target be disabled?") 
+         (default FALSE) 
+         (set_on_instance TRUE))))
+(enter 
+   {if 
+      [$this button_text ]
+      {set 
+         [
+            (
+               [$this button_textobj ] Text)localized_token ]
+         [$this button_text ]}
+      {set 
+         [$this last_button_text ]
+         [$this button_text ]}} 
+   {$this update_quad })
+(edit_poll 
+   {if 
+      {!= 
+         [$this button_text ]
+         [$this last_button_text ]}
+      {set 
+         [
+            (
+               [$this button_textobj ] Text)localized_token ]
+         [$this button_text ]}
+      {set 
+         [$this last_button_text ]
+         [$this button_text ]}} 
+   {$this update_quad })
+(poll 
+   {if 
+      {!= 
+         [$this button_text ]
+         [$this last_button_text ]}
+      {set 
+         [
+            (
+               [$this button_textobj ] Text)localized_token ]
+         [$this button_text ]}
+      {set 
+         [$this last_button_text ]
+         [$this button_text ]}} 
+   {$this update_quad })
+(update_quad 
+   {local $width 
+      [
+         (
+            [$this button_textobj ] Text)bounding_box width ]} 
+   {local $height 
+      [
+         (
+            [$this button_textobj ] Text)bounding_box height ]} 
+   {local $adjusted_height 
+      {+ $height 
+         [$this y_padding ]}} 
+   {local $adjusted_width 
+      {+ $width 
+         [$this x_padding ]}} 
+   {set 
+      [
+         (
+            [$this button_quad ] Scale9Quad)height ]$adjusted_height } 
+   {set 
+      [
+         (
+            [$this button_quad ] Scale9Quad)width ]$adjusted_width } 
+   {local $mid_point 
+      {/ $width 2 }} 
+   {set 
+      [
+         (
+            [$this button_quad ] Transform)x ]$mid_point } 
+   {if 
+      [$this gaze_target ]
+      {local $gaze_margin 
+         [
+            (
+               [$this gaze_target ] VRGazeTarget)activation_margin ]}
+      {local $gaze_width 
+         {+ $adjusted_width 
+            {* 2 $gaze_margin }}}
+      {local $gaze_height 
+         {+ $adjusted_height 
+            {* 2 $gaze_margin }}}
+      {set 
+         [
+            (
+               [$this gaze_target ] VRGazeTarget)dimensions height ]$gaze_height }
+      {set 
+         [
+            (
+               [$this gaze_target ] VRGazeTarget)dimensions width ]$gaze_width }
+      {set 
+         [
+            (
+               [$this gaze_target ] Transform)x ]$mid_point }})

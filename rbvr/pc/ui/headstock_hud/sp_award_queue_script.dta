@@ -1,0 +1,245 @@
+(define ItemQueueScript 
+   (description "a little fifo script for queue management in state graph") 
+   (props 
+      (item_idx int 
+         (help "current item from the queue") 
+         (default 0) 
+         (save FALSE) 
+         (max 
+            {- 
+               {size 
+                  [$this queue ]}1 })) 
+      (insert_idx int 
+         (help "current index to insert at") 
+         (default 0) 
+         (save FALSE) 
+         (max 
+            {- 
+               {size 
+                  [$this queue ]}1 })) 
+      (items_completed int 
+         (default 0) 
+         (read_only TRUE) 
+         (save FALSE)) 
+      (items_added int 
+         (default 0) 
+         (read_only TRUE) 
+         (save FALSE)) 
+      (add bool 
+         (help "Mark this true when work is added")) 
+      (done bool 
+         (help "Mark this true when the work on the current queue item is complete.") 
+         (save FALSE)) 
+      (work_available bool 
+         (read_only TRUE)) 
+      (hold_value symbol) 
+      (add_work struct 
+         (help "") 
+         (props 
+            (prefix_name symbol) 
+            (name symbol) 
+            (score_awarded int) 
+            (modifier_name symbol) 
+            (icon int))) 
+      (read_work struct 
+         (help "") 
+         (read_only TRUE) 
+         (props 
+            (prefix_name symbol) 
+            (name symbol) 
+            (score_awarded int) 
+            (modifier_name symbol) 
+            (icon int))) 
+      (queue array 
+         (help "Our queue") 
+         (item struct 
+            (help "queue entry") 
+            (props 
+               (prefix_name symbol) 
+               (name symbol) 
+               (score_awarded int) 
+               (modifier_name symbol) 
+               (icon int))))))
+(enter 
+   {set 
+      [$this item_idx ]0 } 
+   {set 
+      [$this insert_idx ]0 } 
+   {set 
+      [$this items_completed ]0 } 
+   {set 
+      [$this items_added ]0 })
+(poll 
+   {if 
+      [$this add ]
+      {set 
+         [$this add ]FALSE }
+      {if 
+         {> 
+            {size 
+               [$this queue ]}0 }
+         {set 
+            [$this queue 
+               [$this insert_idx ]prefix_name ]
+            [$this add_work prefix_name ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]name ]
+            [$this add_work name ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]score_awarded ]
+            [$this add_work score_awarded ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]modifier_name ]
+            [$this add_work modifier_name ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]icon ]
+            [$this add_work icon ]}
+         {set 
+            [$this insert_idx ]
+            {mod 
+               {+ 
+                  [$this insert_idx ]1 }
+               {size 
+                  [$this queue ]}}}
+         {if 
+            {== 
+               [$this insert_idx ]
+               [$this item_idx ]}
+            {notify "ItemQueueScript: insert_idx and item_idx should not be equal! Queue size may be too small." }}
+         {++ 
+            [$this items_added ]}}} 
+   {if 
+      [$this done ]
+      {set 
+         [$this done ]FALSE }
+      {set 
+         [$this item_idx ]
+         {mod 
+            {+ 
+               [$this item_idx ]1 }
+            {size 
+               [$this queue ]}}}
+      {++ 
+         [$this items_completed ]}
+      {if 
+         {> 
+            [$this items_completed ]
+            [$this items_added ]}
+         {notify "ItemQueueScript: more items completed than added" }}} 
+   {set 
+      [$this read_work prefix_name ]
+      [$this queue 
+         [$this item_idx ]prefix_name ]} 
+   {set 
+      [$this read_work name ]
+      [$this queue 
+         [$this item_idx ]name ]} 
+   {set 
+      [$this read_work score_awarded ]
+      [$this queue 
+         [$this item_idx ]score_awarded ]} 
+   {set 
+      [$this read_work modifier_name ]
+      [$this queue 
+         [$this item_idx ]modifier_name ]} 
+   {set 
+      [$this read_work icon ]
+      [$this queue 
+         [$this item_idx ]icon ]} 
+   {set 
+      [$this work_available ]
+      {< 
+         [$this items_completed ]
+         [$this items_added ]}})
+(edit_poll 
+   {if 
+      [$this add ]
+      {set 
+         [$this add ]FALSE }
+      {if 
+         {> 
+            {size 
+               [$this queue ]}0 }
+         {print "hello world
+" }
+         {set 
+            [$this queue 
+               [$this insert_idx ]prefix_name ]
+            [$this add_work prefix_name ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]name ]
+            [$this add_work name ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]score_awarded ]
+            [$this add_work score_awarded ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]modifier_name ]
+            [$this add_work modifier_name ]}
+         {set 
+            [$this queue 
+               [$this insert_idx ]icon ]
+            [$this add_work icon ]}
+         {set 
+            [$this insert_idx ]
+            {mod 
+               {+ 
+                  [$this insert_idx ]1 }
+               {size 
+                  [$this queue ]}}}
+         {if 
+            {== 
+               [$this insert_idx ]
+               [$this item_idx ]}
+            {notify "ItemQueueScript: insert_idx and item_idx should not be equal! Queue size may be too small." }}
+         {++ 
+            [$this items_added ]}}} 
+   {if 
+      [$this done ]
+      {set 
+         [$this done ]FALSE }
+      {set 
+         [$this item_idx ]
+         {mod 
+            {+ 
+               [$this item_idx ]1 }
+            {size 
+               [$this queue ]}}}
+      {++ 
+         [$this items_completed ]}
+      {if 
+         {> 
+            [$this items_completed ]
+            [$this items_added ]}
+         {notify "ItemQueueScript: more items completed than added" }}} 
+   {set 
+      [$this read_work prefix_name ]
+      [$this queue 
+         [$this item_idx ]prefix_name ]} 
+   {set 
+      [$this read_work name ]
+      [$this queue 
+         [$this item_idx ]name ]} 
+   {set 
+      [$this read_work score_awarded ]
+      [$this queue 
+         [$this item_idx ]score_awarded ]} 
+   {set 
+      [$this read_work modifier_name ]
+      [$this queue 
+         [$this item_idx ]modifier_name ]} 
+   {set 
+      [$this read_work icon ]
+      [$this queue 
+         [$this item_idx ]icon ]} 
+   {set 
+      [$this work_available ]
+      {< 
+         [$this items_completed ]
+         [$this items_added ]}})

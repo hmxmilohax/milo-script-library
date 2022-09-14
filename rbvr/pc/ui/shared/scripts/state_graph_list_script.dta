@@ -1,0 +1,209 @@
+(define Interface 
+   (description "q") 
+   (props 
+      (items_list array 
+         (help "A simple array of ints.") 
+         (set_on_instance TRUE) 
+         (item object 
+            (help "An int array item whose default value matches its index within the array."))) 
+      (gaze_target_items array 
+         (help "Gaze targets.") 
+         (set_on_instance TRUE) 
+         (item object 
+            (help "Gaze targets for each list item."))) 
+      (target_num_items int 
+         (default -1) 
+         (set_on_instance TRUE)) 
+      (set_highlighted_item_index int 
+         (default -1) 
+         (set_on_instance TRUE)) 
+      (set_equipped_item_index int 
+         (default -1) 
+         (set_on_instance TRUE)) 
+      (is_disabled bool 
+         (set_on_instance TRUE)) 
+      (confirm_num_items int 
+         (set_on_instance TRUE)) 
+      (confirm_highlighted_item_index int 
+         (set_on_instance TRUE)) 
+      (confirm_equipped_item_index int 
+         (set_on_instance TRUE)) 
+      (move_to_next_item_index int 
+         (set_on_instance TRUE)) 
+      (move_to_prev_item_index int 
+         (set_on_instance TRUE)) 
+      (equip_highlighted_item int 
+         (set_on_instance TRUE)) 
+      (last_item_index int 
+         (view_on_instance TRUE)) 
+      (get_highlighted_item_index int 
+         (view_on_instance TRUE)) 
+      (last_move_to_next_item_index int 
+         (view_on_instance TRUE)) 
+      (last_move_to_prev_item_index int 
+         (view_on_instance TRUE)) 
+      (last_equip_highlighted_item int 
+         (view_on_instance TRUE)) 
+      (get_highlighted_item_index int 
+         (view_on_instance TRUE)) 
+      (get_equipped_item_index int 
+         (view_on_instance TRUE)) 
+      (get_num_items int 
+         (view_on_instance TRUE)) 
+      (last_confirm_num_items int 
+         (view_on_instance TRUE)) 
+      (last_confirm_equipped_item_index int 
+         (view_on_instance TRUE)) 
+      (last_confirm_highlighted_item_index int 
+         (view_on_instance TRUE))))
+(enter 
+   {set 
+      [$this get_highlighted_item_index ]
+      [$this set_highlighted_item_index ]} 
+   {set 
+      [$this get_equipped_item_index ]
+      [$this set_equipped_item_index ]} 
+   {foreach_int $i 0 
+      {size 
+         [$this items_list ]}
+      {set 
+         [
+            (
+               [$this items_list $i ] Instance)my_index_in_list ]$i }
+      {set 
+         [
+            (
+               [$this items_list $i ] Instance)is_disabled ]
+         [$this is_disabled ]}} 
+   {$this forward_values } 
+   {$this refresh_lasts })
+(poll 
+   {if 
+      {!= 
+         [$this confirm_highlighted_item_index ]
+         [$this last_confirm_highlighted_item_index ]}
+      {set 
+         [$this get_highlighted_item_index ]
+         [$this set_highlighted_item_index ]}} 
+   {if 
+      {|| 
+         {!= 
+            [$this move_to_next_item_index ]
+            [$this last_move_to_next_item_index ]}
+         {!= 
+            [$this move_to_prev_item_index ]
+            [$this last_move_to_prev_item_index ]}}
+      {set 
+         [$this get_num_items ]0 }
+      {foreach_int $i 0 
+         {size 
+            [$this items_list ]}
+         {if 
+            [
+               (
+                  [$this items_list $i ] Instance)label_loc_key ]
+            {+= 
+               [$this get_num_items ]1 }}}} 
+   {if 
+      {!= 
+         [$this move_to_next_item_index ]
+         [$this last_move_to_next_item_index ]}
+      {+= 
+         [$this get_highlighted_item_index ]1 }
+      {if 
+         {>= 
+            [$this get_highlighted_item_index ]
+            [$this get_num_items ]}
+         {set 
+            [$this get_highlighted_item_index ]0 }}} 
+   {if 
+      {!= 
+         [$this move_to_prev_item_index ]
+         [$this last_move_to_prev_item_index ]}
+      {-= 
+         [$this get_highlighted_item_index ]1 }
+      {if 
+         {< 
+            [$this get_highlighted_item_index ]0 }
+         {set 
+            [$this get_highlighted_item_index ]
+            {- 
+               [$this get_num_items ]1 }}}} 
+   {if 
+      {> 
+         {size 
+            [$this gaze_target_items ]}0 }
+      {local $gaze_target_index -1 }
+      {foreach_int $i 0 
+         {size 
+            [$this gaze_target_items ]}
+         {if 
+            {== 
+               [
+                  (
+                     [$this gaze_target_items $i ] GazeInputReceiverCom)focused ]TRUE }
+            {set $gaze_target_index $i }}}
+      {set 
+         [$this get_highlighted_item_index ]$gaze_target_index }} 
+   {if 
+      {!= 
+         [$this confirm_equipped_item_index ]
+         [$this last_confirm_equipped_item_index ]}
+      {set 
+         [$this get_equipped_item_index ]
+         [$this set_equipped_item_index ]}} 
+   {if 
+      {!= 
+         [$this equip_highlighted_item ]
+         [$this last_equip_highlighted_item ]}
+      {set 
+         [$this get_equipped_item_index ]
+         [$this get_highlighted_item_index ]}
+      {print "Updating equpped:" 
+         [$this get_equipped_item_index ]"
+" }} 
+   {$this forward_values } 
+   {$this refresh_lasts })
+(forward_values 
+   {foreach_int $i 0 
+      {size 
+         [$this items_list ]}
+      {set 
+         [
+            (
+               [$this items_list $i ] Instance)is_highlighted ]
+         {== 
+            [$this get_highlighted_item_index ]$i }}
+      {set 
+         [
+            (
+               [$this items_list $i ] Instance)is_equipped ]
+         {== 
+            [$this get_equipped_item_index ]$i }}
+      {set 
+         [
+            (
+               [$this items_list $i ] Instance)is_disabled ]
+         [$this is_disabled ]}})
+(refresh_lasts 
+   {set 
+      [$this last_item_index ]
+      [$this get_highlighted_item_index ]} 
+   {set 
+      [$this last_move_to_next_item_index ]
+      [$this move_to_next_item_index ]} 
+   {set 
+      [$this last_move_to_prev_item_index ]
+      [$this move_to_prev_item_index ]} 
+   {set 
+      [$this last_confirm_highlighted_item_index ]
+      [$this confirm_highlighted_item_index ]} 
+   {set 
+      [$this last_equip_highlighted_item ]
+      [$this equip_highlighted_item ]} 
+   {set 
+      [$this last_confirm_equipped_item_index ]
+      [$this confirm_equipped_item_index ]} 
+   {set 
+      [$this last_confirm_num_items ]
+      [$this confirm_num_items ]})

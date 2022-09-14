@@ -1,0 +1,207 @@
+(define teleport_manager_liason 
+   (description "q") 
+   (props 
+      (pedalboard_object object 
+         (set_on_instance TRUE) 
+         (help "Optional. Allows us to automagically deactivate the pedalboard when we teleport away")) 
+      (delegate_gaze_filter_update bool 
+         (set_on_instance TRUE) 
+         (help "Initially used in hub. Prevents from setting gaze filters automagically")) 
+      (pedalboard_index int 
+         (set_on_instance TRUE)) 
+      (is_disabled bool 
+         (set_on_instance TRUE)) 
+      (set_equipped_index int 
+         (set_on_instance TRUE)) 
+      (get_is_in_select_mode bool 
+         (view_on_instance TRUE)) 
+      (get_is_activated_mode bool 
+         (view_on_instance TRUE)) 
+      (get_is_at_pedalboard_location bool 
+         (view_on_instance TRUE)) 
+      (get_current_highlighted_index int 
+         (view_on_instance TRUE)) 
+      (on_teleported int 
+         (view_on_instance TRUE)) 
+      (last_get_is_in_select_mode bool 
+         (view_on_instance TRUE)) 
+      (last_set_equipped_index int 
+         (view_on_instance TRUE))))
+(edit_poll 
+   {if 
+      {! 
+         {exists VRPlayerPositionCom }}
+      {print "script teleport_manager_liason requires component VRPlayerPositionCom on the same instance (usually root)
+" }} 
+   {if 
+      {! 
+         {exists RBVRTeleport }}
+      {print "script teleport_manager_liason requires component RBVRTeleport on the same instance (usually root)
+" }} 
+   {if 
+      {! 
+         {exists GazeInputCom }}
+      {print "script teleport_manager_liason requires component GazeInputCom on the same instance (usually root)
+" }} 
+   {if 
+      {! 
+         {exists RBVRGuitarData }}
+      {print "script teleport_manager_liason requires component RBVRGuitarData on the same instance (usually root)
+" }} 
+   {if 
+      [$this pedalboard_object ]
+      {set 
+         [
+            (
+               [$this pedalboard_object ] Instance)was_teleport_link_considered ]TRUE }})
+(poll 
+   {set 
+      [$this get_current_highlighted_index ]-1 } 
+   {local $equipped_yet_this_tick FALSE } 
+   {if_else 
+      [$this is_disabled ]
+      {do 
+         {set 
+            [$this get_is_in_select_mode ]TRUE }}
+      {do 
+         {set 
+            [$this get_is_in_select_mode ]FALSE }}} 
+   {if_else 
+      [$this is_disabled ]
+      {do 
+         {set 
+            [$this get_is_activated_mode ]FALSE }}
+      {do 
+         {set 
+            [$this get_is_activated_mode ]
+            {if_else 
+               {> 
+                  [RBVRGuitarData whammy_bar_value ]-0.99 }
+               {do FALSE }
+               {do TRUE }}}}} 
+   {local $attempt_equip_this_tick 
+      {if_else 
+         {&& 
+            {!= 
+               [$this get_is_in_select_mode ]
+               [$this last_get_is_in_select_mode ]}
+            {== 
+               [$this get_is_in_select_mode ]FALSE }}
+         {do TRUE }
+         {do FALSE }}} 
+   {if 
+      {&& 
+         {== 
+            [$this delegate_gaze_filter_update ]FALSE }
+         {!= 
+            [$this get_is_in_select_mode ]
+            [$this last_get_is_in_select_mode ]}}
+      {set 
+         [GazeInputCom state filter_for_tag ]
+         {if_else 
+            {== 
+               [$this get_is_in_select_mode ]TRUE }
+            {do teleport_spot }
+            {do  }}}} 
+   {foreach_int $i 0 
+      {size 
+         [VRPlayerPositionCom positions ]}
+      {if_else 
+         [VRPlayerPositionCom positions $i obj ]
+         {do 
+            {set 
+               [
+                  (
+                     [VRPlayerPositionCom positions $i obj ] Instance)set_is_dormant ]
+               {if_else 
+                  {&& 
+                     [$this get_is_in_select_mode ]
+                     {&& 
+                        {! 
+                           [
+                              (
+                                 [VRPlayerPositionCom positions $i obj ] Instance)set_is_disabled ]}
+                        {!= $i 
+                           [RBVRTeleport teleport_to ]}}}
+                  {do FALSE }
+                  {do FALSE }}}
+            {if 
+               {&& 
+                  {== 
+                     [$this get_is_in_select_mode ]TRUE }
+                  {== 
+                     [
+                        (
+                           [VRPlayerPositionCom positions $i obj ] Instance)get_is_highlighted ]TRUE }}
+               {set 
+                  [$this get_current_highlighted_index ]$i }}
+            {if_else 
+               {&& 
+                  {== $attempt_equip_this_tick TRUE }
+                  {== $equipped_yet_this_tick FALSE }
+                  {== 
+                     [
+                        (
+                           [VRPlayerPositionCom positions $i obj ] Instance)get_is_highlighted ]TRUE }
+                  {!= $i 
+                     [RBVRTeleport teleport_to ]}}
+               {do 
+                  {set 
+                     [
+                        (
+                           [VRPlayerPositionCom positions $i obj ] Instance)set_is_equipped ]TRUE;;; new value }
+                  {set $equipped_yet_this_tick TRUE;;; new value }
+                  {set 
+                     [RBVRTeleport teleport_to ]$i }
+                  {+= 
+                     [$this on_teleported ]1 }}
+               {do 
+                  {set 
+                     [
+                        (
+                           [VRPlayerPositionCom positions $i obj ] Instance)set_is_equipped ]FALSE }}}}
+         {do }}} 
+   {if 
+      {!= 
+         [$this last_set_equipped_index ]
+         [$this set_equipped_index ]}
+      {set 
+         [RBVRTeleport teleport_to ]
+         [$this set_equipped_index ]}
+      {foreach_int $i 0 
+         {size 
+            [VRPlayerPositionCom positions ]}
+         {if 
+            [VRPlayerPositionCom positions $i obj ]
+            {set 
+               [
+                  (
+                     [VRPlayerPositionCom positions $i obj ] Instance)set_is_equipped ]
+               {== $i 
+                  [$this set_equipped_index ]}}}}} 
+   {set 
+      [$this get_is_at_pedalboard_location ]
+      {if_else 
+         {== 
+            [$this pedalboard_index ]
+            [RBVRTeleport teleport_to ]}
+         {do TRUE }
+         {do FALSE }}} 
+   {if 
+      [$this pedalboard_object ]
+      {set 
+         [
+            (
+               [$this pedalboard_object ] Instance)is_avatar_away_from_pedalboard ]
+         {if_else 
+            [$this get_is_at_pedalboard_location ]
+            {do FALSE }
+            {do TRUE }}}} 
+   {$this refresh_lasts })
+(refresh_lasts 
+   {set 
+      [$this last_get_is_in_select_mode ]
+      [$this get_is_in_select_mode ]} 
+   {set 
+      [$this last_set_equipped_index ]
+      [$this set_equipped_index ]})

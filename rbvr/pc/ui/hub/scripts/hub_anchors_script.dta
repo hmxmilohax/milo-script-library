@@ -1,0 +1,76 @@
+(define Anchors 
+   (rev 2) 
+   (description "This handles the handling of anchors") 
+   (props 
+      (anchors array 
+         (help "An array of anchor items and their panel subcontrols.") 
+         (item struct 
+            (help "A struct array item with a display name and summary defined.") 
+            (summary "Anchor/panel relationships") 
+            (display_name 
+               {do 
+                  {local $name 
+                     [$this anchors 
+                        {elem $path 1 }name ]}
+                  {if_else $name $name 
+                     {sprintf "%d" 
+                        {elem $path 1 }}}}) 
+            (props 
+               (name symbol 
+                  (help "The name of the list item, just to help with keeping track of longer anchors.")) 
+               (anchor object 
+                  (help "Register your anchor control object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (panel object 
+                  (help "Register your panel subcontrol object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (panel_is_entity bool 
+                  (help "If it's an entity it should have an instance w/ a solo property on it.  If not we'll assume it's in the scene and use the GazeInputReceiverCom."))))) 
+      (gaze_input_com object 
+         (required_coms 
+            (GazeInputCom)))))
+(enter 
+   {$entity add_sink $this gaze_ui_button_down_msg on_gaze_ui_button_down_msg })
+(poll)
+(solo_focused 
+   ($on) 
+   {set $focused 
+      [
+         (
+            [$this gaze_input_com ] GazeInputCom)state current_focus ]} 
+   {foreach_int $i 0 
+      {size 
+         [$this anchors ]}
+      {if 
+         {|| 
+            {== 
+               [$this anchors $i anchor ]$focused }
+            {== 
+               [$this anchors $i panel ]$focused }}
+         {if_else 
+            [$this anchors $i panel_is_entity ]
+            {do 
+               {set 
+                  [
+                     (
+                        [$this anchors $i panel ] Instance)solo ]$on }}
+            {do 
+               {set 
+                  [
+                     (
+                        [$this anchors $i panel ] GazeInputReceiverCom)solo ]$on }}}}})
+(on_gaze_ui_button_down_msg 
+   ($user $rawButton $rawAction $padNum $guitarButton) 
+   {switch $guitarButton 
+      (kGuitarButtonGreen 
+         {set $in_solo_mode 
+            [
+               (
+                  [$this gaze_input_com ] GazeInputCom)state in_solo_mode ]} 
+         {if_else $in_solo_mode 
+            {$this solo_focused FALSE }
+            {$this solo_focused TRUE }})
+      (kGuitarButtonRed 
+         {$this solo_focused FALSE })})

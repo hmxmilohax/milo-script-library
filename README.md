@@ -36,9 +36,9 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Extracted<br>Available |
 | **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | Extracted<br>Extracted<br>Extracted |
 | **Rock Band Blitz** | PS3<br>Xbox 360 | Known (new-style DTB) | Extracted<br>Available |
-| **Rock Band 4** | PS4/5<br>Xbox One/Series | Known (new-style DTA-DTA) | Available |
-| **Rock Band VR** | PC | Known (new-style DTA-DTA) | Available |
-| **Amplitude 2016** | PS4/5 | Known (new-style DTA-DTA) | Available |
+| **Rock Band 4** | PS4/5<br>Xbox One/Series | Known (v3 DTA-DTA) | Extracted[^1][^2] |
+| **Rock Band VR** | PC | Known (v3 DTA-DTA) | Extracted[2^][^3] |
+| **Amplitude 2016** | PS3/4/5 | Known (v3 DTA-DTA) | Available |
 
 ### Prototypes and Demos
 | Game | Build | Platform | Script Format | Status |
@@ -60,3 +60,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Guitar Hero Encore: Rocks the 80's** | Deluge prototype | PS2 | Known (old-style DTB) | Extracted |
 
 These tables are not exhaustive. Harmonix released many games and many updates for those games, so this is subject to change and addition as the time goes on. Please let me know about omissions.
+
+[^1]: Due to a slightly unsupported ARK type, some DTA files in rivals are not accurate to the update and may be from a pre-rivals build
+[^2]: Forge has multiple DTA types, `.dta_dta` and `.script_dta`. `.script_dta` files are converted with `_script` appended to the file name
+[^3]: Song/MOGG DTAs failed to convert

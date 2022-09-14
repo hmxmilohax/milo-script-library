@@ -1,0 +1,68 @@
+(define horizontal_format_item_com 
+   (description "q") 
+   (props 
+      (element_type int 
+         (allowed_values 
+            (
+               (0 "undecided" "haven't chosen yet") 
+               (1 "pivot" "just a pivot") 
+               (2 "text" "im a text thing") 
+               (3 "smart" "An entity that calculates its own width")))) 
+      (offset_from_previous float 
+         (help "distance from previous pivot, does not include width of previous")) 
+      (offset_from_next float 
+         (help "distance to next pivot, does not include width of self")) 
+      (is_disabled bool) 
+      (skip_hide_when_disabled bool) 
+      (last_is_disabled bool) 
+      (last_width float) 
+      (skip_edit_poll bool)))
+(enter 
+   {$this recalculate_element_type })
+(edit_poll 
+   {if 
+      {! 
+         [$this skip_edit_poll ]}
+      {$this edit_poll_work }})
+(edit_poll_work 
+   {$this recalculate_element_type } 
+   {$this refresh_showing })
+(recalculate_element_type 
+   {if 
+      {&& 
+         {<= 
+            [$this element_type ]0 }
+         {exists Text }}
+      {set 
+         [$this element_type ]2 }})
+(recalculate_offset 
+   ($prev_x $prev_width) 
+   {set 
+      [$this offset_from_previous ]
+      {- 
+         [Transform x ]
+         {+ $prev_x $prev_width }}})
+(get_current_width 
+   {set 
+      [$this last_width ]
+      {if_else 
+         {<= 
+            [$this element_type ]1 }
+         {do 0 }
+         {do 
+            {if_else 
+               {== 
+                  [$this element_type ]2 }
+               {do 
+                  [Text bounding_box width ]}
+               {do 
+                  [Instance get_current_width ]}}}}} 
+   [$this last_width ])
+(poll 
+   {$this refresh_showing })
+(refresh_showing 
+   {$this refresh_lasts })
+(refresh_lasts 
+   {set 
+      [$this last_is_disabled ]
+      [$this is_disabled ]})

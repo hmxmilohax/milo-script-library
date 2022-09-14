@@ -1,0 +1,413 @@
+(define sibling_list_com 
+   (description "q") 
+   (props 
+      (items_list array 
+         (help "A simple array of items") 
+         (set_on_instance TRUE) 
+         (item object 
+            (help "An int array item whose default value matches its index within the array."))) 
+      (are_list_items_gaze_targets bool 
+         (set_on_instance TRUE) 
+         (help "o")) 
+      (external_gaze_targets array 
+         (help "A simple array of items") 
+         (set_on_instance TRUE) 
+         (item object 
+            (help "An int array item whose default value matches its index within the array."))) 
+      (title_object object 
+         (set_on_instance TRUE)) 
+      (allow_multiple_equips bool 
+         (set_on_instance TRUE) 
+         (help "o")) 
+      (is_disabled bool 
+         (view_on_instance TRUE) 
+         (help "o")) 
+      (highlighted_index int 
+         (view_on_instance TRUE) 
+         (help "o")) 
+      (equipped_index int 
+         (view_on_instance TRUE) 
+         (help "o")) 
+      (highlighted_item_data_object object 
+         (view_on_instance TRUE)) 
+      (target_highlighted_index int 
+         (set_on_instance TRUE) 
+         (help "what index do we want to highlight")) 
+      (target_equipped_index int 
+         (set_on_instance TRUE) 
+         (help "what index do we want to equip")) 
+      (data_list_object object 
+         (set_on_instance TRUE)) 
+      (current_scroll int 
+         (set_on_instance TRUE) 
+         (default 0)) 
+      (equip_highlighted_index int 
+         (set_on_instance TRUE) 
+         (help "o")) 
+      (refresh_highlighted_index int 
+         (set_on_instance TRUE) 
+         (help "o")) 
+      (refresh_equipped_index int 
+         (set_on_instance TRUE) 
+         (help "o")) 
+      (call_change_highlight_up int 
+         (set_on_instance TRUE)) 
+      (call_change_highlight_down int 
+         (set_on_instance TRUE)) 
+      (auto_position_items bool 
+         (view_on_instance TRUE) 
+         (default FALSE)) 
+      (last_equip_highlighted_index int 
+         (view_on_instance TRUE) 
+         (help "o")) 
+      (last_refresh_highlighted_index int 
+         (view_on_instance TRUE) 
+         (help "o")) 
+      (last_refresh_equipped_index int 
+         (view_on_instance TRUE) 
+         (help "o")) 
+      (last_highlighted_index int 
+         (view_on_instance TRUE)) 
+      (last_data_list_object object 
+         (view_on_instance TRUE)) 
+      (last_call_change_highlight_up int 
+         (set_on_instance TRUE)) 
+      (last_call_change_highlight_down int 
+         (set_on_instance TRUE)) 
+      (check_gaze_targets bool 
+         (set_on_instance TRUE) 
+         (help "o")) 
+      (data_list_length int 
+         (view_on_instance TRUE)) 
+      (num_items int 
+         (view_on_instance TRUE)) 
+      (nothin_at_all object 
+         (set_on_instance TRUE))))
+(enter 
+   {if 
+      [$this are_list_items_gaze_targets ]
+      {set 
+         [$this check_gaze_targets ]TRUE }} 
+   {if 
+      {< 
+         {size 
+            [$this external_gaze_targets ]}0 }
+      {set 
+         [$this check_gaze_targets ]TRUE }} 
+   {set 
+      [$this num_items ]
+      {size 
+         [$this items_list ]}} 
+   {$this refresh_lasts })
+(edit_poll 
+   {local $has_empty_slots FALSE } 
+   {set 
+      [$this num_items ]
+      {size 
+         [$this items_list ]}} 
+   {foreach_int $i 0 
+      {size 
+         [$this items_list ]}
+      {if_else 
+         [$this items_list $i ]
+         {do }
+         {do 
+            {set $has_empty_slots TRUE }}}} 
+   {if 
+      {&& 
+         {== 
+            [$this auto_position_items ]TRUE }
+         {> 
+            [$this num_items ]0 }
+         {== $has_empty_slots FALSE }}
+      {local $num_items 
+         [$this num_items ]}
+      {local $final_item_index 
+         {- $num_items 1 }}
+      {local $initial_x 
+         [
+            (
+               [$this items_list 0 ] Transform)x ]}
+      {local $initial_y 
+         [
+            (
+               [$this items_list 0 ] Transform)y ]}
+      {local $initial_z 
+         [
+            (
+               [$this items_list 0 ] Transform)z ]}
+      {local $delta_x 
+         {- 
+            [
+               (
+                  [$this items_list $final_item_index ] Transform)x ]$initial_x }}
+      {local $delta_y 
+         {- 
+            [
+               (
+                  [$this items_list $final_item_index ] Transform)y ]$initial_y }}
+      {local $delta_z 
+         {- 
+            [
+               (
+                  [$this items_list $final_item_index ] Transform)z ]$initial_z }}
+      {local $item_t }
+      {foreach_int $i 0 
+         {size 
+            [$this items_list ]}
+         {set $item_t 
+            {/ $i $final_item_index }}
+         {set 
+            [
+               (
+                  [$this items_list $i ] Transform)x ]
+            {+ $initial_x 
+               {* $delta_x $item_t }}}
+         {set 
+            [
+               (
+                  [$this items_list $i ] Transform)y ]
+            {+ $initial_y 
+               {* $delta_y $item_t }}}
+         {set 
+            [
+               (
+                  [$this items_list $i ] Transform)z ]
+            {+ $initial_z 
+               {* $delta_z $item_t }}}}})
+(poll 
+   {local $gaze_object } 
+   {local $check_gaze_targets_this_tick 
+      {&& 
+         [$this check_gaze_targets ]
+         {== 
+            [$this is_disabled ]FALSE }}} 
+   {local $new_highlight_index 
+      {if_else $check_gaze_targets_this_tick 
+         {do -1 }
+         {do 
+            [$this highlighted_index ]}}} 
+   {if 
+      {!= 
+         [$this last_data_list_object ]
+         [$this data_list_object ]}
+      {$this refresh_data }} 
+   {if 
+      {!= 
+         [$this last_call_change_highlight_down ]
+         [$this call_change_highlight_down ]}
+      {$this change_highlight 1 }} 
+   {if 
+      {!= 
+         [$this last_call_change_highlight_up ]
+         [$this call_change_highlight_up ]}
+      {$this change_highlight -1 }} 
+   {if 
+      {!= 
+         [$this refresh_highlighted_index ]
+         [$this last_refresh_highlighted_index ]}
+      {set 
+         [$this highlighted_index ]
+         [$this target_highlighted_index ]}} 
+   {if 
+      [$this check_gaze_targets ]
+      {foreach_int $i 0 
+         {size 
+            [$this items_list ]}
+         {if_else 
+            [$this are_list_items_gaze_targets ]
+            {do 
+               {set $gaze_object 
+                  [$this items_list $i ]}}
+            {do 
+               {set $gaze_object 
+                  [$this external_gaze_targets $i ]}}}
+         {set 
+            [
+               ($gaze_object GazeInputReceiverCom)disabled ]
+            [$this is_disabled ]}
+         {if $check_gaze_targets_this_tick 
+            {if 
+               [
+                  ($gaze_object GazeInputReceiverCom)focused ]
+               {set $new_highlight_index $i }}}}
+      {set 
+         [$this highlighted_index ]$new_highlight_index }} 
+   {if 
+      {!= 
+         [$this equip_highlighted_index ]
+         [$this last_equip_highlighted_index ]}
+      {$this perform_equip_highlighted_index }} 
+   {if 
+      {!= 
+         [$this refresh_equipped_index ]
+         [$this last_refresh_equipped_index ]}
+      {set 
+         [$this equipped_index ]
+         [$this target_equipped_index ]}} 
+   {foreach_int $j 0 
+      {size 
+         [$this items_list ]}
+      {local $data_index 
+         {+ $j 
+            [$this current_scroll ]}}
+      {set 
+         [
+            (
+               [$this items_list $j ] Instance)is_disabled ]
+         [$this is_disabled ]}
+      {set 
+         [
+            (
+               [$this items_list $j ] Instance)is_highlighted ]
+         {== $data_index $new_highlight_index }}
+      {set 
+         [
+            (
+               [$this items_list $j ] Instance)is_equipped ]
+         {== $data_index 
+            [$this equipped_index ]}}} 
+   {local $highlighted_item_index 
+      {- 
+         [$this highlighted_index ]
+         [$this current_scroll ]}} 
+   {set 
+      [$this highlighted_item_data_object ]
+      {if_else 
+         {&& 
+            {!= 
+               [$this highlighted_index ]-1 }
+            [$this data_list_object ]
+            [$this items_list $highlighted_item_index ]}
+         {do 
+            [
+               (
+                  [$this items_list $highlighted_item_index ] data_list_item_receiver_com)target_data_object ]}
+         {do 
+            [$this nothin_at_all ]}}} 
+   {$this refresh_lasts })
+(perform_equip_highlighted_index 
+   {set 
+      [$this equipped_index ]
+      {if_else 
+         [$this is_disabled ]
+         {do 
+            [$this last_highlighted_index ]}
+         {do 
+            [$this highlighted_index ]}}})
+(change_highlight 
+   ($highlight_delta) 
+   {local $target_index 
+      {+ 
+         [$this highlighted_index ]$highlight_delta }} 
+   {local $max_data_index 
+      {if_else 
+         [$this data_list_object ]
+         {do 
+            {- 
+               [$this data_list_length ]1 }}
+         {do 
+            {- 
+               [$this num_items ]1 }}}} 
+   {if_else 
+      {< $target_index 0 }
+      {do 
+         {set $target_index $max_data_index }}
+      {do 
+         {if 
+            {> $target_index $max_data_index }
+            {set $target_index 0 }}}} 
+   {set 
+      [$this highlighted_index ]$target_index } 
+   {if 
+      {< 
+         [$this highlighted_index ]
+         [$this current_scroll ]}
+      {set 
+         [$this current_scroll ]
+         [$this highlighted_index ]}
+      {$this refresh_items }} 
+   {if 
+      {>= 
+         [$this highlighted_index ]
+         {+ 
+            [$this current_scroll ]
+            [$this num_items ]}}
+      {set 
+         [$this current_scroll ]
+         {- 
+            [$this highlighted_index ]
+            {- 
+               [$this num_items ]1 }}}
+      {$this refresh_items }})
+(refresh_data 
+   {set 
+      [$this data_list_length ]
+      {if_else 
+         [$this data_list_object ]
+         {do 
+            {size 
+               [
+                  (
+                     [$this data_list_object ] data_list_com)data_list_item_objects ]}}
+         {do 0 }}} 
+   {if 
+      [$this title_object ]
+      {set 
+         [
+            (
+               [$this title_object ] Text)text ]
+         [
+            (
+               [$this data_list_object ] data_list_com)list_title ]}} 
+   {set 
+      [$this highlighted_index ]0 } 
+   {set 
+      [$this current_scroll ]0 } 
+   {$this refresh_items })
+(refresh_items 
+   {local $data_index -1 } 
+   {foreach_int $i 0 
+      {size 
+         [$this items_list ]}
+      {set $data_index 
+         {+ 
+            [$this current_scroll ]$i }}
+      {set 
+         [
+            (
+               [$this items_list $i ] data_list_item_receiver_com)target_data_object ]
+         {if_else 
+            {< $data_index 
+               [$this data_list_length ]}
+            {do 
+               [
+                  (
+                     [$this data_list_object ] data_list_com)data_list_item_objects $data_index ]}
+            {do 
+               [$this nothin_at_all ]}}}
+      {
+         (
+            [$this items_list $i ] data_list_item_receiver_com)refresh_data }})
+(refresh_lasts 
+   {set 
+      [$this last_refresh_highlighted_index ]
+      [$this refresh_highlighted_index ]} 
+   {set 
+      [$this last_refresh_equipped_index ]
+      [$this refresh_equipped_index ]} 
+   {set 
+      [$this last_equip_highlighted_index ]
+      [$this equip_highlighted_index ]} 
+   {set 
+      [$this last_highlighted_index ]
+      [$this highlighted_index ]} 
+   {set 
+      [$this last_data_list_object ]
+      [$this data_list_object ]} 
+   {set 
+      [$this last_call_change_highlight_down ]
+      [$this call_change_highlight_down ]} 
+   {set 
+      [$this last_call_change_highlight_up ]
+      [$this call_change_highlight_up ]})

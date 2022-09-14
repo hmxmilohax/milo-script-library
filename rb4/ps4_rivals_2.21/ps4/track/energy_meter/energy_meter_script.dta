@@ -1,0 +1,76 @@
+(define Interface 
+   (description "Energy meter script") 
+   (was_interface TRUE) 
+   (props 
+      (track_type int 
+         (set_on_instance TRUE)) 
+      (game_data object 
+         (required_coms 
+            (RBGameDataCom))) 
+      (energy_root object 
+         (help "The Transform to scale based on energy level") 
+         (required_coms 
+            (Transform))) 
+      (energy_meter object 
+         (help "The material with the energy meter shadergraph on it") 
+         (required_coms 
+            (Material)))))
+(poll 
+   {local $track_type  } 
+   {switch 
+      [$this track_type ]
+      (0 
+         {set $track_type drums })
+      (1 
+         {set $track_type guitar })
+      (2 
+         {set $track_type bass })
+      (3 
+         {set $track_type vocals })} 
+   {if $track_type 
+      {local $active_prop 
+         {symbol 
+            {sprint $track_type "_active" }}}
+      {local $energy_level 0.0 }
+      {local $can_deploy false }
+      {local $is_deploying false }
+      {if 
+         [
+            (
+               [$this game_data ] RBGameDataCom)$active_prop ]
+         {local $energy_prop 
+            {symbol 
+               {sprint $track_type "_energy" }}}
+         {set $energy_level 
+            {clamp 
+               [
+                  (
+                     [$this game_data ] RBGameDataCom)$energy_prop ]0.0 1 }}
+         {local $can_deploy_prop 
+            {symbol 
+               {sprint $track_type "_can_deploy" }}}
+         {set $can_deploy 
+            [
+               (
+                  [$this game_data ] RBGameDataCom)$can_deploy_prop ]}
+         {local $is_deploying_prop 
+            {symbol 
+               {sprint $track_type "_is_deploying" }}}
+         {set $is_deploying 
+            [
+               (
+                  [$this game_data ] RBGameDataCom)$is_deploying_prop ]}}
+      {set 
+         [
+            (
+               [$this energy_root ] Transform)x_scale ]$energy_level }
+      {set 
+         [
+            (
+               [$this energy_meter ] Material)can_deploy ]
+         {if_else $can_deploy 1 0 }}
+      {set 
+         [
+            (
+               [$this energy_meter ] Material)is_deploying ]
+         {if_else $is_deploying 1 0 }}})

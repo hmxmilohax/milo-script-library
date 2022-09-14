@@ -1,0 +1,67 @@
+(define CrowdExciterScript 
+   (description "Calculate Crowd Happiness value based on song authoring and player performance") 
+   (props 
+      (groove_override bool 
+         (help "should the crowd not go over groove state regardless of player performance?")) 
+      (song_performance_total float 
+         (help "Total (on a curve) of the song value and PerformanceModeInfoCom's crowd_excitement value.") 
+         (read_only TRUE)) 
+      (current_song_value float 
+         (default 0.0) 
+         (help "set this value to the current song 'energy state'")) 
+      (ignore_performance bool 
+         (default FALSE) 
+         (help "When you want to force only song authoring excitement without player performance getting in the way.")) 
+      (song_states struct 
+         (props 
+            (neutral_idle float 
+               (help "neutral/idle/unattentive") 
+               (default 0.0)) 
+            (quiet float 
+               (help "respectively listening") 
+               (default 0.15)) 
+            (groove float 
+               (help "jammin to the song") 
+               (default 0.3)) 
+            (happy float 
+               (help "this is a good band, yeah.") 
+               (default 0.45)) 
+            (very_happy float 
+               (help "best thing evarrrrrr") 
+               (default 0.7))))))
+(enter 
+   {if 
+      {! 
+         {exists PerformanceModeInfoCom }}
+      {notify "CrowdExciterScript: PerformanceModeInfoCom not found on object. Only authored song excitement will be used.
+" }})
+(poll 
+   {if_else 
+      {|| 
+         [$this ignore_performance ]
+         {! 
+            {exists PerformanceModeInfoCom }}}
+      {set 
+         [$this song_performance_total ]
+         [$this current_song_value ]}
+      {set 
+         [$this song_performance_total ]
+         {+ 
+            [$this current_song_value ]
+            {* -0.6 
+               {* 
+                  [PerformanceModeInfoCom crowd_excitment ]
+                  [PerformanceModeInfoCom crowd_excitment ]}}
+            {* 1.35 
+               [PerformanceModeInfoCom crowd_excitment ]}-0.35 }}} 
+   {if_else 
+      [$this groove_override ]
+      {set 
+         [$this song_performance_total ]
+         {clamp 
+            [$this song_performance_total ]0.0 
+            [$this song_states groove ]}}
+      {set 
+         [$this song_performance_total ]
+         {clamp 
+            [$this song_performance_total ]0.0 1.0 }}})
