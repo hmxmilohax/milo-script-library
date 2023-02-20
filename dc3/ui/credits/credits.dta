@@ -1,0 +1,162 @@
+{new
+   MoviePanel
+   movie_credits_panel
+   (preload FALSE)
+   (loop FALSE)
+   (audio TRUE)
+   (videos win_credits)
+   (movie_done
+      {if
+         {==
+            {ui current_screen}
+            movie_credits_screen}
+         {ui goto_screen text_credits_screen}})}
+{new
+   HamScreen
+   movie_credits_screen
+   (panels meta movie_credits_panel movie_overlay_panel)
+   (focus movie_overlay_panel)
+   (is_menu_shown FALSE)
+   (enter
+      {meta music_stop}
+      {$this handle_unpause}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (handle_pause
+      {$this set is_menu_shown TRUE}
+      {movie_credits_panel set_paused TRUE})
+   (handle_unpause
+      {$this set is_menu_shown FALSE}
+      {movie_credits_panel set_paused FALSE})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {platform_mgr guide_showing}
+            {!
+               [is_menu_shown]}}
+         {$this handle_pause}}
+      {if
+         {&&
+            {!
+               {platform_mgr guide_showing}}
+            [is_menu_shown]}
+         {$this handle_unpause}})
+   (skip_selected
+      {movie_credits_panel set_paused TRUE}
+      {ui goto_screen movie_credits_skip_confirm_screen})}
+{new
+   CreditsPanel
+   text_credits_panel
+   (file
+      "credits.milo")
+   (credits_done
+      {meta music_start}
+      {text_credits_screen end_credits})}
+{new
+   HamScreen
+   movie_credits_skip_confirm_screen
+   (panels meta movie_credits_panel background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok_no credits_confirm_skip TRUE})
+   (exit)
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {meta music_start}
+            {text_credits_screen end_credits})
+         (no
+            {movie_credits_panel pause_panel FALSE}
+            {ui goto_screen movie_credits_screen})})}
+{new
+   HamScreen
+   text_credits_skip_confirm_screen
+   (panels meta text_credits_panel background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok_no credits_confirm_skip TRUE})
+   (exit)
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {meta music_start}
+            {print
+               "text_credits_skip_confirm_screen : {ui bottom_screen}="
+               {ui bottom_screen}
+               "\n"}
+            {text_credits_screen end_credits})
+         (no
+            {text_credits_panel pause_panel FALSE}
+            {ui goto_screen text_credits_screen})})}
+{new
+   HamScreen
+   text_credits_screen
+   (panels meta text_credits_panel movie_overlay_panel)
+   (focus movie_overlay_panel)
+   (scroll_sfx FALSE)
+   (is_menu_shown FALSE)
+   (next_screen main_screen)
+   (enter
+      {meta music_stop}
+      {$this handle_unpause}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (handle_pause
+      {$this set is_menu_shown TRUE}
+      {text_credits_panel pause_panel TRUE})
+   (handle_unpause
+      {$this set is_menu_shown FALSE}
+      {text_credits_panel pause_panel FALSE})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {platform_mgr guide_showing}
+            {!
+               [is_menu_shown]}}
+         {$this handle_pause}}
+      {if
+         {&&
+            {!
+               {platform_mgr guide_showing}}
+            [is_menu_shown]}
+         {$this handle_unpause}})
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if_else
+         {text_credits_panel is_cheat_on}
+         {text_credits_panel button_down $user $raw_button $action $pad_num}
+         kDataUnhandled})
+   #endif
+   (skip_selected
+      {if
+         {!
+            {text_credits_panel is_cheat_on}}
+         {text_credits_panel pause_panel TRUE}
+         {ui goto_screen text_credits_skip_confirm_screen}})
+   (end_credits
+      {if_else
+         {==
+            {campaign get_campaign_state}
+            kCampaignStatePostCreditsGlitterati}
+         {ui goto_screen campaign_postcredits_glitterati_screen}
+         {do
+            {if_else
+               {!=
+                  {ui bottom_screen}
+                  game_screen}
+               {ui
+                  goto_screen
+                  {text_credits_screen get next_screen}}
+               {ui
+                  pop_screen
+                  {text_credits_screen get next_screen}}}}})}

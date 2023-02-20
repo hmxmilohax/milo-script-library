@@ -1,0 +1,4394 @@
+#define FREESTYLE_KEYFRAME
+(DC_PLAYER_FREESTYLE)
+#define SONG_BUFFER_TIME
+(1.4)
+#define COMMON_GAME_HANDLERS
+((score 0)
+   (num_stars 0)
+   (performance_index 0)
+   (score_multiplier 0)
+   (hide_helpbar TRUE)
+   (is_gameplay_panel TRUE)
+   (final_pose_result '')
+   (song_bpm -1)
+   (load
+      {set_loader_period 14})
+   (finish_load
+      {set_loader_period 10})
+   (unload
+      {set
+         $hud_panel
+         ""}
+      {if
+         {exists gesture_mgr}
+         {gesture_mgr set_identification_enabled TRUE}}
+      {if
+         {exists depth_buffer}
+         {depth_buffer reset_player_color}})
+   (common_init
+      {if
+         $hamdirector
+         {$hamdirector
+            set
+            difficulty
+            {meta_performer get_difficulty}}
+         {$hamdirector set practice_start ''}
+         {$hamdirector set practice_end ''}
+         {if
+            {$hamdirector get_world}
+            {{$hamdirector get_world}
+               add_sink
+               $this
+               ((intro_start on_intro_start)
+                  (intro_end on_intro_end))}}}
+      {do
+         ($song
+            {meta_performer song})
+         ($data
+            {song_mgr get_meta_data $song})
+         ($song_name
+            {find_obj $hud_panel song_name.lbl})
+         ($song_artist
+            {find_obj $hud_panel song_artist.lbl})
+         {if
+            {&& $song_name $song_artist}
+            {$song_name set_song_name $song}
+            {$song_artist set_artist_name $song}}
+         {set
+            [song_bpm]
+            {$data bpm}}}
+      {meta_performer game_init})
+   (common_reset
+      {set
+         [num_stars]
+         0}
+      {set
+         [final_pose_result]
+         ''}
+      {active_events_parser
+         add_sink
+         $this
+         ()
+         kSinkModeExportType}
+      {if
+         $hud_panel
+         {$hud_panel reset}
+         {$hud_panel
+            set_score
+            [score]
+            [score]
+            0
+            1}
+         {$hud_panel
+            set_score
+            [score]
+            [score]
+            0
+            2}
+         {resize
+            {$hud_panel get special_move_list}
+            0}
+         {$hud_panel set_num_photos 1}
+         {$hud_panel set_slow FALSE FALSE}
+         {if
+            {exists profile_mgr}
+            {do
+               ($trigger
+                  {find_obj
+                     $hud_panel
+                     photo_display
+                     {if_else
+                        {profile_mgr get_disable_photos}
+                        disable_short.trig
+                        enable.trig}})
+               {if
+                  $trigger
+                  {$trigger trigger}}}}}
+      {if
+         $hamdirector
+         {$hamdirector set player_freestyle FALSE}
+         {$hamdirector blend_face_overrides_out 0}
+         {$this send_world_message start 0}}
+      {audio clear_loop}
+      {count_in_player reset}
+      {slow_count_in_player reset}
+      {action_bark_player set_active FALSE}
+      {photo_taker clear_events}
+      {$this set_mp_stream FALSE}
+      {$hud_panel reset_snapshots}
+      {$hamdirector set cam_switch_freestyle TRUE}
+      {meta_performer game_reset}
+      {gesture_mgr set_autoexposure FALSE}
+      {gesture_mgr set_identification_enabled TRUE}
+      {depth_buffer reset_player_color}
+      {gameplay_event_scheduler reset})
+   (send_world_message
+      ($message $delay)
+      {if
+         $gameplay_event_spew
+         {print
+            "[ "
+            $message
+            " ]"
+            "\n"}}
+      {if_else
+         {<= $delay 0}
+         {handle
+            ({$hamdirector get_world}
+               $message)}
+         {script_task
+            kTaskSeconds
+            (delay $delay)
+            (script
+               {handle
+                  ({$hamdirector get_world}
+                     $message)})}})
+   (pick_intro
+      {game_screen set_showing TRUE}
+      {$this reset}
+      {if_else
+         $skip_intro
+         {do
+            {$this send_world_message intro_start 0}
+            {$this send_world_message intro_end 0}}
+         {do
+            {$this send_world_message intro_start 0}}})
+   (intro_over
+      {$this send_world_message intro_end 0})
+   (excitement
+      ($ex)
+      {if
+         {gamemode get crowd_reacts}
+         {do
+            ($levels
+               (excitement_boot excitement_bad excitement_okay excitement_great excitement_peak))
+            {if
+               {< $ex kNumExcitements}
+               {handle
+                  ($this
+                     {elem $levels $ex})}}}}
+      kDataUnhandled)
+   (game_over kDataUnhandled)
+   (game_won_common
+      {game set_realtime TRUE}
+      {game set_paused TRUE FALSE})
+   (game_won
+      {$this game_won_common}
+      kDataUnhandled)
+   (game_outro
+      {if_else
+         {==
+            {ui bottom_screen}
+            {ui current_screen}}
+         {ui push_screen win_transition_screen}
+         {ui goto_screen win_transition_screen}}
+      kDataUnhandled)
+   (disable_all_controllers)
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Start}
+         {$this pause_game}})
+   (pause_game
+      {if
+         {!
+            {game_panel is_game_over}}
+         {if_else
+            {==
+               {ui bottom_screen}
+               {ui current_screen}}
+            {ui push_screen pause_screen}
+            {ui goto_screen pause_screen}}})
+   (freestyle_start_beat
+      {do
+         ($song_anim
+            {$hamdirector song_anim})
+         ($retval -1)
+         {$song_anim
+            foreach_keyframe
+            $hamdirector
+            (shot)
+            $frame
+            $value
+            {if
+               {== $value FREESTYLE_KEYFRAME}
+               {set
+                  $retval
+                  {seconds_to_beat
+                     {/ $frame 30}}}}}
+         $retval})
+   (freestyle_end_beat
+      {do
+         ($song_anim
+            {$hamdirector song_anim})
+         ($found_freestyle FALSE)
+         ($retval -1)
+         {$song_anim
+            foreach_keyframe
+            $hamdirector
+            (shot)
+            $frame
+            $value
+            {if_else
+               $found_freestyle
+               {do
+                  {set
+                     $retval
+                     {seconds_to_beat
+                        {/ $frame 30}}}
+                  {set $found_freestyle FALSE}}
+               {if
+                  {== $value FREESTYLE_KEYFRAME}
+                  {set $found_freestyle TRUE}}}}
+         $retval})
+   (set_performance_state_index
+      ($state_index $broadcast_direction)
+      {do
+         ($old_state_index
+            [performance_index])
+         ($multiplier 0)
+         ($old_performance_state '')
+         ($performance_state '')
+         {set
+            [performance_index]
+            {max
+               {min
+                  $state_index
+                  {-
+                     {size
+                        [performance_state_chart]}
+                     1}}
+               0}}
+         {set
+            $multiplier
+            {elem
+               {elem
+                  [performance_state_chart]
+                  [performance_index]}
+               1}}
+         {if
+            $hud_panel
+            {$hud_panel set_score_multiplier $multiplier}}
+         {if
+            {&&
+               $broadcast_direction
+               {!=
+                  $multiplier
+                  [score_multiplier]}}
+            {$this
+               send_world_message
+               {if_else
+                  {>
+                     $multiplier
+                     [score_multiplier]}
+                  score_multiplier_up
+                  score_multiplier_down}
+               0}}
+         {set
+            [score_multiplier]
+            $multiplier}
+         {set
+            $old_performance_state
+            {if_else
+               {>= $old_state_index 0}
+               {elem
+                  {elem
+                     [performance_state_chart]
+                     $old_state_index}
+                  0}
+               ''}}
+         {set
+            $performance_state
+            {elem
+               {elem
+                  [performance_state_chart]
+                  [performance_index]}
+               0}}
+         {if
+            {!= $old_performance_state $performance_state}
+            {$this send_world_message $performance_state 2.0e-2}
+            {if
+               $broadcast_direction
+               {$this
+                  send_world_message
+                  {symbol
+                     {sprint
+                        $performance_state
+                        {if_else
+                           {>
+                              $old_state_index
+                              [performance_index]}
+                           _downto
+                           _upto}}}
+                  2.0e-2}}}})
+   (next_performance_state_index
+      ($rating_idx $cur_index)
+      {if_else
+         {< $cur_index 0}
+         [initial_performance_state_index]
+         {do
+            ($delta
+               {elem
+                  {elem
+                     [performance_state_chart]
+                     $cur_index}
+                  {'+' $rating_idx 2}})
+            {'+' $delta $cur_index}}})
+   (calculate_best_possible_score
+      ($score_chart $bonus_chart)
+      {do
+         ($best_score 0)
+         ($score_index
+            [initial_performance_state_index])
+         ($move_score_base
+            {'+'
+               {elem $score_chart 0}
+               {elem $bonus_chart 0}})
+         ($song_anim
+            {$hamdirector song_anim})
+         ($move
+            "")
+         ($score_add 0)
+         {$song_anim
+            foreach_keyframe
+            $hamdirector
+            (move)
+            $frame
+            $value
+            {set
+               $move
+               {$hud_panel get_move $value}}
+            {if
+               {!
+                  {$move is_rest}}
+               {set
+                  $score_add
+                  {'*'
+                     $move_score_base
+                     {elem
+                        {elem
+                           [performance_state_chart]
+                           $score_index}
+                        1}}}
+               {'+=' $best_score $score_add}
+               {set
+                  $score_index
+                  {$this next_performance_state_index 0 $score_index}}}}
+         $best_score})
+   (calculate_stars
+      ($score)
+      {do
+         ($stars 0)
+         ($threshold 0)
+         ($last_threshold 0)
+         ($done FALSE)
+         {foreach_int
+            $i
+            0
+            {size
+               [star_thresholds]}
+            {set
+               $threshold
+               {elem
+                  [star_thresholds]
+                  $i}}
+            {if
+               {! $done}
+               {if_else
+                  {> $score $threshold}
+                  {'+=' $stars 1}
+                  {do
+                     {'+='
+                        $stars
+                        {/
+                           {- $score $last_threshold}
+                           {- $threshold $last_threshold}}}
+                     {set $done TRUE}}}
+               {set $last_threshold $threshold}}}
+         $stars})
+   (set_mp_stream
+      ($state)
+      {audio
+         set_track_volume
+         drum
+         {if_else $state -96 0}}
+      {audio
+         set_track_volume
+         vocals
+         {if_else $state -96 0}}
+      {audio
+         set_track_volume
+         multi
+         {if_else $state 0 -96}}))
+#define FINAL_POSE_HANDLERS
+((final_pose_start 0)
+   (final_pose_photo
+      {gesture_mgr start_snapshot_batch}
+      {$hud_panel take_snapshot}
+      {gesture_mgr set_identification_enabled TRUE})
+   (final_pose_scored
+      ($rating)
+      {set
+         [final_pose_result]
+         {switch
+            $rating
+            (move_perfect final_pose_perfect)
+            (move_awesome final_pose_awesome)
+            (move_ok final_pose_ok)
+            (move_bad final_pose_bad)}}))
+(GamePanel
+   (description
+      "Main game mode panel for Hammer")
+   (allowed_dirs)
+   (types
+      (linear
+         COMMON_GAME_HANDLERS
+         #include performance.dta
+         (force_scale FALSE)
+         (freestyle_start -1)
+         (freestyle_end -1)
+         (freestyle_score 0)
+         (num_photo_ops 0)
+         (last_scored_move_index -1)
+         (star_thresholds
+            ())
+         (star_display
+            "")
+         (score_chart
+            ())
+         (bonus_chart
+            ())
+         (last_pose_photo_beat -1)
+         (first_move_beat -1)
+         (final_move_beat -1)
+         (poll
+            {if
+               {&&
+                  {>
+                     [freestyle_start]
+                     0}
+                  {>
+                     [freestyle_end]
+                     0}
+                  {<
+                     $beat
+                     [freestyle_end]}}
+               {if
+                  {freestyle_filter detected}
+                  {'+='
+                     [freestyle_score]
+                     {'*'
+                        {/
+                           {taskmgr delta_beat}
+                           {-
+                              [freestyle_end]
+                              [freestyle_start]}}
+                        [freestyle_max_points]}}}
+               {if
+                  {>
+                     [freestyle_score]
+                     [freestyle_max_points]}
+                  {set
+                     [freestyle_score]
+                     [freestyle_max_points]}}}
+            {if
+               {meta_performer get_fitness_mode}
+               {$fit.time_lbl set_fitness_time_num}
+               {$fit.cal_lbl set_fitness_total_calories_num}
+               {do
+                  ($move_amt
+                     {meta_performer get_player_move_amt})
+                  {$fit.sparkles
+                     set
+                     showing
+                     {> $move_amt 0.3}}
+                  {$fit.glow
+                     set
+                     showing
+                     {> $move_amt 0.6}}}})
+         (music_start
+            {if
+               $hamdirector
+               {$this send_world_message beat_animation_start 0}}
+            kDataUnhandled)
+         (music_end
+            {do
+               ($event
+                  {symbol
+                     {sprint
+                        "game_over_stars_"
+                        {int
+                           [num_stars]}}})
+               {$this send_world_message $event 0}
+               {$this send_world_message beat_animation_stop 0}}
+            kDataUnhandled)
+         (end
+            {game_panel win}
+            {$this send_world_message game_over 0})
+         (move_passed
+            ($move $detect_frac)
+            {do
+               ($done FALSE)
+               ($base_points 0)
+               ($old_score
+                  [score])
+               ($move_index
+                  {$hud_panel get cur_move_index})
+               ($rating
+                  {detect_frac_to_rating $detect_frac $move})
+               ($rating_idx
+                  {rating_state_to_index $rating})
+               ($bonus
+                  {get_score_bonus $detect_frac $move})
+               {if
+                  {&&
+                     {!
+                        {$move is_rest}}
+                     $hud_panel
+                     {<
+                        [last_scored_move_index]
+                        $move_index}}
+                  {$this send_world_message $rating 1.0e-3}
+                  {meta_performer move_passed $move $rating_idx $detect_frac}
+                  {set
+                     $base_points
+                     {elem
+                        [score_chart]
+                        $rating_idx}}
+                  {set
+                     $base_points
+                     {'+'
+                        $base_points
+                        {int
+                           {'*'
+                              $bonus
+                              {elem
+                                 [bonus_chart]
+                                 $rating_idx}}}}}
+                  {set $done FALSE}
+                  {set
+                     [last_scored_move_index]
+                     $move_index}
+                  {do
+                     ($points
+                        {'*'
+                           [score_multiplier]
+                           $base_points})
+                     ($last_stars
+                        {int
+                           [num_stars]})
+                     {if
+                        {> $points 0}
+                        {set
+                           [score]
+                           {'+'
+                              [score]
+                              $points}}
+                        {$hud_panel
+                           set_score
+                           [score]
+                           $old_score
+                           0
+                           1}
+                        {set
+                           [num_stars]
+                           {$this
+                              calculate_stars
+                              [score]}}
+                        {do
+                           ($full
+                              {int
+                                 [num_stars]})
+                           ($partial
+                              {-
+                                 [num_stars]
+                                 $full})
+                           {if
+                              [star_display]
+                              {[star_display]
+                                 set_star_progress
+                                 $full
+                                 $partial}
+                              {if
+                                 {> $full $last_stars}
+                                 {[star_display]
+                                    set_star_complete
+                                    $last_stars}
+                                 {if
+                                    {==
+                                       $last_stars
+                                       {-
+                                          {size
+                                             [star_threshold_percentages]}
+                                          1}}
+                                    {$this send_world_message final_star_earned 2.0e-2}}
+                                 {$this send_world_message star_earned 0}}}}
+                        {handle
+                           ($world points_awarded)}}}
+                  {if
+                     {$move get final_pose}
+                     {$this
+                        send_world_message
+                        [final_pose_result]
+                        0}}
+                  {if
+                     {!
+                        [force_scale]}
+                     {do
+                        ($next_state_index
+                           {$this
+                              next_performance_state_index
+                              $rating_idx
+                              [performance_index]})
+                        {$this set_performance_state_index $next_state_index TRUE}}}}})
+         (init
+            {$this common_init}
+            {{{$hud_panel find sound_bank}
+                  find
+                  music_level.fade}
+               set
+               level
+               0}
+            {master
+               add_sink
+               $this
+               (beat)}
+            {set
+               [score_multiplier]
+               0}
+            {if
+               {$hamdirector get_world}
+               {{$hamdirector get_world}
+                  add_sink
+                  $this
+                  ((player_freestyle_start on_freestyle_start)
+                     (player_freestyle_stop on_freestyle_stop)
+                     (move_perfect on_move_perfect)
+                     (move_awesome on_move_awesome)
+                     (move_ok on_move_ok)
+                     (move_bad on_move_bad))}}
+            {if
+               $hamdirector
+               {$this send_world_message performance_mode 0}
+               {set
+                  [star_display]
+                  {{$hamdirector get cur_world}
+                     find
+                     score_star_display
+                     FALSE}}}
+            {$this reset}
+            {set
+               $fit.cal_lbl
+               {find_obj $hud_panel fitness fit_calories_total.lbl}}
+            {set
+               $fit.time_lbl
+               {find_obj $hud_panel fitness fit_time.lbl}}
+            {set
+               $fit.sparkles
+               {find_obj $hud_panel fitness sparkles.grp}}
+            {set
+               $fit.glow
+               {find_obj $hud_panel fitness glow_ring_01.grp}}
+            {{find_obj $hud_panel fitness}
+               set
+               showing
+               {meta_performer get_fitness_mode}}
+            {do
+               ($song_anim
+                  {$hamdirector song_anim})
+               ($move
+                  "")
+               ($b -1)
+               {$song_anim
+                  foreach_keyframe
+                  $hamdirector
+                  (move)
+                  $frame
+                  $value
+                  {set
+                     $move
+                     {$hud_panel get_move $value}}
+                  {set
+                     $b
+                     {round
+                        {seconds_to_beat
+                           {/ $frame 30}}}}
+                  {if
+                     {&&
+                        $move
+                        {$move get scored}}
+                     {set
+                        [final_move_beat]
+                        $b}
+                     {if
+                        {<
+                           [first_move_beat]
+                           0}
+                        {set
+                           [first_move_beat]
+                           $b}}}}}
+            {audio jump 0})
+         (reset
+            {$this common_reset}
+            {if
+               $hamdirector
+               {$hamdirector
+                  set
+                  difficulty
+                  {meta_performer get_difficulty}}}
+            {set
+               [performance_index]
+               -1}
+            {$this
+               set_performance_state_index
+               [initial_performance_state_index]
+               FALSE}
+            {set
+               [score]
+               0}
+            {set
+               [force_scale]
+               FALSE}
+            {set
+               [freestyle_start]
+               -1}
+            {set
+               [freestyle_end]
+               -1}
+            {set
+               [freestyle_score]
+               0}
+            {set
+               [num_photo_ops]
+               1}
+            {set
+               [last_scored_move_index]
+               -1}
+            {$this
+               send_world_message
+               {if_else
+                  {meta_performer is_no_flashcards_active}
+                  flash_cards_hidden
+                  flash_cards_visible}
+               0}
+            {set
+               [score_chart]
+               {switch
+                  {meta_performer get_difficulty}
+                  (kDifficultyEasy
+                     [performance_score_chart_easy])
+                  (kDifficultyMedium
+                     [performance_score_chart_medium])
+                  (kDifficultyExpert
+                     [performance_score_chart_expert])}}
+            {set
+               [bonus_chart]
+               {switch
+                  {meta_performer get_difficulty}
+                  (kDifficultyEasy
+                     [performance_bonus_chart_easy])
+                  (kDifficultyMedium
+                     [performance_bonus_chart_medium])
+                  (kDifficultyExpert
+                     [performance_bonus_chart_expert])}}
+            {if
+               {$hamdirector song_anim}
+               {do
+                  ($best
+                     {$this
+                        calculate_best_possible_score
+                        [score_chart]
+                        [bonus_chart]})
+                  {resize
+                     [star_thresholds]
+                     0}
+                  {foreach
+                     $elem
+                     [star_threshold_percentages]
+                     {push_back
+                        [star_thresholds]
+                        {int
+                           {/
+                              {'*' $elem $best}
+                              100}}}}}
+               {$this send_world_message beat_animation_stop 0}}
+            {if
+               $hud_panel
+               {do
+                  ($special_moves
+                     {$this construct_random_tagged_move_list})
+                  {$hud_panel set special_move_list $special_moves}}}
+            {$hamdirector reset_detection}
+            {$hud_panel set_helper_frame game TRUE}
+            {if
+               {meta_performer get_fitness_mode}
+               {{find_obj $hud_panel fitness heart_beat.anim}
+                  animate}
+               {{find_obj $hud_panel fitness sparkles.anim}
+                  animate}
+               {{find_obj $hud_panel fitness glow_ring.anim}
+                  animate}})
+         (on_intro_end
+            {if
+               $hamdirector
+               {$hamdirector blend_face_overrides_out 0}}
+            kDataUnhandled)
+         (world_unpause
+            {$hud_panel set_helper_frame game FALSE}
+            kDataUnhandled)
+         (pause_on_skeleton_loss
+            {do
+               ($cur_beat
+                  {taskmgr beat})
+               {&&
+                  {>
+                     $cur_beat
+                     {-
+                        [first_move_beat]
+                        8}}
+                  {<=
+                     $cur_beat
+                     [first_move_beat]}}})
+         (beat
+            {if
+               {exists gesture_mgr}
+               {switch
+                  {-
+                     [final_move_beat]
+                     $beat}
+                  (8
+                     {gesture_mgr set_identification_enabled FALSE})
+                  (6
+                     {gesture_mgr set_autoexposure TRUE})
+                  (1
+                     {gesture_mgr set_autoexposure FALSE})}}
+            kDataUnhandled)
+         FINAL_POSE_HANDLERS
+         (on_move_perfect
+            {handle
+               ($this on_move_awesome)}
+            kDataUnhandled)
+         (on_move_awesome
+            {if
+               {&&
+                  {$hud_panel
+                     is_special_move
+                     [last_scored_move_index]}
+                  {<
+                     [num_photo_ops]
+                     [max_num_photos]}}
+               {'++'
+                  [num_photo_ops]}
+               {$hud_panel
+                  set_num_photos
+                  [num_photo_ops]}
+               {$this send_world_message photo_award 0}
+               {$hud_panel
+                  set_photo_op_result
+                  [last_scored_move_index]
+                  TRUE}}
+            kDataUnhandled)
+         (on_move_ok
+            {handle
+               ($this on_move_bad)}
+            kDataUnhandled)
+         (on_move_bad
+            {if
+               {&&
+                  {$hud_panel
+                     is_special_move
+                     [last_scored_move_index]}
+                  {<
+                     [num_photo_ops]
+                     [max_num_photos]}}
+               {$hud_panel
+                  set_photo_op_result
+                  [last_scored_move_index]
+                  FALSE}}
+            kDataUnhandled)
+         (on_freestyle_start
+            {set
+               [freestyle_start]
+               {round
+                  {$this freestyle_start_beat}}}
+            {set
+               [freestyle_end]
+               {int
+                  {$this freestyle_end_beat}}}
+            {photo_taker
+               init
+               {'+'
+                  [freestyle_start]
+                  8}
+               {'*'
+                  [num_photo_ops]
+                  4}
+               {sprint
+                  "performance_"
+                  [num_photo_ops]}
+               {-
+                  [freestyle_end]
+                  1}
+               {'+'
+                  [freestyle_end]
+                  1}
+               {'+'
+                  [freestyle_end]
+                  5}}
+            {gesture_mgr start_snapshot_batch}
+            {set
+               [freestyle_score]
+               0}
+            {freestyle_filter activate}
+            {freestyle_filter
+               set
+               velocity_threshold
+               [freestyle_movement_threshold]})
+         (on_freestyle_stop
+            {set
+               [freestyle_start]
+               -1}
+            {set
+               [freestyle_end]
+               -1}
+            {do
+               ($freestyle_rating '')
+               {foreach
+                  $entry
+                  [freestyle_award_chart]
+                  {if
+                     {>=
+                        [freestyle_score]
+                        {elem $entry 0}}
+                     {set
+                        $freestyle_rating
+                        {elem $entry 1}}}}
+               {photo_taker set rating $freestyle_rating}}
+            {if
+               {exists freestyle_filter}
+               {freestyle_filter deactivate}})
+         (construct_random_tagged_move_list
+            {if_else
+               $hamdirector
+               {do
+                  ($song_anim
+                     {$hamdirector song_anim})
+                  ($last_move_index -1)
+                  ($legal_move_list
+                     {array 0})
+                  ($tagged_move_list
+                     {array 0})
+                  ($tagged_move_count 0)
+                  ($first_move TRUE)
+                  {$song_anim
+                     foreach_keyframe
+                     $hamdirector
+                     (shot)
+                     $frame
+                     $value
+                     {if
+                        {&&
+                           {< $last_move_index 0}
+                           {== $value FREESTYLE_KEYFRAME}}
+                        {set
+                           $last_move_index
+                           {$song_anim
+                              index_from_frame
+                              $hamdirector
+                              (move)
+                              $frame}}}}
+                  {foreach_int
+                     $i
+                     0
+                     {- $last_move_index 2}
+                     {do
+                        ($move_name '')
+                        ($move
+                           "")
+                        {if
+                           {$song_anim
+                              value_from_index
+                              $hamdirector
+                              (move)
+                              $i
+                              $move_name}
+                           {set
+                              $move
+                              {$hud_panel get_move $move_name}}
+                           {if_else
+                              {==
+                                 $move
+                                 ""}
+                              {notify_once
+                                 "Skipping move "
+                                 $move_name}
+                              {do
+                                 {if
+                                    {&&
+                                       {!
+                                          {$move is_rest}}
+                                       {! $first_move}}
+                                    {push_back $legal_move_list $i}}
+                                 {if
+                                    {!
+                                       {$move is_rest}}
+                                    {set $first_move FALSE}}}}}}}
+                  {set
+                     $tagged_move_count
+                     {int
+                        {'*'
+                           {size $legal_move_list}
+                           [tagged_moves_frac]}}}
+                  {set
+                     $tagged_move_count
+                     {max
+                        $tagged_move_count
+                        [tagged_moves_min_count]}}
+                  {set
+                     $tagged_move_count
+                     {min
+                        $tagged_move_count
+                        {size $legal_move_list}}}
+                  {while
+                     {<
+                        {size $tagged_move_list}
+                        $tagged_move_count}
+                     {do
+                        ($val
+                           {elem
+                              $legal_move_list
+                              {random_int
+                                 0
+                                 {size $legal_move_list}}})
+                        {remove_elem $legal_move_list $val}
+                        {push_back $tagged_move_list $val}}}
+                  {sort $tagged_move_list}
+                  $tagged_move_list}
+               ()})
+         (force_performance_next
+            {set
+               [force_scale]
+               TRUE}
+            {$this
+               set_performance_state_index
+               {'+'
+                  [performance_index]
+                  1}
+               TRUE})
+         (force_performance_previous
+            {set
+               [force_scale]
+               TRUE}
+            {$this
+               set_performance_state_index
+               {-
+                  [performance_index]
+                  1}
+               TRUE}))
+      (skillz
+         COMMON_GAME_HANDLERS
+         #include skills.dta
+         (step_index -1)
+         (section
+            "")
+         (num_steps 0)
+         (loop_count 0)
+         (state start)
+         (learn_state fast_track)
+         (start_beat -1)
+         (end_beat -1)
+         (step_complete FALSE)
+         (move_beats
+            ())
+         (learn_move_index 0)
+         (move_results
+            ())
+         (learn_mode_locked FALSE)
+         (user_action '')
+         (panel_expiration_beat -1)
+         (learn_credit_category 0)
+         (section_credits 0)
+         (section_credits_max 0)
+         (learn_section_result_category 0)
+         (num_ticks 0)
+         (miss_streak 0)
+         (performance_state '')
+         (slow_motion FALSE)
+         (review_move_number 0)
+         (review_move_count 0)
+         (review_move_hit_count 0)
+         (review_total_move_count 0)
+         (review_total_move_hit_count 0)
+         (play_barks FALSE)
+         (played_first_express FALSE)
+         (played_first_3rep FALSE)
+         (next_loop_start_margin -1)
+         (vo_spew FALSE)
+         (init
+            {$this common_init}
+            {master
+               add_sink
+               $this
+               (beat stream_jump)}
+            {$this reset}
+            {$this check_tags}
+            {resize
+               [cached_loop_cams]
+               0}
+            {if
+               $hamdirector
+               {$this send_world_message flash_cards_visible 0}}
+            {audio jump 0}
+            {{find_obj $hud_panel fitness}
+               set
+               showing
+               FALSE})
+         (on_intro_start
+            {if
+               $hud_panel
+               {$hud_panel play nar_ses_intro}}
+            kDataUnhandled)
+         (on_intro_end
+            {do
+               ($s)
+               ($e)
+               {if
+                  {!
+                     {audio get_loop_beats $s $e}}
+                  {$this stream_jump}}}
+            {if
+               $hamwardrobe
+               {$hamwardrobe crowd_end_override}}
+            kDataUnhandled)
+         (exit
+            {set
+               [cached_loop_cams]
+               {array 0}})
+         (setup_section
+            {do
+               ($done FALSE)
+               ($index 0)
+               ($moves
+                  {{$hamdirector get_world}
+                     find
+                     moves})
+               ($rev_index -1)
+               ($review_indicies
+                  ())
+               {resize $review_indicies 0}
+               {$moves
+                  iterate
+                  PracticeSection
+                  $ps
+                  {if
+                     {==
+                        {$ps get difficulty}
+                        {meta_performer get_difficulty}}
+                     {set
+                        [section]
+                        $ps}}}
+               {foreach_int
+                  $i
+                  0
+                  {[section]
+                     size
+                     (steps)}
+                  {if
+                     {==
+                        {[section]
+                           get
+                           (steps $i type)}
+                        review}
+                     {push_back $review_indicies $i}}}
+               {while
+                  {size $review_indicies}
+                  {set
+                     $rev_index
+                     {last_elem $review_indicies}}
+                  {resize
+                     $review_indicies
+                     {-
+                        {size $review_indicies}
+                        1}}
+                  {if
+                     {'||'
+                        {>=
+                           {'+' $rev_index 1}
+                           {[section]
+                              size
+                              (steps)}}
+                        {!=
+                           {[section]
+                              get
+                              (steps
+                                 {'+' $rev_index 1}
+                                 type)}
+                           recap_results}}
+                     {[section]
+                        insert
+                        (steps
+                           {'+' $rev_index 1})
+                        0}
+                     {[section]
+                        set
+                        (steps
+                           {'+' $rev_index 1}
+                           type)
+                        recap_results}
+                     {[section]
+                        set
+                        (steps
+                           {'+' $rev_index 1}
+                           boundry)
+                        TRUE}
+                     {[section]
+                        set
+                        (steps
+                           {'+' $rev_index 1}
+                           start)
+                        ""}
+                     {[section]
+                        set
+                        (steps
+                           {'+' $rev_index 1}
+                           end)
+                        ""}}}})
+         (determine_seq_start_beat
+            ($sfx $done_by_beat $time_accounted)
+            {do
+               ($sfx_start_beat 0)
+               ($sfx_length 0)
+               ($done_by_seconds
+                  {beat_to_seconds $done_by_beat})
+               ($time_we_have
+                  {- $done_by_seconds $time_accounted})
+               {set
+                  $sfx
+                  {$hud_panel get_seq $sfx}}
+               {set
+                  $sfx_length
+                  {-
+                     {$hud_panel get_seq_length $sfx}
+                     $time_accounted}}
+               {if
+                  {> $sfx_length $time_we_have}
+                  {if
+                     {==
+                        {$sfx class_name}
+                        RandomGroupSeq}
+                     {$hud_panel
+                        pick_shorter_seq
+                        $sfx
+                        {'+' $time_we_have $time_accounted}}
+                     {set
+                        $sfx_length
+                        {-
+                           {$hud_panel get_seq_length $sfx}
+                           $time_accounted}}}
+                  {if
+                     {> $sfx_length $time_we_have}
+                     {notify
+                        "Found case of overlapping SFX "
+                        $sfx}}}
+               {if_else
+                  {<= $sfx_length 0}
+                  $done_by_beat
+                  {do
+                     {set
+                        $sfx_start_beat
+                        {max
+                           {seconds_to_beat
+                              {- $done_by_seconds $sfx_length}}
+                           0}}
+                     {'*'
+                        4
+                        {int
+                           {/ $sfx_start_beat 4}}}}}})
+         (check_tags
+            {foreach_int
+               $i
+               0
+               [num_steps]
+               {if
+                  {!=
+                     {[section]
+                        get
+                        (steps $i type)}
+                     recap_results}
+                  {if
+                     {<
+                        {$this
+                           beat_from_tag
+                           {[section]
+                              get
+                              (steps $i start)}}
+                        0}
+                     {notify
+                        "Assign as bug to Daniel Chase - Step "
+                        $i
+                        " start tag refers to "
+                        {[section]
+                           get
+                           (steps $i start)}
+                        " which does not exist in song."}}
+                  {if
+                     {<
+                        {$this
+                           beat_from_tag
+                           {[section]
+                              get
+                              (steps $i end)}}
+                        0}
+                     {notify
+                        "Assign as bug to Daniel Chase - Step "
+                        $i
+                        " end tag refers to "
+                        {[section]
+                           get
+                           (steps $i end)}
+                        " which does not exist in song."}}}})
+         (beat_from_tag
+            ($tag)
+            {do
+               ($retVal -1)
+               {if
+                  $hamdirector
+                  {do
+                     ($song_anim
+                        {$hamdirector song_anim})
+                     ($frame)
+                     ($value)
+                     {$song_anim
+                        foreach_keyframe
+                        $hamdirector
+                        (practice)
+                        $frame
+                        $value
+                        {if
+                           {== $tag $value}
+                           {set
+                              $retVal
+                              {round
+                                 {seconds_to_beat
+                                    {/ $frame 30}}}}}}}}
+               $retVal})
+         (move_on
+            {if
+               {==
+                  [state]
+                  learn}
+               {do
+                  ($credits
+                     {elem
+                        [step_category_credits]
+                        [learn_credit_category]})
+                  ($max_credits
+                     {elem
+                        [step_category_credits]
+                        3})
+                  ($cue
+                     {elem
+                        [step_result_category_cues]
+                        [learn_credit_category]})
+                  ($category
+                     [learn_credit_category])
+                  {'+='
+                     [section_credits]
+                     $credits}
+                  {'+='
+                     [section_credits_max]
+                     $max_credits}
+                  {if
+                     $hud_panel
+                     {$hud_panel play $cue}
+                     {if
+                        [vo_spew]
+                        {printf
+                           "VO: Step end. Cat. %d adds %d credits for %d / %d. Playing %s.cue.\n"
+                           $category
+                           $credits
+                           [section_credits]
+                           [section_credits_max]
+                           $cue}}}}
+               {if
+                  {&&
+                     {!=
+                        {ui transition_screen}
+                        slow_down_screen}
+                     {!
+                        {slow_down_panel is_up}}
+                     {!=
+                        {ui transition_screen}
+                        retry_move_screen}
+                     {!
+                        {retry_move_panel is_up}}
+                     {!=
+                        {ui transition_screen}
+                        speed_up_screen}
+                     {!
+                        {speed_up_screen is_up}}
+                     {<
+                        [loop_count]
+                        [max_loops]}}
+                  {ui push_screen retry_move_screen}}}
+            {set
+               [step_complete]
+               TRUE}
+            {count_in_player clear_events}
+            {slow_count_in_player clear_events}
+            {do
+               ($next_step_index
+                  {'+'
+                     [step_index]
+                     1})
+               ($learn_expire
+                  [end_beat])
+               {if_else
+                  {<
+                     $next_step_index
+                     [num_steps]}
+                  {do
+                     ($next_step_start
+                        {[section]
+                           get
+                           (steps $next_step_index start)})
+                     ($next_step_type
+                        {[section]
+                           get
+                           (steps $next_step_index type)})
+                     ($start)
+                     ($end)
+                     {audio get_loop_beats $start $end}
+                     {set
+                        $start
+                        {int $start}}
+                     {set
+                        $end
+                        {int $end}}
+                     {if
+                        {==
+                           [state]
+                           learn}
+                        {do
+                           ($retry_expire_sec
+                              {'+'
+                                 {master stream_time}
+                                 [retry_panel_min_time]})
+                           ($loopback_sec 0)
+                           {set
+                              [panel_expiration_beat]
+                              {'*'
+                                 4
+                                 {'+'
+                                    1
+                                    {int
+                                       {/
+                                          {seconds_to_beat $retry_expire_sec}
+                                          4}}}}}
+                           {set
+                              $loopback_sec
+                              {'+'
+                                 {beat_to_seconds
+                                    [panel_expiration_beat]}
+                                 SONG_BUFFER_TIME}}
+                           {set
+                              $end
+                              {seconds_to_beat $loopback_sec}}
+                           {set
+                              $end
+                              {'*'
+                                 4
+                                 {'+'
+                                    1
+                                    {int
+                                       {/ $end 4}}}}}
+                           {set
+                              $learn_expire
+                              [panel_expiration_beat]}}}
+                     {switch
+                        $next_step_type
+                        (learn
+                           {set
+                              [start_beat]
+                              {$this
+                                 determine_seq_start_beat
+                                 nar_express_short
+                                 {-
+                                    {$this beat_from_tag $next_step_start}
+                                    4}
+                                 0}})
+                        (review
+                           {set
+                              [start_beat]
+                              {-
+                                 {$this beat_from_tag $next_step_start}
+                                 12}}
+                           {do
+                              ($percentage
+                                 {/
+                                    [section_credits]
+                                    [section_credits_max]})
+                              ($category
+                                 {$this
+                                    calc_result_category
+                                    $percentage
+                                    [learn_result_category_thresholds]})
+                              ($cue
+                                 {$hud_panel
+                                    get_seq
+                                    {elem
+                                       [learn_result_category_cues]
+                                       $category}})
+                              ($cue_length
+                                 {$hud_panel get_seq_length $cue})
+                              ($cue_finish_beat
+                                 {seconds_to_beat
+                                    {'+'
+                                       {beat_to_seconds
+                                          {'+' $end 0.5}}
+                                       $cue_length}})
+                              {set
+                                 $cue_finish_beat
+                                 {'*'
+                                    4
+                                    {int
+                                       {'+'
+                                          1
+                                          {/ $cue_finish_beat 4}}}}}
+                              {set $end $cue_finish_beat}
+                              {if
+                                 {<=
+                                    8
+                                    {- $end $learn_expire}}
+                                 {set
+                                    $end
+                                    {'+' $learn_expire 8}}}
+                              {while
+                                 {&&
+                                    {>
+                                       $end
+                                       {master event_beat end}}
+                                    {> $end $learn_expire}}
+                                 {-= $end 4}
+                                 {-=
+                                    [start_beat]
+                                    4}}
+                              {set
+                                 [learn_section_result_category]
+                                 $category}
+                              {gameplay_event_scheduler reset}
+                              {foreach
+                                 $event
+                                 (({'+' $learn_expire 0.5}
+                                       $cue)
+                                    ({'+' $learn_expire 2}
+                                       highlight_awards)
+                                    ({'+' $learn_expire 6}
+                                       skills_learn_done)
+                                    ({'+' $learn_expire 10}
+                                       {if_else
+                                          {>=
+                                             $next_step_index
+                                             {-
+                                                [num_steps]
+                                                2}}
+                                          skills_show_recap_final
+                                          skills_show_recap})
+                                    ({'+' $learn_expire 12}
+                                       skills_review)
+                                    ({'+' $learn_expire 12}
+                                       done))
+                                 {do
+                                    ($time
+                                       {eval
+                                          {elem $event 0}})
+                                    {if
+                                       {> $time $end}
+                                       {set
+                                          $time
+                                          {'+'
+                                             [start_beat]
+                                             {- $time $end}}}}
+                                    {gameplay_event_scheduler
+                                       add_world_message
+                                       $time
+                                       {eval
+                                          {elem $event 1}}}}
+                                 {gameplay_event_scheduler
+                                    reset_to_beat
+                                    {taskmgr beat}}}})
+                        (recap_results
+                           {do
+                              ($last_song_beat
+                                 {int
+                                    {seconds_to_beat
+                                       {/
+                                          {master song_duration_ms}
+                                          1000}}})
+                              ($end_buffer 0)
+                              {-=
+                                 $last_song_beat
+                                 {mod $last_song_beat 4}}
+                              {set
+                                 $end_buffer
+                                 {-
+                                    $last_song_beat
+                                    {'+'
+                                       $end
+                                       {'*'
+                                          4
+                                          [recap_results_measures]}}}}
+                              {if_else
+                                 {> $end_buffer 0}
+                                 {set
+                                    [start_beat]
+                                    $end}
+                                 {set
+                                    [start_beat]
+                                    $start}}})}
+                     {$this
+                        set_loop
+                        [start_beat]
+                        $end}
+                     {set
+                        [next_loop_start_margin]
+                        {round
+                           {/
+                              {-
+                                 {$this beat_from_tag $next_step_start}
+                                 [start_beat]}
+                              4}}}}
+                  {do
+                     ($percentage
+                        {/
+                           [review_total_move_hit_count]
+                           [review_total_move_count]})
+                     ($category
+                        {$this
+                           calc_result_category
+                           $percentage
+                           [session_result_category_thresholds]})
+                     ($cue
+                        {elem
+                           [session_result_category_cues]
+                           $category})
+                     {audio clear_loop}
+                     {$this send_world_message game_over_skills 0}
+                     {game_panel win}
+                     {if
+                        $hud_panel
+                        {$hud_panel play $cue}
+                        {if
+                           [vo_spew]
+                           {printf
+                              "VO: Session end. %d / %d moves hit for %d%%. Cat. %d. Playing %s.cue.\n"
+                              [review_total_move_hit_count]
+                              [review_total_move_count]
+                              {int
+                                 {'*' 100 $percentage}}
+                              $category
+                              $cue}}}
+                     {set
+                        [score]
+                        {int
+                           {'*' 100 $percentage}}}}}})
+         (stream_jump
+            {$hamdirector
+               set_lipsync_offsets
+               {-
+                  {-
+                     {taskmgr seconds}
+                     {master stream_time}}}}
+            {set
+               $desired_loop_start
+               [next_loop_start_margin]}
+            {if
+               [step_complete]
+               {'++'
+                  [step_index]}
+               {if
+                  {&&
+                     [section]
+                     {>=
+                        [step_index]
+                        0}}
+                  {if_else
+                     {>
+                        [num_steps]
+                        [step_index]}
+                     {do
+                        ($start)
+                        ($end)
+                        ($step_start
+                           {[section]
+                              get
+                              (steps
+                                 [step_index]
+                                 start)})
+                        ($step_end
+                           {[section]
+                              get
+                              (steps
+                                 [step_index]
+                                 end)})
+                        ($this_is_recap_results
+                           {==
+                              {[section]
+                                 get
+                                 (steps
+                                    [step_index]
+                                    type)}
+                              recap_results})
+                        {set
+                           [state]
+                           {[section]
+                              get
+                              (steps
+                                 [step_index]
+                                 type)}}
+                        {if
+                           {$this
+                              is_section_boundry
+                              [step_index]}
+                           {$hamdirector set practice_start ''}
+                           {$hamdirector set practice_end ''}
+                           {if
+                              $hud_panel
+                              {$this setup_timeline}}}
+                        {if
+                           $this_is_recap_results
+                           {set
+                              $step_start
+                              {[section]
+                                 get
+                                 (steps 0 start)}}
+                           {set
+                              $step_end
+                              {[section]
+                                 get
+                                 (steps 0 end)}}}
+                        {$hamdirector set practice_start $step_start}
+                        {$hamdirector set practice_end $step_end}
+                        {$this update_margins}
+                        {if_else
+                           $this_is_recap_results
+                           {do
+                              ($cur_start)
+                              ($cur_end)
+                              ($last_song_beat
+                                 {seconds_to_beat
+                                    {/
+                                       {master song_duration_ms}
+                                       1000}})
+                              {audio get_loop_beats $cur_start $cur_end}
+                              {set
+                                 [start_beat]
+                                 $cur_start}
+                              {set
+                                 [end_beat]
+                                 {min
+                                    {'+'
+                                       [start_beat]
+                                       {'*'
+                                          4
+                                          [recap_results_measures]}}
+                                    $last_song_beat}}}
+                           {do
+                              {if
+                                 {!
+                                    {$hamdirector practice_beats $start $end}}
+                                 {print
+                                    "Please assign to Daniel Chase... (Section "
+                                    [section]
+                                    ", step "
+                                    [step_index]
+                                    " has illegal tagging. "
+                                    $step_start
+                                    " to "
+                                    $step_end
+                                    ")\n"}}
+                              {set
+                                 [start_beat]
+                                 {round
+                                    {- $start 4}}}
+                              {set
+                                 [end_beat]
+                                 {round
+                                    {'+' $end 4}}}}}
+                        {$this initialize_step}
+                        {set
+                           [play_barks]
+                           FALSE}
+                        {action_bark_player set_active FALSE}}
+                     {$this move_on}}}}
+            {set
+               [step_complete]
+               FALSE}
+            {count_in_player
+               reset_to_beat
+               {taskmgr beat}}
+            {slow_count_in_player
+               reset_to_beat
+               {taskmgr beat}}
+            {gameplay_event_scheduler
+               reset_to_beat
+               {taskmgr beat}}
+            {midi_player
+               reset_to_beat
+               {taskmgr beat}}
+            {$hamdirector reset_detection}
+            {cond
+               ({==
+                     [step_index]
+                     0}
+                  {$hamdirector
+                     set
+                     start_loop_margin
+                     [next_loop_start_margin]})
+               ({>= $desired_loop_start 0}
+                  {$hamdirector set start_loop_margin $desired_loop_start})}
+            {set
+               [next_loop_start_margin]
+               -1})
+         (initialize_step
+            {switch
+               [state]
+               (learn
+                  {set
+                     [loop_count]
+                     0}
+                  {do
+                     ($intro_vo
+                        "")
+                     ($vo_start_beat 0)
+                     {if_else
+                        [played_first_express]
+                        {set $intro_vo nar_express_short}
+                        {do
+                           {set $intro_vo nar_express_long}
+                           {set
+                              [played_first_express]
+                              TRUE}}}
+                     {if
+                        {$this
+                           is_section_boundry
+                           [step_index]}
+                        {set
+                           [loop_cam_index]
+                           0}
+                        {$this change_camera_angle}}
+                     {$this
+                        set_loop
+                        [start_beat]
+                        [end_beat]}
+                     {if
+                        {==
+                           [step_index]
+                           0}
+                        {set
+                           $vo_start_beat
+                           {$this
+                              determine_seq_start_beat
+                              $intro_vo
+                              [start_beat]
+                              0}}
+                        {$this
+                           set_loop
+                           $vo_start_beat
+                           [end_beat]}
+                        {do
+                           ($fade_out_anim
+                              {find_obj $hud_panel sound_bank skills_music_fade_out.anim})
+                           {if
+                              $fade_out_anim
+                              {$fade_out_anim
+                                 animate
+                                 (dest 0)}}}}
+                     {$hud_panel play $intro_vo}
+                     {$hamdirector set player_freestyle FALSE}}
+                  {set
+                     [learn_credit_category]
+                     3}
+                  {set
+                     [miss_streak]
+                     0}
+                  {set
+                     [performance_state]
+                     ''}
+                  {$this set_learn_state fast_track}
+                  {if
+                     $hud_panel
+                     {$hud_panel set_miss_streak_pct 0}}
+                  {count_in_player
+                     set_section
+                     [start_beat]
+                     [end_beat]}
+                  {slow_count_in_player
+                     set_section
+                     [start_beat]
+                     [end_beat]}
+                  {$this send_world_message skills_learn 2.0e-2}
+                  {$hud_panel set_helper_frame learn FALSE}
+                  {$this send_world_message beat_animation_stop 0}
+                  {if
+                     {&&
+                        $hud_panel
+                        {==
+                           [loop_count]
+                           0}}
+                     {resize
+                        [move_beats]
+                        0}
+                     {set
+                        [num_ticks]
+                        0}
+                     {do
+                        ($timeline
+                           {$hud_panel find dynamic_hud})
+                        ($b
+                           {'+'
+                              [start_beat]
+                              4})
+                        ($num_moves
+                           {round
+                              {/
+                                 {-
+                                    {-
+                                       [end_beat]
+                                       [start_beat]}
+                                    8}
+                                 4}})
+                        ($count 0)
+                        {$timeline deactivate}
+                        {while
+                           {<
+                              $b
+                              {-
+                                 [end_beat]
+                                 4}}
+                           {$timeline set_active $b TRUE}
+                           {$timeline introduce $b $count $num_moves}
+                           {push_back
+                              [move_beats]
+                              $b}
+                           {'++' $count}
+                           {'+=' $b 4}}}})
+               (review
+                  {$this
+                     set_loop
+                     [start_beat]
+                     [end_beat]}
+                  {set
+                     [loop_count]
+                     0}
+                  {count_in_player clear_events}
+                  {slow_count_in_player clear_events}
+                  {do
+                     ($s)
+                     ($e)
+                     {if
+                        {$hamdirector practice_beats $s $e}
+                        {count_in_player
+                           set_section
+                           {- $s 4}
+                           -1}}}
+                  {set
+                     [section_credits]
+                     0}
+                  {set
+                     [section_credits_max]
+                     0}
+                  {if
+                     $hud_panel
+                     {$hud_panel
+                        set_review_result
+                        0
+                        [review_move_count]}}
+                  {$this send_world_message beat_animation_start 0}
+                  {$hud_panel set_helper_frame game FALSE}
+                  {set
+                     [performance_index]
+                     -1}
+                  {$this
+                     set_performance_state_index
+                     [initial_performance_state_index]
+                     FALSE})
+               (recap_results
+                  {$this
+                     set_loop
+                     [start_beat]
+                     [end_beat]}
+                  {set
+                     [loop_count]
+                     0}
+                  {if
+                     {==
+                        [review_move_hit_count]
+                        [review_move_count]}
+                     {$this send_world_message skills_review_done_100_percent 0}}
+                  {$this send_world_message skills_review_done 0}
+                  {$this send_world_message skills_freestyle_enter 0}
+                  {do
+                     ($percentage
+                        {/
+                           [review_move_hit_count]
+                           [review_move_count]})
+                     ($category
+                        {$this
+                           calc_result_category
+                           $percentage
+                           [review_result_category_thresholds]})
+                     ($delta
+                        {-
+                           $category
+                           [learn_section_result_category]})
+                     ($delta_cue
+                        {elem
+                           [review_result_category_delta_cues]
+                           {'+' $delta 3}})
+                     ($result_cue
+                        {elem
+                           [review_result_category_cues]
+                           $category})
+                     ($cue
+                        {if_else
+                           {==
+                              $delta_cue
+                              ""}
+                           $result_cue
+                           $delta_cue})
+                     {if
+                        $hud_panel
+                        {$hud_panel play $cue}
+                        {if
+                           [vo_spew]
+                           {printf
+                              "VO: Review end. %d / %d moves hit for %d%%. Cat. %d. Delta %d. Playing %s.cue.\n"
+                              [review_move_hit_count]
+                              [review_move_count]
+                              {int
+                                 {'*' 100 $percentage}}
+                              $category
+                              $delta
+                              $cue}}}}
+                  {if
+                     {>=
+                        [step_index]
+                        {-
+                           [num_steps]
+                           1}}
+                     {do
+                        ($fade_out_anim
+                           {find_obj $hud_panel sound_bank skills_music_fade_out.anim})
+                        {if
+                           $fade_out_anim
+                           {$fade_out_anim
+                              animate
+                              (dest
+                                 {$fade_out_anim end_frame})}}}}
+                  {$hamdirector select_camera}
+                  {$hamdirector set shot SKILLS_RESULTS}
+                  {$hamdirector select_camera}
+                  {$hamdirector set disable_picking TRUE})})
+         (calc_result_category
+            ($percentage $thresholds)
+            {do
+               ($result 0)
+               {foreach
+                  $i
+                  $thresholds
+                  {if
+                     {>= $percentage $i}
+                     {'++' $result}}}
+               $result})
+         (start_step
+            {switch
+               [state]
+               (learn
+                  {set
+                     [learn_move_index]
+                     0}
+                  {resize
+                     [move_results]
+                     0}
+                  {action_bark_player set_active FALSE}
+                  {if
+                     [play_barks]
+                     {action_bark_player set bank_name barks_slow}
+                     {foreach
+                        $elem
+                        [move_beats]
+                        {if_else
+                           [slow_motion]
+                           {action_bark_player
+                              add_barks
+                              {$hud_panel
+                                 move_from_beat
+                                 {'+' $elem 1}}
+                              (verb_slow)
+                              $elem}
+                           {action_bark_player
+                              add_barks
+                              {$hud_panel
+                                 move_from_beat
+                                 {'+' $elem 1}}
+                              (verb)
+                              $elem}}}
+                     {action_bark_player set_active TRUE}}
+                  {do
+                     ($timeline
+                        {find_obj $hud_panel dynamic_hud})
+                     {if
+                        $timeline
+                        {$timeline reset_results}}}
+                  {if
+                     $hamdirector
+                     {set
+                        $face_name
+                        {if_else
+                           {==
+                              [learn_state]
+                              slow_down}
+                           {elem
+                              [slow_learn_base_viseme]
+                              0}
+                           {elem
+                              [learn_base_viseme]
+                              0}}}
+                     {set
+                        $face_weight
+                        {if_else
+                           {==
+                              [learn_state]
+                              slow_down}
+                           {elem
+                              [slow_learn_base_viseme]
+                              1}
+                           {elem
+                              [learn_base_viseme]
+                              1}}}
+                     {$hamdirector blend_face_clip $face_name $face_weight 1000}}
+                  {if
+                     {!=
+                        [user_action]
+                        ''}
+                     {switch
+                        [user_action]
+                        (RETRY
+                           {set
+                              [learn_credit_category]
+                              2}
+                           {set
+                              [miss_streak]
+                              0}
+                           {$this set_learn_state counting}
+                           {set
+                              [num_ticks]
+                              0}
+                           {do
+                              ($timeline
+                                 {find_obj $hud_panel dynamic_hud})
+                              {$timeline reset_ticks}
+                              {$timeline show_tick_meter TRUE 0}})
+                        (SLOW_DOWN
+                           {set
+                              [learn_credit_category]
+                              2}
+                           {set
+                              [miss_streak]
+                              0})}
+                     {set
+                        [user_action]
+                        ''}}
+                  {count_in_player
+                     set_section
+                     [start_beat]
+                     [end_beat]}
+                  {slow_count_in_player
+                     set_section
+                     [start_beat]
+                     [end_beat]}
+                  {$this
+                     set_loop
+                     [start_beat]
+                     [end_beat]})
+               (review
+                  {'++'
+                     [loop_count]}
+                  {if
+                     {==
+                        [loop_count]
+                        [full_review_count]}
+                     {if
+                        {==
+                           [step_index]
+                           {-
+                              [num_steps]
+                              1}}
+                        {audio clear_loop}
+                        {'+='
+                           [end_beat]
+                           8}}}
+                  {if
+                     $hamdirector
+                     {$hamdirector blend_face_overrides_out 1000}})})
+         (end_step
+            {switch
+               [state]
+               (review
+                  {if
+                     {>=
+                        [loop_count]
+                        [full_review_count]}
+                     {$this move_on}})
+               (recap_results
+                  {if_else
+                     {<
+                        [step_index]
+                        {-
+                           [num_steps]
+                           1}}
+                     {$this move_on}
+                     {set
+                        [step_complete]
+                        TRUE}}
+                  {$this send_world_message skills_freestyle_exit 0})})
+         (is_learn_streak
+            ($move_rating)
+            {do
+               ($streak TRUE)
+               ($rating_idx
+                  {rating_state_to_index $move_rating})
+               {foreach
+                  $elem
+                  [move_results]
+                  {if
+                     {> $elem $rating_idx}
+                     {set $streak FALSE}}}
+               $streak})
+         (learn_move_completed
+            ($rating_idx)
+            {do
+               ($timeline
+                  {$hud_panel find dynamic_hud})
+               ($move_beat
+                  {'+'
+                     [start_beat]
+                     4
+                     {'*'
+                        4
+                        [learn_move_index]}})
+               ($is_last_move
+                  {==
+                     {-
+                        [end_beat]
+                        8}
+                     $move_beat})
+               ($satisfied_move
+                  {<=
+                     $rating_idx
+                     {rating_state_to_index move_awesome}})
+               ($linked_streak
+                  {$this is_learn_streak move_awesome})
+               {if
+                  {! $satisfied_move}
+                  {if
+                     {==
+                        [learn_state]
+                        counting}
+                     {set
+                        [play_barks]
+                        TRUE}}}
+               {if
+                  $is_last_move
+                  {do
+                     ($face_name
+                        {if_else
+                           {==
+                              [learn_state]
+                              slow_down}
+                           {elem
+                              {elem
+                                 [slow_learn_result_faces]
+                                 $rating_idx}
+                              0}
+                           {elem
+                              {elem
+                                 [learn_result_faces]
+                                 $rating_idx}
+                              0}})
+                     ($face_weight
+                        {if_else
+                           {==
+                              [learn_state]
+                              slow_down}
+                           {elem
+                              {elem
+                                 [slow_learn_result_faces]
+                                 $rating_idx}
+                              1}
+                           {elem
+                              {elem
+                                 [learn_result_faces]
+                                 $rating_idx}
+                              1}})
+                     {if
+                        $hamdirector
+                        {if
+                           $hamwardrobe
+                           {do
+                              ($main_character
+                                 {$hamwardrobe get_character})
+                              ($isMain
+                                 {==
+                                    {$main_character get_type}
+                                    main})
+                              {if
+                                 $isMain
+                                 {$main_character set force_blink TRUE}}}}
+                        {$hamdirector blend_face_clip $face_name $face_weight 1000}}}}
+               {if
+                  {&&
+                     $satisfied_move
+                     {==
+                        [learn_state]
+                        counting}}
+                  {if
+                     {&& $is_last_move $linked_streak}
+                     {set
+                        [miss_streak]
+                        0}
+                     {'++'
+                        [num_ticks]}
+                     {$this send_world_message skills_learn_earn_check 0}
+                     {$timeline
+                        award
+                        [num_ticks]}}}
+               {if
+                  {&&
+                     $is_last_move
+                     {! $linked_streak}}
+                  {switch
+                     [learn_state]
+                     (counting
+                        {'++'
+                           [miss_streak]})}
+                  #ifndef _SHIP
+                  {if
+                     {!=
+                        {size
+                           [move_beats]}
+                        {size
+                           [move_results]}}
+                     {notify
+                        "size of [move_beats] != size of [move_results]. move_beats = "
+                        [move_beats]
+                        " move_results = "
+                        [move_results]}}
+                  #endif
+                  {do
+                     ($timeline
+                        {find_obj $hud_panel dynamic_hud})
+                     ($rating_threshold
+                        {rating_state_to_index move_awesome})
+                     ($move_result 0)
+                     ($move_beat 0)
+                     {foreach_int
+                        $i
+                        0
+                        {size
+                           [move_beats]}
+                        {set
+                           $move_result
+                           {elem
+                              [move_results]
+                              $i}}
+                        {set
+                           $move_beat
+                           {elem
+                              [move_beats]
+                              $i}}
+                        {if
+                           {> $move_result $rating_threshold}
+                           {$timeline highlight_flashcard $move_beat}}}}}
+               {if
+                  {&&
+                     {!
+                        [learn_mode_locked]}
+                     $is_last_move}
+                  {'++'
+                     [loop_count]}
+                  {cond
+                     ({&&
+                           {==
+                              [learn_state]
+                              fast_track}
+                           $linked_streak}
+                        {$this move_on}
+                        {$this award_current_moves kSkillsAward_FastTrack}
+                        {$this
+                           skills_bonus
+                           {switch
+                              [loop_count]
+                              (1 skills_bonus_fasttrack_first)
+                              (2 skills_bonus_fasttrack_second)}}
+                        {$this set_learn_performance_state skills_learn_awesome})
+                     ({>=
+                           [num_ticks]
+                           [learn_pass_max]}
+                        {$this move_on}
+                        {$this skills_bonus skills_bonus_learn_complete}
+                        {$this award_current_moves kSkillsAward_Complete}
+                        {$timeline show_tick_meter FALSE 0}
+                        {$this set_slow FALSE TRUE})
+                     ({&&
+                           {==
+                              [learn_state]
+                              fast_track}
+                           {==
+                              [loop_count]
+                              [learn_fast_track_max]}}
+                        {$this set_learn_state counting}
+                        {$timeline show_tick_meter TRUE 0}
+                        {do
+                           ($vo nar_3rep_long)
+                           ($time_til_loop
+                              {-
+                                 {beat_to_seconds
+                                    [end_beat]}
+                                 {master stream_time}})
+                           ($new_loop_start 0)
+                           {if
+                              [played_first_3rep]
+                              {set $vo nar_3rep_short}}
+                           {set
+                              [played_first_3rep]
+                              TRUE}
+                           {set
+                              $new_loop_start
+                              {$this
+                                 determine_seq_start_beat
+                                 $vo
+                                 [start_beat]
+                                 $time_til_loop}}
+                           {if
+                              {<
+                                 $new_loop_start
+                                 [start_beat]}
+                              {$this
+                                 set_loop
+                                 $new_loop_start
+                                 [end_beat]}
+                              {count_in_player set ignore_next TRUE}}
+                           {$hud_panel play $vo}}
+                        {set
+                           [learn_credit_category]
+                           2})
+                     ({>=
+                           [miss_streak]
+                           [learn_miss_streak_max]}
+                        {switch
+                           [learn_state]
+                           (counting
+                              {do
+                                 ($s)
+                                 ($e)
+                                 ($num_extra_beats
+                                    {if_else
+                                       {<=
+                                          [song_bpm]
+                                          [slow_down_panel_2_measure_threshold_bpm]}
+                                       4
+                                       8})
+                                 {audio get_loop_beats $s $e}
+                                 {$this
+                                    set_loop
+                                    $s
+                                    {'+' $e $num_extra_beats}}
+                                 {if
+                                    {<
+                                       [loop_count]
+                                       [max_loops]}
+                                    {ui push_screen slow_down_screen}
+                                    {set
+                                       [panel_expiration_beat]
+                                       {-
+                                          {'+' $e $num_extra_beats}
+                                          5}}}
+                                 {$this fail_learn_move TRUE}})})
+                     ({==
+                           [miss_streak]
+                           {-
+                              [learn_miss_streak_max]
+                              1}}
+                        {switch
+                           [learn_state]
+                           (counting
+                              {$hud_panel play nar_3rep_last}
+                              {if
+                                 {<
+                                    [loop_count]
+                                    [max_loops]}
+                                 {ui push_screen slow_down_screen}
+                                 {set
+                                    [panel_expiration_beat]
+                                    {'+'
+                                       [start_beat]
+                                       2}}})})
+                     ({&&
+                           {==
+                              [learn_state]
+                              counting}
+                           {! $linked_streak}}
+                        {if
+                           {<
+                              [loop_count]
+                              [max_loops]}
+                           {ui push_screen slow_down_screen}
+                           {set
+                              [panel_expiration_beat]
+                              {'+'
+                                 [start_beat]
+                                 2}}})
+                     ({==
+                           [learn_state]
+                           slow_down}
+                        {if_else
+                           {<
+                              [loop_count]
+                              [max_loops]}
+                           {do
+                              {ui push_screen speed_up_screen}
+                              {set
+                                 [panel_expiration_beat]
+                                 {-
+                                    [end_beat]
+                                    1}}}
+                           {$this on_speed_up}})}
+                  {$this change_camera_angle}}
+               {if
+                  $hud_panel
+                  {$hud_panel
+                     set_miss_streak_pct
+                     {/
+                        [miss_streak]
+                        [learn_miss_streak_max]}}}
+               {'++'
+                  [learn_move_index]}})
+         (fail_learn_move
+            ($play_fail_sound)
+            {$this award_current_moves kSkillsAward_Fail}
+            {do
+               ($timeline
+                  {find_obj $hud_panel dynamic_hud})
+               {$timeline show_tick_meter FALSE 0}}
+            {$this set_slow FALSE TRUE}
+            {$this send_world_message skills_learn_fail_move 0}
+            {if
+               $play_fail_sound
+               {$hud_panel play skills_fail}}
+            {set
+               [learn_credit_category]
+               0}
+            {$this move_on})
+         (set_slow
+            ($slow $fade)
+            {set
+               [slow_motion]
+               $slow}
+            {if
+               $hud_panel
+               {$hud_panel set_slow $slow $fade}}
+            {count_in_player
+               set
+               active
+               {!
+                  [slow_motion]}}
+            {slow_count_in_player
+               set
+               active
+               [slow_motion]})
+         (setup_timeline
+            {do
+               ($timeline
+                  {$hud_panel find dynamic_hud})
+               ($profile
+                  {profile_mgr
+                     get_profile
+                     {user_mgr get_active_user}})
+               {switch
+                  [state]
+                  (learn
+                     {$timeline clear_moves}
+                     {do
+                        ($done FALSE)
+                        {foreach_int
+                           $i
+                           [step_index]
+                           [num_steps]
+                           {if
+                              {! $done}
+                              {if_else
+                                 {'||'
+                                    {!
+                                       {$this is_section_boundry $i}}
+                                    {==
+                                       $i
+                                       [step_index]}}
+                                 {do
+                                    ($start_beat
+                                       {$this
+                                          beat_from_tag
+                                          {[section]
+                                             get
+                                             (steps $i start)}})
+                                    ($end_beat
+                                       {$this
+                                          beat_from_tag
+                                          {[section]
+                                             get
+                                             (steps $i end)}})
+                                    ($num_moves
+                                       {int
+                                          {/
+                                             {- $end_beat $start_beat}
+                                             4}})
+                                    ($b 0)
+                                    ($move
+                                       "")
+                                    ($award_key
+                                       {$this construct_award_key $start_beat $num_moves})
+                                    {foreach_int
+                                       $j
+                                       0
+                                       $num_moves
+                                       {set
+                                          $b
+                                          {round
+                                             {'+'
+                                                $start_beat
+                                                {'*' 4 $j}}}}
+                                       {set
+                                          $move
+                                          {$hud_panel move_from_beat $b}}
+                                       {$timeline add_move $move $b}
+                                       {if
+                                          $profile
+                                          {$timeline
+                                             set_move_award
+                                             $b
+                                             {if_else
+                                                {== $j 0}
+                                                {$profile get_award $award_key}
+                                                kSkillsAward_Unplayed}
+                                             FALSE
+                                             TRUE}}
+                                       {do
+                                          ($flash_card
+                                             {$timeline find_flashcard $b})
+                                          {if
+                                             {! $flash_card}
+                                             {print
+                                                "Please assign to Daniel Chase... Number of flashcards in a group: "
+                                                $j
+                                                ". Can't be more than 4. step = "
+                                                $i
+                                                "\n"}}
+                                          {{$timeline find_flashcard $b}
+                                             set_num_links
+                                             {if_else
+                                                {== $j 0}
+                                                $num_moves
+                                                0}}}}}
+                                 {set $done TRUE}}}}})
+                  (review
+                     {do
+                        ($done FALSE)
+                        ($start_beat
+                           {$this
+                              beat_from_tag
+                              {[section]
+                                 get
+                                 (steps
+                                    [step_index]
+                                    start)}})
+                        ($end_beat
+                           {$this
+                              beat_from_tag
+                              {[section]
+                                 get
+                                 (steps
+                                    [step_index]
+                                    end)}})
+                        ($move_count
+                           {int
+                              {/
+                                 {- $end_beat $start_beat}
+                                 4}})
+                        {set
+                           [review_move_number]
+                           0}
+                        {set
+                           [review_move_count]
+                           $move_count}
+                        {set
+                           [review_move_hit_count]
+                           0}})}})
+         (move_passed
+            ($move $detect_frac)
+            {do
+               ($is_rest
+                  {$move is_rest})
+               ($done FALSE)
+               ($rating
+                  {detect_frac_to_rating $detect_frac $move})
+               ($rating_idx
+                  {rating_state_to_index $rating})
+               {unless
+                  $is_rest
+                  {meta_performer move_passed $move $rating_idx $detect_frac}
+                  {switch
+                     [state]
+                     (learn
+                        {$this send_world_message $rating 1.0e-3}
+                        {if
+                           {&&
+                              {size
+                                 [move_beats]}
+                              {>=
+                                 [learn_move_index]
+                                 0}}
+                           {push_back
+                              [move_results]
+                              $rating_idx}
+                           {$this learn_move_completed $rating_idx}})
+                     (review
+                        {meta_performer review_move_passed $move $rating_idx $detect_frac}
+                        {$this send_world_message $rating 1.0e-3}
+                        {if
+                           {<=
+                              $rating_idx
+                              {rating_state_to_index move_awesome}}
+                           {'++'
+                              [review_move_hit_count]}
+                           {if
+                              $hud_panel
+                              {$hud_panel
+                                 set_review_result
+                                 [review_move_hit_count]
+                                 [review_move_count]}}}
+                        {'++'
+                           [review_move_number]}
+                        {do
+                           ($next_state_index
+                              {$this
+                                 next_performance_state_index
+                                 $rating_idx
+                                 [performance_index]})
+                           {$this set_performance_state_index $next_state_index TRUE}}
+                        {if
+                           {==
+                              [review_move_number]
+                              [review_move_count]}
+                           {'+='
+                              [review_total_move_count]
+                              [review_move_count]}
+                           {'+='
+                              [review_total_move_hit_count]
+                              [review_move_hit_count]}
+                           {set
+                              [section_credits]
+                              0}
+                           {set
+                              [section_credits_max]
+                              0}})}}})
+         (on_retry
+            {do
+               ($section_start
+                  {[section]
+                     get
+                     (steps
+                        [step_index]
+                        start)})
+               ($section_end
+                  {[section]
+                     get
+                     (steps
+                        [step_index]
+                        end)})
+               ($timeline
+                  {find_obj $hud_panel dynamic_hud})
+               ($cur_loop_start)
+               ($cur_loop_end)
+               {set
+                  [start_beat]
+                  {round
+                     {-
+                        {$this beat_from_tag $section_start}
+                        4}}}
+               {set
+                  [end_beat]
+                  {round
+                     {'+'
+                        {$this beat_from_tag $section_end}
+                        4}}}
+               {audio get_loop_beats $cur_loop_start $cur_loop_end}
+               {$this
+                  set_loop
+                  [start_beat]
+                  $cur_loop_end}
+               {count_in_player
+                  set_section
+                  [start_beat]
+                  $cur_loop_end}
+               {if
+                  [step_complete]
+                  {foreach
+                     $b
+                     [move_beats]
+                     {meta_performer
+                        recall_move_passed
+                        {$hud_panel move_from_beat $b}}}}
+               {set
+                  [step_complete]
+                  FALSE}
+               {set
+                  [user_action]
+                  RETRY}
+               {$timeline
+                  retract_move_award
+                  {elem
+                     [move_beats]
+                     0}}
+               {gameplay_event_scheduler reset}
+               {$hud_panel stop_narrator}
+               {$hud_panel play nar_retry}
+               {set
+                  [panel_expiration_beat]
+                  -1}})
+         (on_slow_down
+            {do
+               ($section_start
+                  {[section]
+                     get
+                     (steps
+                        [step_index]
+                        start)})
+               ($section_end
+                  {[section]
+                     get
+                     (steps
+                        [step_index]
+                        end)})
+               ($timeline
+                  {find_obj $hud_panel dynamic_hud})
+               ($cur_loop_start)
+               ($cur_loop_end)
+               {if
+                  [step_complete]
+                  {set
+                     [start_beat]
+                     {round
+                        {-
+                           {$this beat_from_tag $section_start}
+                           4}}}
+                  {set
+                     [end_beat]
+                     {round
+                        {'+'
+                           {$this beat_from_tag $section_end}
+                           4}}}
+                  {audio get_loop_beats $cur_loop_start $cur_loop_end}
+                  {$this
+                     set_loop
+                     [start_beat]
+                     $cur_loop_end}
+                  {count_in_player
+                     set_section
+                     [start_beat]
+                     $cur_loop_end}
+                  {slow_count_in_player
+                     set_section
+                     [start_beat]
+                     $cur_loop_end}
+                  {$hud_panel stop_narrator}
+                  {$hud_panel play nar_slow_intro}
+                  {foreach
+                     $b
+                     [move_beats]
+                     {meta_performer
+                        recall_move_passed
+                        {$hud_panel move_from_beat $b}}}
+                  {set
+                     [step_complete]
+                     FALSE}}
+               {if
+                  {!
+                     [step_complete]}
+                  {set
+                     [learn_credit_category]
+                     1}
+                  {set
+                     [miss_streak]
+                     0}}
+               {set
+                  [user_action]
+                  SLOW_DOWN}
+               {$timeline
+                  retract_move_award
+                  {elem
+                     [move_beats]
+                     0}}
+               {$this skills_bonus skills_bonus_enter_slowdown}
+               {$this set_slow TRUE TRUE}
+               {$timeline show_tick_meter FALSE 0}
+               {$this set_learn_state slow_down}
+               {gameplay_event_scheduler reset}
+               {set
+                  [panel_expiration_beat]
+                  -1}})
+         (on_speed_up
+            {do
+               ($timeline
+                  {find_obj $hud_panel dynamic_hud})
+               {$this set_slow FALSE TRUE}
+               {$this set_learn_state counting}
+               {$timeline show_tick_meter TRUE 0}
+               {set
+                  [panel_expiration_beat]
+                  -1}})
+         (set_loop
+            ($start $end)
+            {audio set_loop $start $end}
+            {$this update_margins})
+         (update_margins
+            {if
+               $hamdirector
+               {do
+                  ($practice_start)
+                  ($practice_end)
+                  ($loop_start)
+                  ($loop_end)
+                  {audio get_loop_beats $loop_start $loop_end}
+                  {$hamdirector practice_beats $practice_start $practice_end}
+                  {set
+                     [next_loop_start_margin]
+                     {round
+                        {/
+                           {- $practice_start $loop_start}
+                           4}}}
+                  {$hamdirector
+                     set
+                     end_loop_margin
+                     {round
+                        {/
+                           {- $loop_end $practice_end}
+                           4}}}}})
+         (cached_loop_cams
+            ())
+         (loop_cam_index 0)
+         (change_camera_angle
+            {if
+               $hamdirector
+               {do
+                  ($dir
+                     {$hamdirector get cur_world})
+                  ($picked
+                     "")
+                  ($cam_list
+                     ())
+                  {if_else
+                     {<=
+                        [loop_cam_index]
+                        0}
+                     {if
+                        $dir
+                        {$dir
+                           iterate
+                           HamCamShot
+                           $shot
+                           {if
+                              {==
+                                 {$shot get category}
+                                 PRACTICE}
+                              {set $picked $shot}}}}
+                     {do
+                        ($index
+                           [loop_cam_index])
+                        {if
+                           {&&
+                              $dir
+                              {!
+                                 {size
+                                    [cached_loop_cams]}}}
+                           {$dir
+                              iterate
+                              HamCamShot
+                              $shot
+                              {if
+                                 {==
+                                    {$shot get category}
+                                    PRACTICE_LOOP}
+                                 {push_back
+                                    [cached_loop_cams]
+                                    $shot}}}
+                           {sort
+                              [cached_loop_cams]}}
+                        {-- $index}
+                        {if
+                           {size
+                              [cached_loop_cams]}
+                           {set
+                              $index
+                              {mod
+                                 $index
+                                 {size
+                                    [cached_loop_cams]}}}
+                           {set
+                              $picked
+                              {elem
+                                 [cached_loop_cams]
+                                 $index}}}}}
+                  {if
+                     $picked
+                     {$hamdirector
+                        force_shot
+                        {$picked name}}}
+                  {'++'
+                     [loop_cam_index]}}})
+         (skills_bonus
+            ($bonus_name)
+            {$this send_world_message $bonus_name 0})
+         (set_learn_state
+            ($learn_state)
+            {set
+               [learn_state]
+               $learn_state}
+            {switch
+               [learn_state]
+               (fast_track
+                  {if
+                     {!=
+                        [performance_state]
+                        skills_learn_awesome}
+                     {$this set_learn_performance_state skills_learn_high}})
+               (counting
+                  {$this set_learn_performance_state skills_learn_high})
+               (slow_down
+                  {$this set_learn_performance_state skills_learn_low})})
+         (set_learn_performance_state
+            ($performance_state)
+            {if
+               {!=
+                  [performance_state]
+                  $performance_state}
+               {if
+                  {== $performance_state skills_learn_high}
+                  {switch
+                     [performance_state]
+                     (skills_learn_low
+                        {$this send_world_message skills_learn_high_upto 2.0e-2})
+                     (skills_learn_awesome
+                        {$this send_world_message skills_learn_high_downto 2.0e-2})}}
+               {set
+                  [performance_state]
+                  $performance_state}
+               {$this
+                  send_world_message
+                  [performance_state]
+                  2.0e-2}})
+         (award_current_moves
+            ($award)
+            {do
+               ($timeline
+                  {$hud_panel find dynamic_hud})
+               ($profile
+                  {profile_mgr
+                     get_profile
+                     {user_mgr get_active_user}})
+               ($move_name '')
+               ($first TRUE)
+               ($move_beat
+                  {elem
+                     [move_beats]
+                     0})
+               ($award_key
+                  {$this
+                     construct_award_key
+                     $move_beat
+                     {size
+                        [move_beats]}})
+               {foreach
+                  $b
+                  [move_beats]
+                  {set
+                     $move_name
+                     {$hamdirector beat_to_movename $b}}
+                  {if
+                     $profile
+                     {meta_performer practice_move_passed $move_name $award}
+                     {if
+                        {&& $first $timeline}
+                        {$profile set_award $award_key $award}
+                        {$timeline set_move_award $move_beat $award TRUE FALSE}}}
+                  {set $first FALSE}}})
+         (construct_award_key
+            ($start_beat $num_moves)
+            {do
+               ($key
+                  {array 0})
+               {foreach_int
+                  $j
+                  0
+                  $num_moves
+                  {push_back
+                     $key
+                     {$hud_panel
+                        move_from_beat
+                        {round
+                           {'+'
+                              $start_beat
+                              {'*' 4 $j}}}}}}
+               $key})
+         (is_section_boundry
+            ($step_index)
+            {cond
+               ({== $step_index 0}
+                  TRUE)
+               ({[section]
+                     get
+                     (steps $step_index boundry)}
+                  TRUE)
+               ({!=
+                     {[section]
+                        get
+                        (steps
+                           {- $step_index 1}
+                           type)}
+                     learn}
+                  TRUE)
+               (TRUE FALSE)})
+         (reset
+            {$this common_reset}
+            {if
+               $hamdirector
+               {$hamdirector
+                  set
+                  difficulty
+                  {meta_performer get_difficulty}}}
+            {set
+               [learn_mode_locked]
+               FALSE}
+            {set
+               [learn_move_index]
+               -1}
+            {resize
+               [move_beats]
+               0}
+            {$this setup_section}
+            {set
+               [num_steps]
+               {[section]
+                  size
+                  (steps)}}
+            {if
+               {&&
+                  $hamdirector
+                  {>
+                     [num_steps]
+                     0}}
+               {$hamdirector
+                  set
+                  practice_start
+                  {[section]
+                     get
+                     (steps 0 start)}}
+               {$hamdirector
+                  set
+                  practice_end
+                  {[section]
+                     get
+                     (steps 0 end)}}}
+            {set
+               [step_index]
+               -1}
+            {set
+               [state]
+               start}
+            {set
+               [step_complete]
+               TRUE}
+            {set
+               [played_first_express]
+               FALSE}
+            {set
+               [played_first_3rep]
+               FALSE}
+            {if
+               $hamdirector
+               {$this send_world_message skills_mode 0}}
+            {set
+               [performance_index]
+               -1}
+            {$this
+               set_performance_state_index
+               [initial_performance_state_index]
+               FALSE}
+            {set
+               [performance_state]
+               ''}
+            {$this set_learn_performance_state skills_learn_high}
+            {$this setup_fade_anim}
+            {$this set_slow FALSE FALSE}
+            {if
+               $hud_panel
+               {{{$hud_panel find sound_bank}
+                     find
+                     music_level.fade}
+                  set
+                  level
+                  [base_music_volume]}
+               {do
+                  ($start_beat
+                     {-
+                        {$this
+                           beat_from_tag
+                           {[section]
+                              get
+                              (steps 0 start)}}
+                        4})
+                  {set
+                     $start_beat
+                     {$this determine_seq_start_beat nar_express_long $start_beat 0}}
+                  {if
+                     {> $start_beat 0}
+                     {audio set_loop $start_beat 1.0e-2}}}}
+            {set
+               [loop_cam_index]
+               0}
+            {set
+               [section_credits]
+               0}
+            {set
+               [section_credits_max]
+               0}
+            {set
+               [review_total_move_count]
+               0}
+            {set
+               [review_total_move_hit_count]
+               0}
+            {set
+               [learn_retry]
+               FALSE}
+            {set
+               [panel_expiration_beat]
+               -1}
+            {resize
+               [move_results]
+               0}
+            {set
+               [next_loop_start_margin]
+               -1}
+            {$hamdirector reset_detection}
+            {$hamdirector set cam_switch_freestyle FALSE}
+            {$hud_panel set_helper_frame learn TRUE})
+         (world_unpause
+            {$hud_panel
+               set_helper_frame
+               {switch
+                  [state]
+                  (learn learn)
+                  game}
+               FALSE}
+            kDataUnhandled)
+         (pause_on_skeleton_loss FALSE)
+         (beat
+            {do
+               ($beats_til_end
+                  {-
+                     [end_beat]
+                     $beat})
+               {if
+                  {&&
+                     {==
+                        $beat
+                        [start_beat]}
+                     {!
+                        [step_complete]}}
+                  {$this start_step}}
+               {if
+                  {==
+                     [state]
+                     recap_results}
+                  {switch
+                     $beats_til_end
+                     (1
+                        {$this send_world_message beat_animation_stop 0})
+                     (3
+                        {do
+                           ($vocals_out_anim
+                              {find_obj $hud_panel sound_bank vocals_fadeout.anim})
+                           {if
+                              $vocals_out_anim
+                              {$vocals_out_anim
+                                 animate
+                                 (dest
+                                    {$vocals_out_anim end_frame})}}})}}
+               {if
+                  {==
+                     [state]
+                     review}
+                  {switch
+                     $beats_til_end
+                     (7
+                        {do
+                           ($blend_ms
+                              {'*'
+                                 1000
+                                 {-
+                                    {beat_to_seconds
+                                       {-
+                                          [end_beat]
+                                          4}}
+                                    {beat_to_seconds $beat}}})
+                           {$hamdirector blend_face_overrides_in 100}
+                           {$hamdirector blend_face_clip Smile 1.0 $blend_ms}})}}
+               {if
+                  {<=
+                     {abs
+                        {-
+                           $beat
+                           {-
+                              [end_beat]
+                              4}}}
+                     1.0e-3}
+                  {$this end_step}}
+               {if
+                  {==
+                     $beat
+                     [panel_expiration_beat]}
+                  {do
+                     ($timeline
+                        {find_obj $hud_panel dynamic_hud})
+                     {cond
+                        ({&&
+                              {retry_move_panel is_up}
+                              {==
+                                 [state]
+                                 learn}}
+                           {$timeline deactivate}
+                           {retry_move_panel time_out})
+                        ({slow_down_panel is_up}
+                           {if
+                              [step_complete]
+                              {$timeline deactivate}}
+                           {slow_down_panel time_out})
+                        ({speed_up_panel is_up}
+                           {speed_up_panel time_out})}
+                     {set
+                        [panel_expiration_beat]
+                        -1}}}
+               {if
+                  {==
+                     $beat
+                     {-
+                        [panel_expiration_beat]
+                        1}}
+                  {cond
+                     ({retry_move_panel is_up}
+                        {retry_move_panel play_exit})
+                     ({slow_down_panel is_up}
+                        {slow_down_panel play_exit})
+                     ({speed_up_panel is_up}
+                        {speed_up_panel play_exit})}}
+               {if
+                  {==
+                     3
+                     {mod $beat 4}}
+                  {do
+                     ($timeline
+                        {$hud_panel find dynamic_hud})
+                     ($next_move_beat
+                        {'+' $beat 1})
+                     ($flashcard
+                        {$timeline find_flashcard $next_move_beat})
+                     {if
+                        {&&
+                           {find_elem
+                              [move_beats]
+                              $next_move_beat}
+                           $flashcard}
+                        {{$flashcard find beat.anim}
+                           animate
+                           (range -480 1920)}}}}}
+            kDataUnhandled)
+         (setup_fade_anim
+            {if
+               $hud_panel
+               {do
+                  ($sound_bank
+                     {$hud_panel find sound_bank})
+                  ($prop_anim
+                     {$sound_bank find skills_cross_fade.anim})
+                  {if
+                     $prop_anim
+                     {$prop_anim
+                        add_keys
+                        midi_player
+                        (active)
+                        kPropBool}
+                     {$prop_anim
+                        set_key_val
+                        midi_player
+                        (active)
+                        0
+                        FALSE}
+                     {$prop_anim
+                        set_key_val
+                        midi_player
+                        (active)
+                        60
+                        TRUE}}}})
+         (cheat_skip_section
+            {set
+               [step_complete]
+               TRUE}
+            {$this stream_jump}
+            {game
+               jump
+               {max
+                  {beat_to_ms
+                     {-
+                        [start_beat]
+                        8}}
+                  0}}
+            {$this set_slow FALSE FALSE}))
+      (multiplayer
+         #include multiplayer.dta
+         COMMON_GAME_HANDLERS
+         FINAL_POSE_HANDLERS
+         (last_scored_move_index -1)
+         (player_index 0)
+         (phases
+            ())
+         (phase_index 0)
+         (state start)
+         (loop_start -1)
+         (loop_end -1)
+         (section none)
+         (star_thresholds
+            ())
+         (star_display
+            "")
+         (best_possible_score -1)
+         (player_1_record
+            ())
+         (ghost_score 0)
+         (fail_counter 0)
+         (encouraged FALSE)
+         (return_depth_buffer_beat -1)
+         (photo_set_index 1)
+         (final_move_beat -1)
+         (first_move_beat -1)
+         (post_freestyle_move_beat -1)
+         (in_freestyle FALSE)
+         (inactive_score 0)
+         (inactive_state_index 0)
+         (init
+            {$this common_init}
+            {master
+               add_sink
+               $this
+               (beat stream_jump)}
+            {if
+               {$hamdirector get_world}
+               {{$hamdirector get_world}
+                  add_sink
+                  $this
+                  ((player_freestyle_start on_freestyle_start)
+                     (player_freestyle_stop on_freestyle_stop)
+                     (move_bad on_move_bad))}}
+            {if
+               $hamdirector
+               {$this send_world_message multiplayer_mode 0}
+               {set
+                  [star_display]
+                  {{$hamdirector get cur_world}
+                     find
+                     score_star_display
+                     FALSE}}
+               {$this send_world_message flash_cards_visible 0}
+               {do
+                  ($song_anim
+                     {$hamdirector song_anim})
+                  ($move
+                     "")
+                  ($last_move_frame 0)
+                  ($freestyle_start
+                     {$this freestyle_start_beat})
+                  ($b)
+                  {$song_anim
+                     foreach_keyframe
+                     $hamdirector
+                     (move)
+                     $frame
+                     $value
+                     {set
+                        $move
+                        {$hud_panel get_move $value}}
+                     {set
+                        $b
+                        {round
+                           {seconds_to_beat
+                              {/ $frame 30}}}}
+                     {if
+                        {&&
+                           $move
+                           {$move get scored}}
+                        {set
+                           [final_move_beat]
+                           $b}
+                        {if
+                           {<
+                              [first_move_beat]
+                              0}
+                           {set
+                              [first_move_beat]
+                              $b}}
+                        {if
+                           {&&
+                              {<
+                                 [post_freestyle_move_beat]
+                                 0}
+                              {> $b $freestyle_start}}
+                           {set
+                              [post_freestyle_move_beat]
+                              $b}}}}}}
+            {$this setup_phases}
+            {set
+               [best_possible_score]
+               {$this
+                  calculate_best_possible_score
+                  [multiplayer_score_chart]
+                  [multiplayer_bonus_chart]}}
+            {do
+               ($best
+                  {'*'
+                     2
+                     [best_possible_score]})
+               {resize
+                  [star_thresholds]
+                  0}
+               {foreach
+                  $elem
+                  [star_threshold_percentages]
+                  {push_back
+                     [star_thresholds]
+                     {int
+                        {/
+                           {'*' $elem $best}
+                           100}}}}}
+            {$this reset}
+            {audio jump 0}
+            {{find_obj $hud_panel fitness}
+               set
+               showing
+               FALSE})
+         (end
+            {if
+               {>=
+                  [phase_index]
+                  {-
+                     {size
+                        [phases]}
+                     1}}
+               {game_panel win}
+               {$this send_world_message game_over 0}
+               {audio clear_loop}})
+         (reset
+            {$this common_reset}
+            {set
+               [last_scored_move_index]
+               -1}
+            {set
+               [performance_index]
+               -1}
+            {$this
+               set_performance_state_index
+               [initial_performance_state_index]
+               FALSE}
+            {set
+               [score]
+               0}
+            {set
+               [inactive_score]
+               [score]}
+            {set
+               [inactive_state_index]
+               [performance_index]}
+            {$hamdirector
+               set
+               difficulty
+               {meta_performer get_difficulty}}
+            {synth stop_all_sfx}
+            {$this set_phase 0}
+            {$hamdirector reset_detection}
+            {$hud_panel set_helper_frame game TRUE}
+            {set
+               [ghost_score]
+               0}
+            {set
+               [fail_counter]
+               0}
+            {set
+               [encouraged]
+               FALSE}
+            {set
+               [return_depth_buffer_beat]
+               -1}
+            {set
+               [photo_set_index]
+               1}
+            {set
+               [in_freestyle]
+               FALSE})
+         (world_unpause
+            {$hud_panel set_helper_frame game FALSE}
+            kDataUnhandled)
+         (pause_on_skeleton_loss
+            {do
+               ($cur_beat
+                  {taskmgr beat})
+               {&&
+                  {==
+                     [phase_index]
+                     0}
+                  {>
+                     $cur_beat
+                     {-
+                        [first_move_beat]
+                        8}}
+                  {<=
+                     $cur_beat
+                     [first_move_beat]}}})
+         (move_passed
+            ($move $detect_frac)
+            {do
+               ($done FALSE)
+               ($base_points 0)
+               ($old_score
+                  [score])
+               ($move_index
+                  {$hud_panel get cur_move_index})
+               ($rating
+                  {detect_frac_to_rating $detect_frac $move})
+               ($rating_idx
+                  {rating_state_to_index $rating})
+               ($bonus
+                  {get_score_bonus $detect_frac $move})
+               {if
+                  {&&
+                     {!
+                        {$move is_rest}}
+                     $hud_panel
+                     {!=
+                        [last_scored_move_index]
+                        $move_index}
+                     {<
+                        {$hud_panel beat_from_move_index $move_index}
+                        [loop_end]}
+                     {'||'
+                        {!
+                           {$hamdirector get player_freestyle}}
+                        {$move get final_pose}}}
+                  {$this send_world_message $rating 1.0e-3}
+                  {meta_performer move_passed $move $rating_idx $detect_frac}
+                  {set
+                     $base_points
+                     {elem
+                        [multiplayer_score_chart]
+                        $rating_idx}}
+                  {set
+                     $base_points
+                     {'+'
+                        $base_points
+                        {int
+                           {'*'
+                              $bonus
+                              {elem
+                                 [multiplayer_bonus_chart]
+                                 $rating_idx}}}}}
+                  {set
+                     [last_scored_move_index]
+                     $move_index}
+                  {do
+                     ($points
+                        {'*'
+                           [score_multiplier]
+                           $base_points})
+                     ($last_stars
+                        {int
+                           [num_stars]})
+                     ($player_index
+                        {if_else
+                           {==
+                              [state]
+                              player_1}
+                           1
+                           2})
+                     {if
+                        {> $points 0}
+                        {set
+                           [score]
+                           {'+'
+                              [score]
+                              $points}}
+                        {$hud_panel
+                           set_score
+                           [score]
+                           $old_score
+                           [best_possible_score]
+                           $player_index}
+                        {if
+                           {&&
+                              {>
+                                 [inactive_score]
+                                 0}
+                              {<=
+                                 $old_score
+                                 [inactive_score]}
+                              {>
+                                 [score]
+                                 [inactive_score]}}
+                           {$this
+                              send_world_message
+                              {symbol
+                                 {sprint
+                                    [state]
+                                    "_surpass"}}
+                              0}
+                           {if
+                              {'||'
+                                 {==
+                                    [state]
+                                    player_1}
+                                 {==
+                                    [section]
+                                    first}}
+                              {$hud_panel
+                                 play
+                                 {sprint
+                                    "nar_multi_lead_p"
+                                    {if_else
+                                       {==
+                                          [state]
+                                          player_1}
+                                       1
+                                       2}}}}}
+                        {set
+                           [num_stars]
+                           {$this
+                              calculate_stars
+                              {'+'
+                                 [score]
+                                 [inactive_score]}}}
+                        {do
+                           ($full
+                              {int
+                                 [num_stars]})
+                           ($partial
+                              {-
+                                 [num_stars]
+                                 $full})
+                           {if
+                              [star_display]
+                              {[star_display]
+                                 set_star_progress
+                                 $full
+                                 $partial}
+                              {if
+                                 {> $full $last_stars}
+                                 {[star_display]
+                                    set_star_complete
+                                    $last_stars}
+                                 {if
+                                    {==
+                                       $last_stars
+                                       {-
+                                          {size
+                                             [star_threshold_percentages]}
+                                          1}}
+                                    {$this send_world_message final_star_earned 2.0e-2}}
+                                 {$this send_world_message star_earned 0}}}}
+                        {handle
+                           ($world points_awarded)}}
+                     {if
+                        {$move get final_pose}
+                        {$this
+                           send_world_message
+                           [final_pose_result]
+                           0}}
+                     {if_else
+                        {==
+                           [state]
+                           player_1}
+                        {insert_elem
+                           [player_1_record]
+                           0
+                           [score]}
+                        {if
+                           {size
+                              [player_1_record]}
+                           {set
+                              [ghost_score]
+                              {last_elem
+                                 [player_1_record]}}
+                           {resize
+                              [player_1_record]
+                              {-
+                                 {size
+                                    [player_1_record]}
+                                 1}
+                              0}}}
+                     {do
+                        ($next_state_index
+                           {$this
+                              next_performance_state_index
+                              $rating_idx
+                              [performance_index]})
+                        {$this set_performance_state_index $next_state_index TRUE}}}}})
+         (on_move_bad
+            {'++'
+               [fail_counter]}
+            {if
+               {&&
+                  {!
+                     [encouraged]}
+                  {>=
+                     [fail_counter]
+                     [num_fails_to_encourage]}}
+               {switch
+                  [state]
+                  (player_1
+                     {if
+                        {<
+                           [score]
+                           [inactive_score]}
+                        {$hud_panel play nar_multi_encourage_p1}
+                        {set
+                           [encouraged]
+                           TRUE}})
+                  (player_2
+                     {if
+                        {<
+                           [score]
+                           [ghost_score]}
+                        {$hud_panel play nar_multi_encourage_p2}
+                        {set
+                           [encouraged]
+                           TRUE}})}}
+            kDataUnhandled)
+         (set_phase
+            ($index)
+            {if
+               {<
+                  $index
+                  {size
+                     [phases]}}
+               {set
+                  [phase_index]
+                  $index}
+               {set
+                  [fail_counter]
+                  0}
+               {set
+                  [encouraged]
+                  FALSE}
+               {do
+                  ($data
+                     {elem
+                        [phases]
+                        [phase_index]})
+                  ($event)
+                  {set
+                     [state]
+                     {elem $data 0}}
+                  {set
+                     [loop_start]
+                     {elem $data 1}}
+                  {set
+                     [loop_end]
+                     {elem $data 2}}
+                  {set
+                     [section]
+                     {elem $data 3}}
+                  {switch
+                     [state]
+                     (player_1
+                        {set $event player_1_turn}
+                        {if
+                           {&&
+                              {==
+                                 [section]
+                                 first}
+                              $hud_panel}
+                           {$hamdirector
+                              set
+                              difficulty
+                              {meta_performer get_difficulty}}
+                           {resize
+                              [player_1_record]
+                              0}})
+                     (player_2
+                        {set $event player_2_turn}
+                        {if
+                           {==
+                              [section]
+                              second}
+                           {$hamdirector select_camera}
+                           {$hamdirector
+                              force_shot
+                              ""}
+                           {script_task
+                              kTaskSeconds
+                              (delay 0.1)
+                              (script
+                                 {$hamdirector set cam_switch_freestyle TRUE}
+                                 {do
+                                    ($freestyle_card_setup
+                                       {find_obj $hud_panel static_hud setup_freestyle_card.anim})
+                                    {if
+                                       $freestyle_card_setup
+                                       {$freestyle_card_setup
+                                          animate
+                                          (range 0 0)}}})}})}
+                  {if
+                     $hamdirector
+                     {$this send_world_message $event 0}
+                     {if
+                        {==
+                           [section]
+                           first}
+                        {$hamdirector set player_freestyle FALSE}
+                        {$hamdirector set cam_switch_freestyle TRUE}}}
+                  {if
+                     {'||'
+                        {==
+                           [state]
+                           player_1}
+                        {==
+                           [state]
+                           player_2}}
+                     {do
+                        ($temp_score
+                           [score])
+                        ($temp_index
+                           [performance_index])
+                        {set
+                           [score]
+                           [inactive_score]}
+                        {$this
+                           set_performance_state_index
+                           [inactive_state_index]
+                           FALSE}
+                        {set
+                           [inactive_score]
+                           $temp_score}
+                        {set
+                           [inactive_state_index]
+                           $temp_index}}}
+                  {set
+                     [last_scored_move_index]
+                     -1}
+                  {if_else
+                     {>=
+                        $index
+                        {-
+                           {size
+                              [phases]}
+                           1}}
+                     {audio clear_loop}
+                     {do
+                        ($nextdata
+                           {elem
+                              [phases]
+                              {'+' $index 1}})
+                        {audio
+                           set_loop
+                           {elem $nextdata 1}
+                           [loop_end]}}}}})
+         (stream_jump
+            {$hamdirector
+               set_lipsync_offsets
+               {-
+                  {-
+                     {taskmgr seconds}
+                     {master stream_time}}}}
+            {$this
+               set_phase
+               {'+'
+                  [phase_index]
+                  1}}
+            {$hamdirector reset_detection}
+            {if
+               {==
+                  [phase_index]
+                  2}
+               {$hud_panel
+                  set
+                  added_freestyle_beat
+                  {'+'
+                     4
+                     [final_move_beat]}}}
+            {if
+               {==
+                  [phase_index]
+                  3}
+               {$this setup_photo_taking}
+               {$hud_panel set added_freestyle_beat -1}}
+            kDataUnhandled)
+         (on_freestyle_start
+            {if
+               {!
+                  [in_freestyle]}
+               {set
+                  [in_freestyle]
+                  TRUE}
+               {do
+                  ($next_phase_state
+                     {if_else
+                        {==
+                           [phase_index]
+                           {-
+                              {size
+                                 [phases]}
+                              1}}
+                        end
+                        {elem
+                           {elem
+                              [phases]
+                              {'+'
+                                 [phase_index]
+                                 1}}
+                           0}})
+                  {skeleton_identifier
+                     look_for_player
+                     {== $next_phase_state player_2}}}
+               {if
+                  $hamdirector
+                  {$this send_world_message dance_together 0}
+                  {$hud_panel stop_narrator}
+                  {$hud_panel play nar_multi_freestyle}
+                  {if
+                     {&&
+                        {==
+                           [state]
+                           player_1}
+                        {==
+                           [section]
+                           first}}
+                     {$hamdirector set cam_switch_freestyle FALSE}}}
+               {if
+                  {!=
+                     [photo_set_index]
+                     3}
+                  {$this setup_photo_taking}}}
+            kDataUnhandled)
+         (setup_photo_taking
+            {if
+               {<=
+                  [photo_set_index]
+                  3}
+               {photo_taker
+                  init
+                  {'+'
+                     {$this freestyle_start_beat}
+                     8}
+                  6
+                  {sprint
+                     "multiplayer_"
+                     [photo_set_index]}
+                  {'+'
+                     {$this freestyle_start_beat}
+                     15}
+                  -1
+                  {'+'
+                     {$this freestyle_start_beat}
+                     24}}
+               {'++'
+                  [photo_set_index]}
+               {gesture_mgr start_snapshot_batch}})
+         (on_intro_end
+            {$hud_panel play nar_multi_intro_p1}
+            {depth_buffer call_player 1}
+            {if
+               $hamdirector
+               {$hamdirector blend_face_overrides_out 0}}
+            kDataUnhandled)
+         (on_freestyle_stop
+            {set
+               [in_freestyle]
+               FALSE}
+            {skeleton_identifier stop_looking_for_player}
+            kDataUnhandled)
+         (mp_stream_on
+            {if
+               {&&
+                  {==
+                     [state]
+                     player_1}}
+               {if_else
+                  {==
+                     [section]
+                     first}
+                  {$this set_mp_stream TRUE}
+                  {if
+                     {>
+                        {taskmgr beat}
+                        {master event_beat freestyle_end}}
+                     {$this set_mp_stream TRUE}}}}
+            kDataUnhandled)
+         (mp_stream_off
+            {$this set_mp_stream FALSE}
+            kDataUnhandled)
+         (music_start
+            {$this send_world_message beat_animation_start 0}
+            kDataUnhandled)
+         (music_end
+            {if
+               {>=
+                  [phase_index]
+                  {-
+                     {size
+                        [phases]}
+                     1}}
+               {do
+                  ($event
+                     {symbol
+                        {sprint
+                           "game_over_stars_"
+                           {int
+                              [num_stars]}}})
+                  {$this send_world_message $event 0}
+                  {$this send_world_message beat_animation_stop 0}}}
+            kDataUnhandled)
+         (beat
+            {if
+               {&&
+                  {==
+                     $beat
+                     {'+'
+                        4
+                        [final_move_beat]}}
+                  {==
+                     [state]
+                     player_1}
+                  {==
+                     [section]
+                     second}}
+               {do
+                  ($dir
+                     {$hamdirector get cur_world})
+                  {$dir
+                     iterate
+                     HamCamShot
+                     $shot
+                     {if
+                        {==
+                           {$shot get category}
+                           DC_PLAYER_FREESTYLE}
+                        {$hamdirector
+                           force_shot
+                           {$shot name}}}}}
+               {$hamdirector set cam_switch_freestyle FALSE}
+               {$hamdirector set player_freestyle TRUE}}
+            {if
+               {== $beat 1}
+               {skeleton_identifier look_for_player 0}}
+            {if
+               {== $beat 10}
+               {skeleton_identifier stop_looking_for_player}}
+            {if
+               {exists gesture_mgr}
+               {switch
+                  {-
+                     [final_move_beat]
+                     $beat}
+                  (8
+                     {gesture_mgr set_identification_enabled FALSE})
+                  (6
+                     {gesture_mgr set_autoexposure TRUE})
+                  (1
+                     {gesture_mgr set_autoexposure FALSE})}}
+            {if
+               {&&
+                  {>=
+                     [return_depth_buffer_beat]
+                     0}
+                  {==
+                     $beat
+                     [return_depth_buffer_beat]}}
+               {set
+                  [return_depth_buffer_beat]
+                  -1}
+               {$hud_panel set_helper_frame game TRUE}}
+            {do
+               ($next_player)
+               ($next_section)
+               ($marker_trigger
+                  "")
+               ($player_switch_beat
+                  {switch
+                     [phase_index]
+                     (0
+                        {int
+                           {-
+                              {master event_beat freestyle_end}
+                              9}})
+                     (1
+                        {-
+                           [post_freestyle_move_beat]
+                           9})
+                     (2 -1)
+                     (3
+                        {-
+                           [post_freestyle_move_beat]
+                           9})})
+               {if
+                  {==
+                     $beat
+                     {- $player_switch_beat 8}}
+                  {$hud_panel set_helper_frame player_switch FALSE}
+                  {do
+                     ($depth_intro_anim
+                        {find_obj
+                           $hud_panel
+                           "player_switch.anim"})
+                     {if
+                        $depth_intro_anim
+                        {$depth_intro_anim set_frame 0}}}}
+               {if
+                  {== $beat $player_switch_beat}
+                  {if_else
+                     {<
+                        {'+'
+                           [phase_index]
+                           1}
+                        {size
+                           [phases]}}
+                     {do
+                        ($next_phase_data
+                           {elem
+                              [phases]
+                              {'+'
+                                 [phase_index]
+                                 1}})
+                        {set
+                           $next_player
+                           {elem $next_phase_data 0}}
+                        {set
+                           $next_section
+                           {elem $next_phase_data 3}}}
+                     {do
+                        {set $next_player player_2}
+                        {set $next_section second}}}
+                  {switch
+                     $next_player
+                     (player_1
+                        {$this send_world_message player_1_switch_to 0}
+                        {$hamdirector
+                           set
+                           difficulty
+                           {meta_performer get_difficulty}}
+                        {if
+                           {== $next_section second}
+                           {set
+                              $marker_trigger
+                              {find_obj $hud_panel multiplayer_meter player_1_place_marker.trig}}}
+                        {depth_buffer call_player 1})
+                     (player_2
+                        {$this send_world_message player_2_switch_to 0}
+                        {$hamdirector
+                           set
+                           difficulty
+                           {meta_performer get_secondary_difficulty}}
+                        {$hamdirector reset_detection}
+                        {if
+                           {== $next_section second}
+                           {set
+                              $marker_trigger
+                              {find_obj $hud_panel multiplayer_meter player_2_place_marker.trig}}}
+                        {depth_buffer call_player 2})}
+                  {if
+                     $marker_trigger
+                     {$marker_trigger trigger}}
+                  {$hud_panel clear_flash_cards}
+                  {set
+                     [return_depth_buffer_beat]
+                     {switch
+                        [phase_index]
+                        (0
+                           {-
+                              [first_move_beat]
+                              3})
+                        (1
+                           {-
+                              [post_freestyle_move_beat]
+                              3})
+                        (2 -1)
+                        (3
+                           {-
+                              [post_freestyle_move_beat]
+                              3})}}}})
+         (setup_phases
+            {resize
+               [phases]
+               0}
+            {do
+               ($freestyle_start
+                  {master event_beat freestyle_start})
+               ($freestyle_end
+                  {master event_beat freestyle_end})
+               ($last_song_beat
+                  {seconds_to_beat
+                     {/
+                        {master song_duration_ms}
+                        1000}})
+               ($mp_start
+                  {master event_beat mp_start})
+               ($mp_end
+                  {master event_beat mp_end})
+               ($move)
+               ($b 0)
+               {if
+                  {'||'
+                     {< $freestyle_start 0}
+                     {< $freestyle_end 0}
+                     {< $mp_start 0}
+                     {< $mp_end 0}}
+                  {notify
+                     "This song doesn't appear to be authored for multiplayer."}}
+               {if
+                  {&&
+                     $hud_panel
+                     {>= $freestyle_start 0}}
+                  {set
+                     [phases]
+                     {array
+                        ((player_1 0 $freestyle_end first)
+                           (player_2
+                              $mp_start
+                              [post_freestyle_move_beat]
+                              first)
+                           (player_1
+                              [post_freestyle_move_beat]
+                              $mp_end
+                              second)
+                           (player_2 $freestyle_start $mp_end second))}}}})
+         (cheat_skip_phase
+            {game
+               jump
+               {beat_to_ms
+                  {-
+                     [loop_end]
+                     16}}}))))

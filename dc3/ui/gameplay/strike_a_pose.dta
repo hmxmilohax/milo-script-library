@@ -1,0 +1,148 @@
+(jump_index 0)
+(jump_obj '')
+(reset
+   {$this common_reset}
+   {$hamdirector set_player_spotlights_enabled TRUE}
+   {$hamdirector set freestyle_enabled FALSE}
+   {set
+      [jump_index]
+      0}
+   {$this stream_jump}
+   {{gamedata getp 0 provider}
+      set
+      score
+      0}
+   {{gamedata getp 1 provider}
+      set
+      score
+      0})
+(init
+   {hamprovider set gameplay_mode strike_a_pose}
+   {$this common_init}
+   {master
+      add_sink
+      $this
+      (stream_jump beat)}
+   {set
+      [jump_obj]
+      ""}
+   {{{$hamdirector get_world}
+         find
+         moves}
+      iterate
+      HamPartyJumpData
+      $jd
+      {set
+         [jump_obj]
+         $jd}})
+(on_intro_start
+   {$hud_panel play nar_sap_intro})
+(beat
+   {if
+      {&&
+         {!
+            {$pose_fatalities fatal_active}}
+         {>=
+            {round
+               {taskmgr beat}}
+            {$pose_fatalities get_fatality_beat_lead_in}}
+         {<
+            {round
+               {taskmgr beat}}
+            {$pose_fatalities fatal_end_beat}}}
+      {$pose_fatalities activate_fatalities}
+      {$hamdirector
+         force_shot
+         "area1_far01.shot"}
+      {handle
+         ($hamwardrobe crowd great)}}
+   {if
+      {&&
+         {hamprovider get in_fatalities}
+         {>=
+            {round
+               {taskmgr beat}}
+            {$pose_fatalities fatal_end_beat}}
+         {! $debug_endless_strikeapose}}
+      {$this strikeapose_over}})
+(stream_jump
+   {handle
+      ($hamwardrobe crowd great)}
+   {if
+      [jump_obj]
+      {if_else
+         {<
+            [jump_index]
+            {[jump_obj]
+               size
+               (jumps)}}
+         {do
+            ($from_measure
+               {-
+                  {[jump_obj]
+                     get
+                     (jumps
+                        [jump_index]
+                        from_measure)}
+                  1})
+            ($to_measure
+               {-
+                  {[jump_obj]
+                     get
+                     (jumps
+                        [jump_index]
+                        to_measure)}
+                  1})
+            {audio
+               set_loop
+               {'*' $to_measure 4}
+               {'*' $from_measure 4}}
+            {$pose_fatalities
+               set_jump
+               {'*' $from_measure 4}
+               {'*' $to_measure 4}}
+            {'++'
+               [jump_index]}}
+         {audio clear_loop}}})
+(strikeapose_over
+   {do
+      ($left_player
+         {==
+            {{gamedata getp 0 provider}
+               get
+               side}
+            kSkeletonRight})
+      ($right_player
+         {- 1 $left_player})
+      ($left_score
+         {{gamedata getp $left_player provider}
+            get
+            score})
+      ($right_score
+         {{gamedata getp $right_player provider}
+            get
+            score})
+      {$hud_panel stop_narrator}
+      {if
+         {> $left_score $right_score}
+         {$hud_panel play nar_sap_left_win}}
+      {if
+         {> $right_score $left_score}
+         {$hud_panel play nar_sap_right_win}}
+      {hamprovider set in_fatalities FALSE}
+      {hamprovider set game_stage outro}
+      {$hamdirector set disable_picking FALSE}
+      {$hamdirector fatals_over}})
+(end
+   {if
+      {! $debug_endless_strikeapose}
+      {game_panel win}})
+(pause_on_skeleton_loss TRUE)
+(in_play_range
+   ($beat)
+   FALSE)
+(can_pause TRUE)
+(num_rated_measures
+   {$this num_rated_measures_common})
+(game_outro
+   {$this game_outro_common})

@@ -1,0 +1,876 @@
+#include ..\config\macros.dta
+#include ..\config\process_clips_func.dta
+#include ..\world\worldbase.dta
+(CharBoneDir
+   (resource_path
+      "char/shared"))
+(CharClip
+   (init
+      {if
+         {$this dir}
+         {$this
+            set_type
+            {do
+               ($path
+                  {{$this dir}
+                     get_path_name})
+               {cond
+                  ({has_substr
+                        $path
+                        "crowd"}
+                     crowd)
+                  ({has_substr
+                        $path
+                        "viseme"}
+                     viseme)
+                  main}}}
+         {switch
+            {$this get_type}
+            (crowd
+               {set
+                  [beat_align]
+                  kPlayBeatTime})
+            (viseme
+               {set
+                  [beat_align]
+                  kPlayRealTime}
+               {if
+                  {!=
+                     [name]
+                     Base}
+                  {set
+                     [relative]
+                     {{$this dir}
+                        find
+                        Base}}}
+               {set
+                  [default_loop]
+                  kPlayLoop})}})
+   (types
+      (main
+         (resource
+            main_resource
+            "kHamContextMain")
+         (clip_flags
+            (("kAnimatePropBone"
+                  "Animate the prop bone, otherwise won't be animated")
+               ("kNoRestStep"
+                  "For practice mode _out clips, means no rest_step animation will be played afterwards")
+               ("kForceRestStep"
+                  "For practice mode _out clips, forces rest_step animation afterwards even if character within 6 inches of waypoint")
+               ("kNoRetarget"
+                  "Don't do any retargetting, use when clip is exported with character specific skeleton, like for using props, don't use in song clips")))
+         (exclusive_flags
+            (("kNoRestStep"
+                  "kForceRestStep")))
+         (transition_version 4)
+         (on_transition
+            {if
+               {!=
+                  {$a_clip get beat_align}
+                  kPlayRealTime}
+               {$this
+                  generate_transitions
+                  (restrict
+                     {&&
+                        {< $b_start 1}
+                        {< $a_end 5}
+                        {> $a_end 1}
+                        {==
+                           {floor $b_beat}
+                           $b_beat}})}})
+         (clip_skeleton_index 0)
+         (clip_skeleton
+            {symbol
+               "male"})
+         (useful TRUE)
+         (editor
+            (clip_skeleton
+               symbol
+               (list
+                  (CHARCLIP_SKELETONS))
+               (post_sync
+                  {do
+                     {set $index 0}
+                     {foreach_int
+                        $i
+                        0
+                        {size
+                           (CHARCLIP_SKELETONS)}
+                        {if
+                           {==
+                              {elem
+                                 (CHARCLIP_SKELETONS)
+                                 $i}
+                              [clip_skeleton]}
+                           {set $index $i}}}
+                     {set
+                        [clip_skeleton_index]
+                        $index}})
+               (refresh clip_skeleton_index))
+            (clip_skeleton_index
+               int
+               (read_only TRUE))
+            (useful
+               bool
+               (read_only TRUE)
+               (help
+                  "Is this clip useful in the modular song system?"))))
+      (viseme
+         (resource
+            viseme_resource
+            "kHamContextViseme")
+         (remove_zeros 1))
+      (crowd
+         (resource
+            crowd_resource
+            "kHamContextCrowd")
+         (clip_flags
+            ())
+         (transition_version 6)
+         (on_transition
+            {if
+               {$a_clip shares_groups $b_clip}
+               {$this
+                  generate_transitions
+                  (beat_align 1)
+                  (restrict
+                     {&&
+                        {< $b_start 2}
+                        {&&
+                           {< $a_end 4}
+                           {> $a_end 2}}})}}))
+      (skeleton_bones
+         (resource
+            skeleton_bones_resource
+            "kHamContextSkeleton")))
+   (events
+      ('' pose_fatality_0 pose_fatality_1 pose_fatality_2 pose_fatality_3 pose_fatality_4 pose_fatality_5 pose_fatality_6 pose_fatality_7)))
+(HamSkeletonConverter
+   (types
+      (skeleton
+         (resource
+            skeleton_resource
+            "kHamContextSkeleton"))))
+(HamCharacter
+   (skeleton_path
+      "char/main/retarget_skeletons")
+   (anim_props
+      (force_lookat
+         symbol
+         (list
+            {$this list_interest_objects})
+         (no_test TRUE)
+         (propanim_selected
+            (on
+               {$this set debug_draw_interest_objects TRUE})
+            (off
+               {$this set debug_draw_interest_objects FALSE}))
+         (help
+            "for propanim, the name of the interest object to force on this player"))
+      (enable_auto_blinks
+         bool
+         (help
+            "enable or disable procedural blinks on this character, which will blink the eyes automatically"))
+      (force_blink
+         bool
+         (propanim_blockview FALSE)
+         (help
+            "force character to blink.  must set keyframe to true for it to have an effect")))
+   (types
+      (main
+         (player_index 0 proxy_save)
+         (spotlight_constraint
+            ""
+            proxy_save)
+         (spotlight
+            ""
+            proxy_save)
+         (editor
+            (player_index
+               int
+               (range
+                  0
+                  {-
+                     {gamedata max_players}
+                     1})
+               (help
+                  "Player index"))
+            (spotlight_constraint
+               object
+               (class TransConstraint)
+               (help
+                  "Trans Constraint attached to this character"))
+            (spotlight
+               object
+               (class Spotlight)
+               (help
+                  "Real spotlight used to highghlight this character in Dance Battle")))
+         (flow_commands reset_peak_effects start_peak_effects stop_peak_effects)
+         (enter
+            {if
+               {&&
+                  $edit_mode
+                  {! $hamdirector}}
+               {$this
+                  find_interest_objects
+                  {$this dir}}}
+            {$this cache_vo_bank}
+            {if
+               $edit_mode
+               {do
+                  ($driver
+                     {find_obj $this main.drv})
+                  ($clips
+                     {find_obj $this clips})
+                  {if
+                     {&& $driver $clips}
+                     {$driver set clips $clips}}}}
+            {$this set_blinking TRUE}
+            {hamprovider
+               add_sink
+               $this
+               (on_game_stage_change)
+               0
+               FALSE})
+         (snap_spotlight_constraint
+            {if
+               [spotlight_constraint]
+               {[spotlight_constraint]
+                  snap_to_parent}}
+            {if
+               [spotlight]
+               {do
+                  ($x)
+                  ($y)
+                  ($z)
+                  {$this get_local_pos $x $y $z}
+                  {[spotlight]
+                     set_local_pos
+                     $x
+                     $y
+                     {'+' $z 110.0}}}})
+         (on_game_stage_change
+            {$this set_blinking TRUE})
+         (sync_objects
+            {$this cache_vo_bank})
+         (next_character
+            {do
+               ($list
+                  {file_list
+                     {sprint
+                        [outfit_dir]
+                        "/*.milo"}})
+               ($index 0)
+               {if
+                  {find_elem
+                     $list
+                     [outfit]
+                     $index}
+                  {'++' $index}
+                  {if
+                     {==
+                        $index
+                        {size $list}}
+                     {set $index 0}}
+                  {set
+                     [outfit]
+                     {elem $list $index}}
+                  {$this start_load FALSE}}})
+         (cache_vo_bank
+            {$this
+               iterate
+               (ObjectDir character_vo)
+               $vo_bank
+               {set
+                  [vo_bank]
+                  $vo_bank}})
+         (reset_peak_effects
+            {do
+               ($peak_fx
+                  {find_obj $this peak_effects.anim})
+               ($flip
+                  {find_obj $this flip.anim})
+               ($provider
+                  {gamedata
+                     getp
+                     [player_index]
+                     provider})
+               {if
+                  $peak_fx
+                  {$peak_fx
+                     animate
+                     (range 0 0)}}}
+            {if
+               {! $edit_mode}
+               {maybe_hide_campaign_crowds}})
+         (start_peak_effects
+            {do
+               ($peak_fx
+                  {find_obj $this peak_effects.anim})
+               {if
+                  $peak_fx
+                  {$peak_fx
+                     animate
+                     (dest
+                        {$peak_fx end_frame})}}}
+            {if
+               {! $edit_mode}
+               {maybe_hide_campaign_crowds}})
+         (stop_peak_effects
+            {do
+               ($peak_fx
+                  {find_obj $this peak_effects.anim})
+               {if
+                  $peak_fx
+                  {$peak_fx
+                     animate
+                     (dest 0)}}}
+            {if
+               {! $edit_mode}
+               {maybe_hide_campaign_crowds}})
+         (vo_bank
+            ""))))
+(Character
+   (types
+      (crowd
+         (stance stand proxy_save)
+         (editor
+            (load_slow
+               script
+               (script
+                  {crowd_clips.fm load_tempo slow FALSE 0})
+               (help
+                  "load slow clips"))
+            (load_medium
+               script
+               (script
+                  {crowd_clips.fm load_tempo medium FALSE 0})
+               (help
+                  "load medium clips"))
+            (load_fast
+               script
+               (script
+                  {crowd_clips.fm load_tempo fast FALSE 0})
+               (help
+                  "load fast clips"))
+            (stance
+               symbol
+               (list
+                  (CROWD_STANCE_LIST))
+               (help
+                  "What stance this character should be in")))
+         (enter
+            {bone_pelvis.mesh set trans_parent $this}))))
+(CharCollide
+   (editor
+      (flags
+         bitfield
+         (list
+            (CHAR_HAIR_FLAGS))
+         (help
+            "Which collision volumes to hook up to this strand for collision"))))
+(CharHair
+   (editor
+      (strands
+         (array
+            (struct
+               (hookup_flags
+                  bitfield
+                  (list
+                     (CHAR_HAIR_FLAGS))
+                  (help
+                     "Which collision volumes to hook up to this strand for collision")))))))
+(FileMerger
+   (types
+      (world
+         (change_files
+            ($async $loading)
+            {if
+               {&& $loading $hamdirector}
+               {$hamdirector set merger $this}
+               {if
+                  {exists game_panel}
+                  {$hamdirector load_game_song FALSE}}})
+         (on_pre_merge
+            ($cat $from $to)
+            {if
+               $hamdirector
+               {$hamdirector on_file_loaded $cat $from $to}})
+         (on_post_merge
+            ($cat $from $to)
+            {if
+               $hamdirector
+               {$hamdirector on_file_merged $cat $from}})
+         (on_post_delete
+            ($cat $to $final)
+            {if
+               {'||'
+                  $final
+                  [async_load]}
+               {{$this dir}
+                  sync_objects}})
+         (check_sync
+            ($filename $cat)
+            {if
+               {&&
+                  {exists milo}
+                  {!=
+                     $filename
+                     ""}
+                  {!
+                     {has_substr
+                        $filename
+                        "none.milo"}}}
+               {milo p4_checksync $filename}
+               {if
+                  {== $cat songs}
+                  {milo p4_checklocked $filename TRUE}}}))
+      (game_mode
+         (change_files
+            ($async $loading)
+            {if
+               {&& $loading $hamdirector}
+               {$hamdirector set game_mode_merger $this}})
+         (on_pre_merge
+            ($cat $from $to)
+            {if
+               $hamdirector
+               {$hamdirector on_file_loaded $cat $from $to}})
+         (on_post_merge
+            ($cat $from $to)
+            {if
+               $hamdirector
+               {$hamdirector on_file_merged $cat $from}})
+         (on_post_delete
+            ($cat $to $final)
+            {if
+               {'||'
+                  $final
+                  [async_load]}
+               {{$this dir}
+                  sync_objects}})
+         (check_sync
+            ($filename $cat)
+            {if
+               {&&
+                  {exists milo}
+                  {!=
+                     $filename
+                     ""}
+                  {!
+                     {has_substr
+                        $filename
+                        "none.milo"}}}
+               {milo p4_checksync $filename}})
+         (load_game_hud
+            ($unused)
+            {with_file_root
+               {file_root}
+               {print
+                  "in load_game_hud\n\n"}
+               {if_else
+                  {exists gamemode}
+                  {cond
+                     ({==
+                           holla_back
+                           {gamemode get gameplay_mode}}
+                        {print
+                           "select game_hud ui/hud/_holla_back_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_holla_back_hud.milo"})
+                     ({==
+                           dance_battle
+                           {gamemode get gameplay_mode}}
+                        {if_else
+                           {==
+                              {gamemode get battle_mode}
+                              cascade}
+                           {$this
+                              select
+                              game_hud
+                              "ui/hud/_cascade_hud.milo"}
+                           {$this
+                              select
+                              game_hud
+                              "ui/hud/_dance_battle_hud.milo"}})
+                     ({==
+                           bustamove
+                           {gamemode get gameplay_mode}}
+                        {print
+                           "select game_hud ui/hud/_bustamove_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_bustamove_hud.milo"})
+                     ({'||'
+                           {==
+                              practice
+                              {gamemode get gameplay_mode}}
+                           {==
+                              campaign_practice
+                              {gamemode get gameplay_mode}}}
+                        {print
+                           "select game_hud ui/hud/_practice_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_practice_hud.milo"})
+                     ({==
+                           rhythm_battle
+                           {gamemode get gameplay_mode}}
+                        {print
+                           "select game_hud ui/hud/_rhythm_battle_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_rhythm_battle_hud.milo"})
+                     ({==
+                           mind_control
+                           {gamemode get gameplay_mode}}
+                        {print
+                           "mind_control: select game_hud ui/hud/_rhythm_battle_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           ""})
+                     ({==
+                           cascade
+                           {gamemode get gameplay_mode}}
+                        {print
+                           "select game_hud ui/hud/_cascade_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_cascade_hud.milo"})
+                     ({==
+                           strike_a_pose
+                           {gamemode get gameplay_mode}}
+                        {print
+                           "select game_hud ui/hud/_strike_a_pose_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_strike_a_pose_hud.milo"})
+                     ({'||'
+                           {==
+                              challenge
+                              {gamemode get gameplay_mode}}
+                           {==
+                              {gamemode get_mode}
+                              challenge}}
+                        {print
+                           "select game_hud ui/hud/_challenge_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_challenge_hud.milo"})
+                     (TRUE
+                        {print
+                           "select game_hud empty\n\n"}
+                        {print
+                           {gamemode get gameplay_mode}
+                           "\n"}
+                        {print
+                           "select game_hud ui/hud/_default_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_default_hud.milo"})}
+                  {if_else
+                     $edit_mode
+                     {do
+                        {print
+                           "we are in milo, select game_hud ui/hud/_default_hud.milo\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           "ui/hud/_default_hud.milo"}}
+                     {do
+                        {print
+                           "no game mode: select game_hud empty\n\n"}
+                        {$this
+                           select
+                           game_hud
+                           ""}}}}}))
+      (main
+         (change_files
+            ($async $loading)
+            {if_else
+               {&&
+                  $loading
+                  {!=
+                     "iconman"
+                     {{$this dir}
+                        proxy_name}}
+                  {'||'
+                     $hamdirector
+                     {exists game_panel}}}
+               {$this clear_selections}
+               {{$this dir}
+                  configure_file_merger}})
+         (on_pre_merge
+            ($cat $from $to)
+            {if
+               {== $cat outfit}
+               {$to
+                  set
+                  gender
+                  {outfit_gender
+                     {$to get outfit}}}})
+         (on_post_merge
+            ($cat $from $to)
+            {if
+               {&&
+                  $from
+                  {== $cat outfit}}
+               {$to copy_bounding_sphere $from}
+               {$to merge_draws $from}})
+         (on_post_delete
+            ($cat $to $final)
+            {{$this dir}
+               post_delete
+               $cat}
+            {if
+               {&&
+                  {!
+                     [loading_load]}
+                  {'||'
+                     $final
+                     [async_load]}}
+               {{$this dir}
+                  sync_objects}}))
+      (crowd_anim
+         (change_files
+            ($async $loading)
+            {if
+               $loading
+               {$this
+                  select
+                  male_tempo
+                  ""}
+               {$this
+                  select
+                  male_era
+                  ""}
+               {$this
+                  select
+                  male_tempo_era
+                  ""}
+               {$this
+                  select
+                  female_tempo
+                  ""}
+               {$this
+                  select
+                  female_era
+                  ""}
+               {$this
+                  select
+                  female_tempo_era
+                  ""}})
+         (load_tempo
+            ($tempo $async $venue $coordinator)
+            {with_file_root
+               {file_root}
+               {if_else
+                  $tempo
+                  {do
+                     ($era_from_venue
+                        ((rollerrink 70s)
+                           (streetside 80s)
+                           (houseparty 90s)
+                           (dclive 00s)
+                           (dci 10s)))
+                     ($era 10s)
+                     {set
+                        $era
+                        {find_exists $era_from_venue $venue}}
+                     {if_else
+                        {== $era kDataUnhandled}
+                        {set $era 10s}
+                        {set
+                           $era
+                           {elem $era 1}}}
+                     {$this
+                        select
+                        female_tempo
+                        {sprint
+                           "char/crowd/anim/female_"
+                           $tempo
+                           ".milo"}}
+                     {$this
+                        select
+                        male_tempo
+                        {sprint
+                           "char/crowd/anim/male_"
+                           $tempo
+                           ".milo"}}
+                     {$this
+                        select
+                        female_era
+                        {sprint
+                           "char/crowd/anim/female_base_"
+                           $era
+                           ".milo"}}
+                     {$this
+                        select
+                        male_era
+                        {sprint
+                           "char/crowd/anim/male_base_"
+                           $era
+                           ".milo"}}
+                     {$this
+                        select
+                        female_tempo_era
+                        {sprint
+                           "char/crowd/anim/female_"
+                           $tempo
+                           "_"
+                           $era
+                           ".milo"}}
+                     {$this
+                        select
+                        male_tempo_era
+                        {sprint
+                           "char/crowd/anim/male_"
+                           $tempo
+                           "_"
+                           $era
+                           ".milo"}}}
+                  {do
+                     {$this select female_tempo ''}
+                     {$this select male_tempo ''}
+                     {$this select female_tempo_era ''}
+                     {$this select male_tempo_era ''}
+                     {$this select female_era ''}
+                     {$this select male_era ''}}}
+               {if_else
+                  $coordinator
+                  {$coordinator add_outfit_loader $this}
+                  {$this start_load $async}}}))
+      (modular
+         (change_files
+            ($async $loading)
+            {if
+               {&& $loading $hamdirector}
+               {$hamdirector set move_merger $this}}))
+      (move_graph
+         (on_post_merge
+            ($cat $from $to)
+            {movemgr on_file_merged $cat $from}))))
+(CharLipSync
+   (init
+      {$this set_type facial_exp})
+   (types
+      (facial_exp
+         (Angry 0.0)
+         (Concentrate 0.0)
+         (Excited 0.0)
+         (Grin 0.0)
+         (Mouth_Open 0.0)
+         (O_Face 0.0)
+         (Open_Smile 0.0)
+         (Open_Smile_02 0.0)
+         (Pursed 0.0)
+         (Sexy 0.0)
+         (Smile 0.0)
+         (Smirk 0.0)
+         (Squash_High 0.0)
+         (Squash_Low 0.0)
+         (Neutral 0.0)
+         (talkFurrowed 0.0)
+         (talkRaised 0.0)
+         (talkPleading 0.0)
+         (talkCockedLeft 0.0)
+         (talkCockedRight 0.0)
+         (talkSquintLeft 0.0)
+         (talkSquintRight 0.0)
+         (talkEyesWide 0.0)
+         (talkBlinkLeft 0.0)
+         (talkBlinkRight 0.0)
+         (viseme_list
+            (Angry Concentrate Excited Grin Mouth_Open O_Face Open_Smile Open_Smile_02 Pursed Sexy Smile Smirk Squash_High Squash_Low Neutral talkFurrowed talkRaised talkPleading talkCockedLeft talkCockedRight talkSquintLeft talkSquintRight talkEyesWide talkBlinkLeft talkBlinkRight))
+         (reset_all
+            {foreach
+               $elem
+               [viseme_list]
+               {$this set $elem 0}})
+         (editor
+            (Angry
+               float
+               (range 0 1))
+            (Concentrate
+               float
+               (range 0 1))
+            (Excited
+               float
+               (range 0 1))
+            (Grin
+               float
+               (range 0 1))
+            (Mouth_Open
+               float
+               (range 0 1))
+            (O_Face
+               float
+               (range 0 1))
+            (Open_Smile
+               float
+               (range 0 1))
+            (Open_Smile_02
+               float
+               (range 0 1))
+            (Pursed
+               float
+               (range 0 1))
+            (Sexy
+               float
+               (range 0 1))
+            (Smile
+               float
+               (range 0 1))
+            (Smirk
+               float
+               (range 0 1))
+            (Squash_High
+               float
+               (range 0 1))
+            (Squash_Low
+               float
+               (range 0 1))
+            (Neutral
+               float
+               (range 0 1))
+            (talkFurrowed
+               float
+               (range 0 1))
+            (talkRaised
+               float
+               (range 0 1))
+            (talkPleading
+               float
+               (range 0 1))
+            (talkCockedLeft
+               float
+               (range 0 1))
+            (talkCockedRight
+               float
+               (range 0 1))
+            (talkSquintLeft
+               float
+               (range 0 1))
+            (talkSquintRight
+               float
+               (range 0 1))
+            (talkEyesWide
+               float
+               (range 0 1))
+            (talkBlinkLeft
+               float
+               (range 0 1))
+            (talkBlinkRight
+               float
+               (range 0 1))))))

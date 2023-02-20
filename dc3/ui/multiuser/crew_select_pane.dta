@@ -1,0 +1,122 @@
+{new
+   Object
+   crew_select_pane
+   (enter
+      ($side)
+      {multiuser_panel
+         set_provider
+         $side
+         {multiuser_panel get_crew_provider $side}}
+      {multiuser_panel set_list_dir $side list_crew}
+      {if
+         {hamprovider get is_in_party_mode}
+         {{cursor_panel find depth_buffer_left.grp}
+            set_showing
+            TRUE}
+         {{cursor_panel find depth_buffer_right.grp}
+            set_showing
+            TRUE}
+         {multiuser_panel set_crew '' $side}}
+      {do
+         ($index
+            {multiuser_panel get_crew_index $side})
+         {if
+            {== $index -1}
+            {set
+               $index
+               {'+' $side 1}}}
+         {multiuser_panel set_selection $side $index}
+         {if
+            {== $index 0}
+            {multiuser_panel set_player_crew $side random_crew}}}
+      {$this handle_crew_chosen $side})
+   (exit
+      ($side)
+      {if_else
+         {hamprovider get is_in_party_mode}
+         {multiuser_panel refresh_player_crew $side}
+         {multiuser_panel update_player $side}})
+   (refresh
+      ($side)
+      {multiuser_panel enable_list $side})
+   (highlight
+      ($side $name $index)
+      {multiuser_panel set_player_crew $side $name})
+   (select
+      ($side $name $index)
+      {switch
+         $name
+         (back
+            {if_else
+               {hamprovider get is_in_party_mode}
+               {do
+                  {partymode_mgr set_right_team_crew ''}
+                  {hamprovider set right_team_crew ''}
+                  {partymode_mgr set_left_team_crew ''}
+                  {hamprovider set left_team_crew ''}
+                  {partymode_mgr set_custom_party TRUE}
+                  {ui goto_screen party_mode_branch_screen}}
+               {multiuser_panel set_pending_pane $side startgame_pane}})
+         (random_crew
+            {multiuser_panel set_random_crew $side}
+            {multiuser_panel
+               set_selection
+               $side
+               {multiuser_panel get_crew_index $side}}
+            {$this handle_crew_chosen $side}
+            {if_else
+               {hamprovider get is_in_party_mode}
+               {$this do_readywait $side}
+               {multiuser_panel set_pending_pane $side character_select_pane}})
+         {do
+            {if_else
+               {profile_mgr is_content_unlocked $name}
+               {if_else
+                  {multiuser_panel is_crew_available $name $side}
+                  {do
+                     {multiuser_panel set_crew $name $side}
+                     {$this handle_crew_chosen $side}
+                     {if
+                        {profile_mgr has_active_profile}
+                        {{profile_mgr get_active_profile}
+                           mark_content_not_new
+                           $name}}
+                     {if_else
+                        {hamprovider get is_in_party_mode}
+                        {$this do_readywait $side}
+                        {multiuser_panel set_pending_pane $side character_select_pane}}}
+                  {do
+                     {multiuser_panel handle_invalid_select}
+                     skip_select_anim_and_sound}}
+               {do
+                  {locked_pane set_asset $side $name}
+                  {locked_pane set_back_pane $side crew_select_pane}
+                  {multiuser_panel set_pending_pane $side locked_pane}}}}})
+   (do_readywait
+      ($side)
+      {multiuser_panel play_crew_throwdown_crew_select_vo $side}
+      {if_else
+         {multiuser_panel can_enter_game}
+         {ui goto_screen party_mode_welcome_screen}
+         {multiuser_panel set_pending_pane $side readywait_pane}})
+   (get_voice_command_index
+      ($command $side)
+      {set
+         $crew_pane_index
+         {multiuser_panel get_voice_command_index $command $side}}
+      $crew_pane_index)
+   (get_speech_rule
+      {set $rule crew_select_screen}
+      $rule)
+   (handle_crew_chosen
+      ($side)
+      {if_else
+         {hamprovider get is_in_party_mode}
+         {do
+            {multiuser_panel refresh_ui}
+            {multiuser_panel refresh_player_crew 0}
+            {multiuser_panel refresh_player_crew 1}}
+         {do
+            {multiuser_panel update_providers}
+            {multiuser_panel refresh_lists}
+            {multiuser_panel update_player $side}}})}

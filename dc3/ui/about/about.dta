@@ -1,0 +1,190 @@
+{new
+   HamPanel
+   about_panel
+   (file
+      "about.milo")
+   (show_hand_help FALSE)
+   (focus right_hand.hnl)
+   (selected_index 0)
+   (back_token back)
+   (enter
+      {meta music_start}
+      {hamprovider set ui_nav_mode shell}
+      {right_hand.hnl
+         set_selected
+         [selected_index]}
+      {right_hand.hnl set nav_provider ''}
+      {provider.hnp
+         set_hidden
+         about_menu_warranty
+         {$this should_hide_warranty_option}}
+      {right_hand.hnl set nav_provider provider.hnp}
+      {voice_input_panel activate_voice_context about_screen})
+   (exit
+      {hamprovider set ui_nav_mode title}
+      {set
+         [selected_index]
+         {'+'
+            {right_hand.hnl get_selected}
+            1}}
+      {if
+         {>
+            [selected_index]
+            4}
+         {set
+            [selected_index]
+            0}})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set $about_selection $name}
+            {ui goto_screen about_info_screen})
+         (left_hand.hnl
+            {switch
+               $name
+               (back
+                  {ui go_back_screen title_screen})})})
+   (should_hide_warranty_option
+      {set
+         $sys_loc
+         {system_locale}}
+      {set
+         $sys_lang
+         {system_language}}
+      {if_else
+         {'||'
+            {== $sys_loc chn}
+            {== $sys_loc jpn}
+            {== $sys_loc sin}
+            {== $sys_loc hkg}
+            {if_else
+               {&&
+                  {== $sys_loc usa}
+                  {== $sys_lang cht}}
+               TRUE
+               FALSE}
+            {if_else
+               {&&
+                  {== $sys_loc usa}
+                  {== $sys_lang jpn}}
+               TRUE
+               FALSE}
+            {if_else
+               {&&
+                  {== $sys_loc usa}
+                  {== $sys_lang kor}}
+               TRUE
+               FALSE}}
+         TRUE
+         FALSE})}
+{new
+   HamScreen
+   about_screen
+   (panels meta background_panel about_panel)
+   (back title_screen)
+   (focus about_panel)
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         BACRO
+         {about_panel select_right_list_token $command}})}
+{new
+   HamPanel
+   about_info_panel
+   (file
+      "about_info.milo")
+   (continue_token continue)
+   (helpbar_confirm_label continue)
+   (focus right_hand.hnl)
+   (hide_helpbar
+      {!
+         {shell_input in_controller_mode}})
+   (show_hand_help FALSE)
+   (helpbar_allow_controller FALSE)
+   (ready_disable_controller FALSE)
+   (controller_mode_entered
+      {if
+         {!
+            {show_safety.flow is_running}}
+         {right_hand.hnl set showing FALSE}})
+   (controller_mode_exited
+      {if
+         {!
+            {show_safety.flow is_running}}
+         {right_hand.hnl set showing TRUE}})
+   (enter
+      {$this reveal}
+      {voice_input_panel activate_voice_context about_info_screen})
+   (TRANSITION_COMPLETE_MSG
+      {{helpbar find provider.hnp}
+         set_label
+         0
+         [continue_token]})
+   (NAV_SELECT_MSG
+      {if_else
+         {!= $about_selection ''}
+         {$this reveal}
+         {ui
+            goto_screen
+            {{ui current_screen}
+               get
+               next_screen}}})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll
+      SLIDE_RIGHT_LIST_ITEM
+      {if
+         {!
+            [helpbar_allow_controller]}
+         {set
+            [helpbar_allow_controller]
+            TRUE}
+         {helpbar resync}})
+   (exit
+      {set
+         [ready_disable_controller]
+         FALSE}
+      {set
+         [helpbar_allow_controller]
+         FALSE})
+   (reveal
+      {switch
+         $about_selection
+         (about_menu_safety_warning
+            {show_safety.flow activate}
+            {set $about_selection ''})
+         (about_menu_kinect_warning
+            {show_kinect_1.flow activate}
+            {set $about_selection about_menu_kinect_warning_2})
+         (about_menu_kinect_warning_2
+            {show_kinect_2.flow activate}
+            {set $about_selection ''})
+         (about_menu_warranty
+            {show_warranty_1.flow activate}
+            {set $about_selection about_menu_warranty_2})
+         (about_menu_warranty_2
+            {show_warranty_2.flow activate}
+            {set $about_selection about_menu_warranty_3})
+         (about_menu_warranty_3
+            {show_warranty_3.flow activate}
+            {set $about_selection ''})
+         (about_menu_customer_support
+            {show_support.flow activate}
+            {set $about_selection ''})
+         (about_menu_credits
+            {show_credits.flow activate}
+            {set $about_selection ''})})
+   (on_voice_command
+      ($command)
+      {if
+         {right_hand.hnl showing}
+         {$this select_right_list_token $command}})}
+{new
+   HamScreen
+   about_info_screen
+   (panels meta about_info_panel)
+   (focus about_info_panel)
+   (next_screen about_screen)}

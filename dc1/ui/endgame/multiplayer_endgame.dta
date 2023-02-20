@@ -1,0 +1,416 @@
+{new
+   HamPanel
+   multiplayer_endgame_panel
+   (file
+      "multiplayer_endgame.milo")
+   (show_hand_help FALSE)
+   (is_failure FALSE)
+   (focus none)
+   (enter
+      {unless
+         {ui went_back}
+         {meta_performer
+            trigger_song_completion
+            0
+            {$this get_num_stars}}
+         {meta_performer
+            advance_song
+            {$this get_num_stars}}}
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set_results}
+      {$this show_snapshots}
+      {depth_buffer reset_player_color}
+      ENDGAME_PANEL_COMMON_ENTER
+      {$this
+         begin_results
+         {$this get_num_stars}}
+      {meta_performer add_sink $this})
+   (exit
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+      {meta_performer remove_sink $this})
+   (get_score_player1
+      {int
+         {game_panel get inactive_score}})
+   (get_score_player2
+      {int
+         {game_panel get score}})
+   (get_num_stars
+      {int
+         {game_panel get num_stars}})
+   (set_results
+      {difficulty_player1.lbl
+         set
+         text_token
+         {meta_performer get_difficulty_sym}}
+      {difficulty_player2.lbl
+         set
+         text_token
+         {meta_performer get_secondary_difficulty_sym}}
+      {moves_passed_player1.lbl
+         set_token_fmt
+         moves_passed
+         {meta_performer get_moves_passed 0}}
+      {moves_passed_player2.lbl
+         set_token_fmt
+         moves_passed
+         {meta_performer get_moves_passed 1}})
+   (show_snapshots
+      {if
+         {&& gesture_mgr profile_mgr}
+         {if_else
+            {&&
+               {!
+                  {profile_mgr get_disable_photos}}
+               {>=
+                  {gesture_mgr num_snapshots}
+                  19}}
+            {do
+               {photos_enable.trg trigger}
+               {snapshot_01.mat
+                  set
+                  diffuse_tex
+                  {gesture_mgr snapshot_tex 12}}
+               {snapshot_02.mat
+                  set
+                  diffuse_tex
+                  {gesture_mgr snapshot_tex 19}}}
+            {do
+               {photos_disable.trg trigger}
+               {snapshot_01.mat
+                  set
+                  diffuse_tex
+                  ""}
+               {snapshot_02.mat
+                  set
+                  diffuse_tex
+                  ""}}}})
+   (do_score_countup
+      {result_player1.lbl set showing FALSE}
+      {result_player2.lbl set showing FALSE}
+      {if
+         {==
+            {$this get_score_player1}
+            {$this get_score_player2}}
+         {score_countup_player1.lnt set anim_time 1.3}
+         {score_countup_player2.lnt set anim_time 1.3}}
+      {if
+         {>
+            {$this get_score_player1}
+            {$this get_score_player2}}
+         {score_countup_player1.lnt set anim_time 2}
+         {score_countup_player2.lnt set anim_time 1.3}}
+      {if
+         {>
+            {$this get_score_player2}
+            {$this get_score_player1}}
+         {score_countup_player1.lnt set anim_time 1.3}
+         {score_countup_player2.lnt set anim_time 2}}
+      {score_countup_player1.lnt
+         set
+         desired_value
+         {$this get_score_player1}}
+      {score_countup_player2.lnt
+         set
+         desired_value
+         {$this get_score_player2}}
+      {if
+         {'||'
+            {>
+               {$this get_score_player2}
+               0}
+            {>
+               {$this get_score_player1}
+               0}}
+         {if_else
+            {'||'
+               {==
+                  {$this get_score_player1}
+                  {$this get_score_player2}}
+               {==
+                  {$this get_score_player2}
+                  0}
+               {==
+                  {$this get_score_player1}
+                  0}}
+            {score_countup_01.cue play}
+            {score_countup_02.cue play}}}
+      {script_task
+         kTaskSeconds
+         (delay 2)
+         (script
+            {$this countup_complete})})
+   (countup_complete
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               multiplayer_endgame_screen}}
+         {if
+            {==
+               {$this get_score_player1}
+               {$this get_score_player2}}
+            {result_player1.lbl set text_token dancebattle_tie}
+            {result_player2.lbl set text_token dancebattle_tie}}
+         {if
+            {>
+               {$this get_score_player1}
+               {$this get_score_player2}}
+            {result_player1.lbl set text_token dancebattle_win}
+            {result_player2.lbl set text_token dancebattle_lose}}
+         {if
+            {>
+               {$this get_score_player2}
+               {$this get_score_player1}}
+            {result_player1.lbl set text_token dancebattle_lose}
+            {result_player2.lbl set text_token dancebattle_win}}}
+      {result_player1.lbl set showing TRUE}
+      {result_player2.lbl set showing TRUE}
+      {$this
+         show_stars
+         {$this get_num_stars}})
+   (begin_results
+      ($num_stars)
+      {set
+         [is_failure]
+         {< $num_stars 3}}
+      {stars_0.trg set callback_object $this}
+      {stars_1.trg set callback_object $this}
+      {stars_2.trg set callback_object $this}
+      {stars_3.trg set callback_object $this}
+      {stars_4.trg set callback_object $this}
+      {stars_5.trg set callback_object $this}
+      {stars_6.trg set callback_object $this}
+      {show_score.trg set callback_object $this}
+      {shrink_score.trg set callback_object $this}
+      {show_buttons.trg set callback_object $this}
+      {reset.trg trigger}
+      {$this show_score})
+   (ui_trigger_complete
+      ($trigger)
+      {switch
+         $trigger
+         (show_score.trg
+            {if
+               $hud_panel
+               {cond
+                  ({>
+                        {$this get_score_player1}
+                        {$this get_score_player2}}
+                     {$hud_panel play nar_multi_finish_p1})
+                  ({>
+                        {$this get_score_player2}
+                        {$this get_score_player1}}
+                     {$hud_panel play nar_multi_finish_p2})
+                  (TRUE
+                     {$hud_panel play nar_multi_finish_tie})}})
+         (stars_0.trg
+            {$this shrink_score})
+         (stars_1.trg
+            {$this shrink_score})
+         (stars_2.trg
+            {$this shrink_score})
+         (stars_3.trg
+            {$this shrink_score})
+         (stars_4.trg
+            {$this shrink_score})
+         (stars_5.trg
+            {$this shrink_score})
+         (stars_6.trg
+            {$this shrink_score})
+         (shrink_score.trg
+            {$this show_buttons})
+         (show_buttons.trg
+            {saveload_mgr autosave}
+            {ui goto_screen multiplayer_continue_screen})})
+   (show_stars
+      ($num_stars)
+      {switch
+         $num_stars
+         (0
+            {stars_0.trg trigger})
+         (1
+            {stars_1.trg trigger})
+         (2
+            {stars_2.trg trigger})
+         (3
+            {stars_3.trg trigger})
+         (4
+            {stars_4.trg trigger})
+         (5
+            {stars_5.trg trigger})
+         (6
+            {stars_6.trg trigger})})
+   (show_score
+      {show_score.trg trigger}
+      {$this do_score_countup})
+   (shrink_score
+      {shrink_score.trg trigger})
+   (show_buttons
+      {show_buttons.trg trigger})
+   (continue_next_screen
+      {if_else
+         {meta_performer just_beat_game}
+         {ui pop_screen beat_game_screen}
+         {ui goto_screen multiplayer_complete_screen}})}
+{new
+   HamPanel
+   multiplayer_continue_panel
+   (file
+      "../low_button.milo")
+   (focus continue.btn)
+   (hide_helpbar
+      {!
+         {shell_input in_controller_mode}})
+   (helpbar_confirm_label continue)
+   (show_hand_help FALSE)
+   (enter
+      {right_hand.hbs
+         set
+         showing
+         {!
+            {shell_input in_controller_mode}}})
+   (SELECT_MSG
+      {switch
+         $component
+         (continue.btn
+            {if_else
+               {acc_mgr has_new_awards}
+               {ui goto_screen multiplayer_endgame_popup_between_screen}
+               {multiplayer_endgame_panel continue_next_screen}})})
+   (controller_mode_entered
+      {right_hand.hbs set showing FALSE})
+   (controller_mode_exited
+      {right_hand.hbs set showing TRUE})}
+{new
+   HamPanel
+   multiplayer_complete_panel
+   (file
+      "multiplayer_complete.milo")
+   (focus photos.btn)
+   (enter
+      {song.lbl
+         set_song_name
+         {meta_performer get_completed_song}}
+      {if
+         {meta_performer last_played_mode}
+         {gamemode
+            set_mode
+            {meta_performer last_played_mode}}}
+      {if
+         {acc_mgr
+            is_unlockable_asset
+            {meta_performer song}}
+         {$this disable practice.btn}
+         {shell_input update_button_zones}})
+   (SELECT_MSG
+      {switch
+         $component
+         (restart.btn
+            {meta_performer restart}
+            {game_restart})
+         (practice.btn
+            {gamemode set_mode practice}
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               multiplayer_complete_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (perform.btn
+            {gamemode set_mode perform}
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               multiplayer_complete_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (change_difficulty.btn
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               multiplayer_complete_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (photos.btn
+            {endgame_photos_screen set back_screen multiplayer_complete_screen}
+            {ui goto_screen endgame_photos_screen})
+         (continue.btn
+            {ui pop_screen meta_loading_continue_screen})})}
+{new
+   HamScreen
+   multiplayer_endgame_screen
+   (panels meta background_panel multiplayer_endgame_panel)
+   (focus multiplayer_endgame_panel)}
+{new
+   HamScreen
+   multiplayer_continue_screen
+   (panels meta background_panel multiplayer_endgame_panel multiplayer_continue_panel)
+   (focus multiplayer_continue_panel)}
+{new
+   HamPanel
+   multiplayer_endgame_popup_underneath
+   (file empty_screen.milo)
+   (TRANSITION_COMPLETE_MSG
+      {$this show_unlock_popup})
+   (show_unlock_popup
+      {if_else
+         {acc_mgr has_new_awards}
+         {do
+            {endgame_popup_panel
+               set_popup_text
+               endgame_unlocked_content
+               {acc_mgr
+                  get_name_for_first_new_award
+                  {user_mgr get_active_user}}
+               {acc_mgr
+                  get_description_for_first_new_award
+                  {user_mgr get_active_user}}}
+            {acc_mgr
+               clear_first_new_award
+               {user_mgr get_active_user}}
+            {$this show_popup}
+            {if
+               {acc_mgr
+                  is_group_complete
+                  {profile_mgr
+                     get_profile
+                     {user_mgr get_active_user}}
+                  acc_grp_unlocks}
+               {acc_mgr
+                  earn_accomplishment
+                  {user_mgr get_active_user}
+                  acc_unlocked_all_content}}
+            {if
+               {acc_mgr
+                  is_category_complete
+                  {profile_mgr
+                     get_profile
+                     {user_mgr get_active_user}}
+                  acc_cat_costumes}
+               {acc_mgr
+                  earn_accomplishment
+                  {user_mgr get_active_user}
+                  acc_unlocked_all_costumes}}}
+         {multiplayer_endgame_panel continue_next_screen}})
+   (show_popup
+      {ui goto_screen multiplayer_endgame_popup_screen})}
+{new
+   HamScreen
+   multiplayer_endgame_popup_between_screen
+   (panels meta background_panel multiplayer_endgame_popup_underneath)
+   (focus multiplayer_endgame_popup_underneath)}
+{new
+   HamScreen
+   multiplayer_endgame_popup_screen
+   (panels meta background_panel multiplayer_endgame_popup_underneath endgame_popup_panel)
+   (focus endgame_popup_panel)}
+{new
+   HamScreen
+   multiplayer_complete_screen
+   (panels meta background_panel multiplayer_complete_panel)
+   (focus multiplayer_complete_panel)}

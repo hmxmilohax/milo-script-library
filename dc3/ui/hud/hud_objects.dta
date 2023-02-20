@@ -1,0 +1,5227 @@
+#define SAME_RATING_GOAL
+(5)
+(PanelDir
+   (types
+      (hud
+         (editor
+            (cur_hud
+               object
+               (class RndDir)
+               (obj_flags allow_null)
+               (help
+                  "Currently selected hud"))
+            (move
+               symbol
+               (list
+                  {do
+                     ($dir
+                        {{milo cur_dir}
+                           find
+                           moves
+                           FALSE})
+                     ($list
+                        {array 0})
+                     {push_back $list ''}
+                     {if
+                        $dir
+                        {$dir
+                           iterate
+                           HamMove
+                           $move
+                           {push_back
+                              $list
+                              {symbol
+                                 {$move name}}}}}
+                     $list})
+               (interp_handlers update_move)
+               (propanim_safetoadd update_move_keys)
+               (help
+                  "current move changed by the song.anim"))
+            (toggle_speed
+               script
+               (script
+                  {if
+                     midi_player
+                     {midi_player set active TRUE}}
+                  {$this
+                     set_slow
+                     {!
+                        [slow_speed]}
+                     TRUE}
+                  {$this add_all_barks})
+               (help
+                  "Tests the speed animation"))
+            (toggle_barking
+               script
+               (script
+                  {if
+                     {&& action_bark_player master}
+                     {do
+                        ($was_active
+                           {action_bark_player get active})
+                        {action_bark_player set_active FALSE}
+                        {if
+                           {! $was_active}
+                           {$this add_all_barks}
+                           {action_bark_player set_active TRUE}}}}))
+            (refresh_barks
+               script
+               (script
+                  {$this add_all_barks}))
+            (refresh_lang
+               script
+               (script
+                  {do
+                     ($banks
+                        {array 0})
+                     ($song_bank
+                        "")
+                     {if
+                        {&&
+                           $hamdirector
+                           {$hamdirector get_world}}
+                        {set
+                           $song_bank
+                           {find_obj
+                              {$hamdirector get_world}
+                              moves
+                              barks}}}
+                     {if
+                        {exists master_barks_bank}
+                        {push_back $banks master_barks_bank}}
+                     {if
+                        $song_bank
+                        {push_back $banks $song_bank}}
+                     {foreach
+                        $bank
+                        $banks
+                        {$bank
+                           iterate
+                           SynthSample
+                           $sfx
+                           {foreach
+                              $lang
+                              TURBO_SUPPORTED_LANGUAGES
+                              {if
+                                 {!=
+                                    $lang
+                                    {system_language}}
+                                 {do
+                                    ($lang_path
+                                       {sprint
+                                          "/"
+                                          $lang
+                                          "/"})
+                                    ($new_path
+                                       "")
+                                    {if
+                                       {search_replace
+                                          {$sfx get file}
+                                          $lang_path
+                                          {sprint
+                                             "/"
+                                             {system_language}
+                                             "/"}
+                                          $new_path}
+                                       {$sfx set file $new_path}}}}}}}
+                     {$this add_all_barks}}))
+            (freestyle_movement
+               float
+               (range 0 1)))
+         (cur_hud
+            "")
+         (move_variant
+            "")
+         (move '')
+         (cur_move_index -1)
+         (loop_start 0)
+         (loop_end 0)
+         (moves_dir
+            "")
+         (slow_speed FALSE)
+         (freestyle_movement 0)
+         (last_narrated_seq
+            "")
+         (added_freestyle_beat -1)
+         (force_longest_sfx FALSE)
+         (player_huds
+            ())
+         (now_flashcard0
+            "")
+         (now_flashcard1
+            "")
+         (craze_moves_seen
+            ())
+         (craze_moves_offset
+            ())
+         (rest_move_name
+            "Rest.move")
+         (in_freestyle
+            (FALSE FALSE))
+         (enter
+            {set $hud_panel $this}
+            {set
+               [cur_move_index]
+               -1}
+            {set_elem
+               [in_freestyle]
+               0
+               FALSE}
+            {set_elem
+               [in_freestyle]
+               1
+               FALSE}
+            {do
+               ($ham_world
+                  {if_else
+                     $hamdirector
+                     {$hamdirector get_world}
+                     ""})
+               {if
+                  $ham_world
+                  {set
+                     [moves_dir]
+                     {$ham_world find moves FALSE}}
+                  {$ham_world
+                     add_sink
+                     $this
+                     (skills_review move_perfect move_awesome move_ok move_bad)}}}
+            {if
+               [moves_dir]
+               {[moves_dir]
+                  iterate
+                  HamMove
+                  $move
+                  {if
+                     {==
+                        {tolower
+                           {$move name}}
+                        "rest.move"}
+                     {set
+                        [rest_move_name]
+                        {$move name}}}}}
+            {set
+               [move]
+               [rest_move_name]}
+            {if
+               {exists master}
+               {master
+                  add_sink
+                  $this
+                  (downbeat beat halfbeat quarterbeat first_beat)}}
+            {if
+               {==
+                  [cur_hud]
+                  ""}
+               {set
+                  [cur_hud]
+                  {$this
+                     find
+                     "hud_right"
+                     FALSE}}}
+            {resize
+               [player_huds]
+               0}
+            {push_back
+               [player_huds]
+               {$this
+                  find
+                  "hud_left"
+                  FALSE}}
+            {push_back
+               [player_huds]
+               {$this
+                  find
+                  "hud_right"
+                  FALSE}}
+            {if
+               {exists move_sound_player}
+               {move_sound_player init}}
+            {if
+               {&&
+                  $edit_mode
+                  {exists audio}}
+               {audio set_track_volume multi -96}}
+            {if
+               $hamdirector
+               {$hamdirector hud_entered}})
+         (is_craze_move_seen
+            ($move $measure)
+            {do
+               ($result FALSE)
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [craze_moves_seen]}
+                  {if
+                     {==
+                        $move
+                        {elem
+                           [craze_moves_seen]
+                           $i}}
+                     {if
+                        {>=
+                           $measure
+                           {elem
+                              [craze_moves_offset]
+                              $i}}
+                        {set $result TRUE}}}}
+               {print
+                  "is_craze_move_seen $move = "
+                  $move
+                  " $measure = "
+                  $measure
+                  " : "
+                  $result
+                  "\n"}
+               $result})
+         (is_craze_move_seen_no_offset
+            ($move)
+            {do
+               ($result FALSE)
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [craze_moves_seen]}
+                  {if
+                     {==
+                        $move
+                        {elem
+                           [craze_moves_seen]
+                           $i}}
+                     {set $result TRUE}}}
+               $result})
+         (set_craze_move_seen
+            ($move $measure)
+            {if
+               {!
+                  {$this is_craze_move_seen_no_offset $move}}
+               {push_back
+                  [craze_moves_seen]
+                  $move}
+               {push_back
+                  [craze_moves_offset]
+                  {'+' $measure 3}}
+               {print
+                  "set_craze_move_seen $move = "
+                  $move
+                  " $measure = "
+                  {'+' $measure 3}
+                  "\n"}})
+         (music_start
+            {if
+               {&&
+                  $edit_mode
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {handle
+                  ({$hamdirector get_world}
+                     beat_animation_start)}}
+            kDataUnhandled)
+         (get_player_hud
+            ($player_index)
+            {do
+               ($provider
+                  {gamedata getp $player_index provider})
+               ($hud
+                  "")
+               {if
+                  $provider
+                  {set
+                     $hud
+                     {elem
+                        [player_huds]
+                        {$provider get side}}}}
+               $hud})
+         (set_look_behind_result
+            ($result)
+            {do
+               ($look_behind_beat
+                  {'*'
+                     {-
+                        [cur_move_index]
+                        1}
+                     4})
+               ($scrolling_flash_card
+                  {[cur_hud]
+                     find_flashcard
+                     $look_behind_beat})
+               ($scrolling_trig
+                  {find_obj
+                     $scrolling_flash_card
+                     {sprint
+                        $result
+                        ".trig"}})
+               ($skills_hud
+                  {$this find dynamic_hud FALSE})
+               ($skills_flash_card
+                  {if_else
+                     $skills_hud
+                     {$skills_hud find_flashcard $look_behind_beat}
+                     ""})
+               ($skills_trig
+                  {find_obj
+                     $skills_flash_card
+                     {sprint
+                        $result
+                        ".trig"}})
+               {if
+                  $scrolling_trig
+                  {$scrolling_trig trigger}}
+               {if
+                  $skills_trig
+                  {$skills_trig trigger}}})
+         (move_perfect
+            {$this set_look_behind_result move_perfect}
+            kDataUnhandled)
+         (move_awesome
+            {$this set_look_behind_result move_awesome}
+            kDataUnhandled)
+         (move_ok
+            {$this set_look_behind_result move_ok}
+            kDataUnhandled)
+         (move_bad
+            {$this set_look_behind_result move_bad}
+            kDataUnhandled)
+         (music_end
+            {if
+               {&&
+                  $edit_mode
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {handle
+                  ({$hamdirector get_world}
+                     beat_animation_stop)}}
+            kDataUnhandled)
+         (skills_review
+            {if
+               [cur_hud]
+               {[cur_hud]
+                  reset_beats}}
+            kDataUnhandled)
+         (set_score_multiplier
+            ($mult)
+            {if
+               {!=
+                  {game_panel get_type}
+                  practice}
+               {do
+                  ($mult_anim
+                     {find_obj
+                        {game_panel get star_display}
+                        multiplier_meter
+                        set_multiplier.anim})
+                  {if
+                     $mult_anim
+                     {$mult_anim set_frame $mult}}}})
+         (set_miss_streak_pct
+            ($val)
+            {do
+               ($meter
+                  {$this find miss_streak.anim FALSE})
+               {if
+                  $meter
+                  {$meter
+                     animate
+                     (dest
+                        {'*'
+                           $val
+                           {$meter end_frame}})}}})
+         (set_num_photos
+            ($num)
+            {do
+               ($photo_fill
+                  {find_obj $this photo_award_counter award_fill.anim})
+               {$photo_fill
+                  set_frame
+                  {'*'
+                     2
+                     {'*' $num 480}}}})
+         (set_gold_mulitplier_value
+            ($mult)
+            {foreach_int
+               $i
+               0
+               {size
+                  [player_huds]}
+               {do
+                  ($hud
+                     {elem
+                        [player_huds]
+                        $i})
+                  {foreach
+                     $flash_card
+                     {$hud get flash_cards}
+                     {do
+                        ($mult_lbl
+                           {find_obj
+                              $flash_card
+                              "4x.lbl"})
+                        {if
+                           $mult_lbl
+                           {$mult_lbl set_token_fmt multiplier_fmt $mult}}}}}})
+         (reset_snapshots
+            {ui reset_snapshots})
+         (take_snapshot
+            {if
+               gesture_mgr
+               {ui take_snapshot}})
+         (show_snapshots
+            ($visible $display_token)
+            {do
+               ($cycle_photos
+                  {find_obj
+                     $this
+                     photo_display
+                     {sprint
+                        $display_token
+                        ".anim"}})
+               ($photo_show_anim
+                  {find_obj $this display_photos.anim})
+               {if
+                  $cycle_photos
+                  {$cycle_photos
+                     animate
+                     (loop
+                        0
+                        {$cycle_photos end_frame})}}
+               {if
+                  $photo_show_anim
+                  {$photo_show_anim
+                     animate
+                     (dest
+                        {if_else
+                           $visible
+                           {$photo_show_anim end_frame}
+                           0})}}})
+         (update_move_keys
+            ($safe)
+            {if
+               {&&
+                  $safe
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {foreach_int
+                  $i
+                  0
+                  {'+' kDifficultyExpert 1}
+                  {do
+                     ($song_anim
+                        {$hamdirector difficulty_song_anim $i})
+                     ($frame_measure 0)
+                     {$song_anim
+                        foreach_keyframe
+                        $hamdirector
+                        (move)
+                        $frame
+                        $value
+                        {set
+                           $frame_measure
+                           {/
+                              {seconds_to_beat
+                                 {/ $frame 30}}
+                              4}}
+                        {$song_anim
+                           replace_frame
+                           {'*'
+                              30
+                              {beat_to_seconds
+                                 {'*'
+                                    4
+                                    {round $frame_measure}}}}}}}}})
+         (get_move
+            ($name)
+            {movemgr move_from_move_name $name})
+         (is_tagged_move
+            ($player_index $move_index)
+            {do
+               ($provider
+                  {gamedata getp $player_index provider})
+               {find_elem
+                  {$provider get tagged_moves}
+                  $move_index}})
+         (move_from_beat
+            ($b $player_index)
+            {do
+               ($move)
+               ($practice_start)
+               ($practice_end)
+               {cond
+                  ({&&
+                        {$hamdirector practice_beats $practice_start $practice_end}
+                        {'||'
+                           {<
+                              {int $b}
+                              {round $practice_start}}
+                           {>=
+                              {int $b}
+                              {round $practice_end}}}}
+                     {$this
+                        get_move
+                        [rest_move_name]})
+                  ({&&
+                        {>=
+                           [added_freestyle_beat]
+                           0}
+                        {==
+                           [added_freestyle_beat]
+                           {round $b}}}
+                     {$this
+                        get_move
+                        "Freestyle.move"})
+                  ({&&
+                        {exists master}
+                        {exists game_panel}
+                        {$hamdirector get freestyle_enabled}
+                        {!=
+                           {game_panel freestyle_start_beat}
+                           kDataUnhandled}
+                        {>=
+                           $b
+                           {round
+                              {game_panel freestyle_start_beat}}}
+                        {<
+                           $b
+                           {round
+                              {game_panel freestyle_end_beat}}}}
+                     {do
+                        ($int_b
+                           {int $b})
+                        ($int_start
+                           {int
+                              {round
+                                 {game_panel freestyle_start_beat}}})
+                        {if_else
+                           {== $int_b $int_start}
+                           {$this
+                              get_move
+                              "Freestyle.move"}
+                           {$this
+                              get_move
+                              [rest_move_name]}}})
+                  (TRUE
+                     {if
+                        {==
+                           {mod
+                              {int $b}
+                              4}
+                           0}
+                        {'+=' $b 1}}
+                     {$this
+                        get_move
+                        {$hamdirector beat_to_movename $b $player_index}})}})
+         (beat_from_move_index
+            ($index)
+            {if_else
+               {&&
+                  $hamdirector
+                  {$hamdirector player_song_anim 0}}
+               {seconds_to_beat
+                  {/
+                     {{$hamdirector player_song_anim 0}
+                        frame_from_index
+                        $hamdirector
+                        (move)
+                        $index}
+                     30}}
+               -1})
+         (move_interp
+            ($a $b $r)
+            {if
+               {&&
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {do
+                  ($song_anim
+                     {$hamdirector player_song_anim 0})
+                  ($beat
+                     {max
+                        -1
+                        {seconds_to_beat
+                           {/
+                              {$song_anim frame}
+                              30}}})
+                  ($cur_index
+                     {int
+                        {/ $beat 4}})
+                  ($now
+                     {$this move_from_beat $beat 0})
+                  ($new_move FALSE)
+                  ($in_play_range
+                     {&&
+                        {'||'
+                           {!
+                              {exists game_panel}}
+                           {game_panel in_play_range $beat}}
+                        {'||'
+                           {! $hamdirector}
+                           {!
+                              {$hamdirector is_game_start_hold}}}})
+                  ($force_update_current_flashcard
+                     {if_else $edit_mode TRUE FALSE})
+                  {if
+                     {&&
+                        $in_play_range
+                        {'||'
+                           {!=
+                              {if_else
+                                 $now
+                                 {$now name}
+                                 ''}
+                              [move]}
+                           {!=
+                              $cur_index
+                              [cur_move_index]}}}
+                     {set $new_move TRUE}
+                     {if
+                        $dump_scoring_stats
+                        {print
+                           "new move on timeline "
+                           {$now name}
+                           "\n"}}
+                     {if
+                        {exists move_sound_player}
+                        {move_sound_player set_move $now $beat}}
+                     {if
+                        {$pose_fatalities fatal_active}
+                        {$this clear_flash_cards 0}
+                        {$this clear_flash_cards 1}}
+                     {if
+                        {'||'
+                           {<
+                              $cur_index
+                              [cur_move_index]}
+                           {>
+                              $cur_index
+                              {'+'
+                                 [cur_move_index]
+                                 1}}
+                           {==
+                              {hamprovider get gameplay_mode}
+                              practice}
+                           {==
+                              {hamprovider get gameplay_mode}
+                              routine_builder}}
+                        {set $force_update_current_flashcard TRUE}}
+                     {set
+                        [cur_move_index]
+                        $cur_index}
+                     {set
+                        [move]
+                        {if_else
+                           $now
+                           {$now name}
+                           ''}}
+                     {$this update_flashcards $beat $force_update_current_flashcard}}
+                  {foreach_int
+                     $player_index
+                     0
+                     2
+                     {set
+                        $hud
+                        {$this get_player_hud $player_index}}
+                     {if
+                        {'||'
+                           {! $new_move}
+                           {<= $beat 0}
+                           {==
+                              {hamprovider get gameplay_mode}
+                              practice}
+                           {==
+                              {hamprovider get gameplay_mode}
+                              routine_builder}}
+                        {$hud set_anim_frame $beat}}
+                     {if
+                        $new_move
+                        {do
+                           ($index 0)
+                           ($flash_card_count
+                              {size
+                                 {$hud
+                                    get
+                                    (flash_cards)}})
+                           ($time_to_count_in TRUE)
+                           ($cur_move
+                              "")
+                           ($now_index
+                              {mod
+                                 {int
+                                    {/ $beat 4}}
+                                 $flash_card_count})
+                           {foreach
+                              $flash_card
+                              {$hud
+                                 get
+                                 (flash_cards)}
+                              {do
+                                 {$flash_card set player_idx $player_index}
+                                 {if
+                                    {== $index $now_index}
+                                    {do
+                                       {if_else
+                                          {== $player_index 0}
+                                          {set
+                                             [now_flashcard0]
+                                             $flash_card}
+                                          {set
+                                             [now_flashcard1]
+                                             $flash_card}}}}}
+                              {'++' $index}}
+                           {foreach
+                              $flash_card
+                              {$hud
+                                 get
+                                 (flash_cards)}
+                              {$flash_card
+                                 set
+                                 is_now
+                                 {'||'
+                                    {==
+                                       $flash_card
+                                       [now_flashcard0]}
+                                    {==
+                                       $flash_card
+                                       [now_flashcard1]}}}}
+                           {if
+                              {>= $now_index 0}
+                              {set
+                                 $cur_move
+                                 {{elem
+                                       {$hud
+                                          get
+                                          (flash_cards)}
+                                       $now_index}
+                                    get
+                                    cur_move}}}
+                           {$this set_cur_move $player_index $cur_move}
+                           {if
+                              {!=
+                                 {hamprovider get gameplay_mode}
+                                 practice}
+                              {if
+                                 {>=
+                                    {size
+                                       {$hud
+                                          get
+                                          (flash_cards)}}
+                                    3}
+                                 {foreach_int
+                                    $i
+                                    0
+                                    3
+                                    {do
+                                       ($card_index
+                                          {mod
+                                             {'+' $i $now_index}
+                                             $flash_card_count})
+                                       ($card_move
+                                          {{elem
+                                                {$hud
+                                                   get
+                                                   (flash_cards)}
+                                                $card_index}
+                                             get
+                                             cur_move})
+                                       ($is_scored
+                                          {&&
+                                             $card_move
+                                             {$card_move get scored}
+                                             {!
+                                                {{elem
+                                                      {$hud
+                                                         get
+                                                         (flash_cards)}
+                                                      $card_index}
+                                                   get
+                                                   hidden}}})
+                                       {if
+                                          {'||'
+                                             {&&
+                                                {< $i 2}
+                                                $is_scored}
+                                             {&&
+                                                {== $i 2}
+                                                {! $is_scored}}}
+                                          {set $time_to_count_in FALSE}
+                                          {set $i 2}}}}}
+                              {if
+                                 $time_to_count_in
+                                 {$hud do_count_in 0 TRUE}}}}}}
+                  {if
+                     {&&
+                        $new_move
+                        {exists game_panel}}
+                     {handle
+                        (hamprovider post_move_finished)}
+                     {if
+                        {==
+                           perform
+                           {gamemode get gameplay_mode}}
+                        {if
+                           {&&
+                              {gamedata getp 0 playing}
+                              {gamedata getp 1 playing}}
+                           {if
+                              {meta_performer is_move_scored}
+                              {do
+                                 ($provider1
+                                    {gamedata getp 0 provider})
+                                 ($provider2
+                                    {gamedata getp 1 provider})
+                                 ($player1
+                                    {gamedata player 0})
+                                 ($player2
+                                    {gamedata player 1})
+                                 ($rating1
+                                    {$provider1 get rating})
+                                 ($rating2
+                                    {$provider2 get rating})
+                                 {if
+                                    {&& $rating1 $rating2}
+                                    {do
+                                       ($rating_idx1
+                                          {rating_state_to_index $rating1})
+                                       ($rating_idx2
+                                          {rating_state_to_index $rating2})
+                                       {if_else
+                                          {&&
+                                             {&&
+                                                {< $rating_idx1 2}
+                                                {< $rating_idx2 2}}
+                                             {== $rating_idx1 $rating_idx2}}
+                                          {if_else
+                                             {>
+                                                {$player1 get_last_rating_idx}
+                                                3}
+                                             {$player1 increment_same_rating_count}
+                                             {if_else
+                                                {&&
+                                                   {==
+                                                      $rating_idx1
+                                                      {$player1 get_last_rating_idx}}
+                                                   {==
+                                                      $rating_idx2
+                                                      {$player2 get_last_rating_idx}}}
+                                                {$player1 increment_same_rating_count}
+                                                {$player1 clear_same_rating_count}}}
+                                          {$player1 clear_same_rating_count}}
+                                       {$player1 set_last_rating_idx $rating_idx1}
+                                       {$player2 set_last_rating_idx $rating_idx2}}}
+                                 {if
+                                    {>=
+                                       {$player1 get_same_rating_count}
+                                       SAME_RATING_GOAL}
+                                    {acc_mgr earn_accomplishment_for_all acc_synchronicity TRUE}}}}
+                           {if
+                              {meta_performer get_check_move_scored}
+                              {do
+                                 ($move_dir
+                                    {$hud_panel get moves_dir})
+                                 {if
+                                    $move_dir
+                                    {do
+                                       ($cur_move
+                                          {$move_dir get_cur_move 0})
+                                       {if
+                                          {&&
+                                             $cur_move
+                                             {$cur_move get scored}}
+                                          {meta_performer set_move_scored TRUE}
+                                          {meta_performer set_check_move_scored FALSE}}}}}}}}}}})
+         (set_cur_move
+            ($player_index $cur_move)
+            {if
+               {exists game}
+               {if
+                  $dump_scoring_stats
+                  {print
+                     "setting move "
+                     {if_else
+                        $cur_move
+                        {$cur_move get name}
+                        "NULL"}
+                     " for player "
+                     $player_index
+                     "\n"}}
+               {game set_cur_move $player_index $cur_move}}
+            {if
+               {&&
+                  $cur_move
+                  {!
+                     {$cur_move is_rest}}}
+               {{$this get_player_hud $player_index}
+                  do_now_effect}})
+         (update_card_campaign_status
+            ($flash_card)
+            {set $is_uncaptured_campaign_card 0}
+            {if
+               {&&
+                  {!=
+                     {hamprovider get gameplay_mode}
+                     holla_back}
+                  {exists meta_performer}}
+               {do
+                  ($cur_era
+                     {meta_performer get_era})
+                  ($cur_song
+                     {meta_performer get_song})
+                  ($ham_move
+                     {$flash_card get_move})
+                  ($move_measure
+                     {'+'
+                        {/
+                           {$flash_card get beat}
+                           4}
+                        1})
+                  {if_else
+                     {meta_performer is_dance_craze_move $cur_era $cur_song $ham_move}
+                     {do
+                        {if_else
+                           {==
+                              {hamprovider get metamode}
+                              campaign_perform}
+                           {do
+                              ($mastered
+                                 {meta_performer is_dance_craze_move_mastered $cur_era $cur_song $ham_move})
+                              {if_else
+                                 $mastered
+                                 {$flash_card set_campaign_status captured}
+                                 {if_else
+                                    {$this is_craze_move_seen $ham_move $move_measure}
+                                    {do
+                                       {$flash_card set_campaign_status ''}
+                                       {$flash_card set_campaign_status encryptedish}}
+                                    {do
+                                       {$flash_card set_campaign_status ''}
+                                       {$flash_card set_campaign_status encrypted}
+                                       {$this set_craze_move_seen $ham_move $move_measure}}}}}
+                           {do
+                              ($campaign_status_anim
+                                 {find_obj $flash_card campaign_status.anim})
+                              ($player_color_anim
+                                 {find_obj $flash_card player_color.anim})
+                              {$flash_card set_campaign_status powered_up}
+                              {$player_color_anim set_frame 0}
+                              {$campaign_status_anim set_frame 5}}}}
+                     {do
+                        {$flash_card set_campaign_status dummy}
+                        {$flash_card set_campaign_status not_craze}}}}})
+         (update_all_flashcard_dance_pct
+            {do
+               ($move_dir
+                  {$hud_panel get moves_dir})
+               {if
+                  $move_dir
+                  {foreach_int
+                     $player_index
+                     0
+                     {gamedata max_players}
+                     {do
+                        ($cur_move
+                           {game get_cur_move $player_index})
+                        ($hud
+                           {$this get_player_hud $player_index})
+                        ($norm
+                           {$move_dir cur_move_normalized_result_smoothed $player_index})
+                        ($gamemode
+                           {hamprovider get gameplay_mode})
+                        {foreach
+                           $flash_card
+                           {$hud
+                              get
+                              (flash_cards)}
+                           {if
+                              {==
+                                 {$flash_card get cur_move}
+                                 $cur_move}
+                              {if
+                                 {$flash_card get mystery}
+                                 {$flash_card update_dance_pct $norm}}}}}}}})
+         (set_all_flashcards_mastered
+            {foreach_int
+               $player_index
+               0
+               {gamedata max_players}
+               {do
+                  ($hud
+                     {$this get_player_hud $player_index})
+                  ($flash_card_count
+                     {size
+                        {$hud
+                           get
+                           (flash_cards)}})
+                  ($flash_card)
+                  {foreach
+                     $flash_card
+                     {$hud
+                        get
+                        (flash_cards)}
+                     {$this set_campaign TRUE TRUE TRUE}}}})
+         (update_all_flashcard_campaign_status
+            {do
+               ($metamode
+                  {hamprovider get metamode})
+               ($gamemode
+                  {hamprovider get gameplay_mode})
+               {if_else
+                  {'||'
+                     {== $metamode campaign_perform}
+                     {== $metamode campaign_holla_back}}
+                  {do
+                     {foreach_int
+                        $player_index
+                        0
+                        {gamedata max_players}
+                        {do
+                           ($hud
+                              {$this get_player_hud $player_index})
+                           ($flash_card_count
+                              {size
+                                 {$hud
+                                    get
+                                    (flash_cards)}})
+                           ($flash_card)
+                           {foreach
+                              $flash_card
+                              {$hud
+                                 get
+                                 (flash_cards)}
+                              {$this update_card_campaign_status $flash_card}}}}}
+                  {do
+                     {foreach_int
+                        $player_index
+                        0
+                        {gamedata max_players}
+                        {do
+                           ($hud
+                              {$this get_player_hud $player_index})
+                           ($flash_card_count
+                              {size
+                                 {$hud
+                                    get
+                                    (flash_cards)}})
+                           ($flash_card)
+                           {foreach
+                              $flash_card
+                              {$hud
+                                 get
+                                 (flash_cards)}
+                              {$this set_campaign FALSE FALSE FALSE}}}}}}
+               {trigger_camp_vo_power_move_executed}})
+         (clear_all_flashcard_campaign_status
+            {print
+               "clear_all_flashcard_campaign_status\n"}
+            {foreach_int
+               $player_index
+               0
+               {gamedata max_players}
+               {do
+                  ($hud
+                     {$this get_player_hud $player_index})
+                  ($flash_card_count
+                     {size
+                        {$hud
+                           get
+                           (flash_cards)}})
+                  ($flash_card)
+                  {foreach
+                     $flash_card
+                     {$hud
+                        get
+                        (flash_cards)}
+                     {$flash_card set_campaign_status ''}
+                     {$flash_card set_campaign_status not_craze}
+                     {{find_obj $flash_card spin.anim}
+                        set_frame
+                        0}}}})
+         (update_flashcards
+            ($beat $force)
+            {set $trig_camp_vo_appraoching 0}
+            {foreach_int
+               $player_index
+               0
+               {gamedata max_players}
+               {do
+                  ($hud
+                     {$this get_player_hud $player_index})
+                  ($flash_card_count
+                     {size
+                        {$hud
+                           get
+                           (flash_cards)}})
+                  ($num_look_aheads
+                     {-
+                        {-
+                           $flash_card_count
+                           {$hud get num_look_behinds}}
+                        1})
+                  ($flash_card_beat
+                     {'+'
+                        $beat
+                        {'*' 4 $num_look_aheads}})
+                  ($measure
+                     {int
+                        {/ $flash_card_beat 4}})
+                  ($my_beat)
+                  ($flash_card_measure)
+                  ($flash_card)
+                  ($card_index 0)
+                  ($start_score_move_index
+                     {{gamedata getp $player_index provider}
+                        get
+                        start_score_move_index})
+                  {foreach
+                     $flash_card
+                     {$hud
+                        get
+                        (flash_cards)}
+                     {set
+                        $flash_card_measure
+                        {'+'
+                           $card_index
+                           {'*'
+                              $flash_card_count
+                              {int
+                                 {/
+                                    {- $measure $card_index}
+                                    $flash_card_count}}}}}
+                     {set
+                        $my_beat
+                        {'*' 4 $flash_card_measure}}
+                     {if
+                        {exists game_panel}
+                        {set
+                           $my_beat
+                           {game_panel convert_beat $my_beat $player_index}}}
+                     {if
+                        {&&
+                           {'||'
+                              {<= $my_beat 12.1}
+                              {!=
+                                 $my_beat
+                                 {$flash_card get beat}}}
+                           {'||'
+                              {>= $flash_card_measure $start_score_move_index}
+                              $force}}
+                        {do
+                           ($my_move
+                              {$this move_from_beat $my_beat $player_index})
+                           ($btm_range
+                              {hamprovider get visible_flashcard_btm})
+                           ($top_range
+                              {hamprovider get visible_flashcard_top})
+                           {if_else
+                              {> $btm_range 0}
+                              {do
+                                 ($hidden
+                                    {'||'
+                                       {< $flash_card_measure $btm_range}
+                                       {> $flash_card_measure $top_range}})
+                                 {$flash_card set hidden $hidden}
+                                 {$flash_card
+                                    set
+                                    in_visible_range
+                                    {! $hidden}}}
+                              {$flash_card
+                                 set
+                                 hidden
+                                 {'||'
+                                    {! $my_move}
+                                    {$my_move is_rest}}}}
+                           {$flash_card set beat $my_beat}
+                           {$flash_card set_move $my_move $force}
+                           {if
+                              {!
+                                 {elem
+                                    [in_freestyle]
+                                    $player_index}}
+                              {if
+                                 {&&
+                                    $my_move
+                                    {==
+                                       Freestyle.move
+                                       {$my_move name}}
+                                    {> $my_beat $beat}}
+                                 {do
+                                    ($freestyle_card
+                                       {find_obj $hud freestyle_card})
+                                    ($freestyle_reset
+                                       {find_obj $hud setup_freestyle_card.anim})
+                                    ($freestyle_mat
+                                       {find_obj $freestyle_card flashcard_bg_depthbuffer.mat})
+                                    ($depth_tex
+                                       {if_else
+                                          {exists cursor_panel}
+                                          {if_else
+                                             {== $player_index 0}
+                                             {cursor_panel find depth_buffer_right.tex}
+                                             {cursor_panel find depth_buffer_left.tex}}
+                                          ""})
+                                    {if
+                                       {&& $freestyle_card $freestyle_reset}
+                                       {set_elem
+                                          [in_freestyle]
+                                          $player_index
+                                          TRUE}
+                                       {$freestyle_card set trans_parent $flash_card}
+                                       {$freestyle_mat set diffuse_tex $depth_tex}
+                                       {if
+                                          {! $suppress_freestyle_flashcard}
+                                          {$freestyle_reset animate}}
+                                       {$freestyle_card
+                                          iterate
+                                          ParticleSys
+                                          $part
+                                          {$part clear_all_particles}}}}}}
+                           {if
+                              {elem
+                                 [in_freestyle]
+                                 $player_index}
+                              {if
+                                 {&&
+                                    $my_move
+                                    {!=
+                                       Rest.move
+                                       {$my_move name}}
+                                    {!=
+                                       rest.move
+                                       {$my_move name}}
+                                    {!=
+                                       Freestyle.move
+                                       {$my_move name}}
+                                    {> $my_beat $beat}}
+                                 {print
+                                    "end in_freestyle: {$my_move name} = "
+                                    {$my_move name}
+                                    "\n"}
+                                 {do
+                                    ($freestyle_card
+                                       {find_obj $hud freestyle_card})
+                                    ($freestyle_reset
+                                       {find_obj $hud setup_freestyle_card.anim})
+                                    ($freestyle_mat
+                                       {find_obj $freestyle_card flashcard_bg_depthbuffer.mat})
+                                    {if
+                                       {&& $freestyle_card $freestyle_reset}
+                                       {set_elem
+                                          [in_freestyle]
+                                          $player_index
+                                          FALSE}
+                                       {$freestyle_card set trans_parent ''}
+                                       {$freestyle_mat set diffuse_tex ''}
+                                       {$freestyle_reset set_frame 0.0}
+                                       {$freestyle_card
+                                          iterate
+                                          ParticleSys
+                                          $part
+                                          {$part clear_all_particles}}}}}}
+                           {$flash_card
+                              set_tagged
+                              {$this
+                                 is_tagged_move
+                                 $player_index
+                                 {int
+                                    {/ $my_beat 4}}}}}}
+                     {if
+                        {'||'
+                           {==
+                              {hamprovider get metamode}
+                              campaign_perform}
+                           {==
+                              {hamprovider get metamode}
+                              campaign_holla_back}}
+                        {$this update_card_campaign_status $flash_card}
+                        {if
+                           {$flash_card is_encrypted}
+                           {print
+                              "POWERMOVE! - is_encrypted : card_index="
+                              $card_index
+                              "\n"}
+                           {if
+                              {== $card_index 0}
+                              {set $trig_camp_vo_appraoching 1}}}}
+                     {'++' $card_index}}}}
+            {if
+               $trig_camp_vo_appraoching
+               {trigger_camp_vo_power_move_approaching}})
+         (reset
+            {if
+               [cur_hud]
+               {[cur_hud]
+                  reset}}
+            {$this set_slow FALSE FALSE}
+            {if
+               {&&
+                  $edit_mode
+                  {exists active_events_parser}}
+               {active_events_parser
+                  add_sink
+                  $this
+                  ()
+                  kSinkModeExportType}}
+            {$this clear_flash_cards 0}
+            {$this clear_flash_cards 1}
+            {set
+               [move]
+               ""}
+            {set
+               [last_narrated_seq]
+               ""}
+            {set
+               [added_freestyle_beat]
+               -1})
+         (set_score
+            ($score $old_score $best_possible $player_idx))
+         (set_review_result
+            ($num $den)
+            {do
+               ($boombox_score
+                  {if_else
+                     $hamdirector
+                     {find_obj
+                        {$hamdirector get cur_world}
+                        score
+                        score_player_1.lbl}
+                     ""})
+               ($recap_restults
+                  {find_obj $this text_recap})
+               ($results_num
+                  {find_obj $recap_restults numerator})
+               ($results_den
+                  {find_obj $recap_restults denominator})
+               ($results_pct
+                  {find_obj $recap_restults percentage})
+               {if
+                  $boombox_score
+                  {$boombox_score set_token_fmt fraction $num $den}}
+               {if
+                  $results_num
+                  {$results_num set_number $num}}
+               {if
+                  $results_den
+                  {$results_den set_number $den}}
+               {if
+                  $results_pct
+                  {$results_pct
+                     set_number
+                     {/
+                        {'*' 100 $num}
+                        $den}}}})
+         (clear_flash_cards
+            ($index)
+            {$this
+               iterate
+               (RndDir 4beatscrolling)
+               $cur_hud
+               {if
+                  {==
+                     $index
+                     {$cur_hud get player_index}}
+                  {foreach
+                     $flash_card
+                     {$cur_hud
+                        get
+                        (flash_cards)}
+                     {$flash_card set beat -1}
+                     {$flash_card
+                        set_move
+                        ""
+                        TRUE}}}})
+         (get_seq
+            ($seq)
+            {if
+               {!=
+                  {type $seq}
+                  kDataObject}
+               {do
+                  ($bank
+                     {find_obj $this sound_bank})
+                  ($name $seq)
+                  {set
+                     $seq
+                     {find_obj
+                        $bank
+                        {sprint
+                           $name
+                           ".snd"}}}
+                  {if
+                     {! $seq}
+                     {set
+                        $seq
+                        {find_obj
+                           $bank
+                           {sprint
+                              $name
+                              ".grp"}}}}
+                  {if
+                     {! $seq}
+                     {do
+                        ($world
+                           {$hamdirector get cur_world})
+                        {set
+                           $seq
+                           {find_obj
+                              $world
+                              {sprint
+                                 $name
+                                 ".snd"}}}
+                        {if
+                           {! $seq}
+                           {set
+                              $seq
+                              {find_obj
+                                 $world
+                                 {sprint
+                                    $name
+                                    ".grp"}}}}}}
+                  {if_else
+                     {! $seq}
+                     {print
+                        "can't find sound or group named "
+                        $name
+                        " in world or sound_bank WTH?\n"}
+                     {print
+                        "we found "
+                        $name
+                        ", now we should hear it!\n"}}}}
+            $seq)
+         (play
+            ($seq)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if_else
+               $seq
+               {do
+                  {$seq play}
+                  {if
+                     {startswith
+                        {$seq name}
+                        "nar_"}
+                     {set
+                        [last_narrated_seq]
+                        $seq}}}
+               {notify
+                  "could not play "
+                  $seq}})
+         (get_seq_length
+            ($seq)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if_else
+               $seq
+               {switch
+                  {$seq class_name}
+                  (Sound
+                     {do
+                        ($samp
+                           {$seq get sample})
+                        {if_else
+                           $samp
+                           {$samp sample_length}
+                           0}})
+                  (Group
+                     {if_else
+                        {==
+                           {$seq get_type}
+                           sound_group}
+                        {$this
+                           get_seq_length
+                           {$seq next_sound}}
+                        0})
+                  (RandomGroupSeq
+                     {if_else
+                        {$seq
+                           size
+                           (children)}
+                        {$this
+                           get_seq_length
+                           {$seq
+                              get
+                              (children
+                                 {mod
+                                    {$seq get_next_play_index}
+                                    {$seq
+                                       size
+                                       (children)}})}}
+                        0})
+                  (Sfx
+                     {do
+                        ($length 0)
+                        ($samp_length 0)
+                        {foreach_int
+                           $i
+                           0
+                           {$seq
+                              size
+                              (sfxmaps)}
+                           {set
+                              $samp_length
+                              {{$seq
+                                    get
+                                    (sfxmaps $i sample)}
+                                 sample_length}}
+                           {if
+                              {> $samp_length $length}
+                              {set $length $samp_length}}}
+                        $length})}
+               0})
+         (get_longest_seq
+            ($seq)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {do
+               ($children
+                  {array 0})
+               ($longest 0)
+               ($child_length 0)
+               {switch
+                  {$seq class_name}
+                  (Group
+                     {if
+                        {==
+                           {$seq get_type}
+                           sound_group}
+                        {set
+                           $children
+                           {$seq get_array objects}}})
+                  (RandomGroupSeq
+                     {set
+                        $children
+                        {$seq get_array children}})}
+               {foreach
+                  $child
+                  $children
+                  {set
+                     $child_length
+                     {$this get_seq_length $child}}
+                  {if
+                     {> $child_length $longest}
+                     {set $seq $child}
+                     {set $longest $child_length}}}}
+            $seq)
+         (pick_shorter_seq
+            ($seq $highest_length)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {do
+               ($legal
+                  {array 0})
+               ($children
+                  {array 0})
+               ($longest 0)
+               ($child_length)
+               ($longest_legal)
+               ($index 0)
+               {switch
+                  {$seq class_name}
+                  (Group
+                     {if
+                        {==
+                           {$seq get_type}
+                           sound_group}
+                        {set
+                           $children
+                           {$seq get_array objects}}})
+                  (RandomGroupSeq
+                     {set
+                        $children
+                        {$seq get_array children}})}
+               {foreach
+                  $child
+                  $children
+                  {set
+                     $child_length
+                     {$this get_seq_length $child}}
+                  {if
+                     {<= $child_length $highest_length}
+                     {push_back $legal $index}
+                     {if
+                        {> $child_length $longest}
+                        {set $longest_legal $index}
+                        {set $longest $child_length}}}
+                  {'++' $index}}
+               {if
+                  {size $legal}
+                  {if_else
+                     [force_longest_sfx]
+                     {$seq force_next_play_index $longest_legal}
+                     {$seq
+                        force_next_play_index
+                        {elem
+                           $legal
+                           {random_int
+                              0
+                              {size $legal}}}}}}})
+         (stop_narrator
+            {if
+               [last_narrated_seq]
+               {[last_narrated_seq]
+                  stop}
+               {set
+                  [last_narrated_seq]
+                  ""}})
+         (set_slow
+            ($slow $fade)
+            {set
+               [slow_speed]
+               $slow}
+            {do
+               ($bank
+                  {find_obj $this sound_bank})
+               ($fade_anim
+                  {if_else
+                     $bank
+                     {$bank find skills_cross_fade.anim FALSE}
+                     0})
+               ($dest_frame
+                  {if_else
+                     {&& $fade_anim $slow}
+                     {$fade_anim end_frame}
+                     0})
+               {if
+                  $fade_anim
+                  {if_else
+                     $fade
+                     {$fade_anim
+                        animate
+                        (dest $dest_frame)}
+                     {$fade_anim
+                        animate
+                        (range $dest_frame $dest_frame)}}}}
+            {if
+               {&&
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {handle
+                  ({$hamdirector get_world}
+                     {if_else
+                        [slow_speed]
+                        skills_slowdown_start
+                        skills_slowdown_stop})}})
+         (enable_drum_track
+            ($enable $fade)
+            {if
+               midi_player
+               {midi_player set active TRUE}}
+            {do
+               ($bank
+                  {find_obj $this sound_bank})
+               ($fade_anim
+                  {if_else
+                     $bank
+                     {$bank find skills_cross_fade.anim FALSE}
+                     0})
+               ($dest_frame
+                  {if_else
+                     {&& $fade_anim $slow}
+                     {$fade_anim end_frame}
+                     0})
+               {if
+                  $fade_anim
+                  {if_else
+                     $fade
+                     {$fade_anim
+                        animate
+                        (dest $dest_frame)}
+                     {$fade_anim
+                        animate
+                        (range $dest_frame $dest_frame)}}}})
+         (feedback_instruction
+            ($text)
+            {instructional_message.lbl set text_token $text}
+            {instructional_message.anim animate})
+         (add_all_barks
+            {if
+               {&&
+                  {exists action_bark_player}
+                  {exists master}}
+               {do
+                  ($last_beat
+                     {seconds_to_beat
+                        {/
+                           {master song_duration_ms}
+                           1000}})
+                  ($i 0)
+                  {action_bark_player clear_events}
+                  {while
+                     {< $i $last_beat}
+                     {if_else
+                        [slow_speed]
+                        {action_bark_player
+                           add_barks
+                           {$this move_from_beat $i 0}
+                           (verb_slow)
+                           $i}
+                        {action_bark_player
+                           add_barks
+                           {$this move_from_beat $i 0}
+                           (verb)
+                           $i}}
+                     {'+=' $i 4}}}}))
+      (shell
+         (editor
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use when this panel is on screen"))
+            (refresh_postproc
+               script
+               (script
+                  {$this update_postproc})
+               (help
+                  "Refresh postprocessor selection on the tool")))
+         (postprocess '')
+         (enter
+            {$this update_postproc})
+         (exit_complete
+            {rnd reset_postproc})
+         (update_postproc
+            {if_else
+               [postprocess]
+               {do
+                  {rnd reset_dof_proc}
+                  {[postprocess]
+                     select}}
+               {do
+                  {rnd reset_postproc}}}))
+      (shell_in_game
+         (editor
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use when this panel is on screen"))
+            (refresh_postproc
+               script
+               (script
+                  {$this
+                     override_postproc
+                     [postprocess]})
+               (help
+                  "Refresh postprocessor selection on the tool")))
+         (flow_commands broadcast_winning_crew)
+         (postprocess '')
+         (enter
+            {$this
+               override_postproc
+               [postprocess]})
+         (override_postproc
+            ($pp)
+            {rnd set_postproc_override $pp})
+         (use_postproc_as_override
+            {rnd
+               set_postproc_override
+               [postprocess]})
+         (exit_complete
+            {$this override_postproc ''})
+         (broadcast_winning_crew
+            {do
+               ($score0
+                  {{gamedata getp 0 provider}
+                     get
+                     score})
+               ($score1
+                  {{gamedata getp 1 provider}
+                     get
+                     score})
+               {if
+                  {!= $score0 $score1}
+                  {do
+                     ($winner
+                        {if_else
+                           {> $score0 $score1}
+                           0
+                           1})
+                     {handle
+                        (hamprovider
+                           nar_play_crew_vo
+                           win
+                           {gamedata getp $winner crew})}}}}))
+      (shell_with_narrator
+         (editor
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use when this panel is on screen"))
+            (refresh_postproc
+               script
+               (script
+                  {$this update_postproc})
+               (help
+                  "Refresh postprocessor selection on the tool")))
+         (postprocess '')
+         (enter
+            {$this update_postproc}
+            {set
+               [curr_vo]
+               ''}
+            {set
+               [vo_playing]
+               FALSE})
+         (exit_complete
+            {rnd reset_postproc})
+         (update_postproc
+            {if_else
+               [postprocess]
+               {[postprocess]
+                  select}
+               {rnd reset_postproc}})
+         (flow_commands
+            (play_vo
+               (editor
+                  (sound
+                     object
+                     (class Sound)
+                     (help
+                        "Sound clip to play"))
+                  (interrupt
+                     bool
+                     (help
+                        "Whether any currently playing VO should be cut off by this one")))
+               (sound '')
+               (interrupt FALSE))
+            stop_vo
+            end_vo
+            (queue_vo
+               (editor
+                  (sound
+                     object
+                     (class Sound)
+                     (help
+                        "Sound clip to play"))
+                  (delay
+                     float
+                     (help
+                        "How long after previous VO to play this one"))
+                  (interrupt
+                     bool
+                     (help
+                        "Whether this queued VO should interrupt that might have been played during the delay period")))
+               (sound '')
+               (delay 0.0)
+               (interrupt TRUE))
+            (goto_screen
+               (editor
+                  (screen_name
+                     string
+                     (help
+                        "Which screen to go to")))
+               (screen_name '')))
+         (vo_playing FALSE)
+         (curr_vo '')
+         (vo_queue
+            ())
+         (get_seq
+            ($seq)
+            {if
+               {!=
+                  {type $seq}
+                  kDataObject}
+               {set
+                  $seq
+                  {find_obj
+                     $this
+                     {sprint
+                        $seq
+                        ".snd"}}}}
+            $seq)
+         (get_seq_length
+            ($seq)
+            {if_else
+               $seq
+               {do
+                  ($samp
+                     {$seq get sample})
+                  {if_else
+                     $samp
+                     {$samp sample_length}
+                     0}}
+               0})
+         (goto_screen
+            ($screen_name)
+            {if
+               {!
+                  {exists milo}}
+               {ui goto_screen $screen_name}})
+         (play_vo
+            ($seq $interrupt)
+            {if
+               $interrupt
+               {$this stop_vo}}
+            {if
+               {!
+                  [vo_playing]}
+               {set
+                  [curr_vo]
+                  {$this get_seq $seq}}
+               {if_else
+                  [curr_vo]
+                  {do
+                     ($curr_vo_time 0.0)
+                     {print
+                        "playing vo "
+                        [curr_vo]
+                        "\n"}
+                     {[curr_vo]
+                        play}
+                     {set
+                        $curr_vo_time
+                        {$this get_seq_length $seq}}
+                     {set
+                        [vo_playing]
+                        TRUE}
+                     {script_task
+                        kTaskUISeconds
+                        (delay $curr_vo_time)
+                        (script
+                           {$this end_vo})}}
+                  {set
+                     [curr_vo]
+                     ''}}})
+         (end_vo
+            {set
+               [curr_vo]
+               ''}
+            {set
+               [vo_playing]
+               FALSE}
+            {if
+               {>
+                  {size
+                     [vo_queue]}
+                  0}
+               {set
+                  $vo_elem
+                  {elem
+                     [vo_queue]
+                     0}}
+               {remove_elem
+                  [vo_queue]
+                  $vo_elem}
+               {script_task
+                  kTaskUISeconds
+                  (delay
+                     {elem $vo_elem 1})
+                  (script
+                     {$this
+                        play_vo
+                        {elem $vo_elem 0}
+                        {elem $vo_elem 2}})}})
+         (stop_vo
+            {if
+               [curr_vo]
+               {[curr_vo]
+                  stop}
+               {set
+                  [curr_vo]
+                  ''}
+               {set
+                  [vo_playing]
+                  FALSE}
+               {resize
+                  [vo_queue]
+                  0}})
+         (queue_vo
+            ($seq $delay $interrupt)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if_else
+               {!
+                  [vo_playing]}
+               {do
+                  {script_task
+                     kTaskUISeconds
+                     (delay $delay)
+                     (script
+                        {$this play_vo $seq $interrupt})}}
+               {push_back
+                  [vo_queue]
+                  {'`'
+                     ({',' $seq}
+                        {',' $delay}
+                        {',' $interrupt})}}}))
+      (song_info_panel
+         (album_art_visibility_time 0.5 proxy_save)
+         (curr_song '')
+         (editor
+            (album_art_visibility_time
+               float
+               (help
+                  "How long the album art should be visible before transition to mini-Marcos")))
+         (enter
+            {ui
+               add_sink
+               $this
+               (song_data_mounted)})
+         (exit
+            {ui remove_sink $this song_data_mounted})
+         (set_song
+            ($song)
+            {$this set curr_song $song}
+            {$this set_song_details}
+            {$this play_song_preview})
+         (song_data_mounted
+            ($song)
+            {if
+               {==
+                  $song
+                  [curr_song]}
+               {$this refresh_album_art}})
+         (set_song_details
+            {if_else
+               {!=
+                  [curr_song]
+                  ''}
+               {$this refresh_song_details}
+               {$this clear_song_details}}
+            {$this refresh_album_art})
+         (refresh_song_details
+            {do
+               ($songid
+                  {song_mgr
+                     get_song_id
+                     [curr_song]})
+               {song_name.lbl
+                  set_song_name
+                  [curr_song]}
+               {song_name.lbl set showing TRUE}
+               {artist.lbl
+                  set_artist_name
+                  [curr_song]}
+               {artist.lbl set showing TRUE}
+               {intensity.sdd set showing TRUE}
+               {intensity.lbl set showing TRUE}
+               {intensity.sdd
+                  set_level
+                  {song_mgr
+                     rank_tier_for_song
+                     [curr_song]}}})
+         (clear_song_details
+            {do
+               {song.lbl set text_token ''}
+               {album.lbl set text_token ''}
+               {artist.lbl set text_token ''}
+               {intensity.sdd set showing FALSE}
+               {intensity.lbl set showing FALSE}
+               {dancer.lbl set text_token ''}})
+         (refresh_album_art
+            {do
+               ($pic
+                  {album_art find album_art.pic})
+               {if_else
+                  {!=
+                     [curr_song]
+                     ''}
+                  {do
+                     ($content_name
+                        {song_mgr
+                           content_name_from_sym
+                           [curr_song]})
+                     {if_else
+                        {'||'
+                           {==
+                              $content_name
+                              ""}
+                           {content_mgr is_mounted $content_name}}
+                        {$pic
+                           set
+                           tex_file
+                           {song_mgr
+                              album_art_path
+                              [curr_song]}}
+                        {$pic
+                           set
+                           tex_file
+                           "ui/image/dc_logo_keep.png"}}}
+                  {$pic
+                     set
+                     tex_file
+                     "ui/image/dc_logo_keep.png"}}})
+         (play_song_preview
+            {song_preview
+               start_video
+               [curr_song]
+               preview.tmov}
+            {preview.flow activate})
+         (stop_song_preview
+            {song_preview start_video '' preview.tmov}))
+      (flashcard_dock_panel
+         (popup_display_beats 6.0)
+         (editor
+            (popup_display_beats
+               float
+               (help
+                  "number of beats to sustain the popup before retracting"))))
+      (fitness_hud
+         (editor
+            (enabled
+               int
+               (help
+                  "Is calorie hud currently in use. Set from script."))
+            (hidden
+               int
+               (help
+                  "Whether or not player's hud is being temporarily hidden. Set from script."))
+            (calories
+               float
+               (help
+                  "Current calorie count. Set from script."))
+            (calories_alert_interval
+               int
+               (help
+                  "Every X calories, have a calories_alert"))
+            (calories_alert
+               int
+               (help
+                  "Whether a new calorie alert should happen. Script sets TRUE. Flow sets FALSE after response."))
+            (time
+               int
+               (help
+                  "Seconds of time. Set from script"))
+            (time_alert_interval
+               int
+               (help
+                  "Every X seconds, have a time_alert"))
+            (time_alert
+               int
+               (help
+                  "Whether a time alert should happen. Script sets TRUE. Flow sets FALSE after response.")))
+         (enabled TRUE)
+         (hidden FALSE)
+         (calories 0.0)
+         (calories_alert FALSE)
+         (calories_alert_interval 50)
+         (time 0)
+         (time_alert FALSE)
+         (time_alert_interval 60)
+         (set_calories
+            ($cal $is_initialization)
+            {do
+               ($interval_prev
+                  {int
+                     {/
+                        [calories]
+                        [calories_alert_interval]}})
+               ($interval_next
+                  {int
+                     {/
+                        $cal
+                        [calories_alert_interval]}})
+               {if
+                  {&&
+                     {! $is_initialization}
+                     {> $interval_next $interval_prev}}
+                  {set
+                     [calories_alert]
+                     TRUE}}
+               {set
+                  [calories]
+                  $cal}})
+         (set_time
+            ($sec $is_initialization)
+            {do
+               ($interval_prev
+                  {int
+                     {/
+                        [time]
+                        [time_alert_interval]}})
+               ($interval_next
+                  {int
+                     {/
+                        $sec
+                        [time_alert_interval]}})
+               {if
+                  {&&
+                     {! $is_initialization}
+                     {> $interval_next $interval_prev}}
+                  {set
+                     [time_alert]
+                     TRUE}}
+               {set
+                  [time]
+                  $sec}})
+         (update
+            ($player_idx $is_initialization)
+            {do
+               ($cal 0.0)
+               ($sec 0.0)
+               {if_else
+                  {game_panel get_fitness_data $player_idx TRUE $cal $sec}
+                  {do
+                     {set
+                        [enabled]
+                        TRUE}
+                     {$this set_calories $cal $is_initialization}
+                     {$this set_time $sec $is_initialization}}
+                  {do
+                     {set
+                        [enabled]
+                        FALSE}}}}))))
+(RndDir
+   (types
+      (4beatscrolling
+         (measure_anim
+            "")
+         (flash_cards
+            ())
+         (flash_card_animations
+            ())
+         (num_look_behinds 1)
+         (right_justify TRUE proxy_save)
+         (player_index 0 proxy_save)
+         (editor
+            (player_index
+               int
+               (range
+                  0
+                  {-
+                     {gamedata max_players}
+                     1})
+               (help
+                  "Player index"))
+            (measure_anim
+               object
+               (class Anim)
+               (help
+                  "Animation to use on the measure"))
+            (flash_cards
+               (array
+                  object
+                  (class RndDir move_display))
+               (help
+                  "Sequence of the flashcards starting with the lookbehind"))
+            (flash_card_animations
+               (array
+                  object
+                  (class PropAnim))
+               (help
+                  "Sequence of the PropAnims which animate flashcards through the UI"))
+            (num_look_behinds
+               int
+               (range 0 5)
+               (help
+                  "How many of the flashcards in the list are 'look behinds'?"))
+            (right_justify
+               bool
+               (post_sync
+                  {$this
+                     set_justify
+                     [right_justify]})
+               (help
+                  "Screen justification")))
+         (reset)
+         (enter
+            {$this
+               set_justify
+               [right_justify]})
+         (set_justify
+            ($right)
+            {do
+               ($justify_anim
+                  {find_obj $this flip.anim})
+               {set
+                  [right_justify]
+                  $right}
+               {if
+                  $justify_anim
+                  {$justify_anim
+                     set_frame
+                     {if_else $right 0 1}}}
+               {$this
+                  clear
+                  (flash_card_animations)}
+               {foreach
+                  $flash_card
+                  [flash_cards]
+                  {$flash_card
+                     set
+                     player_index
+                     [player_index]}
+                  {$flash_card set_justify $right}}})
+         (do_now_effect
+            {do
+               ($btm
+                  {hamprovider get visible_flashcard_btm})
+               ($top
+                  {hamprovider get visible_flashcard_top})
+               ($measure 42)
+               {if
+                  {'||'
+                     {< $btm 0}
+                     {&&
+                        {>= $measure $btm}
+                        {<= $measure $top}}}
+                  {do
+                     ($effect
+                        {find_obj $this idle_glow.anim})
+                     {if
+                        $effect
+                        {$effect animate}}}}})
+         (do_count_in
+            ($start_frame $broadcast_provider)
+            {do
+               ($provider
+                  {gamedata
+                     getp
+                     [player_index]
+                     provider})
+               ($anim
+                  {find_obj $this count_in.anim})
+               {if
+                  $broadcast_provider
+                  {handle
+                     ($provider count_in)}}
+               {if
+                  $anim
+                  {$anim
+                     animate
+                     (range
+                        $start_frame
+                        {$anim end_frame})}}})
+         (counting_in
+            {do
+               ($anim
+                  {find_obj $this count_in.anim})
+               {if_else
+                  $anim
+                  {$anim is_animating}
+                  FALSE}})
+         (count_in_frame
+            {do
+               ($anim
+                  {find_obj $this count_in.anim})
+               {if_else
+                  $anim
+                  {$anim frame}
+                  0}})
+         (set_anim_frame
+            ($beat)
+            {if
+               [measure_anim]
+               {do
+                  ($frame
+                     {'*' $beat 480})
+                  ($anim_length
+                     {[measure_anim]
+                        end_frame})
+                  {if
+                     {!= $anim_length 0}
+                     {set
+                        $frame
+                        {-
+                           $frame
+                           {'*'
+                              $anim_length
+                              {int
+                                 {/ $frame $anim_length}}}}}}
+                  {[measure_anim]
+                     set_frame
+                     $frame}}})
+         (reset_beats
+            {foreach
+               $elem
+               [flash_cards]
+               {$elem reset}})
+         (find_flashcard
+            ($beat)
+            {do
+               ($found
+                  "")
+               {foreach
+                  $flash_card
+                  [flash_cards]
+                  {if
+                     {==
+                        $beat
+                        {$flash_card get beat}}
+                     {set $found $flash_card}}}
+               $found}))
+      (fitness
+         (player 0)
+         (editor
+            (player
+               int
+               (help
+                  "Which player?"))))
+      (mini_game_flashcard
+         (row 0)
+         (col 0)
+         (row_cur 0)
+         (row_next 0)
+         (move
+            "")
+         (move_variant
+            "")
+         (scored FALSE)
+         (dancer 0)
+         (score 0)
+         (move_color 0)
+         (flipped FALSE)
+         (poofed_offset 800.0)
+         (poofed FALSE)
+         (result 0.0)
+         (flip_beat 0)
+         (row_ht 175.0)
+         (editor
+            (row
+               int
+               (help
+                  "row value"))
+            (col
+               int
+               (help
+                  "col value"))
+            (move_color
+               int
+               range
+               (0 7)
+               (help
+                  "back color")))
+         (dump_info
+            {print
+               "flashcard"
+               ", r="
+               [row_cur]
+               ", c="
+               [col]
+               ", move="
+               {[move]
+                  display_name}
+               "\n"})
+         (move_down
+            ($from $to)
+            {drop_card.anim
+               set_key_val
+               all.grp
+               (local_xfm z)
+               0.0
+               $from
+               TRUE}
+            {drop_card.anim
+               set_key_val
+               all.grp
+               (local_xfm z)
+               1.0
+               $to
+               TRUE}
+            {drop_card.anim
+               animate
+               (range 0 1)
+               (ease kBlendEaseIn)})
+         (drop
+            {if_else
+               [poofed]
+               {$this poof_in}
+               {do
+                  ($from)
+                  ($to)
+                  {if
+                     {!=
+                        [row_cur]
+                        [row_next]}
+                     {set
+                        $from
+                        {'*'
+                           [row_ht]
+                           {-
+                              [row]
+                              [row_cur]}}}
+                     {set
+                        $to
+                        {'*'
+                           [row_ht]
+                           {-
+                              [row]
+                              [row_next]}}}
+                     {$this move_down $from $to}
+                     {set
+                        [row_cur]
+                        [row_next]}}}})
+         (init
+            ($row $col $activate_color_flow)
+            {set
+               [row]
+               $row}
+            {set
+               [col]
+               $col}
+            {set
+               [row_cur]
+               $row}
+            {set
+               [row_next]
+               $row}
+            {set
+               [scored]
+               FALSE}
+            {set
+               [move]
+               ""}
+            {set
+               [move_variant]
+               ""}
+            {set
+               [poofed]
+               FALSE}
+            {$this show_move_detection_meters FALSE FALSE}
+            {all.grp
+               set
+               (local_xfm z)
+               0.0}
+            {$this flip_up 0}
+            {if
+               $activate_color_flow
+               {card_color.flow activate}})
+         (flip_over
+            ($beat)
+            {if
+               {!
+                  [flipped]}
+               {flip_over.flow activate}
+               {set
+                  [flipped]
+                  TRUE}
+               {set
+                  [flip_beat]
+                  $beat}})
+         (flip_up
+            ($beat)
+            {if
+               [poofed]
+               {poof_card_out.anim set_frame 0}
+               {set
+                  [poofed]
+                  FALSE}}
+            {if
+               [flipped]
+               {flip_up.flow activate}
+               {set
+                  [flipped]
+                  FALSE}
+               {set
+                  [flip_beat]
+                  $beat}})
+         (show_score
+            {print
+               "mini_game_flashcard show score"
+               "move="
+               {[move]
+                  display_name}
+               ", dancer="
+               [dancer]
+               ", score="
+               [score]
+               "\n"}
+            {score_color.anim
+               set_frame
+               [dancer]}
+            {score.lbl
+               set_token_fmt
+               {localize_separated_int
+                  [score]}}
+            {show_cascade_result.anim animate})
+         (set_score
+            ($dancer $score $result)
+            {set
+               [dancer]
+               $dancer}
+            {set
+               [score]
+               $score}
+            {set
+               [result]
+               $result}
+            {set
+               [scored]
+               TRUE})
+         (poof_in
+            {set
+               [poofed]
+               FALSE}
+            {do
+               ($pos 0.0)
+               {set
+                  $pos
+                  {'*'
+                     [row_ht]
+                     {-
+                        [row]
+                        [row_next]}}}
+               {$this
+                  move_down
+                  [poofed_offset]
+                  $pos}
+               {set
+                  [row_cur]
+                  [row_next]}})
+         (poof_out
+            {set
+               [poofed]
+               TRUE}
+            {poof_card_out.anim
+               animate
+               (range 0 1)})
+         (disable_move
+            {$this show_move_detection_meters FALSE FALSE}
+            {set
+               [move_color]
+               {'+'
+                  6
+                  [dancer]}}
+            {$this flip_over 0})
+         (dump_card
+            {print
+               "mini_game_flashcard"
+               ", r="
+               [row_cur]
+               ", c="
+               [col]
+               ", clr="
+               [move_color]
+               ", mv="
+               [move_variant]
+               ", hm="
+               [move]
+               ", name="
+               {[move]
+                  display_name}
+               "dancer="
+               [dancer]
+               "score="
+               [score]
+               "\n"})
+         (set_move
+            ($move_variant $color_index)
+            {set
+               [scored]
+               FALSE}
+            {set
+               [result]
+               0.0}
+            {set
+               [move_variant]
+               $move_variant}
+            {set
+               [move]
+               {movemgr
+                  get_ham_move
+                  [move_variant]}}
+            {set
+               [move_color]
+               $color_index}
+            {if
+               {!
+                  [move]}
+               {print
+                  "mini_game_flashcard ERROR NULL HAM MOVE: "
+                  [move_variant]
+                  "\n"}}
+            {if
+               [move]
+               {move_name.lbl
+                  set_move_name
+                  [move]}
+               {icon.mat
+                  set
+                  diffuse_tex
+                  {[move]
+                     get
+                     tex}}
+               {icon_state.anim
+                  set_frame
+                  {[move]
+                     get
+                     tex_state}}
+               {iconman.iconman
+                  set
+                  char_clip
+                  {movemgr
+                     get_char_clip
+                     [move_variant]}}
+               {iconman.anim
+                  animate
+                  (loop 0 3840)}
+               {player_flip.flow activate}
+               {$this show_move_detection_meters TRUE TRUE}})
+         (update_feedback
+            ($right_side $value)
+            {if_else
+               $right_side
+               {tri_right.anim
+                  animate
+                  (dest $value)}
+               {tri_left.anim
+                  animate
+                  (dest $value)}})
+         (show_move_detection_meters
+            ($show_right $show_left)
+            {right_meter.grp set showing $show_right}
+            {left_meter.grp set showing $show_left}
+            {bar_right.anim set_frame 0.0}
+            {bar_left.anim set_frame 0.0}
+            {tri_right.anim set_frame 0.0}
+            {tri_left.anim set_frame 0.0}))
+      (move_display
+         (beat_anim
+            "")
+         (cur_move
+            "")
+         (tagged FALSE)
+         (mystery FALSE)
+         (hidden FALSE)
+         (beat -10)
+         (active FALSE)
+         (beat_frame 0.0)
+         (right_justify TRUE)
+         (max_display_length 0 proxy_save)
+         (use_small_tex FALSE)
+         (value 0)
+         (scored FALSE)
+         (color_index 0)
+         (practice_choose_card FALSE)
+         (is_campaign_move FALSE)
+         (is_mastered FALSE)
+         (is_now FALSE)
+         (player_idx 0)
+         (in_visible_range TRUE)
+         (dock_status_change_pending FALSE)
+         (campaign_status not_craze)
+         (is_dock FALSE)
+         (flow_commands
+            update_flashcard_color
+            update_flashcard_move
+            animate_status_change
+            update_dance_pct
+            (set_mystery
+               (editor
+                  (is_mystery
+                     bool
+                     (help
+                        "Mystery or not?")))
+               (is_mystery TRUE))
+            (set_campaign_status
+               (editor
+                  (campaign_status
+                     symbol
+                     (help
+                        "<not_craze | encrypted | encryptedish | captured | powered_up>")))
+               (campaign_status not_craze)))
+         (editor
+            (reset
+               script
+               (script
+                  {$this reset}))
+            (tagged
+               bool
+               (help
+                  "Tells us if this move is tagged for photo opportunity")
+               (post_sync
+                  {$this
+                     set_tagged
+                     [tagged]}))
+            (mystery
+               bool
+               (help
+                  "Tells us if this move should hide the icon and name")
+               (post_sync
+                  {$this
+                     set_mystery
+                     [mystery]}))
+            (active
+               bool
+               (post_sync
+                  {$this
+                     activate
+                     [active]})
+               (help
+                  "Test for activation of the flashcard"))
+            (max_display_length
+               float
+               (help
+                  "Maximum length to change justification so not to clip with edge of screen"))
+            (beat_anim
+               object
+               (class Anim)
+               (help
+                  "Animation to play along with the beat"))
+            (beat_frame
+               float
+               (interp_handlers set_beat_frame)
+               (help
+                  "Frame of animation for the beat animation"))
+            (use_small_tex
+               bool
+               (interp_handlers set_use_small_tex)
+               (help
+                  "Use the small texture \\"
+                  '_sm.tex\\"'
+                  'instead."'))
+            (right_justify
+               bool
+               (help
+                  "Right justify the hud")
+               (post_sync
+                  {$this
+                     set_justify
+                     [right_justify]}))
+            (color_index
+               int
+               (help
+                  "Which color index to use")
+               (range 0 1))
+            (player_index
+               int
+               (help
+                  "Which player (player 1 = 0, player 2 = 1) does this card belong to?")
+               (range 0 1))
+            (is_now
+               bool
+               (help
+                  "Whether this is the current move being danced"))
+            (practice_choose_card
+               bool
+               (help
+                  "If this card is for practice_choose_panel"))
+            (campaign_status
+               symbol
+               (help
+                  "<not_craze | encrypted | encryptedish | captured | powered_up>"))
+            (in_visible_range
+               bool
+               (help
+                  "Whether this card is in the visible range"))
+            (dock_status_change_pending
+               bool
+               (help
+                  "pending morph in the flashcard dock?"))
+            (is_dock
+               bool
+               (help
+                  "is this card used in the flashcard dock? if not, it's in the carousel")))
+         (reset
+            {$this move_to $this FALSE}
+            {set
+               [beat]
+               -10})
+         (set_use_small_tex
+            ($value)
+            {set
+               [use_small_tex]
+               $value}
+            {if
+               {&&
+                  {!=
+                     [cur_move]
+                     ""}
+                  {!
+                     [mystery]}}
+               {do
+                  {icon.mat
+                     set
+                     diffuse_tex
+                     {[cur_move]
+                        get
+                        {if_else
+                           [use_small_tex]
+                           small_tex
+                           tex}}}}})
+         (set_beat_frame
+            ($a $b $r)
+            {if
+               [beat_anim]
+               {[beat_anim]
+                  set_frame
+                  {'*'
+                     {'*' 4 480}
+                     {'+'
+                        $a
+                        {'*'
+                           $r
+                           {- $b $a}}}}}})
+         (set_justify
+            ($right)
+            {do
+               ($justify_anim
+                  {find_obj $this flip.anim})
+               {set
+                  [right_justify]
+                  $right}
+               {if
+                  $justify_anim
+                  {$justify_anim
+                     set_frame
+                     {if_else $right 0 1}}}})
+         (set_campaign_status
+            ($new_status)
+            {if
+               {!=
+                  $new_status
+                  [campaign_status]}
+               {do
+                  ($in_shell
+                     {==
+                        {ui current_screen}
+                        campaign_songselect_screen})
+                  ($anim
+                     {find_obj $this campaign_status.anim})
+                  {if
+                     {&&
+                        {exists gamemode}
+                        {==
+                           holla_back
+                           {gamemode get gameplay_mode}}
+                        {>=
+                           [beat]
+                           0.0}}
+                     {game_panel
+                        set_move_state
+                        {/
+                           [beat]
+                           4}
+                        $new_status}}
+                  {cond
+                     ({== $new_status not_craze}
+                        {do
+                           ($campaign_status_anim
+                              {find_obj $this campaign_status.anim})
+                           ($player_color_anim
+                              {find_obj $this player_color.anim})
+                           {{find_obj $this carousel_capture.flow}
+                              request_stop}
+                           {{find_obj $this carousel_decipher.flow}
+                              request_stop}
+                           {{find_obj $this decipher_craze.anim}
+                              set_frame
+                              0}
+                           {{find_obj $this capture_craze.anim}
+                              set_frame
+                              0}
+                           {$campaign_status_anim set_frame 1}
+                           {$campaign_status_anim set_frame 0}
+                           {$this set_mystery FALSE}
+                           {$player_color_anim
+                              set_frame
+                              {$player_color_anim frame}}})
+                     ({== $new_status encrypted}
+                        {$this update_dance_pct 0.0}
+                        {$this set_mystery TRUE}
+                        {$anim set_frame 0.9}
+                        {$anim set_frame 1}
+                        {{find_obj $this move_name.lbl}
+                           set_showing
+                           FALSE})
+                     ({&&
+                           {== $new_status encryptedish}
+                           {!=
+                              [campaign_status]
+                              encrypted}}
+                        {$this set_mystery FALSE}
+                        {$anim set_frame 0.9}
+                        {$anim set_frame 1})
+                     ({== $new_status captured}
+                        {$this set_mystery FALSE}
+                        {if_else
+                           {&&
+                              {!=
+                                 holla_back
+                                 {gamemode get gameplay_mode}}
+                              {! $in_shell}
+                              {'||'
+                                 {==
+                                    [campaign_status]
+                                    encryptedish}
+                                 {==
+                                    [campaign_status]
+                                    encrypted}}}
+                           {do
+                              {{find_obj $this carousel_capture.flow}
+                                 activate}
+                              {if
+                                 {&&
+                                    {!
+                                       [is_dock]}
+                                    {!
+                                       [hidden]}
+                                    [is_now]}
+                                 {handle
+                                    (hamprovider hb_card_capture)}}}
+                           {do
+                              {{find_obj $this carousel_capture.flow}
+                                 request_stop}
+                              {{find_obj $this carousel_decipher.flow}
+                                 request_stop}
+                              {{find_obj $this campaign_status.anim}
+                                 set_frame
+                                 2.9}
+                              {{find_obj $this campaign_status.anim}
+                                 set_frame
+                                 3}
+                              {{find_obj $this carousel_fastcapture.flow}
+                                 activate}}})
+                     ({== $new_status powered_up}
+                        {$this set_mystery FALSE}
+                        {if_else
+                           {'||'
+                              {==
+                                 [campaign_status]
+                                 encryptedish}
+                              {==
+                                 [campaign_status]
+                                 encrypted}
+                              {==
+                                 [campaign_status]
+                                 captured}}
+                           {do
+                              {{find_obj $this carousel_decipher.flow}
+                                 activate}
+                              {if
+                                 {&&
+                                    {!
+                                       [is_dock]}
+                                    {!
+                                       [hidden]}
+                                    [is_now]}
+                                 {handle
+                                    (hamprovider hb_card_powerup)}}}
+                           {do
+                              {{find_obj $this campaign_status.anim}
+                                 set_frame
+                                 3.9}
+                              {{find_obj $this campaign_status.anim}
+                                 set_frame
+                                 4}}})}
+                  {set
+                     [campaign_status]
+                     $new_status}}})
+         (is_encrypted
+            {'||'
+               {==
+                  [campaign_status]
+                  encrypted}
+               {==
+                  [campaign_status]
+                  encryptedish}})
+         (set_campaign
+            ($is_campaign_move $is_mastered $uses_distortion)
+            {do
+               ($prev_campaign_status
+                  [campaign_status])
+               ($cur_campaign_status
+                  [campaign_status])
+               {cond
+                  ({! $is_campaign_move}
+                     {set $cur_campaign_status not_craze}
+                     {do
+                        ($campaign_status_anim
+                           {find_obj $this campaign_status.anim})
+                        ($player_color_anim
+                           {find_obj $this player_color.anim})
+                        {$campaign_status_anim set_frame 0}
+                        {$this set_mystery FALSE}
+                        {$player_color_anim
+                           set_frame
+                           {$player_color_anim frame}}})
+                  ({! $is_mastered}
+                     {if_else
+                        $uses_distortion
+                        {set $cur_campaign_status encrypted}
+                        {set $cur_campaign_status encryptedish}})
+                  {set $cur_campaign_status captured}}
+               {$this set_campaign_status $cur_campaign_status}})
+         (set_move
+            ($move $force_update)
+            {set
+               [cur_move]
+               $move}
+            {if
+               $force_update
+               {$this update_flashcard_move}}
+            {if
+               {&&
+                  $hud_panel
+                  {!
+                     [is_dock]}
+                  {'||'
+                     {==
+                        {hamprovider get metamode}
+                        campaign_perform}
+                     {==
+                        {hamprovider get metamode}
+                        campaign_holla_back}}}
+               {$hud_panel update_card_campaign_status $this}})
+         (get_move
+            [cur_move])
+         (get_move_name
+            {if_else
+               {!=
+                  [cur_move]
+                  ""}
+               {symbol
+                  {[cur_move]
+                     get
+                     name}}
+               {symbol
+                  ""}})
+         (get_move_display_name
+            {if_else
+               {!=
+                  [cur_move]
+                  ""}
+               {symbol
+                  {[cur_move]
+                     display_name}}
+               {symbol
+                  ""}})
+         (update_dance_pct
+            ($norm)
+            {if
+               [mystery]
+               {do
+                  ($dance_pct_anim
+                     {find_obj $this dance_pct.anim})
+                  ($frame
+                     {'*' 4.0 $norm})
+                  {$dance_pct_anim set_frame $frame}}})
+         (set_status_change_pending
+            {print
+               "move_display: set_status_change_pending: cur_move="
+               [cur_move]
+               "\n"}
+            {set
+               [dock_status_change_pending]
+               TRUE})
+         (animate_status_change
+            {if
+               [dock_status_change_pending]
+               {print
+                  "move_display: animate_status_change: cur_move="
+                  [cur_move]
+                  "\n"}
+               {set
+                  [dock_status_change_pending]
+                  FALSE}
+               {do
+                  ($unswirl
+                     {find_obj $this dock_capture.flow})
+                  {if
+                     $unswirl
+                     {$unswirl activate}}}})
+         (update_flashcard_move
+            {do
+               ($skip FALSE)
+               {if
+                  {&&
+                     $edit_mode
+                     {exists milo}
+                     {milo cur_dir}
+                     {'||'
+                        {==
+                           {milo cur_dir}
+                           $this}
+                        {==
+                           {milo cur_dir}
+                           {$this dir}}}}
+                  {set $skip TRUE}}
+               {if
+                  {! $skip}
+                  {if_else
+                     {!=
+                        [cur_move]
+                        ""}
+                     {do
+                        ($justify_anim
+                           {find_obj $this text_flip.anim})
+                        ($tex
+                           {[cur_move]
+                              get
+                              {if_else
+                                 [use_small_tex]
+                                 small_tex
+                                 tex}})
+                        {if_else
+                           {!
+                              [mystery]}
+                           {icon.mat set diffuse_tex $tex}
+                           {twirl.tp set input_texture $tex}}
+                        {icon_state.anim
+                           set_frame
+                           {[cur_move]
+                              get
+                              tex_state}}
+                        {if
+                           {&&
+                              $edit_mode
+                              {!=
+                                 {move_name.lbl get edit_text}
+                                 ""}}
+                           {move_name.lbl
+                              set
+                              edit_text
+                              ""}}
+                        {paradiddle.anim
+                           set_frame
+                           {[cur_move]
+                              get
+                              paradiddle}}
+                        {move_name.lbl
+                           set_move_name
+                           [cur_move]}
+                        {if
+                           {&&
+                              $justify_anim
+                              {>
+                                 [max_display_length]
+                                 0}}
+                           {if_else
+                              [right_justify]
+                              {$justify_anim
+                                 set_frame
+                                 {if_else
+                                    {<=
+                                       {move_name.lbl draw_rect_width}
+                                       [max_display_length]}
+                                    0
+                                    1}}
+                              {$justify_anim
+                                 set_frame
+                                 {if_else
+                                    {<=
+                                       {move_name.lbl draw_rect_width}
+                                       [max_display_length]}
+                                    1
+                                    0}}}}
+                        {all.grp
+                           set_showing
+                           {!
+                              [hidden]}}
+                        {icon.grp
+                           set_showing
+                           {!
+                              {==
+                                 $tex
+                                 ""}}}
+                        {if
+                           {&&
+                              {exists gamemode}
+                              {==
+                                 holla_back
+                                 {gamemode get gameplay_mode}}
+                              {>=
+                                 [beat]
+                                 0.0}}
+                           {do
+                              ($move_state
+                                 {game_panel
+                                    get_move_state
+                                    {/
+                                       [beat]
+                                       4}})
+                              {$this set_campaign_status $move_state}
+                              {if
+                                 {!
+                                    [is_now]}
+                                 {if
+                                    {== $move_state captured}
+                                    {{find_obj $this carousel_fastcapture.flow}
+                                       activate}}
+                                 {if
+                                    {== $move_state powered_up}
+                                    {{find_obj $this carousel_fastpowerup.flow}
+                                       activate}}}}}}
+                     {do
+                        ($icon_state
+                           {$this find icon_state.anim FALSE})
+                        {if
+                           {!
+                              [mystery]}
+                           {icon.mat
+                              set
+                              diffuse_tex
+                              ""}}
+                        {move_name.lbl
+                           set_move_name
+                           ""}
+                        {paradiddle.anim set_frame 0}
+                        {if
+                           $icon_state
+                           {$icon_state set_frame kTexNone}}
+                        {all.grp set_showing FALSE}}}}})
+         (set_move_2
+            ($move $force_update)
+            {set
+               [cur_move]
+               $move}
+            {if
+               $force_update
+               {$this update_flashcard_move_2}})
+         (update_flashcard_move_2
+            {do
+               ($skip FALSE)
+               {if
+                  {&&
+                     $edit_mode
+                     {exists milo}
+                     {milo cur_dir}
+                     {'||'
+                        {==
+                           {milo cur_dir}
+                           $this}
+                        {==
+                           {milo cur_dir}
+                           {$this dir}}}}
+                  {set $skip TRUE}}
+               if
+               {[mystery]
+                  {set $skip TRUE}}
+               {if
+                  {! $skip}
+                  {if_else
+                     {!=
+                        [cur_move]
+                        ""}
+                     {do
+                        ($justify_anim
+                           {find_obj $this text_flip.anim})
+                        ($tex
+                           {[cur_move]
+                              get
+                              {if_else
+                                 [use_small_tex]
+                                 small_tex
+                                 tex}})
+                        {if
+                           {!
+                              [mystery]}
+                           {icon.mat set diffuse_tex $tex}}
+                        {icon_state.anim
+                           set_frame
+                           {[cur_move]
+                              get
+                              tex_state}}
+                        {if
+                           {&&
+                              $edit_mode
+                              {!=
+                                 {move_name.lbl get edit_text}
+                                 ""}}
+                           {move_name.lbl
+                              set
+                              edit_text
+                              ""}}
+                        {if
+                           {&&
+                              $justify_anim
+                              {>
+                                 [max_display_length]
+                                 0}}
+                           {if_else
+                              [right_justify]
+                              {$justify_anim
+                                 set_frame
+                                 {if_else
+                                    {<=
+                                       {move_name.lbl draw_rect_width}
+                                       [max_display_length]}
+                                    0
+                                    1}}
+                              {$justify_anim
+                                 set_frame
+                                 {if_else
+                                    {<=
+                                       {move_name.lbl draw_rect_width}
+                                       [max_display_length]}
+                                    1
+                                    0}}}}
+                        {all.grp
+                           set_showing
+                           {!=
+                              $tex
+                              ""}}}
+                     {do
+                        ($icon_state
+                           {$this find icon_state.anim FALSE})
+                        {if
+                           {!
+                              [mystery]}
+                           {icon.mat
+                              set
+                              diffuse_tex
+                              ""}}
+                        {if
+                           $icon_state
+                           {$icon_state set_frame kTexNone}}}}}})
+         (set_tagged
+            ($val)
+            {set
+               [tagged]
+               $val}
+            {$this update_flashcard_color})
+         (set_mystery
+            ($val)
+            {if
+               {!=
+                  [mystery]
+                  $val}
+               {if
+                  $val
+                  {{find_obj $this dance_pct.anim}
+                     set_frame
+                     0}}
+               {set
+                  [mystery]
+                  $val}
+               {if_else
+                  {== $val FALSE}
+                  {do
+                     ($tex
+                        {if_else
+                           [cur_move]
+                           {[cur_move]
+                              get
+                              tex}
+                           "neutral_pose.tex"})
+                     {move_name.lbl set_showing TRUE}
+                     {twirl.tp set_showing FALSE}
+                     {icon.mat set diffuse_tex $tex}}
+                  {do
+                     ($tex
+                        {if_else
+                           [cur_move]
+                           {[cur_move]
+                              get
+                              tex}
+                           "neutral_pose.tex"})
+                     {move_name.lbl set_showing FALSE}
+                     {twirl.tp set_params 31.4 0.5 0.0}
+                     {twirl.tp set_showing TRUE}
+                     {twirl.tp set input_texture $tex}
+                     {icon.mat set diffuse_tex shader_output.tex}}}})
+         (update_flashcard_color
+            {do
+               ($anim
+                  {find_obj $this player_color.anim})
+               {if
+                  $anim
+                  {$anim
+                     set_frame
+                     {if_else
+                        {==
+                           {hamprovider get gameplay_mode}
+                           holla_back}
+                        [color_index]
+                        {cond
+                           ({&&
+                                 {==
+                                    [campaign_status]
+                                    not_craze}
+                                 [tagged]}
+                              2)
+                           (TRUE
+                              [color_index])}}}}})
+         (activate
+            ($active)
+            {do
+               ($active_anim
+                  {find_obj $this activate.anim})
+               ($active_award
+                  {find_obj $this current_award})
+               ($persistent_award
+                  {find_obj $this persistent_award})
+               ($persistent_hide
+                  {find_obj $this hide_persistent.anim})
+               ($end_frame 0)
+               {if
+                  $active_anim
+                  {set
+                     $end_frame
+                     {$active_anim end_frame}}
+                  {if_else
+                     $active
+                     {$active_anim
+                        animate
+                        (range 0 $end_frame)}
+                     {$active_anim
+                        animate
+                        (dest 0)}}}
+               {if
+                  {! $active}
+                  {$this move_to $this TRUE}}
+               {if
+                  $active
+                  {if
+                     $active_award
+                     {$active_award set_showing TRUE}}}})
+         (set_award
+            ($award $play $persistent)
+            {do
+               ($award_display
+                  {$this
+                     find
+                     {if_else $persistent persistent_award current_award}})
+               ($award_select_anim
+                  {$award_display find setup.anim FALSE})
+               ($effect_anim
+                  {find_obj $award_display effect.anim})
+               {$award_display set_showing TRUE}
+               {if
+                  $award_select_anim
+                  {$award_select_anim set_frame $award}}
+               {if
+                  $effect_anim
+                  {if_else
+                     $play
+                     {$effect_anim animate}
+                     {$effect_anim
+                        set_frame
+                        {$effect_anim end_frame}}}}})
+         (get_award
+            ($persistent)
+            {do
+               ($award_display
+                  {$this
+                     find
+                     {if_else $persistent persistent_award current_award}})
+               ($award_select_anim
+                  {$award_display find setup.anim FALSE})
+               {$award_select_anim get frame}})
+         (retract_award
+            {do
+               ($effect_anim
+                  {find_obj $this current_award effect.anim})
+               {if
+                  $effect_anim
+                  {$effect_anim
+                     animate
+                     (dest 0)}}})
+         (replay_effect
+            {do
+               ($anim
+                  "")
+               {if_else
+                  {!=
+                     {$this get_award FALSE}
+                     kSkillsAward_Unplayed}
+                  {set
+                     $anim
+                     {find_obj $this current_award effect.anim}}
+                  {set
+                     $anim
+                     {find_obj $this persistent_award effect.anim}}}
+               {if
+                  {&&
+                     $anim
+                     {>
+                        {$anim frame}
+                        0}}
+                  {$anim animate}}})
+         (move_to
+            ($location_trans $animate)
+            {if
+               {&&
+                  {$this exists move_to.anim}
+                  {$this exists flash_card.grp}}
+               {do
+                  ($end
+                     {move_to.anim end_frame})
+                  {flash_card.grp set_trans_parent $location_trans TRUE}
+                  {move_to.anim stop_animation}
+                  {if_else
+                     {! $animate}
+                     {do
+                        {flash_card.grp set_local_rot_mat 1 0 0 0 1 0 0 0 1}
+                        {flash_card.grp set_local_pos 0 0 0}}
+                     {do
+                        {move_to.anim
+                           set_key
+                           flash_card.grp
+                           (scale)
+                           0}
+                        {move_to.anim
+                           set_key
+                           flash_card.grp
+                           (rotation)
+                           0}
+                        {move_to.anim
+                           set_key
+                           flash_card.grp
+                           (position)
+                           0}
+                        {if_else
+                           {== $location_trans $this}
+                           {do
+                              {move_to.anim
+                                 set_key_val
+                                 flash_card.grp
+                                 (scale)
+                                 480
+                                 (1 1 1)
+                                 TRUE}
+                              {move_to.anim
+                                 set_key_val
+                                 flash_card.grp
+                                 (rotation)
+                                 480
+                                 (0 0 0 1)
+                                 TRUE}
+                              {move_to.anim
+                                 set_key_val
+                                 flash_card.grp
+                                 (position)
+                                 480
+                                 (0 0 0)
+                                 TRUE}}
+                           {do
+                              {move_to.anim
+                                 set_key
+                                 flash_card.grp
+                                 (scale)
+                                 480}
+                              {move_to.anim
+                                 set_key
+                                 flash_card.grp
+                                 (rotation)
+                                 480}
+                              {move_to.anim
+                                 set_key
+                                 flash_card.grp
+                                 (position)
+                                 480}}}
+                        {move_to.anim animate}}}}})
+         (set_num_links
+            ($count)
+            {if
+               {$this exists link_bracket.anim}
+               {link_bracket.anim set_frame $count}})
+         (set_value
+            ($value)
+            {do
+               ($value_label
+                  {find_obj $this value.lbl})
+               ($new_move
+                  {find_obj $this new_move.flow})
+               {set
+                  [value]
+                  $value}
+               {set
+                  [scored]
+                  FALSE}
+               {if
+                  $value_label
+                  {$value_label
+                     set_int
+                     [value]}}
+               {if
+                  $new_move
+                  {$new_move activate}}})
+         (value_achieved
+            {do
+               ($award
+                  {find_obj $this award.flow})
+               {set
+                  [scored]
+                  TRUE}
+               {if
+                  $award
+                  {$award activate}}}))
+      (multiplier_meter
+         (editor
+            (channel1_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame channel1 from narrator audio"))
+            (channel2_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame channel2 from narrator audio"))
+            (average_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame average of channel1 and channel2"))
+            (multiply_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame multiplication of channel1 and channel2")))
+         (channel1_anim
+            "")
+         (channel2_anim
+            "")
+         (average_anim
+            "")
+         (multiply_anim
+            "")
+         (high_water_mark 0)
+         (channel_data
+            ($ch1 $ch2)
+            {set
+               [high_water_mark]
+               {max
+                  [high_water_mark]
+                  {max $ch1 $ch2}}}
+            {if
+               {>
+                  [high_water_mark]
+                  0}
+               {/=
+                  $ch1
+                  {'*'
+                     1.5
+                     [high_water_mark]}}
+               {/=
+                  $ch2
+                  {'*'
+                     1.5
+                     [high_water_mark]}}}
+            {if
+               [channel1_anim]
+               {[channel1_anim]
+                  set_frame
+                  $ch1}}
+            {if
+               [channel2_anim]
+               {[channel2_anim]
+                  set_frame
+                  $ch2}}
+            {if
+               [average_anim]
+               {[average_anim]
+                  set_frame
+                  {/
+                     {'+' $ch1 $ch2}
+                     2}}}
+            {if
+               [multiply_anim]
+               {[multiply_anim]
+                  set_frame
+                  {'*' $ch1 $ch2}}})
+         (enter
+            {set
+               [effmon_is_set]
+               FALSE}
+            {$this channel_data 0 0}
+            {$this hook_up_narrator})
+         (hook_up_effmon
+            ($effmon)
+            {if
+               $effmon
+               {$effmon
+                  add_sink
+                  $this
+                  (channel_data)}})
+         (effmon_is_set
+            "")
+         (hook_up_narrator
+            {if
+               {!
+                  [effmon_is_set]}
+               {do
+                  ($fx 0)
+                  {if
+                     {&&
+                        $hamdirector
+                        {$hamdirector get_world}}
+                     {set
+                        $fx
+                        {find_obj
+                           {$hamdirector get_world}
+                           hud
+                           sound_bank
+                           narrator_monitor.effmon}}}
+                  {if
+                     {&&
+                        {! $fx}
+                        {exists loading_panel}}
+                     {set
+                        $fx
+                        {loading_panel find narrator_monitor.effmon}}}
+                  {if
+                     $fx
+                     {$fx
+                        add_sink
+                        $this
+                        (channel_data)}
+                     {set
+                        [effmon_is_set]
+                        TRUE}}}}))
+      (score_star_display
+         (editor
+            (stars
+               (array
+                  object
+                  (class RndDir))
+               (help
+                  "Stars in the list"))
+            (cur_star
+               int
+               (range
+                  0
+                  {'+'
+                     {size
+                        [stars]}
+                     1})
+               (help
+                  "Current selected star for testing"))
+            (star_progress
+               float
+               (range 0 1)
+               (post_sync
+                  {$this
+                     set_star_progress
+                     [cur_star]
+                     [star_progress]})
+               (help
+                  "Star progress for testing"))
+            (star_complete
+               script
+               (script
+                  {$this
+                     set_star_complete
+                     [cur_star]}))
+            (reset
+               script
+               (script
+                  {$this reset})))
+         (stars
+            ())
+         (cur_star 0)
+         (star_progress 0)
+         (set_star_progress
+            ($index $progress)
+            {if
+               {&&
+                  {>= $index 0}
+                  {<
+                     $index
+                     {size
+                        [stars]}}}
+               {do
+                  ($anim
+                     {{elem
+                           [stars]
+                           $index}
+                        find
+                        "score.anim"
+                        FALSE})
+                  {if
+                     $anim
+                     {$anim
+                        set_frame
+                        {'*'
+                           $progress
+                           {$anim end_frame}}}}}})
+         (set_star_complete
+            ($index)
+            {if
+               {&&
+                  {>= $index 0}
+                  {<
+                     $index
+                     {size
+                        [stars]}}}
+               {do
+                  ($anim
+                     {{elem
+                           [stars]
+                           $index}
+                        find
+                        "award.anim"
+                        FALSE})
+                  {if
+                     $anim
+                     {$anim animate}}
+                  {$this set_star_progress $index 1}}}))
+      (skills_timeline
+         (editor
+            (flash_cards
+               (array
+                  object
+                  (class RndDir))
+               (help
+                  "All the flash cards we have to use"))
+            (num_moves
+               int
+               (range
+                  0
+                  {size
+                     [flash_cards]})
+               (post_sync
+                  {$this
+                     set_num_moves
+                     [num_moves]}))
+            (deactivate
+               script
+               (script
+                  {$this deactivate}))
+            (introduce_1
+               script
+               (script
+                  {$this test_introduce 1}))
+            (introduce_2
+               script
+               (script
+                  {$this test_introduce 2}))
+            (introduce_3
+               script
+               (script
+                  {$this test_introduce 3}))
+            (introduce_4
+               script
+               (script
+                  {$this test_introduce 4})))
+         (flash_cards
+            ())
+         (num_moves 1)
+         (flow_commands deactivate)
+         (set_num_moves
+            ($num_moves)
+            {do
+               ($setup_anim
+                  {$this find setup.anim FALSE})
+               {set
+                  [num_moves]
+                  $num_moves}
+               {if
+                  $setup_anim
+                  {$setup_anim
+                     set_frame
+                     [num_moves]}}
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [flash_cards]}
+                  {{elem
+                        [flash_cards]
+                        $i}
+                     set_showing
+                     {<
+                        $i
+                        [num_moves]}}}})
+         (clear_moves
+            {foreach
+               $flashcard
+               [flash_cards]
+               {$flashcard reset}}
+            {$this set_num_moves 0}
+            {$this deactivate})
+         (add_move
+            ($move $beat)
+            {if
+               {&&
+                  $move
+                  {<
+                     [num_moves]
+                     {-
+                        {size
+                           [flash_cards]}
+                        1}}}
+               {do
+                  ($flash_card
+                     {elem
+                        [flash_cards]
+                        [num_moves]})
+                  {$flash_card set_move $move TRUE}
+                  {$flash_card set beat $beat}
+                  {$this
+                     set_num_moves
+                     {'+'
+                        [num_moves]
+                        1}}}})
+         (deactivate
+            {$this show_tick_meter FALSE 0}
+            {do
+               ($active_group
+                  {$this find active.grp FALSE})
+               ($inactive_group
+                  {$this find main.grp FALSE})
+               {foreach
+                  $flashcard
+                  [flash_cards]
+                  {$flashcard activate FALSE}
+                  {if
+                     {&& $active_group $inactive_group}
+                     {$active_group remove_object $flashcard}
+                     {$inactive_group add_object $flashcard}}}})
+         (find_flashcard
+            ($beat)
+            {do
+               ($found
+                  "")
+               {foreach_int
+                  $i
+                  0
+                  [num_moves]
+                  {do
+                     ($flash_card
+                        {elem
+                           [flash_cards]
+                           $i})
+                     {if
+                        {==
+                           $beat
+                           {$flash_card get beat}}
+                        {set $found $flash_card}}}}
+               $found})
+         (set_active
+            ($beat $activate)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {$flash_card activate $activate}}})
+         (award
+            ($index)
+            {do
+               ($tick_anim
+                  {find_obj
+                     $this
+                     skillz_gate_meter
+                     {sprint
+                        "tick_"
+                        $index
+                        "_fire.anim"}})
+               {if
+                  $tick_anim
+                  {$tick_anim animate}}})
+         (set_move_award
+            ($beat $award $play $persistent)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {$flash_card set_award $award $play $persistent}
+                  {$flash_card
+                     set_award
+                     kSkillsAward_Unplayed
+                     FALSE
+                     {! $persistent}}}})
+         (transfer_award_to_persistent
+            ($beat)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {do
+                     ($award
+                        {$flash_card get_award FALSE})
+                     {if
+                        {!= $award kSkillsAward_Unplayed}
+                        {$flash_card set_award $award FALSE TRUE}
+                        {$flash_card set_award kSkillsAward_Unplayed FALSE FALSE}}}}})
+         (retract_move_award
+            ($beat)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {$flash_card retract_award}}})
+         (highlight_flashcard
+            ($beat)
+            {do
+               ($highlight
+                  {find_obj
+                     {$this find_flashcard $beat}
+                     highlight_result.anim})
+               {if
+                  $highlight
+                  {$highlight animate}}})
+         (highlight_awards
+            {foreach
+               $flash_card
+               [flash_cards]
+               {$flash_card replay_effect}})
+         (introduce
+            ($flashcard_beat $index $total)
+            {do
+               ($flash_card
+                  {$this find_flashcard $flashcard_beat})
+               ($trans
+                  {$this
+                     find
+                     {sprint
+                        "introduce_"
+                        $total
+                        "_move_"
+                        {'+' $index 1}
+                        ".trans"}
+                     FALSE})
+               ($active_group
+                  {$this find active.grp FALSE})
+               ($inactive_group
+                  {$this find main.grp FALSE})
+               {if
+                  {&& $flash_card $trans}
+                  {$flash_card move_to $trans TRUE}
+                  {if
+                     {&& $active_group $inactive_group}
+                     {$active_group add_object $flash_card}
+                     {$inactive_group remove_object $flash_card}}}
+               {$this reset_ticks}})
+         (show_tick_meter
+            ($show $beat_delay)
+            {do
+               ($anim
+                  {find_obj $this show_meter.anim})
+               {if
+                  $anim
+                  {if
+                     {&&
+                        $beat_delay
+                        {!
+                           {$anim is_animating}}}
+                     {$anim
+                        set_frame
+                        {if_else
+                           {>=
+                              {$anim frame}
+                              {/
+                                 {$anim end_frame}
+                                 2}}
+                           {'+'
+                              {$anim end_frame}
+                              {'*' $beat_delay 480}}
+                           {-
+                              0
+                              {'*' $beat_delay 480}}}}}
+                  {$anim
+                     animate
+                     (dest
+                        {if_else
+                           $show
+                           {$anim end_frame}
+                           0})}}})
+         (reset_ticks
+            {do
+               ($reset_ticks
+                  {find_obj $this skillz_gate_meter reset.flow})
+               {if
+                  $reset_ticks
+                  {$reset_ticks activate}}})
+         (test_introduce
+            ($count)
+            {foreach_int
+               $i
+               0
+               $count
+               {do
+                  ($flash_card
+                     {elem
+                        [flash_cards]
+                        $i})
+                  ($trans
+                     {$this
+                        find
+                        {sprint
+                           "introduce_"
+                           $count
+                           "_move_"
+                           {'+' $i 1}
+                           ".trans"}
+                        FALSE})
+                  {if
+                     $trans
+                     {$flash_card move_to $trans TRUE}}
+                  {$flash_card activate TRUE}}}))
+      (numbers_3D
+         (editor
+            (alignment
+               int
+               (list
+                  ("kMiddleRight"
+                     "kMiddleLeft"))
+               (post_sync
+                  {$this set_alignment_anim})
+               (refresh alignment_anim)))
+         (alignment_anim
+            "")
+         (alignment kMiddleRight proxy_save)
+         (enter
+            {$this set_alignment_anim})
+         (set_number
+            ($num)
+            {if
+               [alignment_anim]
+               {[alignment_anim]
+                  set_frame
+                  $num}})
+         (set_alignment_anim
+            {set
+               [alignment_anim]
+               {find_obj
+                  $this
+                  {switch
+                     [alignment]
+                     (kMiddleRight
+                        "right_justify.anim")
+                     (kMiddleLeft
+                        "left_justify.anim")}}}
+            {$this set_number 100}))
+      (player_hud_component
+         (player_index 0 proxy_save)
+         (side kSkeletonRight proxy_save)
+         (editor
+            (player_index
+               int
+               (help
+                  "player index to give feedback for (0 or 1)")
+               (range
+                  0
+                  {-
+                     {gamedata max_players}
+                     1}))
+            (side
+               int
+               (help
+                  "side of the screen")
+               (list
+                  ("kSkeletonLeft"
+                     "kSkeletonRight")))))
+      (challenge_mission_info
+         (flow_commands update_info)
+         (update_info
+            {do
+               ($gamertag
+                  {find_obj $this gamertag.lbl})
+               ($score
+                  {find_obj $this score.lbl})
+               {if
+                  {&&
+                     $gamertag
+                     {exists challenges}}
+                  {$gamertag
+                     set_prelocalized_string
+                     {challenges get_challenge_mission_gamertag}}}
+               {if
+                  {&&
+                     $score
+                     {exists challenges}}
+                  {$score
+                     set_int
+                     {challenges get_challenge_mission_score}
+                     TRUE}}}))
+      (challenge_target_info
+         (player_index 0 proxy_save)
+         (side kSkeletonRight proxy_save)
+         (editor
+            (player_index
+               int
+               (help
+                  "player index to give feedback for (0 or 1)")
+               (range
+                  0
+                  {-
+                     {gamedata max_players}
+                     1}))
+            (side
+               int
+               (help
+                  "side of the screen")
+               (list
+                  ("kSkeletonLeft"
+                     "kSkeletonRight"))))
+         (flow_commands play_sfx_score_pass play_sfx_explosion play_fanfare_mission_accomplished play_vo_next play_vo_this_is_it play_vo_last_one)
+         (play_sfx_score_pass
+            {handle
+               (hamprovider challenge_play_sfx_score_pass)})
+         (play_sfx_explosion
+            {handle
+               (hamprovider challenge_play_sfx_explosion)})
+         (play_fanfare_mission_accomplished
+            {handle
+               (hamprovider challenge_play_fanfare_mission_accomplished)})
+         (play_vo_next
+            {handle
+               (hamprovider challenge_play_vo_next)})
+         (play_vo_this_is_it
+            {handle
+               (hamprovider challenge_play_vo_this_is_it)})
+         (play_vo_last_one
+            {handle
+               (hamprovider challenge_play_vo_last_one)}))
+      (challenge_score
+         (flow_commands
+            (update_score
+               (editor
+                  (score
+                     float
+                     (help
+                        "The score amount.")))
+               (score 0.0)))
+         (update_score
+            ($score)
+            {score.lbl
+               set_int
+               {int $score}
+               TRUE}))
+      (point_chase_hud
+         (point_curve 0.0)
+         (editor
+            (point_curve
+               float
+               (range 0 1))))
+      (bustamove_column
+         (side kSkeletonRight proxy_save)
+         (editor
+            (side
+               int
+               (help
+                  "side of the screen")
+               (list
+                  ("kSkeletonLeft"
+                     "kSkeletonRight")))))
+      (point_chase_column
+         (move
+            "")
+         (move_variant
+            "")
+         (move_start -1)
+         (last_measure -1)
+         (value 0)
+         (gold FALSE)
+         (breaking FALSE)
+         (streaking FALSE)
+         (completed
+            (FALSE FALSE))
+         (max_send 10000)
+         (sent 0)
+         (editor
+            (gold bool)
+            (breaking bool)
+            (streaking bool)
+            (max_send int)
+            (sent int))
+         (init
+            ($last_measure)
+            {set
+               [last_measure]
+               $last_measure}
+            {$this update_feedback 0 0}
+            {$this update_feedback 1 0}
+            {set
+               [gold]
+               FALSE}
+            {do
+               ($mult_lbl
+                  {find_obj $this goldtext.lbl})
+               {if
+                  $mult_lbl
+                  {$mult_lbl set_token_fmt multiplier_fmt 2}}}
+            {set
+               [completed]
+               {array 0}}
+            {foreach_int
+               $i
+               0
+               {gamedata max_players}
+               {push_back
+                  [completed]
+                  FALSE}})
+         (update_feedback
+            ($i $results)
+            {do
+               ($provider
+                  {gamedata getp $i provider})
+               ($bar_anim_name
+                  {switch
+                     {$provider get side}
+                     (kSkeletonRight
+                        "bar_right.anim")
+                     (kSkeletonLeft
+                        "bar_left.anim")
+                     ""})
+               ($tri_anim_name
+                  {switch
+                     {$provider get side}
+                     (kSkeletonRight
+                        "tri_right.anim")
+                     (kSkeletonLeft
+                        "tri_left.anim")
+                     ""})
+               ($bar_anim
+                  {find_obj $this $bar_anim_name})
+               ($tri_anim
+                  {find_obj $this $tri_anim_name})
+               {if
+                  $bar_anim
+                  {$bar_anim set_frame 0}}
+               {if
+                  $tri_anim
+                  {$tri_anim
+                     animate
+                     (dest $results)}}})
+         (win
+            ($player)
+            {if_else
+               {&&
+                  {hamprovider get is_in_party_mode}
+                  {==
+                     {player_provider_1 get side}
+                     0}}
+               {do
+                  ($win_flow
+                     {find_obj
+                        $this
+                        {sprint
+                           "win_"
+                           {- 1 $player}
+                           ".flow"}})
+                  {set_elem
+                     [completed]
+                     $player
+                     TRUE}
+                  {if
+                     $win_flow
+                     {$win_flow activate}}}
+               {do
+                  ($win_flow
+                     {find_obj
+                        $this
+                        {sprint
+                           "win_"
+                           $player
+                           ".flow"}})
+                  {set_elem
+                     [completed]
+                     $player
+                     TRUE}
+                  {if
+                     $win_flow
+                     {$win_flow activate}}}})
+         (send_next_card
+            ($move)
+            {if
+               {<
+                  [sent]
+                  [max_send]}
+               {'++'
+                  [sent]}
+               {do
+                  ($send_flow
+                     {find_obj
+                        $this
+                        "send_card.flow"})
+                  ($stop
+                     {find_obj
+                        $this
+                        "stop.flow"})
+                  {set
+                     [move]
+                     $move}
+                  {$this setup_static_flashcard}
+                  {if_else
+                     [move]
+                     {if
+                        $send_flow
+                        {$send_flow activate}}
+                     {if
+                        $stop
+                        {$stop activate}}}}})
+         (setup_static_flashcard
+            {if
+               [move]
+               {do
+                  ($tex
+                     {[move]
+                        get
+                        tex})
+                  {icon.mat set diffuse_tex $tex}
+                  {icon_state.anim
+                     set_frame
+                     {[move]
+                        get
+                        tex_state}}
+                  {if
+                     {&&
+                        $edit_mode
+                        {!=
+                           {move_name.lbl get edit_text}
+                           ""}}
+                     {move_name.lbl
+                        set
+                        edit_text
+                        ""}}
+                  {paradiddle.anim
+                     set_frame
+                     {[move]
+                        get
+                        paradiddle}}
+                  {move_name.lbl
+                     set_move_name
+                     [move]}}})
+         (update
+            ($measure_offset $move_start_minus_one $move_start_minus_two)
+            {if
+               {>
+                  $measure_offset
+                  [last_measure]}
+               {print
+                  "$measure_offset = "
+                  $measure_offset
+                  " [last_measure] = "
+                  [last_measure]
+                  "\n"}
+               {set
+                  [move]
+                  ""}}
+            {if
+               {&&
+                  [move]
+                  {== $measure_offset $move_start_minus_two}}
+               {$this
+                  send_next_card
+                  [move]}}
+            {if
+               {&&
+                  [move]
+                  {== $measure_offset $move_start_minus_one}}
+               {$this setup_iconman}}
+            {if
+               {&&
+                  {!
+                     [move]}
+                  {<
+                     [sent]
+                     [max_send]}}
+               {do
+                  ($stop
+                     {find_obj
+                        $this
+                        "stop.flow"})
+                  {if
+                     $stop
+                     {$stop activate}}}})
+         (setup_iconman
+            {if_else
+               [move_variant]
+               {do
+                  ($iconman
+                     {find_obj
+                        $this
+                        "iconman.iconman"})
+                  ($char_clip
+                     {movemgr
+                        get_char_clip
+                        [move_variant]})
+                  {$iconman set char_clip $char_clip}}
+               {do
+                  ($song_anim
+                     {$hamdirector difficulty_song_anim kDifficultyExpert})
+                  ($frame_beat 0)
+                  ($iconman
+                     {find_obj
+                        $this
+                        "iconman.iconman"})
+                  ($done FALSE)
+                  {$song_anim
+                     foreach_keyframe
+                     $hamdirector
+                     (move)
+                     $frame
+                     $value
+                     {if
+                        {&&
+                           {! $done}
+                           {==
+                              {[move]
+                                 get
+                                 name}
+                              $value}
+                           $iconman}
+                        {print
+                           ", move="
+                           {[move]
+                              get
+                              name}}
+                        {set
+                           $frame_beat
+                           {seconds_to_beat
+                              {/ $frame 30}}}
+                        {$iconman set start_beat $frame_beat}
+                        {$iconman
+                           set
+                           end_beat
+                           {'+' $frame_beat 4}}
+                        {set $done TRUE}}}
+                  {print
+                     "\n"}}})
+         (set_value
+            ($value)
+            {set
+               [value]
+               $value}
+            {do
+               ($value_lbl
+                  {find_obj
+                     $this
+                     "value.lbl"})
+               {if
+                  $value_lbl
+                  {$value_lbl
+                     set_int
+                     [value]
+                     TRUE}}}))
+      (routine_sequence_hud
+         (vertical FALSE)
+         (num_display 8)
+         (editor
+            (vertical
+               bool
+               (help
+                  "sets display to vertical or horizontal"))
+            (num_display
+               int
+               (help
+                  "sets the number of visible flashcards (editor only)"))
+            (refresh
+               script
+               (script
+                  {$this refresh})))
+         (init)
+         (set_vertical
+            ($is_vertical)
+            {set
+               [vertical]
+               $is_vertical}
+            {$this refresh})
+         (set_num_display
+            ($num)
+            {set
+               [num_display]
+               $num}
+            {$this refresh})
+         (refresh
+            {set $card_count 0}
+            {set
+               $flashcards
+               {{find_obj
+                     $this
+                     "flashcards.grp"}
+                  get_group_children}}
+            {foreach
+               $flashcard
+               $flashcards
+               {if_else
+                  {<
+                     $card_count
+                     [num_display]}
+                  {$flashcard set_showing TRUE}
+                  {$flashcard set_showing FALSE}}
+               {'++' $card_count}})
+         (set_sequence_display_showing
+            ($showing)
+            {{find_obj
+                  $this
+                  "flashcards.grp"}
+               set_showing
+               $showing})
+         (do_mode_start
+            {{find_obj
+                  {find_obj
+                     $this
+                     "routine_sequence_title_card"}
+                  "mode_start.flow"}
+               activate})
+         (do_new_pattern
+            ($pattern_name)
+            {do
+               ($panel)
+               ($label)
+               {set
+                  $panel
+                  {find_obj
+                     $this
+                     "routine_sequence_title_card"}}
+               {{find_obj
+                     $panel
+                     "new_pattern.flow"}
+                  activate}
+               {set
+                  $label
+                  {find_obj
+                     $panel
+                     "new_pattern_body.lbl"}}
+               {$label set_prelocalized_string $pattern_name}})
+         (do_move_selector
+            {{find_obj
+                  {find_obj
+                     $this
+                     "routine_sequence_title_card"}
+                  "move_selector.flow"}
+               activate})
+         (do_move_recap
+            {print
+               "hud_objects:do_move_recap\n"}
+            {{find_obj
+                  {find_obj
+                     $this
+                     "routine_sequence_title_card"}
+                  "move_recap.flow"}
+               activate})
+         (do_end_pattern
+            ($pattern_name)
+            {do
+               ($panel)
+               ($label)
+               {set
+                  $panel
+                  {find_obj
+                     $this
+                     "routine_sequence_title_card"}}
+               {{find_obj
+                     $panel
+                     "end_pattern.flow"}
+                  activate}
+               {set
+                  $label
+                  {find_obj
+                     $panel
+                     "end_pattern_body.lbl"}}
+               {$label set_prelocalized_string $pattern_name}})
+         (do_end_routine
+            {{find_obj
+                  {find_obj
+                     $this
+                     "routine_sequence_title_card"}
+                  "end_routine.flow"}
+               activate}))
+      (twelve_card_hud
+         (some_value 0.0)
+         (genre 0)
+         (number_of_cards 12)
+         (max_cascade_moves 4)
+         (title_token
+            {symbol ntd_title})
+         (editor
+            (some_value
+               float
+               (range 0.0 1.0))
+            (genre
+               int
+               range
+               (0 7))
+            (number_of_cards
+               int
+               range
+               (0 16))
+            (max_cascade_moves
+               int
+               range
+               (1 16))
+            (title_token symbol)
+            (test_stuff
+               script
+               (script
+                  {$this do_test_stuff 1}
+                  {$this do_test_stuff 10}
+                  {$this do_test_stuff 100})))
+         (do_test_stuff
+            ($input_var)
+            {do
+               ($local_vars
+                  ())
+               ($i 0)
+               ($var
+                  "")
+               {push_back $local_vars $input_var}
+               {print
+                  "var list start\n"}
+               {foreach
+                  $var
+                  $local_vars
+                  {print
+                     "var"
+                     $i
+                     "="
+                     $var
+                     "\n"}
+                  {'++' $i}}
+               {print
+                  "var list end\n"}}))
+      (status_card
+         (editor
+            (push_name_test_anim
+               script
+               (script
+                  {$this push_name_anim angel}))
+            (push_name_at_anim_start
+               script
+               (script
+                  {$this push_name_at_anim_start angel})))
+         (flow_commands animate_titles)
+         (push_name_anim
+            ($name)
+            {print
+               "push_name_anim "
+               $name
+               "\n"}
+            {oldest_title.lbl
+               set
+               text_token
+               {previous_title.lbl get text_token}}
+            {previous_title.lbl
+               set
+               text_token
+               {current_title.lbl get text_token}}
+            {current_title.lbl set text_token $name}
+            {cycle_titles.anim animate})
+         (push_name_at_anim_start
+            ($name)
+            {print
+               "push_name_at_anim_start "
+               $name
+               "\n"}
+            {oldest_title.lbl
+               set
+               text_token
+               {previous_title.lbl get text_token}}
+            {previous_title.lbl
+               set
+               text_token
+               {current_title.lbl get text_token}}
+            {current_title.lbl set text_token $name}
+            {cycle_titles.anim
+               set_frame
+               {cycle_titles.anim get start_frame}})
+         (push_name_at_anim_end
+            ($name)
+            {print
+               "push_name_at_anim_end "
+               $name
+               "\n"}
+            {oldest_title.lbl
+               set
+               text_token
+               {previous_title.lbl get text_token}}
+            {previous_title.lbl
+               set
+               text_token
+               {current_title.lbl get text_token}}
+            {current_title.lbl set text_token $name}
+            {cycle_titles.anim
+               set_frame
+               {cycle_titles.anim get end_frame}})
+         (animate_titles
+            {print
+               "status_card animate_titles\n"}
+            {cycle_titles.anim animate})
+         (clear_titles
+            {oldest_title.lbl
+               set_prelocalized_string
+               ""}
+            {previous_title.lbl
+               set_prelocalized_string
+               ""}
+            {current_title.lbl
+               set_prelocalized_string
+               ""})
+         (set_photo
+            ($player_index)
+            {ui apply_texture_clip photo.mat $player_index})
+         (set_color_side
+            ($side)
+            {switch
+               $side
+               (-1
+                  {color_blue.flow activate})
+               (0
+                  {color_gray.flow activate})
+               (1
+                  {color_red.flow activate})})
+         (set_color_rank
+            ($rank)
+            {switch
+               $rank
+               (1
+                  {color_gold.anim animate})
+               (2)
+               (3
+                  {color_bronze.anim animate})}))
+      (bar_timer
+         (time_scale 1.0 proxy_save)
+         (flow_commands start_marcos start_camera start_hidden reset stop hide)
+         (editor
+            (time_scale
+               float
+               (help
+                  "Scale"))
+            (test_marcos_anim
+               script
+               (script
+                  {$this start_marcos}))
+            (test_camera_anim
+               script
+               (script
+                  {$this start_camera}))
+            (test_hide_anim
+               script
+               (script
+                  {$this hide}))
+            (test_reset
+               script
+               (script
+                  {$this reset}))
+            (test_stop
+               script
+               (script
+                  {$this stop})))
+         (hide
+            {timerBar_Fill.mat set alpha 0.0}
+            {timerBar_Frame.mat set alpha 0.0}
+            {timerBar_MarcosIcon.mat set alpha 0.0}
+            {timerBar_CameraIcon.mat set alpha 0.0}
+            {timerBar_Fill.anim set frame 0.0}
+            {timerBar_Fill.anim stop_animation}
+            {timerBar_Fill_no_sound.anim set frame 0.0}
+            {timerBar_Fill_no_sound.anim stop_animation})
+         (start_hidden
+            {timerBar_Fill.mat set alpha 0.0}
+            {timerBar_Frame.mat set alpha 0.0}
+            {timerBar_MarcosIcon.mat set alpha 0.0}
+            {timerBar_CameraIcon.mat set alpha 0.0}
+            {timerBar_Fill_no_sound.anim set frame 0.0}
+            {timerBar_Fill_no_sound.anim
+               animate
+               (period
+                  [time_scale])})
+         (start_marcos
+            {timerBar_Fill.mat set alpha 1.0}
+            {timerBar_Frame.mat set alpha 1.0}
+            {timerBar_MarcosIcon.mat set alpha 1.0}
+            {timerBar_CameraIcon.mat set alpha 0.0}
+            {timerBar_Fill_no_sound.anim set frame 0.0}
+            {timerBar_Fill_no_sound.anim
+               animate
+               (period
+                  [time_scale])})
+         (start_camera
+            {timerBar_Fill.mat set alpha 1.0}
+            {timerBar_Frame.mat set alpha 1.0}
+            {timerBar_MarcosIcon.mat set alpha 0.0}
+            {timerBar_CameraIcon.mat set alpha 1.0}
+            {timerBar_Fill.anim set frame 0.0}
+            {timerBar_Fill.anim
+               animate
+               (period
+                  [time_scale])})
+         (reset
+            {timerBar_Fill.anim stop_animation}
+            {timerBar_Fill.anim set frame 0.0}
+            {timerBar_Fill_no_sound.anim stop_animation}
+            {timerBar_Fill_no_sound.anim set frame 0.0})
+         (stop
+            {timerBar_Fill.anim stop_animation}
+            {timerBar_Fill_no_sound.anim stop_animation})
+         (is_done
+            {set
+               $is_done
+               {<
+                  {$this time_left}
+                  0.1}}
+            $is_done)
+         (is_started
+            {set $is_started FALSE}
+            {set
+               $curr_anim
+               {$this get_anim}}
+            {if
+               $curr_anim
+               {set
+                  $is_started
+                  {'||'
+                     {$curr_anim is_animating}
+                     {>
+                        {$curr_anim frame}
+                        {$curr_anim start_frame}}}}}
+            $is_started)
+         (time_left
+            {set
+               $time
+               [time_scale]}
+            {set
+               $curr_anim
+               {$this get_anim}}
+            {if
+               $curr_anim
+               {set
+                  $time
+                  {'*'
+                     {/
+                        {-
+                           {$curr_anim end_frame}
+                           {$curr_anim frame}}
+                        {$curr_anim end_frame}}
+                     [time_scale]}}}
+            $time)
+         (get_anim
+            {set $ret ''}
+            {if
+               {'||'
+                  {timerBar_Fill.anim is_animating}
+                  {>
+                     {timerBar_Fill.anim get frame}
+                     {timerBar_Fill.anim start_frame}}}
+               {set $ret timerBar_Fill.anim}}
+            {if
+               {'||'
+                  {timerBar_Fill_no_sound.anim is_animating}
+                  {>
+                     {timerBar_Fill_no_sound.anim get frame}
+                     {timerBar_Fill_no_sound.anim start_frame}}}
+               {set $ret timerBar_Fill_no_sound.anim}}
+            $ret))
+      (standings_meter
+         (fill_amt 0.0)
+         (prev_fill_amt 0.0)
+         (editor
+            (fill_amt
+               float
+               (help
+                  "FOR TEST"))
+            (prev_fill_amt
+               float
+               (help
+                  "FOR TEST")))
+         (set_crew
+            ($crew))
+         (set_colors
+            ($color1 $color2)
+            {arrow.mat set color $color1}
+            {fore.mat set color $color1}
+            {back.mat set color $color2})
+         (animate
+            {reveal.flow activate})
+         (set_fill_amt
+            ($amt)
+            {set
+               [prev_fill_amt]
+               [fill_amt]}
+            {set
+               [fill_amt]
+               $amt})
+         (set_meter_frame
+            ($frame)
+            {reveal.anim set_frame $frame})
+         (set_just_won
+            ($won)
+            {print
+               $this
+               " just won? "
+               $won
+               "\n"}
+            {if_else
+               $won
+               {just_won.flow activate}
+               {just_lost.flow activate}}))
+      (game_mode_icon
+         (flow_commands
+            (set_mode
+               (editor
+                  (mode
+                     symbol
+                     (help
+                        "mode symbol")))
+               (mode perform))
+            show_small)
+         (set_mode
+            ($mode)
+            {set
+               $mode_tex
+               {sprint
+                  $mode
+                  ".tex"}}
+            {if
+               {exists $mode_tex}
+               {icon.mat set diffuse_tex $mode_tex}}
+            {set
+               $mode_tex
+               {sprint
+                  $mode
+                  "_sml.tex"}}
+            {if
+               {exists $mode_tex}
+               {icon_sml.mat set diffuse_tex $mode_tex}})
+         (show
+            {play_enter_anim.flow activate})
+         (show_small
+            {play_enter_sml_anim.flow activate})
+         (show_small_faded
+            {play_enter_sml_faded_anim.flow activate})
+         (hide
+            {play_exit_anim.flow activate})
+         (hide_small
+            {play_exit_sml_anim.flow activate})
+         (bump
+            {bump.anim animate}))
+      #include practice_options.dta))
+(Object
+   (types
+      (music_speed_controller
+         (speed 1.0)
+         (editor
+            (speed
+               float
+               (range 0 1.0)
+               (interp_handlers update_speed)
+               (help
+                  "Animates the song speed")))
+         (update_speed
+            ($a $b $r)
+            {if
+               {exists audio}
+               {audio
+                  set
+                  speed
+                  {'+'
+                     $a
+                     {'*'
+                        $r
+                        {- $b $a}}}}}))
+      (minimarcos_anim_parameters
+         (period 1.0)
+         (num_beats 4.0)
+         (offset_time 0.375)
+         (editor
+            (period float)
+            (num_beats float)
+            (offset_time float)))
+      (drum_track_controller
+         (editor
+            (enable_drum_track
+               script
+               (script
+                  {$this enable_drum_track}))
+            (disable_drum_track
+               script
+               (script
+                  {$this disable_drum_track})))
+         (flow_commands
+            (enable_drum_track)
+            (disable_drum_track))
+         (enable_drum_track
+            {print
+               "enable_drum_track\n"}
+            {if
+               midi_player
+               {midi_player set active TRUE}})
+         (disable_drum_track
+            {print
+               "disable_drum_track\n"}
+            {if
+               midi_player
+               {midi_player set active FALSE}}))))

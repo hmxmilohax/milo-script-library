@@ -1,0 +1,185 @@
+#define STARTGAME_PANEL_COMMON
+((enter
+      {diff.lbl
+         set
+         text_token
+         {meta_performer get_difficulty_sym}}
+      {if
+         {!
+            {$this allow_venue_select}}
+         {if
+            {exists select_venue.btn}
+            {$this disable select_venue.btn}}
+         {if
+            {exists select_character.btn}
+            {$this disable select_character.btn}}
+         {shell_input update_button_zones}}
+      {dancer.lbl
+         set_token_fmt
+         song_dancer
+         {meta_performer get_character_no_outfit}}
+      {venue.lbl
+         set_token_fmt
+         song_venue
+         {meta_performer get_venue}}
+      {tip.lbl set_random_tip}
+      {handle
+         ($this set_up)}
+      {song_info_panel
+         set_mode_label
+         {cond
+            ({gamemode in_mode perform}
+               perform)
+            ({gamemode in_mode practice}
+               practice)
+            ({gamemode in_mode multiplayer}
+               multiplayer)}})
+   (SELECT_MSG
+      {switch
+         $component
+         (play.btn
+            {if_else
+               {profile_mgr has_seen_current_mode_tutorial}
+               {enter_gameplay}
+               {enter_tutorial FALSE}})
+         (select_venue.btn
+            {ui goto_screen venue_select_screen})
+         (select_character.btn
+            {character_select_panel set top_index -1}
+            {ui goto_screen character_select_screen})
+         (fitness_mode.btn
+            {if_else
+               {meta_performer get_fitness_mode}
+               {ui goto_screen fitness_disable_confirm_screen}
+               {ui goto_screen weight_input_screen}})
+         (no_flashcards.btn
+            {if_else
+               {$this is_no_flashcards_unlocked}
+               {do
+                  {meta_performer
+                     use_no_flashcards
+                     {!
+                        {meta_performer is_no_flashcards_active}}}
+                  {$this update_checks}}
+               {do
+                  {shell_input skip_current_select_anim}
+                  {locked_content_panel
+                     set_up_no_flashcards
+                     {meta_performer song}
+                     {meta_performer get_difficulty}}
+                  {ui push_screen locked_content_screen}}})
+         (back.btn
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})
+   (allow_venue_select
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {user_mgr get_active_user}})
+         {if_else
+            {meta_performer is_endgame_song}
+            FALSE
+            TRUE}}))
+{new
+   HamPanel
+   startgame_panel
+   (file
+      "startgame.milo")
+   (focus play.btn)
+   (show_back_button TRUE)
+   STARTGAME_PANEL_COMMON
+   (set_up
+      {$this update_checks}
+      {best_score.lbl
+         set_best_score
+         {song_mgr
+            get_song_id
+            {meta_performer song}}})
+   (update_checks
+      {fitness_mode_check.lbl
+         set_checked
+         {meta_performer get_fitness_mode}}
+      {if_else
+         {$this is_no_flashcards_unlocked}
+         {do
+            {no_flashcards_check.lbl
+               set_checked
+               {meta_performer is_no_flashcards_active}}
+            {no_flashcards_icon.lbl
+               set
+               showing
+               {meta_performer is_no_flashcards_active}}}
+         {do
+            {no_flashcards_check.lbl set_locked TRUE}
+            {no_flashcards_icon.lbl set showing FALSE}}})
+   (is_no_flashcards_unlocked
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {user_mgr get_active_user}})
+         {$profile
+            is_no_flashcards_unlocked
+            {meta_performer song}
+            {meta_performer get_difficulty}}})}
+{new
+   HamScreen
+   startgame_screen
+   (panels meta background_panel startgame_panel song_info_panel)
+   (focus startgame_panel)
+   (back
+      {gamemode get seldiff_screen})}
+{new
+   HamPanel
+   startgame_practice_panel
+   (file
+      "startgame_practice.milo")
+   (focus play.btn)
+   (show_back_button TRUE)
+   STARTGAME_PANEL_COMMON}
+{new
+   HamScreen
+   startgame_practice_screen
+   (panels meta background_panel startgame_practice_panel song_info_panel)
+   (focus startgame_practice_panel)
+   (back
+      {gamemode get seldiff_screen})}
+{new
+   HamPanel
+   startgame_multiplayer_panel
+   (file
+      "startgame_multiplayer.milo")
+   (focus play.btn)
+   (show_back_button TRUE)
+   STARTGAME_PANEL_COMMON
+   (set_up
+      {diff_player2.lbl
+         set
+         text_token
+         {meta_performer get_secondary_difficulty_sym}})}
+{new
+   HamScreen
+   startgame_multiplayer_screen
+   (panels meta background_panel startgame_multiplayer_panel song_info_panel)
+   (focus startgame_multiplayer_panel)
+   (back
+      {gamemode get seldiff_screen})}
+{new
+   HamScreen
+   fitness_disable_confirm_screen
+   (panels meta background_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno fitness_disableconfirm})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {meta_performer set_fitness_mode FALSE}
+            {ui goto_screen startgame_screen})
+         (opt2.btn
+            {ui goto_screen startgame_screen})})}

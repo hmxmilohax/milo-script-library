@@ -1,0 +1,123 @@
+{new
+   CalibrationPanel
+   calibration_panel
+   (file
+      "calibration.milo")
+   (focus song_button_01.sbt)
+   (show_back_button TRUE)
+   (chosen_offset 0)
+   (enter
+      {right_hand.hbs set_provider calibration_offset_provider}
+      {meta music_stop}
+      {set
+         [chosen_offset]
+         {profile_mgr get_song_to_taskmgr_ms_raw}}
+      {do
+         ($focus_index
+            {int
+               {/
+                  [chosen_offset]
+                  10}})
+         {if
+            {!= $focus_index -1}
+            {right_hand.hbs scroll_to_index $focus_index}
+            {shell_input set_focus_if_controller_mode song_button_01.sbt}}})
+   (exit
+      {profile_mgr
+         set_song_to_taskmgr_ms
+         [chosen_offset]}
+      {meta music_start})
+   (SELECT_MSG
+      {switch
+         $component
+         (song_button_01.sbt
+            {$this select_offset $component})
+         (song_button_02.sbt
+            {$this select_offset $component})
+         (song_button_03.sbt
+            {$this select_offset $component})
+         (song_button_04.sbt
+            {$this select_offset $component})
+         (back.btn
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})
+   (select_offset
+      ($button)
+      {do
+         ($index
+            {right_hand.hbs list_index_for_button $button})
+         ($offset
+            {calibration_offset_provider get_offset $index})
+         {set
+            [chosen_offset]
+            $offset}
+         {profile_mgr set_song_to_taskmgr_ms $offset}
+         {right_hand.hbs update_list}})
+   (preview_offset
+      ($button)
+      {if
+         {&&
+            {!= $button song_button_down.sbt}
+            {!= $button song_button_up.sbt}}
+         {do
+            ($index
+               {right_hand.hbs list_index_for_button $button})
+            ($offset
+               {calibration_offset_provider get_offset $index})
+            {profile_mgr set_song_to_taskmgr_ms $offset}}})
+   (stop_preview
+      {profile_mgr
+         set_song_to_taskmgr_ms
+         [chosen_offset]})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {==
+               {{$this loaded_dir}
+                  get
+                  focus_component}
+               song_button_01.sbt}
+            {== $action kAction_Up}}
+         {right_hand.hbs scroll_up}}
+      {if
+         {&&
+            {==
+               {{$this loaded_dir}
+                  get
+                  focus_component}
+               song_button_04.sbt}
+            {== $action kAction_Down}}
+         {right_hand.hbs scroll_down}}
+      kDataUnhandled)
+   (FOCUS_MSG
+      {$this highlight_changed $new_focus})
+   (HIGHLIGHT_CHANGED_MSG
+      {if
+         {!
+            {ui in_transition}}
+         {switch
+            $component
+            (song_button_01.sbt
+               {$this preview_offset $component})
+            (song_button_02.sbt
+               {$this preview_offset $component})
+            (song_button_03.sbt
+               {$this preview_offset $component})
+            (song_button_04.sbt
+               {$this preview_offset $component})
+            (song_button_up.sbt
+               {$this preview_offset $component})
+            (song_button_down.sbt
+               {$this preview_offset $component})
+            (back.btn)
+            {$this stop_preview}}})}
+{new
+   HamScreen
+   calibration_screen
+   (panels meta background_panel calibration_panel)
+   (focus calibration_panel)
+   (back options_screen)
+   (scroll_sfx FALSE)}

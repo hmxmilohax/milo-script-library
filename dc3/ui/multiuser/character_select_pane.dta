@@ -1,0 +1,195 @@
+{new
+   Object
+   character_select_pane
+   (next_pane '')
+   (back_pane '')
+   (enter
+      ($side)
+      {multiuser_panel
+         set_provider
+         $side
+         {multiuser_panel get_char_provider $side}}
+      {multiuser_panel set_list_dir $side list_character}
+      {do
+         ($index
+            {multiuser_panel get_character_index $side})
+         {multiuser_panel set_selection $side $index}})
+   (exit
+      ($side)
+      {multiuser_panel update_player $side})
+   (refresh
+      ($side)
+      {do
+         ($index
+            {multiuser_panel get_selection_index $side})
+         ($character
+            {multiuser_panel get_character $index $side})
+         {multiuser_panel
+            set_player_character
+            $side
+            $character
+            {character_outfit $character 0}}}
+      {multiuser_panel enable_list $side})
+   (highlight
+      ($side $name $index)
+      {multiuser_panel
+         set_player_character
+         $side
+         $name
+         {character_outfit $name 0}})
+   (select
+      ($side $name $index)
+      {switch
+         $name
+         (back
+            {multiuser_panel
+               set_pending_pane
+               $side
+               [back_pane]})
+         (character_default
+            {$this on_select_default})
+         (character_default_title
+            {$this on_select_default})
+         {do
+            {if_else
+               {profile_mgr is_content_unlocked $name}
+               {if_else
+                  {multiuser_panel is_character_available $name $side}
+                  {do
+                     {multiuser_panel
+                        set_character
+                        $name
+                        {multiuser_panel get_player_index $side}}
+                     {multiuser_panel update_providers}
+                     {multiuser_panel refresh_lists}
+                     {if
+                        {profile_mgr has_active_profile}
+                        {{profile_mgr get_active_profile}
+                           mark_content_not_new
+                           $name}}
+                     {if_else
+                        {>
+                           {num_character_outfits $name}
+                           1}
+                        {multiuser_panel set_pending_pane $side outfit_select_pane}
+                        {multiuser_panel set_pending_pane $side startgame_pane}}}
+                  {do
+                     {multiuser_panel handle_invalid_select}
+                     skip_select_anim_and_sound}}
+               {do
+                  {locked_pane set_asset $side $name}
+                  {locked_pane set_back_pane $side character_select_pane}
+                  {multiuser_panel set_pending_pane $side locked_pane}}}}})
+   (on_select_default
+      {multiuser_panel set_default_character $side}
+      {multiuser_panel update_providers}
+      {multiuser_panel refresh_lists}
+      {multiuser_panel refresh_ui}
+      {multiuser_panel set_pending_pane $side startgame_pane})
+   (get_voice_command_index
+      ($command $side)
+      {switch
+         $command
+         (default
+            {set $character_select_index 0})
+         {do
+            {set
+               $character_select_index
+               {multiuser_panel get_voice_command_index $command $side}}}}
+      $character_select_index)
+   (get_speech_rule
+      {set $rule character_select_screen}
+      $rule)
+   (get_voice_context
+      {set $context character_select_screen}
+      $context)}
+{new
+   Object
+   outfit_select_pane
+   (enter
+      ($side)
+      {multiuser_panel set_list_dir $side list_asset}
+      {multiuser_panel
+         set_provider
+         $side
+         {multiuser_panel get_outfit_provider $side}}
+      {do
+         ($index
+            {multiuser_panel get_outfit_index $side})
+         {multiuser_panel set_selection $side $index}})
+   (exit
+      ($side)
+      {multiuser_panel update_player $side})
+   (refresh
+      ($side)
+      {multiuser_panel update_providers}
+      {do
+         ($player_index
+            {multiuser_panel get_player_index $side})
+         ($character
+            {$this character $player_index})
+         ($index
+            {multiuser_panel get_selection_index $side})
+         ($outfit
+            {multiuser_panel get_outfit $index $side})
+         {multiuser_panel set_player_character $side $character $outfit}}
+      {multiuser_panel enable_list $side})
+   (highlight
+      ($side $name $index)
+      {do
+         ($player_index
+            {multiuser_panel get_player_index $side})
+         ($character
+            {$this character $player_index})
+         ($outfit
+            {multiuser_panel get_outfit $index $side})
+         {multiuser_panel set_player_character $side $character $outfit}})
+   (select
+      ($side $name $outfit_index)
+      {switch
+         $name
+         (back
+            {multiuser_panel set_pending_pane $side character_select_pane})
+         {do
+            ($player_index
+               {multiuser_panel get_player_index $side})
+            ($outfit_token
+               {multiuser_panel get_outfit $outfit_index $side})
+            {if_else
+               {profile_mgr is_content_unlocked $outfit_token}
+               {do
+                  {multiuser_panel
+                     set_outfit
+                     $outfit_token
+                     {multiuser_panel get_player_index $side}}
+                  {if
+                     {profile_mgr has_active_profile}
+                     {{profile_mgr get_active_profile}
+                        mark_content_not_new
+                        $outfit_token}}
+                  {$this update_status $outfit_idx}
+                  {multiuser_panel set_pending_pane $side startgame_pane}}
+               {do
+                  {locked_pane set_asset $side $name}
+                  {locked_pane set_back_pane $side outfit_select_pane}
+                  {multiuser_panel set_pending_pane $side locked_pane}}}}})
+   (get_voice_command_index
+      ($command $side)
+      {set
+         $command
+         {multiuser_panel get_voice_command_outfit_tag $side $command}}
+      {set
+         $outfit_pane_index
+         {multiuser_panel get_voice_command_index $command $side}}
+      $outfit_pane_index)
+   (get_speech_rule
+      {set $rule outfit_select_screen}
+      $rule)
+   (get_voice_context
+      {set $context outfit_select_screen}
+      $context)
+   (character
+      ($player_index)
+      {gamedata getp $player_index character})
+   (update_status
+      ($outfit_idx))}

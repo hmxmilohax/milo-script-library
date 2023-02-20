@@ -1,0 +1,153 @@
+{new
+   HamPanel
+   practice_endgame_panel
+   (file
+      "practice_endgame.milo")
+   (focus right_hand.hnl)
+   (show_hand_help FALSE)
+   (is_running FALSE)
+   (allow_voice_control
+      {!
+         {gamemode in_mode campaign}})
+   (load
+      {$this set is_running FALSE})
+   (enter
+      {hamprovider set ui_nav_mode results}
+      {meta_performer calculate_practice_results}
+      {$this set_results}
+      ENDGAME_PANEL_COMMON_ENTER
+      {meta_performer add_sink $this}
+      {if
+         {meta_performer last_played_mode}
+         {gamemode
+            set_mode
+            {meta_performer last_played_mode}}}
+      {results.flow activate}
+      {$this set is_running TRUE}
+      {set
+         $just_practiced_song
+         {gamedata get song}}
+      {provider.hnp
+         set_enabled
+         focus_on_failed
+         {meta_performer failed_any_practice_moves}}
+      {provider_campaign.hnp
+         set_enabled
+         focus_on_failed
+         {meta_performer failed_any_practice_moves}}
+      {if
+         {exists gesture_mgr}
+         {gesture_mgr set_identification_enabled TRUE}}
+      {meta_performer handle_song_practiced}
+      {hamprovider set voice_commander_tip_lower TRUE})
+   (poll
+      {if
+         [is_running]
+         {if
+            {!
+               {results.flow is_running}}
+            {$this set is_running FALSE}
+            {saveload_mgr autosave}}})
+   (exit
+      {meta music_stop}
+      {meta_performer remove_sink $this})
+   (set_results
+      {song.lbl
+         set_song_name
+         {gamedata get song}}
+      {difficulty.lbl
+         set
+         text_token
+         {difficulty_to_sym
+            {gamedata
+               getp
+               {hamprovider get ui_nav_player}
+               difficulty}}}
+      {learn_moves_passed.lbl
+         set_token_fmt
+         practiceresults_learn_moves_passed
+         {'+'
+            {meta_performer get_learn_moves_passed_count}
+            {meta_performer get_learn_moves_fastlaned_count}}
+         {meta_performer get_learn_moves_total}}
+      {passed_count.lbl
+         set_int
+         {meta_performer get_learn_moves_passed_count}
+         FALSE}
+      {fastlaned_count.lbl
+         set_int
+         {meta_performer get_learn_moves_fastlaned_count}
+         FALSE}
+      {learn_score.lbl
+         set_token_fmt
+         practiceresults_learn_score
+         {meta_performer get_practice_learn_score}}
+      {review_moves_passed.lbl
+         set_token_fmt
+         practiceresults_review_moves_passed
+         {meta_performer get_review_moves_passed_count}
+         {meta_performer get_review_moves_total}}
+      {review_score.lbl
+         set_token_fmt
+         practiceresults_review_score
+         {meta_performer get_practice_review_score}}
+      {overall_score.lbl
+         set_token_fmt
+         practiceresults_overall_score
+         {meta_performer get_practice_overall_score}}
+      {results.ep
+         set
+         high_score
+         {meta_performer got_moves_passed_best}})
+   (on_restart
+      {meta_performer restart}
+      {game_restart})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (pausecommand_restart
+            {$this on_restart})
+         (perform
+            {{ui current_screen}
+               handle_perform_selected})
+         (dancebattle
+            {{ui current_screen}
+               handle_dancebattle_selected})
+         (focus_on_failed
+            {gamemode set_mode practice}
+            {set $auto_select_practice_moves TRUE}
+            {ui pop_screen practice_choose_screen})
+         (new_song
+            {ui pop_screen meta_loading_continue_screen})})
+   (set_provider
+      ($provider)
+      {right_hand.hnl set_provider $provider})}
+{new
+   HamScreen
+   practice_endgame_screen
+   (panels meta_game background_panel practice_endgame_panel)
+   (focus practice_endgame_panel)
+   (enter
+      {practice_endgame_panel
+         set_provider
+         {practice_endgame_panel find provider.hnp}})
+   (handle_perform_selected
+      {gamemode set_mode perform}
+      {if_else
+         {game_panel is_game_over}
+         {do
+            {meta_performer restart}
+            {game_restart}}
+         {game_panel end_game kRestart}})}
+{new
+   HamScreen
+   campaign_practice_endgame_screen
+   (panels meta_game background_panel practice_endgame_panel)
+   (focus practice_endgame_panel)
+   (enter
+      {practice_endgame_panel
+         set_provider
+         {practice_endgame_panel find provider_campaign.hnp}})
+   (handle_perform_selected
+      {gamemode set_mode campaign_perform}
+      {practice_endgame_panel on_restart})}

@@ -1,0 +1,310 @@
+#define NAV_TUTORIAL_DELAY_SECONDS
+(7.5)
+{new TitleProvider title_provider}
+{new
+   HamPanel
+   title_panel
+   (file
+      "title.milo")
+   (show_hand_help FALSE)
+   (focus right_hand.hnl)
+   (pending_show_kinect_tuner FALSE)
+   (back_token natal_troubleshooter)
+   (tertiary_token title_screen_about)
+   (enter
+      {hamprovider set ui_nav_mode title}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)}
+      {set
+         [pending_show_kinect_tuner]
+         FALSE}
+      {$this refresh}
+      {speech_mgr begin_recognition TRUE}
+      {voice_input_panel activate_voice_context title_screen})
+   (refresh
+      {title_provider
+         update_list
+         {ui show_dev_menu}}
+      {right_hand.hnl set_provider title_provider})
+   (exit
+      {platform_mgr remove_sink $this ui_changed}
+      {hamprovider set ui_nav_mode shell})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (NAV_SELECT_MSG
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               title_screen}}
+         {print
+            "main_menu NAV_SELECT_MSG : "
+            $name
+            "\n"}
+         {switch
+            $name
+            (title_screen_menu
+               {skeleton_identifier set_up_initial_profiles}
+               {set $post_load_dest_screen main_screen}
+               {ui goto_screen wait_main_after_saveload_screen})
+            (title_screen_about
+               {ui goto_screen about_screen})
+            (start_the_party
+               {partymode_mgr set_custom_party FALSE}
+               {skeleton_identifier set_up_initial_profiles}
+               {wait_main_after_saveload_screen set go_to_party TRUE}
+               {ui goto_screen wait_main_after_saveload_screen})
+            (natal_troubleshooter
+               {platform_mgr show_controller_required $this})}})
+   (controller_req_op_complete
+      ($success)
+      {if
+         {== $success TRUE}
+         {if_else
+            {platform_mgr is_guide_showing}
+            {set
+               [pending_show_kinect_tuner]
+               TRUE}
+            {$this show_kinect_tuner}}})
+   (show_kinect_tuner
+      {gesture_mgr show_gesture_troubleshooter})
+   (UI_CHANGED_MSG
+      {if
+         [pending_show_kinect_tuner]
+         {set
+            [pending_show_kinect_tuner]
+            FALSE}
+         {$this show_kinect_tuner}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         ((kAction_Cancel)
+            {platform_mgr show_controller_required $this})
+         kDataUnhandled})}
+{new
+   HamPanel
+   tutorial_nav_panel
+   (file
+      "../tutorial/tutorial_nav.milo")}
+{new
+   HamPanel
+   empty_postproc_panel
+   (file
+      "empty_postproc.milo")}
+{new
+   HamScreen
+   title_screen
+   (panels background_panel title_panel tutorial_nav_panel meta)
+   (focus title_panel)
+   (handle_global_commands TRUE)
+   (check_for_nag FALSE)
+   (always_nag FALSE)
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (title_screen_about
+            {helpbar select_left_list_item 0})
+         (natal_troubleshooter
+            {helpbar select_left_list_item 1})
+         {title_panel select_right_list_token $command}})
+   (on_global_voice_command
+      ($command)
+      {switch
+         $command
+         (hidden_global_main
+            {title_panel select_right_list_token title_screen_menu})
+         (hidden_global_start_the_party
+            {title_panel select_right_list_token start_the_party})
+         {on_global_voice_command $command}})}
+{new
+   HamScreen
+   title_screen_to_voice_control_tutorial_screen
+   (panels meta background_panel title_panel tutorial_nav_panel)
+   (enter
+      {enter_tutorial tutorial_voice_control_screen_0 FALSE})}
+{new
+   HamPanel
+   wait_for_saveload_panel
+   (is_waiting TRUE)
+   (enter
+      {set
+         [is_waiting]
+         TRUE})
+   (poll
+      {if
+         {&&
+            {==
+               [is_waiting]
+               TRUE}
+            {!
+               {ui in_transition}}
+            {saveload_mgr is_idle}}
+         {set
+            [is_waiting]
+            FALSE}
+         {{ui current_screen}
+            saveload_complete}})}
+{new
+   HamScreen
+   wait_check_signin_after_saveload_screen
+   (panels meta background_panel empty_postproc_panel wait_for_saveload_panel)
+   (focus wait_for_saveload_panel)
+   (saveload_complete
+      {ui goto_screen check_signin_screen})}
+{new
+   HamScreen
+   wait_main_after_saveload_screen
+   (panels meta background_panel empty_postproc_panel wait_for_saveload_panel title_panel tutorial_nav_panel)
+   (focus wait_for_saveload_panel)
+   (go_to_party FALSE)
+   (enter
+      {saveload_mgr activate})
+   (exit
+      {set
+         [go_to_party]
+         FALSE})
+   (saveload_complete
+      {content_mgr start_refresh}
+      {if
+         {== $post_load_dest_screen main_screen}
+         {cond
+            ({&&
+                  {!
+                     {profile_mgr get_disable_voice}}
+                  {!
+                     {profile_mgr has_seen_tutorial kTutorialVoiceControl}}}
+               {tutorial_voice_control_screen_4 set next_screen $post_load_dest_screen}
+               {set $post_load_dest_screen title_screen_to_voice_control_tutorial_screen})
+            ({title_screen get always_nag}
+               {if
+                  {profile_mgr has_active_profile}
+                  {set
+                     $active_profile
+                     {profile_mgr get_active_profile}}
+                  {set
+                     $post_load_dest_screen
+                     {$active_profile nag}}})
+            (TRUE
+               {if
+                  {title_screen get check_for_nag}
+                  {if
+                     {profile_mgr has_active_profile}
+                     {set
+                        $active_profile
+                        {profile_mgr get_active_profile}}
+                     {$active_profile update_nag}
+                     {if
+                        {$active_profile needs_to_be_nagged}
+                        {set
+                           $post_load_dest_screen
+                           {$active_profile nag}}}}
+                  {title_screen set check_for_nag FALSE}})}}
+      {if_else
+         {profile_mgr get_disable_voice}
+         {speech_mgr set_recognizing FALSE}
+         {speech_mgr set_recognizing TRUE}}
+      {if_else
+         [go_to_party]
+         {do
+            {meta music_start}
+            {enter_party_screen main_screen}}
+         {ui goto_screen $post_load_dest_screen}})}
+{new
+   HamScreen
+   unlock_all_screen
+   (panels meta background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok unlock_all_description TRUE}
+      {meta unlock_all})
+   (NAV_SELECT_MSG
+      {ui goto_screen main_screen})}
+{new
+   HamScreen
+   unlock_classic1_screen
+   (panels meta background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {if_else
+         {>
+            {profile_mgr get_num_valid_profiles}
+            0}
+         {do
+            {dialog_panel set_ok unlock_classic1_description TRUE}
+            {meta unlock_classic award_classic_outfit01}
+            {synth run_flow cheat_unlock.flow}}
+         {do
+            {dialog_panel set_ok unlock_classic_description_error TRUE}}})
+   (NAV_SELECT_MSG
+      {ui goto_screen options_gameplay_screen})}
+{new
+   HamScreen
+   unlock_classic2_screen
+   (panels meta background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {if_else
+         {>
+            {profile_mgr get_num_valid_profiles}
+            0}
+         {do
+            {dialog_panel set_ok unlock_classic2_description TRUE}
+            {meta unlock_classic award_classic_outfit02}
+            {synth run_flow cheat_unlock.flow}}
+         {do
+            {dialog_panel set_ok unlock_classic_description_error TRUE}}})
+   (NAV_SELECT_MSG
+      {ui goto_screen options_gameplay_screen})}
+{new
+   HamScreen
+   unlock_classic3_screen
+   (panels meta background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {if_else
+         {>
+            {profile_mgr get_num_valid_profiles}
+            0}
+         {do
+            {dialog_panel set_ok unlock_classic3_description TRUE}
+            {meta unlock_classic award_classic_outfit03}
+            {synth run_flow cheat_unlock.flow}}
+         {do
+            {dialog_panel set_ok unlock_classic_description_error TRUE}}})
+   (NAV_SELECT_MSG
+      {ui goto_screen options_gameplay_screen})}
+{new
+   HamScreen
+   unlock_classic4_screen
+   (panels meta background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {if_else
+         {>
+            {profile_mgr get_num_valid_profiles}
+            0}
+         {do
+            {dialog_panel set_ok unlock_classic4_description TRUE}
+            {meta unlock_classic award_classic_outfit04}
+            {synth run_flow cheat_unlock.flow}}
+         {do
+            {dialog_panel set_ok unlock_classic_description_error TRUE}}})
+   (NAV_SELECT_MSG
+      {ui goto_screen options_gameplay_screen})}
+{new
+   HamPanel
+   augmented_photo_test_panel
+   (file
+      "augmented_photo_test_screen.milo")}
+{new
+   HamScreen
+   augmented_photo_test_screen
+   (panels meta background_panel augmented_photo_test_panel)
+   (focus augmented_photo_test_panel)
+   (enter
+      {gesture_mgr set_identification_enabled FALSE})}

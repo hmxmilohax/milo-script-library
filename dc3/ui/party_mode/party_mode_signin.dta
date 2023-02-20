@@ -1,0 +1,1347 @@
+#define NUM_PHOTOS
+(8)
+#define LEFT_CREW
+(crew04)
+#define RIGHT_CREW
+(crew01)
+#define DB_TOP
+(155.0)
+#define DB_BOT
+(-161.0)
+#define DB_LFT
+(-215.0)
+#define DB_RIT
+(215.0)
+{func
+   crew_throwdown_skip_step
+   {set
+      $current_screen_focus_panel
+      {{ui current_screen}
+         focus_panel}}
+   {cond
+      ({== $current_screen_focus_panel party_mode_new_crew_select_panel}
+         {party_mode_new_crew_select_panel finalize_crew})
+      ({== $current_screen_focus_panel party_mode_continue_panel}
+         {party_mode_signin_panel skip_cheat})
+      ({== $current_screen_focus_panel party_mode_hub_panel}
+         {party_mode_hub_panel on_high_five})
+      ({== $current_screen_focus_panel infinite_party_hub_panel}
+         {infinite_party_hub_panel on_high_five})
+      ({== $current_screen_focus_panel infinite_party_skip_nextsong_panel}
+         {infinite_party_hub_panel on_high_five})}}
+{new
+   HamPanel
+   party_mode_photos_panel
+   (file
+      "party_mode_photos.milo")
+   (enter
+      {foreach_int
+         $i
+         1
+         {'+' NUM_PHOTOS 1}
+         {$this hide_photo $i}})
+   (hide_photo
+      ($idx)
+      {do
+         ($photo_mat)
+         ($photo_mesh)
+         {set
+            $photo_mesh
+            {find_obj
+               {$this loaded_dir}
+               {sprint
+                  "p"
+                  $idx
+                  ".mesh"}}}
+         {if
+            $photo_mesh
+            {$photo_mesh set_showing FALSE}}
+         {set
+            $photo_mesh
+            {find_obj
+               {$this loaded_dir}
+               {sprint
+                  "p"
+                  $idx
+                  "_flash.mesh"}}}
+         {if
+            $photo_mesh
+            {$photo_mesh set_showing FALSE}}})
+   (draw_photo
+      ($idx)
+      {do
+         ($photo_mat)
+         ($photo_mesh)
+         {set
+            $photo_mat
+            {find_obj
+               {$this loaded_dir}
+               {sprint
+                  "p"
+                  $idx
+                  ".mat"}}}
+         {set
+            $photo_mesh
+            {find_obj
+               {$this loaded_dir}
+               {sprint
+                  "p"
+                  $idx
+                  ".mesh"}}}
+         {ui
+            apply_texture_clip
+            $photo_mat
+            {- $idx 1}}
+         {$photo_mesh set_showing TRUE}
+         {set
+            $photo_mesh
+            {find_obj
+               {$this loaded_dir}
+               {sprint
+                  "p"
+                  $idx
+                  "_flash.mesh"}}}
+         {if
+            $photo_mesh
+            {$photo_mesh set_showing TRUE}}})
+   (take_pictures
+      {flash.flow activate})}
+{new
+   HamPanel
+   party_mode_continue_panel
+   (file
+      "../low_button.milo")
+   (focus right_hand.hnl)
+   (helpbar_confirm_label yes)
+   (show_hand_help FALSE)
+   (is_enabled TRUE)
+   (allow_voice_control FALSE)
+   (callback_panel 0)
+   (back_token no)
+   (hide_letterbox FALSE)
+   (allow_doubleuser_swipe TRUE)
+   (disable
+      {set
+         [is_enabled]
+         FALSE}
+      {set
+         [hide_helpbar]
+         TRUE}
+      {set
+         [helpbar_allow_controller]
+         FALSE}
+      {hamprovider set ui_nav_mode shell_4p}
+      {hamprovider set sided_colors_locked TRUE}
+      {right_hand.hnl set showing FALSE}
+      {helpbar resync})
+   (enable
+      {set
+         [is_enabled]
+         TRUE}
+      {set
+         [hide_helpbar]
+         FALSE}
+      {set
+         [helpbar_allow_controller]
+         TRUE}
+      {hamprovider set ui_nav_mode shell}
+      {hamprovider set sided_colors_locked FALSE}
+      {right_hand.hnl
+         set
+         showing
+         {!
+            {shell_input in_controller_mode}}}
+      {right_hand.hnl set_provider provider_ok.hnp}
+      {helpbar resync})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         ((kAction_Cancel)
+            {if
+               {&&
+                  {right_hand.hnl get showing}
+                  [callback_panel]}
+               {do
+                  ($temp_callback_panel
+                     [callback_panel])
+                  {set
+                     [callback_panel]
+                     0}
+                  {$this disable}
+                  {$temp_callback_panel
+                     continue_panel_callback
+                     [back_token]}}})
+         kDataUnhandled})
+   (NAV_SELECT_MSG
+      {if
+         [callback_panel]
+         {do
+            ($temp_callback_panel
+               [callback_panel])
+            {set
+               [callback_panel]
+               0}
+            {$this disable}
+            {$temp_callback_panel continue_panel_callback $name}}})
+   (controller_mode_entered
+      {right_hand.hnl set showing FALSE})
+   (controller_mode_exited
+      {if
+         [is_enabled]
+         {right_hand.hnl set showing TRUE}})}
+{new
+   HamPanel
+   party_mode_signin_panel
+   (file
+      "party_mode_signin.milo")
+   (hide_helpbar TRUE)
+   (helpbar_allow_controller FALSE)
+   (back_token no)
+   (hide_letterbox FALSE)
+   (allow_doubleuser_swipe TRUE)
+   (allow_voice_control FALSE)
+   (skeleton_hand_up
+      (FALSE FALSE FALSE FALSE FALSE FALSE))
+   (new_skeleton_hand_up
+      (FALSE FALSE FALSE FALSE FALSE FALSE))
+   (prev_hands_up 0)
+   (curr_hands_up 0)
+   (prev_frames_claimed 0)
+   (curr_frames_claimed 0)
+   (prev_blobs_detected 0)
+   (curr_blobs_detected 0)
+   (timer 6.0)
+   (timer_int 6)
+   (enrollment_time 6.0)
+   (picture_time 6.0)
+   (picture_taken FALSE)
+   (pictures_taken 0)
+   (photo_queue
+      ())
+   (player_queue
+      ())
+   (photo_developing -1)
+   (enrolled_so_far 0)
+   (depth_display_left 0)
+   (depth_display_right 0)
+   (idle_vo_timer IDLE_VO_TIME)
+   (cur_team 0)
+   (moving_on FALSE)
+   (frames_claimed_increased FALSE)
+   (frames_claimed_changed FALSE)
+   (blobs_detected_changed FALSE)
+   (show_confirmation_options_timer_is_on FALSE)
+   {show_confirmation_options_timer 0.0}
+   (enter
+      {print
+         "party_mode_signin_panel: <"
+         {$hamdirector camera_source}
+         "> \n"}
+      {$this hide_frame 0}
+      {$this hide_frame 1}
+      {$this hide_frame 2}
+      {$this hide_frame 3}
+      {$this hide_frame 4}
+      {$this hide_frame 5}
+      {set
+         $depth_left
+         {cursor_panel find depth_buffer_left.grp}}
+      {set
+         $depth_right
+         {cursor_panel find depth_buffer_right.grp}}
+      {set
+         [depth_display_left]
+         {$depth_left showing}}
+      {set
+         [depth_display_right]
+         {$depth_right showing}}
+      {print
+         "[depth_display_left] = "
+         [depth_display_left]
+         "\n"}
+      {print
+         "[depth_display_right] = "
+         [depth_display_right]
+         "\n"}
+      {$this reset}
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 1}}
+         {do
+            {print
+               "party_mode_signin_panel enter- left team signing in\n"}
+            {set
+               [cur_team]
+               1}
+            {prompt_team_1_step_up.flow activate}
+            {StreamRendererColor.sr
+               set_crew_photo_horizontal_color
+               {partymode_mgr get_left_crew_color_1}}
+            {StreamRendererColor.sr
+               set_crew_photo_vertical_color
+               {partymode_mgr get_left_crew_color_2}}
+            {crewLogo.mat
+               set
+               diffuse_tex
+               {sprint
+                  {partymode_mgr get_left_team_crew}
+                  "_logo.tex"}}
+            {ribbons_purple_l.mesh set_showing FALSE}
+            {ribbons_purple_r.mesh set_showing FALSE}
+            {ribbons_blue_l.mesh set_showing TRUE}
+            {ribbons_blue_r.mesh set_showing FALSE}}
+         {do
+            {print
+               "party_mode_signin_panel enter- right team signing in\n"}
+            {set
+               [cur_team]
+               2}
+            {prompt_team_2_step_up.flow activate}
+            {StreamRendererColor.sr
+               set_crew_photo_horizontal_color
+               {partymode_mgr get_right_crew_color_1}}
+            {StreamRendererColor.sr
+               set_crew_photo_vertical_color
+               {partymode_mgr get_right_crew_color_2}}
+            {crewLogo.mat
+               set
+               diffuse_tex
+               {sprint
+                  {partymode_mgr get_right_team_crew}
+                  "_logo.tex"}}
+            {ribbons_purple_l.mesh set_showing FALSE}
+            {ribbons_purple_r.mesh set_showing TRUE}
+            {ribbons_blue_l.mesh set_showing FALSE}
+            {ribbons_blue_r.mesh set_showing FALSE}}}
+      {voice_input_panel activate_voice_context ''})
+   (exit
+      {$depth_left
+         set_showing
+         [depth_display_left]}
+      {$depth_right
+         set_showing
+         [depth_display_right]})
+   (reset
+      {set
+         [prev_hands_up]
+         0}
+      {set
+         [curr_hands_up]
+         0}
+      {set
+         [prev_frames_claimed]
+         0}
+      {set
+         [curr_frames_claimed]
+         0}
+      {set
+         [prev_blobs_detected]
+         0}
+      {set
+         [curr_blobs_detected]
+         0}
+      {set
+         [picture_taken]
+         FALSE}
+      {set
+         [photo_developing]
+         -1}
+      {set
+         [photo_queue]
+         ()}
+      {set
+         [player_queue]
+         ()}
+      {skeleton_chooser lock_enrollment FALSE}
+      {set
+         [enrolled_so_far]
+         {partymode_mgr num_enrolled}}
+      {hamprovider set ui_nav_mode shell_4p}
+      {set
+         [helpbar_allow_controller]
+         FALSE}
+      {helpbar resync}
+      {foreach_int
+         $i
+         0
+         {size
+            [skeleton_hand_up]}
+         {set_elem
+            [skeleton_hand_up]
+            $i
+            FALSE}}
+      {$depth_left set_showing FALSE}
+      {$depth_right set_showing FALSE}
+      {set
+         [idle_vo_time]
+         IDLE_VO_TIME}
+      {$this show_confirmation_options FALSE}
+      {set
+         [moving_on]
+         FALSE})
+   (frame_positions
+      ((0 0 0 0 0)
+         (0 0 0 0 0)
+         (0 0 0 0 0)
+         (0 0 0 0 0)
+         (0 0 0 0 0)
+         (0 0 0 0 0)))
+   SELECT_RIGHT_LIST_TOKEN
+   (poll
+      SLIDE_RIGHT_LIST_ITEM
+      {if
+         [show_confirmation_options_timer_is_on]
+         {-=
+            [show_confirmation_options_timer]
+            {taskmgr ui_delta_seconds}}
+         {if
+            {<
+               [show_confirmation_options_timer]
+               0.0}
+            {$this show_confirmation_options TRUE}
+            {set
+               [show_confirmation_options_timer_is_on]
+               FALSE}}}
+      {StreamRendererColor.sr set_crew_photo_player_centers}
+      {$this poll_frames_claimed}
+      {cond
+         ([picture_taken])
+         ({!
+               {$this is_prompt_flow_running}}
+            {if_else
+               {!
+                  {skeleton_chooser is_enrollment_locked}}
+               {do
+                  {$this poll_enrollment}
+                  {$this draw_frames}}
+               {if
+                  {&&
+                     {!
+                        [picture_taken]}
+                     {!
+                        {show_timer_camera_1.flow is_running}}
+                     {!
+                        {show_timer_camera_2.flow is_running}}}
+                  {do
+                     {$this countdown_to_picture}
+                     {if
+                        {!
+                           [picture_taken]}
+                        {$this draw_frames}}}}}
+            {if
+               {==
+                  [curr_frames_claimed]
+                  0}
+               {-=
+                  [idle_vo_time]
+                  {taskmgr ui_delta_seconds}}
+               {if
+                  {<
+                     [idle_vo_time]
+                     0.0}
+                  {play_idle.flow activate}
+                  {set
+                     [idle_vo_time]
+                     IDLE_VO_TIME}}})})
+   (is_prompt_flow_running
+      {'||'
+         {prompt_team_1_step_up.flow is_running}
+         {prompt_team_2_step_up.flow is_running}
+         {flash.flow is_running}
+         {retake_team_1.flow is_running}
+         {retake_team_2.flow is_running}})
+   (poll_frames_claimed
+      {set
+         [prev_hands_up]
+         [curr_hands_up]}
+      {set
+         [curr_hands_up]
+         0}
+      {set
+         [prev_frames_claimed]
+         [curr_frames_claimed]}
+      {set
+         [curr_frames_claimed]
+         0}
+      {set
+         [prev_blobs_detected]
+         [curr_blobs_detected]}
+      {set
+         [curr_blobs_detected]
+         0}
+      {foreach_int
+         $skel
+         0
+         {size
+            [skeleton_hand_up]}
+         {set
+            $hand_up
+            {skeleton_chooser check_hand_raised $skel}}
+         {if_else
+            {elem
+               [skeleton_hand_up]
+               $skel}
+            {do
+               {set_elem
+                  [new_skeleton_hand_up]
+                  $skel
+                  FALSE}
+               {if
+                  {!
+                     {skeleton_chooser is_skeleton_valid $skel}}
+                  {set_elem
+                     [skeleton_hand_up]
+                     $skel
+                     FALSE}}}
+            {do
+               {if
+                  {<
+                     [prev_frames_claimed]
+                     4}
+                  {do
+                     {set_elem
+                        [skeleton_hand_up]
+                        $skel
+                        $hand_up}
+                     {set_elem
+                        [new_skeleton_hand_up]
+                        $skel
+                        $hand_up}}}}}
+         {if
+            $hand_up
+            {'++'
+               [curr_hands_up]}}
+         {if
+            {elem
+               [skeleton_hand_up]
+               $skel}
+            {'++'
+               [curr_frames_claimed]}}
+         {if
+            {skeleton_chooser is_skeleton_valid $skel}
+            {'++'
+               [curr_blobs_detected]}}
+         {StreamRendererColor.sr
+            set_crew_photo_player_detected
+            $skel
+            {elem
+               [skeleton_hand_up]
+               $skel}}}
+      {if
+         {>
+            [curr_frames_claimed]
+            [prev_frames_claimed]}
+         {set
+            [frames_claimed_increased]
+            TRUE}}
+      {if
+         {!=
+            [prev_frames_claimed]
+            [curr_frames_claimed]}
+         {set
+            [frames_claimed_changed]
+            TRUE}}
+      {if
+         {!=
+            [prev_blobs_detected]
+            [curr_blobs_detected]}
+         {set
+            [blobs_detected_changed]
+            TRUE}})
+   (poll_enrollment
+      {do
+         {if_else
+            {<=
+               [curr_frames_claimed]
+               0}
+            {sign_in_label.lbl set text_token partymode_title_sign_in}
+            {if_else
+               {>
+                  [timer_int]
+                  2}
+               {sign_in_label.lbl set text_token partymode_enroll_anyone_else}
+               {sign_in_label.lbl set text_token partymode_enroll_last_chance}}}
+         {$this set_frame_positions_from_skeletons}
+         {if
+            [frames_claimed_increased]
+            {new_player.flow activate}
+            {set
+               [frames_claimed_increased]
+               FALSE}}
+         {if_else
+            {>
+               [curr_frames_claimed]
+               0}
+            {do
+               {if
+                  [frames_claimed_changed]
+                  {show_timer_marcos.flow activate}}
+               {set
+                  [timer_int]
+                  {int
+                     {timer time_left}}}
+               {$this
+                  set_time
+                  [timer_int]}
+               {if
+                  {<
+                     {timer time_left}
+                     0.1}
+                  {skeleton_chooser lock_enrollment TRUE}
+                  {sign_in_label.lbl set text_token partymode_enroll_strike_pose}
+                  {print
+                     "[cur_team] = "
+                     [cur_team]
+                     "\n"}
+                  {cond
+                     ({==
+                           [cur_team]
+                           1}
+                        {show_timer_camera_1.flow activate})
+                     ({==
+                           [cur_team]
+                           2}
+                        {show_timer_camera_2.flow activate})
+                     (TRUE
+                        {show_timer_camera.flow activate})}}
+               {if
+                  [blobs_detected_changed]
+                  {show_timer_marcos.flow activate}
+                  {set
+                     [blobs_detected_changed]
+                     FALSE}}}
+            {do
+               {hide_timer.flow activate}}}
+         {if
+            [frames_claimed_changed]
+            {$this
+               activate_anyone_else_flow
+               [curr_frames_claimed]}}
+         {if
+            [frames_claimed_changed]
+            {set
+               [frames_claimed_changed]
+               FALSE}}})
+   (activate_anyone_else_flow
+      ($num_present)
+      {switch
+         $num_present
+         (0
+            {play_raise_hand.flow activate})
+         (1
+            {play_anyone_else1.flow activate})
+         (2
+            {play_anyone_else2.flow activate})
+         (3
+            {play_anyone_else3.flow activate})
+         (4
+            {play_anyone_else4.flow activate})})
+   (countdown_to_picture
+      {set $hand_up_count 0}
+      {foreach_int
+         $skel
+         0
+         {size
+            [skeleton_hand_up]}
+         {if
+            {elem
+               [skeleton_hand_up]
+               $skel}
+            {'++' $hand_up_count}}}
+      {if_else
+         {> $hand_up_count 0}
+         {do
+            ($prev_timer_int
+               [timer_int])
+            {set
+               [timer_int]
+               {'+'
+                  {int
+                     {timer time_left}}
+                  1}}
+            {$this
+               set_time
+               {if_else
+                  {<
+                     [timer_int]
+                     1}
+                  1
+                  [timer_int]}}
+            {if
+               {<=
+                  [timer_int]
+                  3}
+               {if
+                  {&&
+                     {==
+                        [timer_int]
+                        3}
+                     {!=
+                        $prev_timer_int
+                        [timer_int]}}
+                  {play_pose.flow activate}}
+               {$this show_timer TRUE}}
+            {$this set_frame_positions_from_skeletons}
+            {if
+               {<
+                  {timer time_left}
+                  0.1}
+               {$this take_pictures}
+               {TexRenderer.rndtex set output_texture keep_me.tex}
+               {$this show_timer FALSE}}}
+         {do
+            {skeleton_chooser lock_enrollment FALSE}
+            {$this show_timer FALSE}
+            {hide_timer.flow activate}
+            {show_timer_camera.flow request_stop}
+            {show_timer_camera_1.flow request_stop}
+            {show_timer_camera_2.flow request_stop}
+            {if_else
+               {!
+                  {partymode_mgr is_team_signed_in 1}}
+               {toggle_hand_up_right.flow activate}
+               {toggle_hand_up_left.flow activate}}}})
+   (take_pictures
+      {set
+         [helpbar_allow_controller]
+         TRUE}
+      {helpbar resync}
+      {flash.flow activate}
+      {party_mode_photos_panel take_pictures}
+      {set $hand_up_count 0}
+      {foreach_int
+         $skel
+         0
+         {size
+            [skeleton_hand_up]}
+         {set
+            $hand_up
+            {elem
+               [skeleton_hand_up]
+               $skel}}
+         {if
+            $hand_up
+            {push_back
+               [photo_queue]
+               $skel}
+            {push_back
+               [player_queue]
+               {partymode_mgr num_enrolled}}
+            {if_else
+               {!
+                  {partymode_mgr is_team_signed_in 1}}
+               {partymode_mgr add_player_to_team 1}
+               {partymode_mgr add_player_to_team 2}}
+            {set
+               $frame_pos
+               {elem
+                  [frame_positions]
+                  $skel}}
+            {set
+               $scale
+               {/
+                  80.0
+                  {elem $frame_pos 2}}}
+            {set
+               $frame_scale
+               {'*' $scale 1.2}}
+            {set
+               $scr_x
+               {elem $frame_pos 3}}
+            {set
+               $scr_y
+               {elem $frame_pos 4}}
+            {set
+               $player_index
+               {-
+                  {partymode_mgr num_enrolled}
+                  1}}
+            {set $player_photo_index $hand_up_count}
+            {if
+               {partymode_mgr is_team_signed_in 1}
+               {'+=' $player_photo_index 4}}
+            {partymode_mgr store_player_frame_pos $player_index $scr_x $scr_y}
+            {partymode_mgr store_player_frame_scale $player_index $frame_scale}
+            {'++'
+               [pictures_taken]}
+            {'++' $hand_up_count}}}
+      {set
+         [picture_taken]
+         TRUE}
+      {skeleton_chooser lock_enrollment FALSE}
+      {set
+         [show_confirmation_options_timer_is_on]
+         TRUE}
+      {set
+         [show_confirmation_options_timer]
+         3.0})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         ((kAction_Cancel)
+            {if
+               {right_hand.hnl get showing}
+               {$this retake_team_photo}})
+         kDataUnhandled})
+   (NAV_SELECT_MSG
+      {print
+         "----- NAV_SELECT_MSG: "
+         $name
+         "\n"}
+      {switch
+         $name
+         (back
+            {set
+               [depth_display_left]
+               TRUE}
+            {set
+               [depth_display_right]
+               TRUE}
+            {exit_party_mode}
+            {ui goto_screen main_screen})
+         (yes
+            {$this confirm_team_photo})
+         (no
+            {$this retake_team_photo})})
+   (skip_cheat
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 1}}
+         {do
+            {partymode_mgr add_player_to_team 1}
+            {ui
+               store_texture_clip_at
+               0
+               0
+               132
+               160
+               {partymode_mgr is_team_signed_in 1}
+               0}
+            {partymode_mgr finalize_team 1}
+            {ui goto_screen party_mode_crew_announcement_screen}}
+         {do
+            {partymode_mgr add_player_to_team 2}
+            {ui
+               store_texture_clip_at
+               0
+               0
+               132
+               160
+               {partymode_mgr is_team_signed_in 1}
+               4}
+            {partymode_mgr finalize_team 2}
+            {partymode_mgr finalize_party}
+            {ui goto_screen party_mode_crew_announcement_screen}}})
+   (continue_panel_callback
+      ($name)
+      {print
+         "received callback from continue panel - $name:"
+         $name
+         "\n"}
+      {switch
+         $name
+         (back
+            {set
+               [depth_display_left]
+               TRUE}
+            {set
+               [depth_display_right]
+               TRUE}
+            {exit_party_mode}
+            {ui goto_screen main_screen})
+         (ok
+            {$this confirm_team_photo})
+         (no
+            {$this retake_team_photo})})
+   (show_confirmation_options
+      ($show)
+      {right_hand.hnl set showing FALSE}
+      {right_hand.hnl disable_selection}
+      {$depth_left set_showing $show}
+      {$depth_right set_showing $show}
+      {if_else
+         $show
+         {do
+            {party_mode_continue_panel set callback_panel $this}
+            {party_mode_continue_panel enable}}
+         {do
+            {party_mode_continue_panel set callback_panel 0}
+            {party_mode_continue_panel disable}}})
+   (confirm_team_photo
+      {print
+         "----- confirming team photo\n"}
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 1}}
+         {do
+            {partymode_mgr finalize_team 1}
+            {ui goto_screen party_mode_crew_announcement_screen}}
+         {do
+            {partymode_mgr finalize_team 2}
+            {partymode_mgr finalize_party}
+            {ui goto_screen party_mode_crew_announcement_screen}}})
+   (retake_team_photo
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 1}}
+         {do
+            {foreach_int
+               $i
+               1
+               5
+               {party_mode_photos_panel hide_photo $i}}
+            {partymode_mgr clear_team 1}
+            {retake_team_1.flow activate}}
+         {do
+            {foreach_int
+               $i
+               5
+               9
+               {party_mode_photos_panel hide_photo $i}}
+            {partymode_mgr clear_team 2}
+            {retake_team_2.flow activate}}}
+      {$this reset})
+   (show_timer
+      ($show)
+      {timer.lbl set_showing $show})
+   (set_time
+      ($time)
+      {timer.lbl set_int $time})
+   (show_snapshot
+      ($show)
+      {snapshot.mesh set_showing TRUE})
+   (set_frame_position
+      ($frameid $depth_u $depth_v $depth_w)
+      {do
+         ($frame_pos
+            {elem
+               [frame_positions]
+               $frameid})
+         {set_elem $frame_pos 0 $depth_u}
+         {set_elem $frame_pos 1 $depth_v}
+         {set_elem $frame_pos 2 $depth_w}
+         {set_elem
+            $frame_pos
+            3
+            {'+'
+               DB_LFT
+               {'*'
+                  $depth_u
+                  {- DB_RIT DB_LFT}}}}
+         {set_elem
+            $frame_pos
+            4
+            {'+'
+               DB_TOP
+               {'*'
+                  $depth_v
+                  {- DB_BOT DB_TOP}}}}})
+   (update_frame_on_screen
+      ($frameid $player_index)
+      {set
+         $frame_pos
+         {elem
+            [frame_positions]
+            $frameid}}
+      {set
+         $depth_u
+         {elem $frame_pos 0}}
+      {set
+         $depth_v
+         {elem $frame_pos 1}}
+      {set
+         $scale
+         {/
+            80.0
+            {elem $frame_pos 2}}}
+      {set
+         $scr_x
+         {elem $frame_pos 3}}
+      {set
+         $scr_y
+         {elem $frame_pos 4}}
+      {set
+         $pic_id
+         {'+' $frameid 1}}
+      {set
+         $frame_mesh
+         {find_obj
+            {$this loaded_dir}
+            {sprint
+               "frame"
+               $pic_id
+               ".mesh"}}}
+      {if
+         $frame_mesh
+         {do
+            {$frame_mesh set_local_pos $scr_x 0 $scr_y}
+            {set
+               $frame_scale
+               {'*' $scale 1.2}}
+            {$frame_mesh set_local_scale $frame_scale 1 $frame_scale}}}
+      {set
+         $cb_hit
+         {'*' $scale 6.0e-3}}
+      {set
+         $cb_wid
+         {'*' $cb_hit 1.0}}
+      {set
+         $cb_off_x
+         {-
+            $depth_u
+            {'*' $cb_wid 0.5}}}
+      {set
+         $cb_off_y
+         {-
+            $depth_v
+            {'*' $cb_hit 0.5}}}
+      {set
+         $cb_off_y
+         {'+' $cb_off_y 9.0e-2}}
+      {if
+         {< $cb_off_x 0.0}
+         {set $cb_off_x 0.0}}
+      {if
+         {< $cb_off_y 0.0}
+         {set $cb_off_y 0.0}}
+      {ui
+         store_texture_clip_at
+         {elem $frame_pos 0}
+         {elem $frame_pos 1}
+         132
+         160
+         {partymode_mgr is_team_signed_in 1}
+         $player_index}
+      {party_mode_photos_panel
+         draw_photo
+         {'+' 1 $player_index}})
+   (hide_frame
+      ($frameid)
+      {set
+         $pic_id
+         {'+' $frameid 1}}
+      {set
+         $frame_mesh
+         {find_obj
+            {$this loaded_dir}
+            {sprint
+               "frame"
+               $pic_id
+               ".mesh"}}}
+      {if
+         $frame_mesh
+         {$frame_mesh set_showing FALSE}}
+      {set
+         $output_mesh
+         {find_obj
+            {$this loaded_dir}
+            {sprint
+               "output"
+               $pic_id
+               ".mesh"}}}
+      {if
+         $output_mesh
+         {$output_mesh set_showing FALSE}})
+   (draw_frames
+      {set $hand_up_count 0}
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 1}}
+         {do
+            {if
+               {!
+                  {ui get_stored_texture 0}}
+               {ui
+                  store_texture_at
+                  {TexRenderer.rndtex get output_texture}
+                  0}}
+            {TexRenderer.rndtex
+               set
+               output_texture
+               {ui get_stored_texture 0}}
+            {signin.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 0}}
+            {team_photo.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 0}}}
+         {do
+            {if
+               {!
+                  {ui get_stored_texture 1}}
+               {ui
+                  store_texture_at
+                  {TexRenderer.rndtex get output_texture}
+                  1}}
+            {TexRenderer.rndtex
+               set
+               output_texture
+               {ui get_stored_texture 1}}
+            {signin.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 1}}
+            {team_photo.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 1}}}}
+      {foreach_int
+         $skel
+         0
+         {size
+            [skeleton_hand_up]}
+         {do
+            {if
+               {!
+                  {skeleton_chooser is_skeleton_valid $skel}}
+               {set_elem
+                  [skeleton_hand_up]
+                  $skel
+                  FALSE}}
+            {set
+               $hand_up
+               {elem
+                  [skeleton_hand_up]
+                  $skel}}
+            {set $player_index $hand_up_count}
+            {if
+               {partymode_mgr is_team_signed_in 1}
+               {'+=' $player_index 4}}
+            {if_else
+               $hand_up
+               {do
+                  {$this update_frame_on_screen $skel $player_index}
+                  {'++' $hand_up_count}}
+               {do
+                  {$this hide_frame $skel}}}}}
+      {foreach_int
+         $player_index
+         [curr_frames_claimed]
+         4
+         {do
+            {set $photo_index $player_index}
+            {if
+               {partymode_mgr is_team_signed_in 1}
+               {'+=' $photo_index 4}}
+            {party_mode_photos_panel
+               hide_photo
+               {'+' 1 $photo_index}}}})
+   (set_frame_positions_from_skeletons
+      {foreach_int
+         $skel
+         0
+         {size
+            [skeleton_hand_up]}
+         {set
+            $hand_up
+            {elem
+               [skeleton_hand_up]
+               $skel}}
+         {if
+            $hand_up
+            {if
+               {skeleton_chooser is_skeleton_valid $skel}
+               {do
+                  ($depth_u 0)
+                  ($depth_v 0)
+                  ($depth_w 0)
+                  {skeleton_chooser get_joint_depth_pos $skel kJointHead $depth_u $depth_v $depth_w}
+                  {if
+                     {elem
+                        [new_skeleton_hand_up]
+                        $skel}
+                     {partymode_mgr force_frame_smoother_pos $skel $depth_u $depth_v}}
+                  {partymode_mgr smooth_frame_motion $skel $depth_u $depth_v}
+                  {partymode_mgr get_smoothed_frame_pos $skel $depth_u $depth_v}
+                  {$this set_frame_position $skel $depth_u $depth_v $depth_w}}}}})}
+{new
+   HamScreen
+   party_mode_signin_screen
+   (panels party_mode_signin_panel party_mode_photos_panel party_mode_continue_panel meta)
+   (focus party_mode_continue_panel)
+   (back main_screen)
+   (enter
+      {hamprovider set ui_nav_mode shell_4p}
+      {party_mode_hub_panel set first_time_enter TRUE})
+   (exit
+      {hamprovider set ui_nav_mode shell})
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (yes
+            {party_mode_signin_panel select_right_list_token $command})
+         (no
+            {helpbar select_left_list_item 1})})}
+{new
+   HamPanel
+   party_mode_crew_announcement_panel
+   (file
+      "party_mode_crew_announcement.milo")
+   (hide_letterbox FALSE)
+   (enter
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 2}}
+         {do
+            {set
+               $num_enrolled1
+               {partymode_mgr num_enrolled_team_1}}
+            {foreach_int
+               $i
+               0
+               4
+               {if_else
+                  {< $i $num_enrolled1}
+                  {do
+                     ($headshot_mat
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_left.mat"}})
+                     ($headshot_mesh
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_left.mesh"}})
+                     {ui
+                        apply_texture_clip
+                        $headshot_mat
+                        {partymode_mgr get_player_photo_index $i}}
+                     {$headshot_mesh set showing TRUE}}
+                  {do
+                     ($headshot_mesh
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_left.mesh"}})
+                     {$headshot_mesh set showing FALSE}}}}
+            {crew_photo_left.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 0}}
+            {enter_announcement_left.flow activate}
+            {start_scrolling_anims.flow activate}}
+         {do
+            {set
+               $num_enrolled1
+               {partymode_mgr num_enrolled_team_1}}
+            {foreach_int
+               $i
+               0
+               4
+               {if_else
+                  {< $i $num_enrolled1}
+                  {do
+                     ($headshot_mat
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_left.mat"}})
+                     ($headshot_mesh
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_left.mesh"}})
+                     {ui
+                        apply_texture_clip
+                        $headshot_mat
+                        {partymode_mgr get_player_photo_index $i}}
+                     {$headshot_mesh set showing TRUE}}
+                  {do
+                     ($headshot_mesh
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_left.mesh"}})
+                     {$headshot_mesh set showing FALSE}}}}
+            {crew_photo_left.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 0}}
+            {set
+               $num_enrolled2
+               {partymode_mgr num_enrolled_team_2}}
+            {foreach_int
+               $i
+               0
+               4
+               {if_else
+                  {< $i $num_enrolled2}
+                  {do
+                     ($headshot_mat
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_right.mat"}})
+                     ($headshot_mesh
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_right.mesh"}})
+                     {ui
+                        apply_texture_clip
+                        $headshot_mat
+                        {partymode_mgr
+                           get_player_photo_index
+                           {'+' $num_enrolled1 $i}}}
+                     {$headshot_mesh set showing TRUE}}
+                  {do
+                     ($headshot_mesh
+                        {find_obj
+                           {$this loaded_dir}
+                           {sprint
+                              "crewmate"
+                              $i
+                              "_right.mesh"}})
+                     {$headshot_mesh set showing FALSE}}}}
+            {crew_photo_right.mat
+               set
+               diffuse_tex
+               {ui get_stored_texture 1}}
+            {enter_announcement_right.flow activate}
+            {start_scrolling_anims.flow activate}}}
+      {{cursor_panel find depth_buffer_left.grp}
+         set_showing
+         FALSE}
+      {{cursor_panel find depth_buffer_right.grp}
+         set_showing
+         FALSE}
+      {meta music_start})
+   (poll
+      {if_else
+         {!
+            {partymode_mgr is_team_signed_in 2}}
+         {if
+            {!
+               {enter_announcement_left.flow is_running}}
+            {ui goto_screen party_mode_welcome_screen}}
+         {if
+            {!
+               {enter_announcement_right.flow is_running}}
+            {ui goto_screen party_mode_hub_screen}}})}
+{new
+   HamScreen
+   party_mode_crew_announcement_screen
+   (panels party_mode_crew_announcement_panel meta)
+   (focus party_mode_crew_announcement_panel)}

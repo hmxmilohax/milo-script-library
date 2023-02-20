@@ -1,0 +1,326 @@
+{new
+   HamPanel
+   options_gameplay_panel
+   (file
+      "options_gameplay.milo")
+   (focus right_hand.hnl)
+   (back_token back)
+   (provider provider.hnp)
+   (enter
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      {hamprovider
+         add_sink
+         $this
+         (on_ui_nav_player_change)
+         0
+         FALSE}
+      {player_provider_1
+         add_sink
+         $this
+         (padnum_updated)}
+      {player_provider_2
+         add_sink
+         $this
+         (padnum_updated)}
+      {$this update_provider}
+      {right_hand.hnl
+         set
+         nav_provider
+         [provider]}
+      {$this update_all}
+      {$this
+         update_description
+         {right_hand.hnl get_selected_sym}})
+   (update_provider
+      {if_else
+         {&&
+            {exists speech_mgr}
+            {speech_mgr is_speech_supportable}}
+         {$this set provider provider.hnp}
+         {$this set provider provider_no_voice.hnp}})
+   (exit
+      {memcardmgr remove_sink $this}
+      {hamprovider remove_sink $this on_ui_nav_player_change}
+      {player_provider_1 remove_sink $this padnum_updated}
+      {player_provider_2 remove_sink $this padnum_updated})
+   (update_all
+      {$this update_checks}
+      {if_else
+         {profile_mgr has_active_profile}
+         {do
+            ($profile
+               {profile_mgr get_active_profile})
+            {if_else
+               {'||'
+                  {!
+                     {platform_mgr
+                        is_pad_signed_in
+                        {$profile get_pad_num}}}
+                  {platform_mgr
+                     is_pad_a_guest
+                     {$profile get_pad_num}}
+                  {$profile has_cheated}}
+               {do
+                  {[provider]
+                     set_enabled
+                     autosave
+                     FALSE}
+                  {[provider]
+                     set_checked
+                     autosave
+                     FALSE}}
+               {[provider]
+                  set_enabled
+                  autosave
+                  TRUE}}}
+         {do
+            {[provider]
+               set_enabled
+               autosave
+               FALSE}
+            {[provider]
+               set_checked
+               autosave
+               FALSE}}}
+      {if_else
+         {profile_mgr has_active_profile}
+         {[provider]
+            set_enabled
+            option_choosestorage
+            {profile_mgr
+               is_autosave_enabled
+               {profile_mgr get_active_profile}}}
+         {[provider]
+            set_enabled
+            option_choosestorage
+            FALSE}})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (option_photo
+            {profile_mgr toggle_disable_photos}
+            {$this update_all}
+            skip_select_anim)
+         (option_freestyle
+            {profile_mgr toggle_disable_freestyle}
+            {$this update_all}
+            skip_select_anim)
+         (option_voice
+            {if_else
+               {!
+                  {speech_mgr has_language_support}}
+               {ui push_screen force_speech_dialog_screen}
+               {ui goto_screen options_voice_screen}})
+         (autosave
+            {if_else
+               {saveload_mgr
+                  is_autosave_enabled
+                  {profile_mgr get_active_profile}}
+               {ui goto_screen autosave_disable_confirm_screen}
+               {saveload_mgr
+                  enable_autosave
+                  {profile_mgr get_active_profile}}}
+            {$this update_all}
+            skip_select_anim)
+         (option_choosestorage
+            {if
+               {profile_mgr has_active_profile}
+               {saveload_mgr
+                  manual_save
+                  {profile_mgr get_active_profile}}}
+            skip_select_anim)
+         (option_cheats
+            {ui goto_screen cheats_screen})
+         (back
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})
+   (NAV_HIGHLIGHT_MSG
+      {$this update_description $name})
+   (update_checks
+      {[provider]
+         set_checked
+         autosave
+         {profile_mgr
+            is_autosave_enabled
+            {profile_mgr get_active_profile}}}
+      {[provider]
+         set_checked
+         option_photo
+         {!
+            {profile_mgr get_disable_photos}}}
+      {[provider]
+         set_checked
+         option_freestyle
+         {!
+            {profile_mgr get_disable_freestyle}}})
+   (update_description
+      ($name)
+      {switch
+         $name
+         (option_photo
+            {description.lbl set text_token option_photo_desc})
+         (option_freestyle
+            {description.lbl set text_token option_freestyle_desc})
+         (option_voice
+            {description.lbl set text_token option_voice_desc})
+         (autosave
+            {description.lbl set text_token option_autosave_desc})
+         (option_choosestorage
+            {description.lbl set text_token option_choosestorage_desc})
+         (option_cheats
+            {description.lbl set text_token option_cheats_desc})})
+   (save_load_all_complete_msg
+      {$this update_all})
+   (padnum_updated
+      {$this update_all})
+   (on_ui_nav_player_change
+      {$this update_all})
+   (controller_mode_entered
+      {$this update_all})
+   (controller_mode_exited
+      {$this update_all})}
+{new
+   HamPanel
+   options_voice_panel
+   (file
+      "options_voice.milo")
+   (focus right_hand.hnl)
+   (back_token back)
+   (enter
+      {$this update_checks}
+      {$this update_label})
+   (exit)
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (option_voice_voice_commander
+            {if
+               {&&
+                  {profile_mgr get_disable_voice_commander}
+                  {profile_mgr is_voice_commander_suboptimal}}
+               {ui push_screen voice_commander_figs_dialog_screen}}
+            {profile_mgr toggle_disable_voice_commander}
+            {$this update_checks}
+            skip_select_anim)
+         (option_voice_pause
+            {profile_mgr toggle_disable_voice_pause}
+            {$this update_checks}
+            skip_select_anim)
+         (option_voice_practice
+            {profile_mgr toggle_disable_voice_practice}
+            {$this update_checks}
+            skip_select_anim)
+         (option_voice_tip_hide
+            {profile_mgr toggle_show_voice_tip}
+            {$this update_checks}
+            skip_select_anim)
+         (back
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})
+   (NAV_HIGHLIGHT_MSG
+      {$this update_label})
+   (update_label
+      {switch
+         {right_hand.hnl get_selected_sym}
+         (option_voice_voice_commander
+            {description.lbl set text_token option_voice_info_main})
+         (option_voice_pause
+            {description.lbl set text_token option_voice_info_pause})
+         (option_voice_practice
+            {description.lbl set text_token option_voice_info_bid})
+         (option_voice_tip_hide
+            {description.lbl set text_token option_voice_tip_hide_desc})})
+   (update_checks
+      {provider.hnp
+         set_checked
+         option_voice_voice_commander
+         {!
+            {profile_mgr get_disable_voice_commander}}}
+      {provider.hnp
+         set_checked
+         option_voice_pause
+         {!
+            {profile_mgr get_disable_voice_pause}}}
+      {provider.hnp
+         set_checked
+         option_voice_practice
+         {!
+            {profile_mgr get_disable_voice_practice}}}
+      {provider.hnp
+         set_checked
+         option_voice_tip_hide
+         {profile_mgr get_show_voice_tip}})}
+{new
+   HamScreen
+   options_gameplay_screen
+   (panels meta background_panel options_gameplay_panel)
+   (focus options_gameplay_panel)
+   (back options_screen)}
+{new
+   HamScreen
+   autosave_disable_confirm_screen
+   (panels meta background_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno autosave_confirm})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (yes
+            {saveload_mgr
+               disable_autosave
+               {profile_mgr get_active_profile}}
+            {ui goto_screen options_gameplay_screen})
+         (no
+            {ui goto_screen options_gameplay_screen})})}
+{new
+   HamScreen
+   cheats_screen
+   (panels meta background_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_custom_1btn cheats_confirm enter_cheat_done})
+   (NAV_SELECT_MSG
+      {ui goto_screen options_gameplay_screen})}
+{new
+   HamScreen
+   options_voice_screen
+   (panels meta background_panel options_voice_panel)
+   (focus options_voice_panel)
+   (back options_gameplay_screen)}
+{new
+   HamScreen
+   force_speech_dialog_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno force_speech_language_dialog})
+   (exit)
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (yes
+            {speech_mgr force_language_support}
+            {profile_mgr enable_force_speech_language_support}
+            {ui pop_screen options_voice_screen})
+         (no
+            {ui pop_screen})})}
+{new
+   HamScreen
+   voice_commander_figs_dialog_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok option_voice_voice_commander_figs})
+   (exit)
+   (NAV_SELECT_MSG
+      {ui pop_screen})}

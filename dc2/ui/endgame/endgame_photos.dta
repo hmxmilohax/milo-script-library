@@ -1,0 +1,226 @@
+{func
+   kinectshare_handle_select
+   ($index)
+   {cond
+      ({!
+            {platform_mgr is_any_user_signed_in_to_live}}
+         {endgame_photos_complete_screen set msg_token kinectshare_error_signin}
+         {ui goto_screen endgame_photos_complete_screen})
+      ({!
+            {platform_mgr has_created_content_privilege}}
+         {endgame_photos_complete_screen set msg_token kinectshare_no_created_content}
+         {ui goto_screen endgame_photos_complete_screen})
+      ({!
+            {platform_mgr has_kinectshare_privilege}}
+         {endgame_photos_complete_screen set msg_token kinectshare_denied}
+         {ui goto_screen endgame_photos_complete_screen})
+      (TRUE
+         {switch
+            {ui current_screen}
+            (endgame_photos_screen
+               {endgame_photos_frame_panel set tex_index $index}
+               {ui goto_screen endgame_photos_frame_screen})
+            (endgame_photos_frame_screen
+               {ui goto_screen endgame_photos_upload_confirm_screen})
+            (endgame_photos_upload_confirm_screen
+               {endgame_photos_upload_panel
+                  set
+                  texture
+                  {endgame_photos_frame_panel find render.tex}}
+               {ui goto_screen endgame_photos_upload_screen})
+            {notify
+               "kinectshare_handle_select called from invalid screen\n"}})}}
+{new
+   KinectSharePanel
+   endgame_photos_upload_panel
+   (file
+      "endgame_photos_upload.milo")
+   (back_token '')
+   (upload_complete
+      ($msg)
+      {endgame_photos_complete_screen set msg_token $msg}
+      {ui goto_screen endgame_photos_complete_screen})}
+{new
+   HamPanel
+   endgame_photos_panel
+   (file
+      "endgame_photos.milo")
+   (focus right_hand.hnl)
+   (helpbar_confirm_label none)
+   (back_token back)
+   (navlist_index_to_gesture_mgr_index
+      ($index)
+      {if_else
+         {== $index 0}
+         {-
+            {gesture_mgr num_snapshots}
+            1}
+         {- $index 1}})
+   (enter
+      {right_hand.hnl set_controller_focus 0}
+      {do
+         ($max_index
+            {-
+               {gesture_mgr num_snapshots}
+               1})
+         {photo.mat
+            set
+            diffuse_tex
+            {gesture_mgr snapshot_tex $max_index}}
+         {switch
+            $max_index
+            (0
+               {right_hand.hnl set_provider nofreestyle.hnp})
+            (16
+               {right_hand.hnl set_provider freestyle.hnp})
+            {notify
+               "Invalid number of snapshots for photo screen\n"}}})
+   (NAV_HIGHLIGHT_MSG
+      {if
+         {== $component right_hand.hnl}
+         {photo.mat
+            set
+            diffuse_tex
+            {gesture_mgr
+               snapshot_tex
+               {$this navlist_index_to_gesture_mgr_index $index}}}})
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (left_hand.hnl
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back_screen}})
+         (right_hand.hnl
+            {kinectshare_handle_select
+               {$this navlist_index_to_gesture_mgr_index $index}})})}
+{new
+   HamPanel
+   endgame_photos_frame_panel
+   (file
+      "endgame_photos_frame.milo")
+   (focus right_hand.hnl)
+   (back_token back)
+   (tex_index 0)
+   (enter
+      {photo.mat
+         set
+         diffuse_tex
+         {gesture_mgr
+            snapshot_tex
+            [tex_index]}}
+      {do
+         ($songname
+            {gamedata get song})
+         {song_title.lbl set_song_name $songname}
+         {stars.std
+            set_song
+            {song_mgr get_song_id $songname}}})
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {kinectshare_handle_select $index})
+         (left_hand.hnl
+            {ui goto_screen endgame_photos_screen})})}
+{new
+   HamScreen
+   endgame_photos_upload_screen
+   (panels endgame_photos_frame_panel endgame_photos_upload_panel)
+   (focus endgame_photos_upload_panel)
+   (allow_cancel FALSE)
+   (task)
+   (enter
+      {endgame_photos_upload_panel set back_token ''}
+      {set
+         [task]
+         {script_task
+            kTaskSeconds
+            (delay 5)
+            (script
+               {set
+                  [allow_cancel]
+                  TRUE}
+               {endgame_photos_upload_panel set back_token back}
+               {helpbar resync})}}
+      {$this upload})
+   (exit
+      {if
+         [task]
+         {delete
+            [task]}}
+      {set
+         [allow_cancel]
+         FALSE}
+      {$this cleanup})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {shell_input in_controller_mode}
+            {== $action kAction_Cancel}}
+         {$this cancel}}
+      kDataUnhandled)
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (left_hand.hnl
+            {$this cancel})})
+   (cancel
+      {if
+         [allow_cancel]
+         {ui goto_screen endgame_photos_screen}})}
+{new
+   HamScreen
+   endgame_photos_complete_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (msg_token '')
+   (enter
+      {dialog_panel
+         set_ok
+         [msg_token]})
+   (NAV_SELECT_MSG
+      {ui goto_screen endgame_photos_screen})}
+{new
+   HamScreen
+   endgame_photos_screen
+   (panels meta_game background_panel endgame_photos_panel)
+   (focus endgame_photos_panel)
+   (back
+      {endgame_photos_screen get back_screen})
+   (back_screen none)}
+{new
+   HamScreen
+   endgame_photos_frame_screen
+   (panels meta_game background_panel endgame_photos_frame_panel)
+   (focus endgame_photos_frame_panel)
+   (back
+      {endgame_photos_frame_screen get back_screen})
+   (back_screen endgame_photos_screen)}
+{new
+   HamScreen
+   endgame_photos_upload_confirm_screen
+   (panels endgame_photos_frame_panel dialog_panel)
+   (focus dialog_panel)
+   (message kinectshare_confirm)
+   (confirm_token kinectshare_confirm_really)
+   (cancel_token ingame_cancel)
+   (enter
+      {dialog_panel
+         set_custom
+         [message]
+         [confirm_token]
+         [cancel_token]
+         0})
+   (NAV_SELECT_MSG
+      {cond
+         ({==
+               $name
+               [confirm_token]}
+            {kinectshare_handle_select $index})
+         ({==
+               $name
+               [cancel_token]}
+            {ui goto_screen endgame_photos_screen})})}

@@ -1,0 +1,1741 @@
+#define CHOICE_SET_SIZE
+(4)
+#define STATE_PLAYING_SONG
+(1)
+#define STATE_BUILD_PATTERN
+(2)
+#define STATE_REPLAY_PATTERN
+(3)
+#define STATE_INTRO
+(4)
+#include performance.dta
+(score_chart
+   ((5000 3000 1000 0)
+      (5000 3000 1000 0)
+      (5000 3000 1000 0)))
+(solo_score_chart
+   ((10000 6000 2000 0)
+      (10000 6000 2000 0)
+      (10000 6000 2000 0)))
+(battle_obj
+   "")
+(battle_index -1)
+(winning -1)
+(streaks
+   (0 0))
+(count_ins
+   (0 0))
+(called_up
+   (FALSE FALSE))
+(mini_game
+   "")
+(scored_moves
+   (()
+      ()))
+(player_encouraged -1)
+(battle_config kHamPlayerBoth)
+(routine
+   ())
+(all_moves
+   ())
+(rest_key
+   "")
+(last_move 0)
+(intro_rest_count)
+(detection_needs_reset FALSE)
+(waiting_for_stream_jump)
+(prev_move_key
+   "")
+(play_state STATE_INTRO)
+(intro_init FALSE)
+(intro_display_showing FALSE)
+(recap_card_shown FALSE)
+(play_state_init FALSE)
+(game_active FALSE)
+(song_layout
+   "")
+(routine_sequence_display)
+(routine_display_shown FALSE)
+(cur_pattern -1)
+(accept_dialog FALSE)
+(old_focus_panel)
+(init
+   {print
+      "routine_builder:init\n"}
+   {hamprovider set gameplay_mode routine_builder}
+   {$this common_init}
+   {master
+      add_sink
+      $this
+      (beat stream_jump)}
+   {hamprovider
+      add_sink
+      $this
+      ((player_join on_player_join)
+         (on_game_stage_change on_game_stage)
+         (camshot_changed on_camshot_changed)
+         (post_move_finished on_post_move_finished)
+         (final_pose_photo on_final_pose_photo)
+         (post_sides_switched on_side_moved))
+      kSinkModeHandle
+      FALSE}
+   {player_provider_1
+      add_sink
+      $this
+      ((count_in on_p1_count_in))
+      0
+      FALSE}
+   {player_provider_2
+      add_sink
+      $this
+      ((count_in on_p2_count_in))
+      0
+      FALSE}
+   {gamedata setp 0 difficulty kDifficultyEasy}
+   {gamedata setp 1 difficulty kDifficultyEasy}
+   {set
+      [routine_sequence_display]
+      {find_obj $hud_panel routine_sequence}}
+   {[routine_sequence_display]
+      set_showing
+      TRUE}
+   {[routine_sequence_display]
+      set_sequence_display_showing
+      FALSE})
+(reset
+   {print
+      "routine_builder:reset\n"}
+   {if
+      {!
+         [game_active]}
+      {$this do_reset}})
+(do_reset
+   {print
+      "routine_builder:do_reset\n"}
+   {overshell resolve_skeletons}
+   {$this common_reset}
+   {hamprovider set performance high}
+   {set
+      [song_layout]
+      {movemgr get_song_layout}}
+   {[song_layout]
+      clear_all_moves}
+   {set
+      [cur_pattern]
+      {[song_layout]
+         first_unfilled_pattern}}
+   {set
+      [cur_replacer]
+      {[song_layout]
+         first_unfilled_replacer}}
+   {[song_layout]
+      dump_patterns}
+   {set
+      [prev_move_key]
+      ""}
+   {if
+      [mini_game]
+      {delete
+         [mini_game]}
+      {set
+         [mini_game]
+         ""}}
+   {set
+      [waiting_for_stream_jump]
+      FALSE}
+   {if
+      {&&
+         $hamdirector
+         {$hamdirector get cur_world}}
+      {{$hamdirector get cur_world}
+         set_showing
+         TRUE}}
+   {$hamdirector set disable_picking FALSE}
+   {foreach_int
+      $i
+      0
+      {gamedata max_players}
+      {do
+         ($provider
+            {gamedata getp $i provider})
+         {$provider set score 0}
+         {$provider
+            clear
+            (tagged_moves)}
+         {$provider set start_score_move_index 0}
+         {set_elem
+            [streaks]
+            $i
+            0}
+         {set_elem
+            [count_ins]
+            $i
+            0}
+         {set_elem
+            [called_up]
+            $i
+            FALSE}
+         {resize
+            {elem
+               [scored_moves]
+               $i}
+            0}
+         {$this
+            performance_ladder
+            $i
+            [initial_performance_state_index]}}}
+   {set
+      [player_encouraged]
+      -1}
+   {set
+      [battle_config]
+      kHamPlayerBoth}
+   {game reset_detection}
+   {$hamdirector set freestyle_enabled FALSE}
+   {hamprovider set cam_player_config kHamPlayer0}
+   {set
+      [winning]
+      -1}
+   {$this set_chars_showing TRUE}
+   {print
+      "song anim move keys \n"}
+   {$this dump_move_track}
+   {$this save_move_sequence}
+   {$this init_routine}
+   {set
+      [intro_rest_count]
+      {size
+         [routine]}}
+   {$this dump_routine}
+   {$this debug_print_routine}
+   {$this clear_clip_track}
+   {set
+      [detection_needs_reset]
+      TRUE}
+   {set
+      [play_state]
+      STATE_INTRO}
+   {set
+      [intro_init]
+      FALSE}
+   {set
+      [intro_display_showing]
+      FALSE}
+   {handle
+      ({gamedata getp 0 provider}
+         hide_hud
+         TRUE)}
+   {handle
+      ({gamedata getp 1 provider}
+         hide_hud
+         TRUE)}
+   {set
+      [game_active]
+      TRUE}
+   {set
+      [accept_dialog]
+      FALSE}
+   {[routine_sequence_display]
+      do_mode_start})
+(cheat_choose_pattern
+   ($ans)
+   {if
+      [accept_dialog]
+      {accept_pattern_panel set selected $ans}})
+(game_over
+   {print
+      "routine_builder:game_over\n"}
+   {set
+      [game_active]
+      FALSE}
+   kDataUnhandled)
+(clear_clip_track
+   {do
+      ($song_anim
+         {$hamdirector player_song_anim 0})
+      {$song_anim
+         foreach_keyframe
+         $hamdirector
+         (clip)
+         $frame
+         $value
+         {if
+            {!
+               {has_substr
+                  $value
+                  "groove"}}
+            {print
+               "clear_clip_track, removing from clip track: "
+               $value
+               "-"
+               $frame
+               "\n"}
+            {$song_anim remove_keyframe}}}})
+(add_move_to_routine_display
+   ($selected_move $display_index)
+   {set
+      $flashcard_name
+      {sprintf
+         "routine_sequence_card_0%i"
+         $display_index}}
+   {set
+      $rout_card
+      {find_obj
+         [routine_sequence_display]
+         $flashcard_name}}
+   {set
+      $rout_move
+      {movemgr get_ham_move $selected_move}}
+   {$rout_card set_move_2 $rout_move TRUE})
+(clear_routine_display
+   {set $card_count 0}
+   {set
+      $max_cards
+      {size
+         {{find_obj
+               [routine_sequence_display]
+               "flashcards.grp"}
+            get_group_children}}}
+   {while
+      {< $card_count $max_cards}
+      {$this
+         add_move_to_routine_display
+         ""
+         $card_count}
+      {'++' $card_count}})
+(debug_print_routine
+   {print
+      "-- routine moves --\n"}
+   {foreach_int
+      $i
+      0
+      {size
+         [routine]}
+      {print
+         "elem:"
+         $i
+         " = "
+         {elem
+            [routine]
+            $i}
+         "\n"}})
+(dump_routine
+   {do
+      ($count 0)
+      {print
+         "-- routine_builder:dump_routine --"
+         "\n"}
+      {foreach
+         $key
+         [routine]
+         {do
+            ($ham_move
+               {movemgr get_ham_move $key})
+            ($display_name
+               {if_else
+                  $ham_move
+                  {$ham_move display_name}
+                  "<null>"})
+            {print
+               " "
+               $key
+               "("
+               $display_name
+               ")\n"}
+            {'++' $count}
+            {if
+               {> $count 5}
+               {print
+                  "\n"}
+               {set $count 0}}}}}
+   {print
+      "\n-- --\n"})
+(dump_move_track
+   {print
+      "-- move track --\n"}
+   {do
+      ($i 0)
+      ($beat)
+      ($display_name)
+      ($song_anim
+         {$hamdirector player_song_anim 0})
+      ($move)
+      ($move_display_name)
+      {$song_anim
+         foreach_keyframe
+         $hamdirector
+         (move)
+         $frame
+         $value
+         {set
+            $beat
+            {round
+               {seconds_to_beat
+                  {/ $frame 30}}}}
+         {set
+            $move
+            {movemgr move_from_move_name $value}}
+         {if_else
+            $move
+            {set
+               $move_display_name
+               {$move display_name}}
+            {set
+               $move_display_name
+               "<null>"}}
+         {print
+            "("
+            $i
+            ")"
+            ", move="
+            $value
+            "("
+            $display_name
+            ") "
+            " frame="
+            $frame
+            ", beat="
+            $beat
+            "\n"}
+         {'++' $i}}})
+(dump_clip_track
+   {print
+      "clip track\n"}
+   {do
+      ($song_anim
+         {$hamdirector player_song_anim 0})
+      ($frame)
+      ($value)
+      {$song_anim
+         foreach_keyframe
+         $hamdirector
+         (clip)
+         $frame
+         $value
+         {print
+            "clip: "
+            $value
+            ", frame: "
+            $frame
+            "\n"}}})
+(dump_move_set
+   ($move_set)
+   {foreach
+      $move
+      $move_set
+      {print
+         "move="
+         $move
+         "\n"}})
+(set_chars_showing
+   ($show)
+   {if
+      $hamdirector
+      {do
+         ($world
+            {$hamdirector get cur_world})
+         ($show_p0 $show)
+         ($show_p1 FALSE)
+         {$world
+            iterate
+            Character
+            $c
+            {if
+               {has_substr
+                  {$c name}
+                  "player0"}
+               {$c set_showing TRUE}}
+            {if
+               {has_substr
+                  {$c name}
+                  "player1"}
+               {$c set_showing FALSE}}
+            {if
+               {has_substr
+                  {$c name}
+                  "backup0"}
+               {$c set_showing FALSE}}
+            {if
+               {has_substr
+                  {$c name}
+                  "backup1"}
+               {$c set_showing FALSE}}}
+         {$world
+            iterate
+            RndDir
+            $r
+            {if
+               {has_substr
+                  {$r name}
+                  "backup0"}
+               {$r set_showing FALSE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "backup1"}
+               {$r set_showing FALSE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "player0"}
+               {$r set_showing TRUE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "player1"}
+               {$r set_showing FALSE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "feedback0"}
+               {$r set_showing TRUE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "feedback1"}
+               {$r set_showing FALSE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "meter0"}
+               {$r set_showing TRUE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "meter1"}
+               {$r set_showing FALSE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "spiral0"}
+               {$r set_showing TRUE}}
+            {if
+               {has_substr
+                  {$r name}
+                  "spiral1"}
+               {$r set_showing FALSE}}}}})
+(init_rest_key
+   {set
+      [rest_key]
+      ""}
+   {do
+      ($song_move)
+      ($song_anim
+         {$hamdirector player_song_anim 0})
+      {$song_anim
+         foreach_keyframe
+         $hamdirector
+         (move)
+         $frame
+         $value
+         {if
+            {!
+               [rest_key]}
+            {set
+               $song_move
+               {$hud_panel get_move $value}}
+            {if
+               {$song_move is_rest}
+               {set
+                  [rest_key]
+                  $value}}}}})
+(init_routine
+   {resize
+      [routine]
+      0}
+   {$this init_rest_key}
+   {do
+      ($found_non_rest_key FALSE)
+      ($song_anim
+         {$hamdirector player_song_anim 0})
+      ($num_rest_moves 0)
+      {$song_anim
+         foreach_keyframe
+         $hamdirector
+         (move)
+         $frame
+         $value
+         {if
+            {! $found_non_rest_key}
+            {'++' $num_rest_moves}
+            {set
+               $song_move
+               {$hud_panel get_move $value}}
+            {if_else
+               {$song_move is_rest}
+               {do
+                  {push_back
+                     [routine]
+                     [rest_key]}}
+               {set $found_non_rest_key TRUE}}}}
+      {movemgr init_song}}
+   {$this clear_routine_display})
+(have_move
+   ($move_key)
+   {do
+      ($found FALSE)
+      {foreach
+         $key
+         [all_moves]
+         {if
+            {==
+               $move_key
+               {elem $key 0}}
+            {set $found TRUE}}}
+      $found})
+(save_move_sequence
+   {resize
+      [all_moves]
+      0}
+   {set
+      [last_move]
+      0}
+   {print
+      "--routine_builder:save_move_sequence--"
+      "\n"}
+   {do
+      ($key_measure)
+      ($key_beat)
+      ($move_count 0)
+      ($song_anim
+         {$hamdirector player_song_anim 0})
+      ($frame)
+      ($value)
+      {$song_anim
+         foreach_keyframe
+         $hamdirector
+         (move)
+         $frame
+         $value
+         {'++' $move_count}
+         {set
+            $key_beat
+            {round
+               {seconds_to_beat
+                  {/ $frame 30}}}}
+         {set
+            $key_measure
+            {beat_to_measure $key_beat}}
+         {push_back
+            [all_moves]
+            {array
+               ($value $key_measure)}}}
+      {set
+         [last_move]
+         {- $move_count 3}}}
+   {print
+      "save_move_sequence:"
+      ", count="
+      {size
+         [all_moves]}
+      ", last="
+      [last_move]
+      "\n"})
+(poll
+   {if
+      [mini_game]
+      {[mini_game]
+         poll}}
+   {if
+      [accept_dialog]
+      {do
+         ($sel -1)
+         {set
+            $sel
+            {accept_pattern_panel get selected}}
+         {if
+            {> $sel -1}
+            {$this close_accept_panel $sel}}}})
+(start_choose_mode
+   {do
+      ($player_idx 0)
+      ($move_choice_set
+         {array 0})
+      ($cur_measure
+         {[song_layout]
+            replacer_first_measure
+            [cur_replacer]})
+      ($beat
+         {measure_to_beat $cur_measure})
+      ($play_duration 16)
+      ($start_loop)
+      ($end_loop)
+      {print
+         "routine_builder:start_choose_mode"
+         ", b="
+         {taskmgr beat}
+         ", cm="
+         $cur_measure
+         "\n"}
+      {set
+         [play_state]
+         STATE_BUILD_PATTERN}
+      {set
+         [mini_game]
+         {new Object choose_move_mini_game}}
+      {[mini_game]
+         set
+         type
+         choose_move}
+      {movemgr
+         next_moves
+         $move_choice_set
+         {'+' $cur_measure 1}}
+      {print
+         "--move choices--\n"}
+      {$this dump_move_set $move_choice_set}
+      {handle
+         ([mini_game]
+            enter
+            $move_choice_set
+            $player_idx)}
+      {$hamdirector set disable_picking TRUE}
+      {handle
+         ({gamedata getp 0 provider}
+            hide_hud
+            TRUE)}
+      {handle
+         ({gamedata getp 1 provider}
+            hide_hud
+            TRUE)}
+      {$this set_chars_showing FALSE}
+      {set
+         $start_loop
+         {int $beat}}
+      {set
+         $end_loop
+         {'+' $start_loop $play_duration}}
+      {audio set_loop $start_loop $end_loop}
+      {print
+         "start_choose_mode: set audio loop "
+         $start_loop
+         " to "
+         $end_loop
+         "\n"}
+      {[routine_sequence_display]
+         set_num_display
+         8}
+      {[routine_sequence_display]
+         do_move_selector}
+      {[routine_sequence_display]
+         set_sequence_display_showing
+         TRUE}})
+(add_move_to_pattern
+   ($selected_move)
+   {set
+      [prev_move_key]
+      $selected_move}
+   {push_back
+      [routine]
+      $selected_move}
+   {do
+      ($measure
+         {'+'
+            {[song_layout]
+               first_measure
+               [cur_pattern]}
+            {[song_layout]
+               move_count
+               [cur_pattern]}})
+      {[song_layout]
+         add_move
+         [cur_pattern]
+         $selected_move}
+      {movemgr fill_routine_from_verses $measure}
+      {movemgr prepare_next_choice_set $measure}}
+   {$this dump_routine}
+   {$this dump_move_track}
+   {$this dump_clip_track})
+(add_move_to_replacer
+   ($selected_move)
+   {print
+      "add_move_to_replacer"}
+   {[song_layout]
+      replace_move
+      [cur_replacer]
+      $selected_move}
+   {set
+      [cur_replacer]
+      {[song_layout]
+         first_unfilled_replacer}}
+   {movemgr fill_routine_from_replacer -1}
+   {if
+      {!=
+         [cur_replacer]
+         -1}
+      {do
+         {set
+            $measure
+            {[song_layout]
+               replacer_first_measure
+               [cur_replacer]}}
+         {movemgr prepare_next_choice_set $measure}}}
+   {$this dump_routine}
+   {$this dump_move_track}
+   {$this dump_clip_track})
+(is_cur_pattern_complete
+   {>=
+      {[song_layout]
+         move_count
+         [cur_pattern]}
+      {[song_layout]
+         pattern_size
+         [cur_pattern]}})
+(start_review_pattern
+   {do
+      ($backup_measures -3)
+      ($first_measure
+         {[song_layout]
+            first_measure
+            [cur_pattern]})
+      ($loop_start_beat
+         {'*'
+            {'+' $first_measure $backup_measures}
+            4})
+      ($beat_round
+         {round
+            {taskmgr beat}})
+      ($loop_end_beat
+         {'+' 4 $beat_round})
+      {print
+         "start_review_pattern"
+         ", cur_pat="
+         [cur_pattern]
+         "\n"}
+      {set
+         [waiting_for_stream_jump]
+         TRUE}
+      {set
+         [detection_needs_reset]
+         TRUE}
+      {print
+         "setting loop beats "
+         $loop_start_beat
+         " "
+         $loop_end_beat
+         " measures "
+         {/ $loop_start_beat 4}
+         " "
+         {/ $loop_end_beat 4}
+         "\n"}
+      {audio clear_loop}
+      {audio set_loop $loop_start_beat $loop_end_beat}
+      {set
+         [play_state]
+         STATE_REPLAY_PATTERN}
+      {script_task
+         kTaskUISeconds
+         (delay 2.0)
+         (script
+            {[routine_sequence_display]
+               do_end_pattern
+               {[song_layout]
+                  pattern_name
+                  [cur_pattern]}})}})
+(start_review_move
+   {do
+      ($backup_measures -4)
+      ($first_measure
+         {[song_layout]
+            first_measure
+            [cur_pattern]})
+      ($move_count
+         {[song_layout]
+            move_count
+            [cur_pattern]})
+      ($loop_start_beat
+         {'*'
+            {'+' $first_measure $backup_measures $move_count}
+            4})
+      ($beat
+         {round
+            {taskmgr beat}})
+      ($loop_end_beat
+         {'+' 4 $beat})
+      {if
+         {!=
+            1
+            {[song_layout]
+               move_count
+               [cur_pattern]}}
+         {set
+            $loop_start_beat
+            {- $loop_start_beat 4}}}
+      {print
+         "start_review_move"
+         ", cur_pat="
+         [cur_pattern]
+         ", 1st bar="
+         $first_measure
+         ", move_index="
+         $move_count
+         ", beat="
+         $beat
+         "\n"}
+      {set
+         [waiting_for_stream_jump]
+         TRUE}
+      {set
+         [detection_needs_reset]
+         TRUE}
+      {print
+         "setting loop beats "
+         $loop_start_beat
+         " "
+         $loop_end_beat
+         " measures "
+         {/ $loop_start_beat 4}
+         " "
+         {/ $loop_end_beat 4}
+         "\n"}
+      {audio clear_loop}
+      {audio set_loop $loop_start_beat $loop_end_beat}
+      {[routine_sequence_display]
+         do_move_recap}})
+(end_choose_mode
+   {do
+      ($selected_idx
+         {max
+            0
+            {[mini_game]
+               get
+               selected_move_index}})
+      ($selected_move
+         {elem
+            {[mini_game]
+               get
+               move_choice_list}
+            $selected_idx})
+      ($move_index
+         {[song_layout]
+            move_count
+            [cur_pattern]})
+      ($move_choice_set
+         {array 0})
+      {print
+         "end_choose_mode mini_game move selected="
+         $selected_idx
+         ", move="
+         $selected_move
+         ", beat="
+         {int
+            {taskmgr beat}}
+         "\n"}
+      {$this add_move_to_routine_display $selected_move $move_index}
+      {$this add_move_to_replacer $selected_move}
+      {if_else
+         {==
+            [cur_replacer]
+            -1}
+         {do
+            {print
+               "exiting minigame\n"}
+            {handle
+               ([mini_game]
+                  exit)}
+            {delete
+               [mini_game]}
+            {set
+               [mini_game]
+               ""}
+            {$this set_chars_showing TRUE}
+            {$this play_song}}
+         {do
+            ($cur_measure
+               {[song_layout]
+                  replacer_first_measure
+                  [cur_replacer]})
+            ($beat
+               {measure_to_beat $cur_measure})
+            {set
+               $measure
+               {[song_layout]
+                  replacer_first_measure
+                  [cur_replacer]}}
+            {movemgr
+               next_moves
+               $move_choice_set
+               {'+' $measure 1}}
+            {print
+               "--move choices--\n"}
+            {$this dump_move_set $move_choice_set}
+            {handle
+               ([mini_game]
+                  enter
+                  $move_choice_set
+                  $player_idx)}
+            {set
+               $start_loop
+               {int $beat}}
+            {set
+               $end_loop
+               {'+' $start_loop $play_duration}}
+            {audio set_loop $start_loop $end_loop}}}})
+FINAL_POSE_HANDLERS
+(end
+   {print
+      "end is temporarily disabled in routine builder\n"})
+(move_passed
+   ($player $move $detect_frac)
+   {if
+      {&&
+         {!
+            [mini_game]}
+         {$this
+            should_score_measure
+            {beat_to_measure
+               {int
+                  {taskmgr beat}}}}}
+      {do
+         ($base_points 0)
+         ($rating
+            {detect_frac_to_rating $detect_frac $move})
+         ($rating_idx
+            {rating_state_to_index $rating})
+         ($bonus
+            {get_score_bonus $detect_frac $move})
+         ($difficulty
+            {gamedata getp $player difficulty})
+         ($player_provider
+            {gamedata getp $player provider})
+         {$player_provider set rating ''}
+         {if
+            {&&
+               {!
+                  {$move is_rest}}
+               $hud_panel}
+            {$this hamprovider_export move_finished $player $rating 2.0e-2}
+            {$player_provider set rating $rating}
+            {do
+               ($streak
+                  {elem
+                     [streaks]
+                     $player})
+               {set
+                  $streak
+                  {if_else
+                     {<=
+                        $rating_idx
+                        {rating_state_to_index move_awesome}}
+                     {'+' $streak 1}
+                     0}}
+               {set_elem
+                  [streaks]
+                  $player
+                  $streak}}
+            {switch
+               $rating
+               (move_perfect
+                  {$player_provider
+                     set
+                     num_perfect
+                     {'+'
+                        1
+                        {$player_provider get num_perfect}}})
+               (move_awesome
+                  {$player_provider
+                     set
+                     num_awesome
+                     {'+'
+                        1
+                        {$player_provider get num_awesome}}})}
+            {meta_performer move_passed $player $move $rating_idx $detect_frac}
+            {do
+               ($score_chart
+                  {if_else
+                     {==
+                        [battle_config]
+                        kHamPlayerBoth}
+                     [score_chart]
+                     [solo_score_chart]})
+               {set
+                  $base_points
+                  {elem
+                     {elem
+                        $score_chart
+                        {gamedata getp $player difficulty}}
+                     $rating_idx}}}
+            {do
+               ($player_score
+                  {$player_provider get score})
+               {$player_provider
+                  set
+                  score
+                  {'+' $player_score $base_points}}}
+            {do
+               ($next_state_index
+                  {$this
+                     next_performance_state_index
+                     $rating_idx
+                     {$player_provider get performance_index}})
+               {$this performance_ladder $player $next_state_index}}}
+         {$player_provider
+            set
+            last_move_index
+            {$hud_panel get cur_move_index}}}})
+(show_venue
+   {if
+      $hamdirector
+      {if
+         {&&
+            $hamdirector
+            {$hamdirector get cur_world}}
+         {{$hamdirector get cur_world}
+            set_showing
+            TRUE}
+         {$hamdirector set disable_picking FALSE}
+         {$hamdirector set_force_postproc performance_awesome 1}
+         {$hamdirector set force_postproc_blend 1}}})
+(on_post_move_finished
+   {do
+      ($old_winning
+         [winning])
+      ($score_diff
+         {-
+            {player_provider_1 get score}
+            {player_provider_2 get score}})
+      ($played_vo FALSE)
+      ($final_pose FALSE)
+      ($was_scored_move FALSE)
+      ($beat
+         {int
+            {taskmgr beat}})
+      ($cur_measure
+         {beat_to_measure $beat})
+      {if
+         {!
+            [mini_game]}
+         {print
+            "routine_builder:on_post_move_finished"
+            ",b="
+            $beat
+            ", m="
+            $cur_measure}
+         {if_else
+            {$this is_cur_verse $cur_measure}
+            {print
+               " is in current verse\n"}
+            {print
+               " is NOT in current verse\n"}}}
+      {foreach_int
+         $i
+         0
+         {gamedata max_players}
+         {set
+            $provider
+            {gamedata getp $i provider}}
+         {if
+            {!=
+               {$provider get final_pose_rating}
+               ''}
+            {set $final_pose TRUE}}}
+      {if
+         $final_pose
+         {handle
+            (hamprovider final_pose)}}
+      {if
+         {$hamdirector is_world_loaded}
+         {if
+            {!
+               [waiting_for_stream_jump]}
+            {if_else
+               [mini_game]
+               {$this manage_chooser}
+               {if
+                  {!
+                     [accept_dialog]}
+                  {$this manage_play_state}}}}}
+      {if
+         [detection_needs_reset]
+         {game reset_detection}
+         {set
+            [detection_needs_reset]
+            FALSE}}
+      {set
+         [battle_config]
+         {hamprovider get dance_battle_config}}})
+(manage_chooser
+   {if_else
+      {<
+         -1
+         {[mini_game]
+            get
+            selected_move_index}}
+      {$this end_choose_mode}
+      ()})
+(show_accept_panel
+   {if
+      {!
+         [accept_dialog]}
+      {accept_pattern_panel set selected -1}
+      {accept_pattern_panel set_showing TRUE}
+      {set
+         [old_focus_panel]
+         {ui focus_panel}}
+      {ui set_focus_panel accept_pattern_panel}
+      {accept_pattern_panel
+         set_ok_no
+         "Accept Pattern?"}
+      {set
+         [accept_dialog]
+         TRUE}
+      {do
+         ($start
+            {'*'
+               4
+               {[song_layout]
+                  first_measure
+                  [cur_pattern]}})
+         ($end
+            {'+'
+               4
+               {int
+                  {taskmgr beat}}})
+         {print
+            "show_accept_panel set loop "
+            $start
+            " to "
+            $end
+            "\n"}
+         {audio set_loop $start $end}}})
+(build_next_pattern
+   {set
+      [cur_pattern]
+      {[song_layout]
+         first_unfilled_pattern}}
+   {print
+      "build_next_pattern"
+      ", pat="
+      [cur_pattern]
+      "\n"}
+   {$this clear_routine_display}
+   {audio clear_loop}
+   {set
+      [play_state]
+      STATE_INTRO}
+   {set
+      [intro_init]
+      FALSE}
+   {set
+      [intro_display_showing]
+      FALSE})
+(rebuild_current_pattern
+   {print
+      "rebuild_current_pattern"
+      ", pat="
+      [cur_pattern]
+      "\n"}
+   {$this clear_routine_display}
+   {[song_layout]
+      clear_moves
+      [cur_pattern]}
+   {audio clear_loop}
+   {set
+      [play_state]
+      STATE_INTRO}
+   {set
+      [intro_init]
+      FALSE}
+   {set
+      [intro_display_showing]
+      FALSE})
+(play_song
+   {print
+      "play_song"
+      "\n"}
+   {set
+      [play_state]
+      STATE_PLAYING_SONG}
+   {set
+      [routine_display_shown]
+      FALSE}
+   {do
+      ($start 0)
+      ($end
+         {'+'
+            4
+            {taskmgr beat}})
+      {audio set_loop $start $end}})
+(close_accept_panel
+   ($sel)
+   {do
+      ($sel
+         {accept_pattern_panel get selected})
+      {ui
+         set_focus_panel
+         [old_focus_panel]}
+      {accept_pattern_panel set_showing FALSE}
+      {set
+         [accept_dialog]
+         FALSE}
+      {if_else
+         {== 0 $sel}
+         {$this rebuild_current_pattern}
+         {if_else
+            {==
+               -1
+               {[song_layout]
+                  first_unfilled_pattern}}
+            {$this play_song}
+            {$this build_next_pattern}}}})
+(manage_play_state
+   {set
+      $measure
+      {beat_to_measure
+         {int
+            {taskmgr beat}}}}
+   {print
+      "manage_play_state: measure="
+      $measure
+      ", beat="
+      {int
+         {taskmgr beat}}
+      ", cur_pat="
+      [cur_pattern]
+      " "}
+   {switch
+      [play_state]
+      (STATE_PLAYING_SONG
+         {print
+            "state STATE_PLAYING_SONG"
+            ", measure="
+            $measure
+            "\n"}
+         {if
+            {!
+               [routine_display_shown]}
+            {[routine_sequence_display]
+               do_end_routine}
+            {set
+               [routine_display_shown]
+               TRUE}})
+      (STATE_BUILD_PATTERN
+         {print
+            "state STATE_BUILD_PATTERN"
+            ", measure="
+            $measure
+            "\n"}
+         {do
+            ($first_measure
+               {[song_layout]
+                  first_measure
+                  [cur_pattern]})
+            ($move_count
+               {[song_layout]
+                  move_count
+                  [cur_pattern]})
+            ($last_measure
+               {'+' $first_measure $move_count -1})
+            {print
+               "move count = "
+               $move_count
+               "\n"}
+            {print
+               "$first_measure = "
+               $first_measure
+               "\n"}
+            {print
+               "$last_measure = "
+               $last_measure
+               "\n"}
+            {print
+               "{taskmgr beat} = "
+               {int
+                  {taskmgr beat}}
+               "\n"}
+            {if
+               {> $measure $last_measure}
+               {$this start_choose_mode}}})
+      (STATE_REPLAY_PATTERN
+         {print
+            "state STATE_REPLAY_PATTERN"
+            ", measure="
+            $measure
+            "\n"}
+         {do
+            ($first_measure
+               {[song_layout]
+                  first_measure
+                  [cur_pattern]})
+            ($move_count
+               {[song_layout]
+                  move_count
+                  [cur_pattern]})
+            ($last_measure
+               {'+' $first_measure $move_count})
+            {print
+               "move count = "
+               $move_count
+               "\n"}
+            {print
+               "$first_measure = "
+               $first_measure
+               "\n"}
+            {print
+               "$last_measure = "
+               $last_measure
+               "\n"}
+            {print
+               "{taskmgr beat} = "
+               {int
+                  {taskmgr beat}}
+               "\n"}
+            {if
+               {!
+                  [accept_dialog]}
+               {if
+                  {> $measure $last_measure}
+                  {$this show_accept_panel}}}})
+      (STATE_INTRO
+         {do
+            ($first_measure
+               {[song_layout]
+                  first_measure
+                  [cur_pattern]})
+            ($offset
+               {- $first_measure $measure})
+            ($jump_beat
+               {'*'
+                  4
+                  {- $first_measure 3}})
+            {print
+               "state STATE_INTRO, measure="
+               $measure
+               ", first="
+               $first_measure
+               "\n"}
+            {set
+               $ms
+               {beat_to_ms $jump_beat}}
+            {cond
+               ({== 0 $offset}
+                  {print
+                     "STATE_INTRO, offset 0"
+                     "\n"}
+                  {$this start_choose_mode})
+               ({== 2 $offset}
+                  {print
+                     "STATE_INTRO, offset 2"
+                     "\n"}
+                  {if
+                     {!
+                        [intro_display_showing]}
+                     {[routine_sequence_display]
+                        do_new_pattern
+                        {[song_layout]
+                           pattern_name
+                           [cur_pattern]}}
+                     {set
+                        [intro_display_showing]
+                        TRUE}})
+               ({== 1 $offset}
+                  {print
+                     "STATE_INTRO, offset 1"
+                     "\n"})
+               ({'||'
+                     {> 0 $offset}
+                     {< 2 $offset}}
+                  {print
+                     "STATE_INTRO, offset:"
+                     $offset
+                     "\n"}
+                  {do
+                     {if
+                        {&&
+                           {!
+                              [intro_init]}
+                           {< 0 $ms}}
+                        {print
+                           "jump to ms="
+                           $ms
+                           ", beat="
+                           jump_beat
+                           "\n"}
+                        {game jump $ms}
+                        {set
+                           [intro_init]
+                           TRUE}}})}})})
+(on_player_join
+   ($index)
+   {game reset_detection $index})
+(on_game_stage
+   {if
+      $hamdirector
+      {switch
+         {hamprovider get game_stage}
+         (playing
+            {if
+               $hamwardrobe
+               {$hamwardrobe crowd_end_override}
+               {$hamwardrobe crowd great}})
+         (outro)}})
+(pause_on_skeleton_loss
+   {do
+      ($cur_beat
+         {int
+            {taskmgr beat}})
+      {> $cur_beat 4}})
+(record_move_score
+   ($player_index $move $score)
+   {print
+      "routine_builder:record_move_score"
+      ",p="
+      $player_index
+      ",m="
+      $move
+      ",s="
+      $score
+      "\n"}
+   {do
+      ($array
+         {elem
+            [scored_moves]
+            $player})
+      ($entered FALSE)
+      ($new_entry
+         ())
+      {foreach
+         $scored_move
+         $array
+         {if
+            {&&
+               {! $entered}
+               {==
+                  $move
+                  {elem $scored_move 1}}}
+            {set_elem $scored_move 0 $score}
+            {set $entered TRUE}}}
+      {if
+         {! $entered}
+         {set
+            $new_entry
+            {array 2}}
+         {set_elem $new_entry 0 $score}
+         {set_elem $new_entry 1 $move}
+         {push_back $array $new_entry}}})
+(on_p1_count_in
+   {set_elem
+      [count_ins]
+      0
+      3})
+(on_p2_count_in
+   {set_elem
+      [count_ins]
+      1
+      3})
+(on_side_moved
+   {print
+      "routine_builder:on_side_moved"
+      "\n"})
+(stream_jump
+   {print
+      "routine_builder:stream_jump\n"}
+   {set
+      [waiting_for_stream_jump]
+      FALSE}
+   {if
+      {&&
+         {!
+            [mini_game]}
+         {!
+            [accept_dialog]}}
+      {do
+         ($Start_beat)
+         ($end_beat)
+         ($beat
+            {int
+               {taskmgr beat}})
+         {audio get_loop_beats $start_beat $end_beat}
+         {print
+            "routine_builder:stream_jump"
+            ", $beat="
+            $beat
+            ", {taskmgr beat}="
+            {taskmgr beat}
+            ", loopS="
+            $start_beat
+            ", loopE="
+            $end_beat
+            "\n"}
+         {$hud_panel clear_flash_cards 0}
+         {$hud_panel update_flashcards $start_beat TRUE}
+         {handle
+            ({gamedata getp 0 provider}
+               show_hud
+               TRUE)}
+         {audio clear_loop}
+         {print
+            "routine_builder:stream_jump"
+            ", clear loop"
+            "\n"}
+         {$this show_venue}}})
+(beat
+   {if
+      {!
+         [mini_game]}
+      {print
+         "routine_builder:beat"
+         ", beat="
+         {taskmgr beat}
+         "\n"}})
+(set_shot
+   ($category)
+   {print
+      "routine_builder:set_shot"
+      ", $beat="
+      {int
+         {taskmgr beat}}
+      ", {taskmgr beat}="
+      {taskmgr beat}
+      "\n"}
+   {$hamdirector set disable_picking FALSE}
+   {$hamdirector select_camera}
+   {$hamdirector set shot $category}
+   {$hamdirector select_camera}
+   {$hamdirector set disable_picking TRUE})
+(on_camshot_changed
+   {do
+      ($other_player_char '')
+      ($other_phrase_meter '')
+      ($other_player_action '')
+      ($cur_world
+         {$hamdirector get cur_world})
+      ($player0
+         {find_obj $cur_world player0})
+      ($player1
+         {find_obj $cur_world player1})
+      ($phrase_meter0
+         {find_obj $cur_world phrase_meter0 draw.grp})
+      ($phrase_meter1
+         {find_obj $cur_world phrase_meter1 draw.grp})
+      ($bk_dancer
+         "")
+      {switch
+         {hamprovider get cam_player_config}
+         (kHamPlayer0
+            {set $other_player_char $player1}
+            {set $other_phrase_meter $phrase_meter1})
+         (kHamPlayer1
+            {set $other_player_char $player0}
+            {set $other_phrase_meter $phrase_meter0})}
+      {$phrase_meter0 set_showing TRUE}
+      {$phrase_meter1 set_showing TRUE}
+      {if
+         $other_player_char
+         {$other_phrase_meter set_showing FALSE}
+         {switch
+            $other_player_action
+            (idle
+               {{find_obj $other_player_char main.drv}
+                  play_group
+                  rest_clip
+                  {'|' kPlayNoBlend kPlayNodeLoop}})}}
+      {if
+         {==
+            {hamprovider get game_stage}
+            playing}
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {set
+               $bk_dancer
+               {find_obj
+                  $cur_world
+                  {sprint
+                     "backup"
+                     $i}}}
+            {if
+               $bk_dancer
+               {$bk_dancer set_showing FALSE}}}}})
+(performance_ladder
+   ($player_index $state_index)
+   {print
+      "routine_builder:performance_ladder"
+      ", $beat="
+      {taskmgr beat}
+      "\n"})
+(in_play_range
+   ($b)
+   TRUE)
+(can_pause TRUE)
+(num_rated_measures
+   {$this num_rated_measures_common})
+(is_cur_verse
+   ($measure)
+   {do
+      ($res)
+      {set
+         $res
+         {[song_layout]
+            measure_in_pattern
+            $measure
+            [cur_pattern]}}
+      $res})
+(convert_beat
+   ($b $player_index)
+   {do
+      ($converted_beat -1)
+      ($cur_beat
+         {round
+            {taskmgr beat}})
+      {if_else
+         {$this
+            should_score_measure
+            {beat_to_measure $b}}
+         {set $converted_beat $b}
+         {set $converted_beat 0}}
+      {if
+         {== 1 $player_index}
+         {set $converted_beat 0}}
+      $converted_beat})
+(should_score_measure
+   ($measure)
+   {do
+      ($ret TRUE)
+      ($cur_verse
+         {$this is_cur_verse $measure})
+      ($pat_first
+         {[song_layout]
+            first_measure
+            [cur_pattern]})
+      ($pat_count
+         {[song_layout]
+            move_count
+            [cur_pattern]})
+      ($pattern_measure
+         {-
+            {'+' $pat_first $pat_count}
+            1})
+      {switch
+         [play_state]
+         (STATE_PLAYING_SONG
+            {set $ret TRUE})
+         (STATE_REPLAY_PATTERN
+            {set $ret $cur_verse})
+         (STATE_BUILD_PATTERN
+            {do
+               ($offset
+                  {- $pattern_measure $measure})
+               {set
+                  $ret
+                  {&&
+                     $cur_verse
+                     {'||'
+                        {== $offset 1}
+                        {== $offset 0}}}}})
+         (STATE_INTRO
+            {set $ret FALSE})}
+      {if
+         {>
+            $measure
+            [last_move]}
+         {set $ret FALSE}}
+      {if
+         {<=
+            $measure
+            [intro_rest_count]}
+         {set $ret FALSE}}
+      $ret})
+(game_outro
+   {$this game_outro_common})

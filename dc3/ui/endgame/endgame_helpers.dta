@@ -1,0 +1,1232 @@
+#define kSideLeft
+(1)
+#define kSideRight
+(0)
+{new
+   HamPanel
+   win_transition_panel
+   (helpbar_allow_controller FALSE)
+   (allow_voice_control FALSE)}
+{new
+   HamPanel
+   endgame_delay_panel
+   (helpbar_allow_controller FALSE)
+   (allow_voice_control FALSE)
+   (is_loaded
+      {! $outro_started})}
+{func
+   win_screen_common
+   {if
+      {!
+         {&&
+            {gamemode in_mode campaign}
+            {==
+               {meta_performer get_era}
+               era_tan_battle}}}
+      {if
+         {==
+            {hamprovider get skipped_song}
+            FALSE}
+         {meta music_start}}}
+   {meta_performer
+      trigger_song_completion
+      {'+'
+         {player_provider_1 get score}
+         {player_provider_2 get score}}
+      {int
+         {game_panel get num_stars}}}
+   {meta_performer
+      advance_song
+      {int
+         {game_panel get num_stars}}}}
+{func
+   goto_win_screen
+   ($push)
+   {win_screen_common}
+   {if_else
+      $push
+      {ui
+         push_screen
+         {gamemode get win_screen}}
+      {ui
+         goto_screen
+         {gamemode get win_screen}}}}
+#define ENDGAME_PANEL_COMMON_ENTER
+({game_screen set_showing FALSE})
+#define kXPRewardPanelState_None
+(0)
+#define kXPRewardPanelState_RevealingFrame
+(1)
+#define kXPRewardPanelState_RevealingItem
+(2)
+#define kXPRewardPanelState_Showing
+(3)
+#define kXPRewardPanelState_HidingItem
+(4)
+#define kXPRewardPanelState_HidingFrame
+(5)
+#define kXPRewardItemType_Normal
+(0)
+#define kXPRewardItemType_Boomy
+(1)
+#define kXPRewardItemType_Stage
+(2)
+#define kXPReward_UseContinue
+(0)
+{new
+   HamPanel
+   xp_reward_panel
+   (file ../xp_rewards_screen.milo)
+   (active 0)
+   (prev_screen)
+   (msg
+      (""
+         ""
+         ""
+         ""))
+   (timer_reset 0.0)
+   (timer 0.0)
+   (item_type kXPRewardItemType_Normal)
+   (pending_award FALSE)
+   (display_state kXPRewardPanelState_None)
+   (continue_to_next_screen FALSE)
+   (enter
+      {print
+         "xp_reward_panel: awards triggered\n"}
+      {clear.flow activate}
+      {$this show}
+      {if
+         {{ui current_screen}
+            get
+            has_continue_panel}
+         {perform_continue_panel disable}})
+   (exit
+      {print
+         "xp_reward_panel: exit\n"})
+   (show
+      {print
+         "xp_reward_panel: show\n"}
+      {if_else
+         {xp_have_deferred_award}
+         {do
+            {$this set showing 1}
+            {set
+               [display_state]
+               kXPRewardPanelState_None}
+            {set
+               [active]
+               1}
+            {set
+               [continue_to_next_screen]
+               FALSE}
+            {$this trigger_next_award}}
+         {$this hide}})
+   (hide
+      {print
+         "xp_reward_panel: hide\n"}
+      {$this set showing 0}
+      {xp_overlay_panel set pause_point_tally 0}
+      {set
+         [active]
+         0}
+      {ui
+         go_back_screen
+         [prev_screen]})
+   (poll
+      {if
+         [active]
+         {switch
+            [display_state]
+            (kXPRewardPanelState_None)
+            (kXPRewardPanelState_RevealingFrame
+               {if
+                  {!
+                     {reveal_frame.flow is_running}}
+                  {$this reveal_item}})
+            (kXPRewardPanelState_RevealingItem
+               {if
+                  {&&
+                     {!
+                        {reveal_item.flow is_running}}
+                     {!
+                        {reveal_boomy.flow is_running}}
+                     {!
+                        {reveal_stage.flow is_running}}}
+                  {set
+                     [display_state]
+                     kXPRewardPanelState_Showing}
+                  {if
+                     {&&
+                        {{ui current_screen}
+                           get
+                           has_continue_panel}
+                        kXPReward_UseContinue}
+                     {print
+                        "using continue panel\n"}
+                     {perform_continue_panel enable}
+                     {perform_continue_panel set callback_panel $this}}})
+            (kXPRewardPanelState_Showing
+               {do
+                  ($done_showing FALSE)
+                  {if_else
+                     {&&
+                        {{ui current_screen}
+                           get
+                           has_continue_panel}
+                        kXPReward_UseContinue}
+                     {if
+                        [continue_to_next_screen]
+                        {perform_continue_panel disable}
+                        {set $done_showing TRUE}
+                        {set
+                           [continue_to_next_screen]
+                           FALSE}}
+                     {do
+                        {-=
+                           [timer]
+                           {taskmgr ui_delta_seconds}}
+                        {if
+                           {<
+                              [timer]
+                              0.0}
+                           {set $done_showing TRUE}}}}
+                  {if
+                     $done_showing
+                     {set
+                        [pending_award]
+                        FALSE}
+                     {$this hide_item}}})
+            (kXPRewardPanelState_HidingItem
+               {if
+                  {&&
+                     {!
+                        {hide_item.flow is_running}}
+                     {!
+                        {hide_boomy.flow is_running}}
+                     {!
+                        {hide_stage.flow is_running}}}
+                  {$this hide_frame}})
+            (kXPRewardPanelState_HidingFrame
+               {if
+                  {!
+                     {hide_frame.flow is_running}}
+                  {if_else
+                     [pending_award]
+                     {do
+                        {$this set_next_item}
+                        {$this reveal_frame}}
+                     {$this hide}}})}})
+   (trigger_next_award
+      {print
+         "xp_reward: trigger_next_award\n"}
+      {set
+         [timer]
+         [timer_reset]}
+      {if_else
+         {xp_have_deferred_award}
+         {do
+            {set
+               [msg]
+               {xp_deferred_award}}
+            {print
+               "xp_reward: award is "
+               [msg]
+               "\n"}
+            {set
+               [pending_award]
+               TRUE}}
+         {do
+            {set
+               [pending_award]
+               FALSE}}}
+      {$this hide_item})
+   (set_next_item
+      {print
+         "xp_reward: set_next_item\n"}
+      {do
+         ($gamertag
+            {elem
+               [msg]
+               0})
+         ($name_lbl
+            {elem
+               [msg]
+               1})
+         ($desc_lbl
+            {elem
+               [msg]
+               2})
+         ($img_name
+            {elem
+               [msg]
+               3})
+         ($is_boomy
+            {has_substr
+               $img_name
+               "boomy"})
+         ($is_tantopia
+            {has_substr
+               $img_name
+               "crowsnest"})
+         {gamertag.lbl set text_token $gamertag}
+         {item_name.lbl set text_token $name_lbl}
+         {item_desc.lbl set text_token $desc_lbl}
+         {cond
+            ($is_boomy
+               {set
+                  [item_type]
+                  kXPRewardItemType_Boomy})
+            ($is_tantopia
+               {set
+                  [item_type]
+                  kXPRewardItemType_Stage})
+            (TRUE
+               {char_p1.pic set tex_file $img_name}
+               {char_p2.pic set tex_file $img_name}
+               {set
+                  [item_type]
+                  kXPRewardItemType_Normal})}})
+   (reveal_frame
+      {print
+         "xp_reward: reveal_frame\n"}
+      {set
+         [display_state]
+         kXPRewardPanelState_RevealingFrame}
+      {reveal_frame.flow activate})
+   (reveal_item
+      {print
+         "xp_reward: reveal_item\n"}
+      {set
+         [display_state]
+         kXPRewardPanelState_RevealingItem}
+      {cond
+         ({==
+               [item_type]
+               kXPRewardItemType_Boomy}
+            {reveal_boomy.flow activate})
+         ({==
+               [item_type]
+               kXPRewardItemType_Stage}
+            {reveal_stage.flow activate})
+         (TRUE
+            {reveal_item.flow activate})})
+   (hide_item
+      {print
+         "xp_reward: hide_item\n"}
+      {set
+         [display_state]
+         kXPRewardPanelState_HidingItem}
+      {hide_item.flow activate}
+      {hide_boomy.flow activate}
+      {hide_stage.flow activate})
+   (hide_frame
+      {print
+         "xp_reward: hide_frame\n"}
+      {set
+         [display_state]
+         kXPRewardPanelState_HidingFrame}
+      {hide_frame.flow activate})}
+#define kXPToasterPanelState_None
+(0)
+#define kXPToasterPanelState_SlidingInBackground
+(1)
+#define kXPToasterPanelState_DisplayingInitialRank_BarAndGem
+(2)
+#define kXPToasterPanelState_DisplayingInitialRank_Level
+(3)
+#define kXPToasterPanelState_CountingXP_HandleTaskDisplay
+(4)
+#define kXPToasterPanelState_CountingXP_PauseAfterTaskDisplay
+(5)
+#define kXPToasterPanelState_TasksDone
+(6)
+#define kXPToaster_AfterTaskPauseTime
+(0.0)
+#define kXPToaster_FinalDisplayTime
+(1.0)
+#define kXPToaster_AnimateStartState
+(0)
+{new
+   HamPanel
+   xp_overlay_panel
+   (file ../hud/xptoaster_panel.milo)
+   (draw_after_letterbox TRUE)
+   (suppress_display FALSE)
+   (active 0)
+   (done_displaying FALSE)
+   (pause_point_tally 0)
+   (display_state kXPToasterPanelState_None)
+   (display_timer 0.0)
+   (have_displayed_XP FALSE)
+   (pending_toasters
+      ())
+   (current_toaster 0)
+   (current_side 0)
+   (current_rank_mgr 0)
+   (pending_award FALSE)
+   (enter
+      {print
+         "xp_overlay_panel enter\n"}
+      {set
+         [active]
+         0}
+      {set
+         [pause_point_tally]
+         0}
+      {set
+         [showing]
+         0}
+      {set
+         [suppress_display]
+         FALSE}
+      {set
+         [have_displayed_XP]
+         FALSE}
+      {set
+         [pending_award]
+         FALSE}
+      {xptoaster_left set showing 0}
+      {xptoaster_rt set showing 0}
+      {$this set_pending_toasters})
+   (exit
+      {print
+         "xp_overlay_panel exit\n"}
+      {set
+         [showing]
+         0}
+      {set
+         [active]
+         0})
+   (start_display
+      {print
+         "xp_overlay_panel start_display\n"}
+      {$this set showing 1}
+      {set
+         [active]
+         1}
+      {if_else
+         [suppress_display]
+         {set
+            [done_displaying]
+            TRUE}
+         {do
+            {set
+               [done_displaying]
+               FALSE}
+            {$this display_next_toaster}}})
+   (display_next_toaster
+      {xptoaster_left set showing 0}
+      {xptoaster_rt set showing 0}
+      {if_else
+         {>
+            {size
+               [pending_toasters]}
+            0}
+         {do
+            {set
+               [have_displayed_XP]
+               TRUE}
+            {$this set_current_toaster}
+            {$this set_current_side}
+            {$this set_current_rank_mgr}
+            {$this pop_pending_toaster}
+            {do
+               ($xp_player
+                  {$this
+                     get_xp_player
+                     [current_toaster]})
+               {$xp_player
+                  set
+                  xp_for_1
+                  ""}
+               {$xp_player
+                  set
+                  xp_for_0
+                  ""}}
+            {[current_toaster]
+               set
+               showing
+               1}
+            {{[current_toaster]
+                  find
+                  init.flow}
+               activate}
+            {if_else
+               kXPToaster_AnimateStartState
+               {do
+                  {{[current_toaster]
+                        find
+                        slide_in_background.flow}
+                     activate}
+                  {set
+                     [display_state]
+                     kXPToasterPanelState_SlidingInBackground}}
+               {$this set_initial_rank_bar_and_gem}}}
+         {do
+            {$this stop_display}}})
+   (stop_display
+      {print
+         "xp_overlay_panel stop_display\n"}
+      {xptoaster_left set showing 0}
+      {xptoaster_rt set showing 0}
+      {$this set showing 0}
+      {set
+         [active]
+         0}
+      {set
+         [done_displaying]
+         TRUE}
+      {if
+         [have_displayed_XP]
+         {print
+            "  triggering autosave\n"}
+         {saveload_mgr autosave}})
+   (is_done
+      [done_displaying])
+   (poll
+      {if
+         {&&
+            [active]
+            [current_rank_mgr]
+            {!
+               [done_displaying]}
+            {!
+               [pause_point_tally]}
+            {!
+               {passive_messenger has_messages}}}
+         {$this update_xp_points_display}
+         {switch
+            [display_state]
+            (kXPToasterPanelState_None)
+            (kXPToasterPanelState_SlidingInBackground
+               {if
+                  {&&
+                     {!
+                        {{[current_toaster]
+                              find
+                              slide_in_background.flow}
+                           is_running}}
+                     {!
+                        {{[current_toaster]
+                              find
+                              init.flow}
+                           is_running}}}
+                  {if_else
+                     kXPToaster_AnimateStartState
+                     {$this set_initial_rank_bar_and_gem}
+                     {do
+                        {{[current_toaster]
+                              find
+                              update_display.flow}
+                           activate}
+                        {{$this
+                              get_xp_player
+                              [current_toaster]}
+                           set
+                           ready
+                           TRUE}
+                        {$this get_next_task}}}})
+            (kXPToasterPanelState_DisplayingInitialRank_BarAndGem
+               {if
+                  {&&
+                     {!
+                        {{[current_toaster]
+                              find
+                              animate_xp_bar.flow}
+                           is_running}}
+                     {!
+                        {{[current_toaster]
+                              find
+                              update_tier.flow}
+                           is_running}}}
+                  {$this display_initial_rank_level}})
+            (kXPToasterPanelState_DisplayingInitialRank_Level
+               {if
+                  {&&
+                     {!
+                        {{[current_toaster]
+                              find
+                              turn_on_level.flow}
+                           is_running}}
+                     {!
+                        {{[current_toaster]
+                              find
+                              turn_on_xp.flow}
+                           is_running}}}
+                  {if_else
+                     kXPToaster_AnimateStartState
+                     {do
+                        {{[current_toaster]
+                              find
+                              update_display.flow}
+                           activate}
+                        {{$this
+                              get_xp_player
+                              [current_toaster]}
+                           set
+                           ready
+                           TRUE}
+                        {$this get_next_task}}
+                     {do
+                        {{[current_toaster]
+                              find
+                              slide_in_background.flow}
+                           activate}
+                        {set
+                           [display_state]
+                           kXPToasterPanelState_SlidingInBackground}}}})
+            (kXPToasterPanelState_CountingXP_HandleTaskDisplay
+               {if
+                  {!
+                     {{[current_toaster]
+                           find
+                           update_text.flow}
+                        is_running}}
+                  {if
+                     {$this handle_task_display}
+                     {$this pause_after_task_display}}})
+            (kXPToasterPanelState_CountingXP_PauseAfterTaskDisplay
+               {-=
+                  [display_timer]
+                  {taskmgr ui_delta_seconds}}
+               {if
+                  {<
+                     [display_timer]
+                     0.0}
+                  {$this get_next_task}})
+            (kXPToasterPanelState_TasksDone
+               {if_else
+                  {[current_toaster]
+                     find
+                     slide_out_background.flow}
+                  {if
+                     {!
+                        {{[current_toaster]
+                              find
+                              slide_out_background.flow}
+                           is_running}}
+                     {$this display_next_toaster}}
+                  {do
+                     {-=
+                        [display_timer]
+                        {taskmgr ui_delta_seconds}}
+                     {if
+                        {<
+                           [display_timer]
+                           0.0}
+                        {$this display_next_toaster}}}})}})
+   (set_pending_toasters
+      {set
+         [pending_toasters]
+         {array 0}}
+      {do
+         ($toaster_right
+            (xptoaster_rt kSkeletonRight kSideRight))
+         ($toaster_left
+            (xptoaster_left kSkeletonLeft kSideLeft))
+         {if
+            {==
+               {player_provider_1 get join_state}
+               kJoinPlaying}
+            {cond
+               ({==
+                     {player_provider_1 get side}
+                     kSkeletonRight}
+                  {do
+                     ($rank_mgr_this_side
+                        {$this get_rank_mgr kSideRight})
+                     {if
+                        {&&
+                           $rank_mgr_this_side
+                           {$rank_mgr_this_side have_deferred_points}}
+                        {push_back
+                           [pending_toasters]
+                           $toaster_right}}})
+               ({==
+                     {player_provider_1 get side}
+                     kSkeletonLeft}
+                  {do
+                     ($rank_mgr_this_side
+                        {$this get_rank_mgr kSideLeft})
+                     {if
+                        {&&
+                           $rank_mgr_this_side
+                           {$rank_mgr_this_side have_deferred_points}}
+                        {push_back
+                           [pending_toasters]
+                           $toaster_left}}})}}
+         {if
+            {==
+               {player_provider_2 get join_state}
+               kJoinPlaying}
+            {cond
+               ({==
+                     {player_provider_2 get side}
+                     kSkeletonRight}
+                  {do
+                     ($rank_mgr_this_side
+                        {$this get_rank_mgr kSideRight})
+                     {if
+                        {&&
+                           $rank_mgr_this_side
+                           {$rank_mgr_this_side have_deferred_points}}
+                        {push_back
+                           [pending_toasters]
+                           $toaster_right}}})
+               ({==
+                     {player_provider_2 get side}
+                     kSkeletonLeft}
+                  {do
+                     ($rank_mgr_this_side
+                        {$this get_rank_mgr kSideLeft})
+                     {if
+                        {&&
+                           $rank_mgr_this_side
+                           {$rank_mgr_this_side have_deferred_points}}
+                        {push_back
+                           [pending_toasters]
+                           $toaster_left}}})}}})
+   (pop_pending_toaster
+      {if_else
+         {>
+            {size
+               [pending_toasters]}
+            0}
+         {do
+            ($elem_to_remove
+               {elem
+                  [pending_toasters]
+                  0})
+            {remove_elem
+               [pending_toasters]
+               $elem_to_remove}
+            1}
+         0})
+   (set_current_toaster
+      {if_else
+         {>
+            {size
+               [pending_toasters]}
+            0}
+         {set
+            [current_toaster]
+            {elem
+               {elem
+                  [pending_toasters]
+                  0}
+               0}}
+         {set
+            [current_toaster]
+            0}})
+   (set_current_side
+      {if_else
+         {>
+            {size
+               [pending_toasters]}
+            0}
+         {set
+            [current_side]
+            {elem
+               {elem
+                  [pending_toasters]
+                  0}
+               1}}
+         {set
+            [current_side]
+            0}})
+   (set_current_rank_mgr
+      {set
+         [current_rank_mgr]
+         {$this
+            get_rank_mgr
+            {elem
+               {elem
+                  [pending_toasters]
+                  0}
+               2}}})
+   (get_rank_mgr
+      ($side)
+      {do
+         ($player_index
+            {multiuser_panel get_player_index $side})
+         ($pad
+            {{gamedata player $player_index}
+               get
+               pad_num})
+         {if_else
+            {>= $pad 0}
+            {do
+               ($profile
+                  {profile_mgr get_profile_from_pad $pad})
+               {$profile get_rank}}
+            0}})
+   (set_initial_rank_bar_and_gem
+      {print
+         "xp_overlay_panel set_initial_rank_bar_and_gem [current_rank_mgr] = "
+         [current_rank_mgr]
+         "\n"}
+      {if
+         [current_rank_mgr]
+         {do
+            ($xp_player
+               {$this
+                  get_xp_player
+                  [current_toaster]})
+            ($rank_in_tier
+               {[current_rank_mgr]
+                  get_rank_in_tier})
+            ($tier
+               {[current_rank_mgr]
+                  get_tier})
+            ($rank
+               {[current_rank_mgr]
+                  get_rank_number})
+            ($progress_percent
+               {[current_rank_mgr]
+                  get_percent_to_next_rank})
+            {$this
+               fill_in_values
+               [current_toaster]
+               $xp_player
+               $rank_in_tier
+               $tier
+               $rank
+               $progress_percent}
+            {{[current_toaster]
+                  find
+                  update_rank_number.flow}
+               activate}
+            {{[current_toaster]
+                  find
+                  update_tier.flow}
+               activate}}
+         {$this display_initial_rank_bar_and_gem}})
+   (display_initial_rank_bar_and_gem
+      {print
+         "xp_overlay_panel display_initial_rank_bar_and_gem\n"}
+      {if_else
+         kXPToaster_AnimateStartState
+         {{[current_toaster]
+               find
+               animate_xp_bar.flow}
+            activate}
+         {{[current_toaster]
+               find
+               set_xp_bar.flow}
+            activate}}
+      {set
+         [display_state]
+         kXPToasterPanelState_DisplayingInitialRank_BarAndGem})
+   (display_initial_rank_level
+      {print
+         "xp_overlay_panel display_initial_rank_level [current_rank_mgr] = "
+         [current_rank_mgr]
+         "\n"}
+      {if
+         [current_rank_mgr]
+         {{[current_toaster]
+               find
+               turn_on_level.flow}
+            activate}
+         {do
+            ($xp_player
+               {$this
+                  get_xp_player
+                  [current_toaster]})
+            ($rank_in_tier
+               {[current_rank_mgr]
+                  get_rank_in_tier})
+            {if
+               {!= $rank_in_tier 0}
+               {{[current_toaster]
+                     find
+                     turn_on_xp.flow}
+                  activate}}}
+         {set
+            [display_state]
+            kXPToasterPanelState_DisplayingInitialRank_Level}})
+   (get_next_task
+      {print
+         "xp_overlay_panel get_next_task\n"}
+      {set
+         [display_state]
+         kXPToasterPanelState_CountingXP_HandleTaskDisplay}
+      {if_else
+         {[current_rank_mgr]
+            have_deferred_points}
+         {do
+            ($msg
+               {[current_rank_mgr]
+                  get_next_deferred_points})
+            ($xp_player
+               {$this
+                  get_xp_player
+                  [current_toaster]})
+            {print
+               "  task completed: "
+               $msg
+               "\n"}
+            {$xp_player
+               set
+               xp_for_1
+               {$xp_player get xp_for_0}}
+            {if_else
+               {>
+                  {elem $msg 1}
+                  0}
+               {$xp_player
+                  set
+                  xp_for_0
+                  {sprint
+                     {localize
+                        {elem $msg 0}}
+                     " (+"
+                     {elem $msg 1}
+                     "<alt>I</alt>)"}}
+               {$xp_player
+                  set
+                  xp_for_0
+                  {sprint
+                     {localize
+                        {elem $msg 0}}}}}
+            {{[current_toaster]
+                  find
+                  update_text.flow}
+               activate}}
+         {do
+            {print
+               "  no more tasks\n"}
+            {$this set_tasks_done}}})
+   (handle_task_display
+      {if_else
+         {!
+            {{$this
+                  get_xp_player
+                  [current_toaster]}
+               get
+               ready}}
+         0
+         {if_else
+            {$this handle_show_award}
+            0
+            {do
+               ($xp_player
+                  {$this
+                     get_xp_player
+                     [current_toaster]})
+               ($prev_progress_percent
+                  {$this
+                     get_progress_percent
+                     [current_toaster]
+                     $xp_player})
+               ($next_progress_percent
+                  {[current_rank_mgr]
+                     get_percent_to_next_rank})
+               ($prev_rank_in_tier
+                  {$xp_player get rank_in_tier})
+               ($next_rank_in_tier
+                  {[current_rank_mgr]
+                     get_rank_in_tier})
+               ($prev_tier
+                  {$xp_player get tier})
+               ($next_tier
+                  {[current_rank_mgr]
+                     get_tier})
+               ($prev_rank
+                  {$xp_player get rank})
+               ($next_rank
+                  {[current_rank_mgr]
+                     get_rank_number})
+               {print
+                  "  percent- prev: "
+                  $prev_progress_percent
+                  " next: "
+                  $next_progress_percent
+                  "  rank_in_tier- prev: "
+                  $prev_rank_in_tier
+                  " next: "
+                  $next_rank_in_tier
+                  "  tier- prev: "
+                  $prev_tier
+                  " next: "
+                  $next_tier
+                  " rank- prev: "
+                  $prev_rank
+                  " next: "
+                  $next_rank
+                  "\n"}
+               {if_else
+                  {== $prev_tier 0}
+                  {if_else
+                     {> $next_tier $prev_tier}
+                     {do
+                        {$xp_player set tier 1}
+                        {$xp_player set rank_in_tier 1}
+                        {$xp_player set rank 1}
+                        {$xp_player
+                           set
+                           rank_text
+                           {sprint 1}}
+                        {set
+                           [pending_award]
+                           TRUE}
+                        0}
+                     1}
+                  {if_else
+                     {== $prev_tier $next_tier}
+                     {if_else
+                        {== $prev_rank_in_tier $next_rank_in_tier}
+                        {if_else
+                           {<
+                              {abs
+                                 {- $prev_progress_percent $next_progress_percent}}
+                              1.0e-4}
+                           1
+                           {if_else
+                              {< $prev_progress_percent $next_progress_percent}
+                              {do
+                                 {$this
+                                    set_progress_percent
+                                    [current_toaster]
+                                    $xp_player
+                                    $next_progress_percent}
+                                 0}
+                              {do
+                                 {print
+                                    "  ****ERROR**** - prev_tier == next_tier, prev_rank_in_tier == next_rank_in_tier, prev_progress_percent > next_progress_percent\n"}
+                                 1}}}
+                        {if_else
+                           {< $prev_rank_in_tier $next_rank_in_tier}
+                           {do
+                              {$this
+                                 set_progress_percent
+                                 [current_toaster]
+                                 $xp_player
+                                 0.0}
+                              {$xp_player
+                                 set
+                                 rank_in_tier
+                                 {'++' $prev_rank_in_tier}}
+                              {$xp_player
+                                 set
+                                 rank
+                                 {'+' $prev_rank 1}}
+                              {$xp_player
+                                 set
+                                 rank_text
+                                 {sprint
+                                    {'+' $prev_rank 1}}}
+                              {set
+                                 [pending_award]
+                                 TRUE}
+                              0}
+                           {do
+                              {print
+                                 "  ****ERROR**** - prev_tier == next_tier, prev_rank_in_tier > next_rank_in_tier\n"}
+                              1}}}
+                     {if_else
+                        {< $prev_tier $next_tier}
+                        {if_else
+                           {&&
+                              {==
+                                 {- $next_tier $prev_tier}
+                                 1}
+                              {== $next_rank_in_tier 0}}
+                           {do
+                              {$this
+                                 set_progress_percent
+                                 [current_toaster]
+                                 $xp_player
+                                 0.0}
+                              {$xp_player set rank_in_tier 0}
+                              {$xp_player set tier $next_tier}
+                              {$xp_player
+                                 set
+                                 rank
+                                 {'+' $prev_rank 1}}
+                              {$xp_player
+                                 set
+                                 rank_text
+                                 ""}
+                              {set
+                                 [pending_award]
+                                 TRUE}
+                              0}
+                           {do
+                              {$this
+                                 set_progress_percent
+                                 [current_toaster]
+                                 $xp_player
+                                 0.0}
+                              {$xp_player set rank_in_tier 1}
+                              {$xp_player
+                                 set
+                                 tier
+                                 {'++' $prev_tier}}
+                              {$xp_player
+                                 set
+                                 rank
+                                 {'+' $prev_rank 1}}
+                              {$xp_player
+                                 set
+                                 rank_text
+                                 {sprint
+                                    {'+' $prev_rank 1}}}
+                              {set
+                                 [pending_award]
+                                 TRUE}
+                              0}}
+                        {do
+                           {print
+                              "  ****ERROR**** - prev_tier > next_tier\n"}
+                           1}}}}}}})
+   (pause_after_task_display
+      {set
+         [display_timer]
+         kXPToaster_AfterTaskPauseTime}
+      {set
+         [display_state]
+         kXPToasterPanelState_CountingXP_PauseAfterTaskDisplay})
+   (set_tasks_done
+      {print
+         "xp_overlay_panel set_tasks_done\n"}
+      {if_else
+         {[current_toaster]
+            find
+            slide_out_background.flow}
+         {if
+            [current_toaster]
+            {{[current_toaster]
+                  find
+                  slide_out_background.flow}
+               activate}}
+         {set
+            [display_timer]
+            kXPToaster_FinalDisplayTime}}
+      {set
+         [display_state]
+         kXPToasterPanelState_TasksDone})
+   (get_xp_player
+      ($toaster)
+      {$toaster find player.ep})
+   (get_progress_percent
+      ($toaster $xp_player)
+      {/
+         {$xp_player get progress_percent}
+         {{$toaster find meter_topbar.anim}
+            get
+            end_frame}})
+   (set_progress_percent
+      ($toaster $xp_player $progress_percent)
+      {$xp_player
+         set
+         progress_percent
+         {'*'
+            $progress_percent
+            {{$toaster find meter_topbar.anim}
+               get
+               end_frame}}})
+   (fill_in_values
+      ($toaster $xp_player $rank_in_tier $tier $rank $progress_percent)
+      {print
+         "xp_overlay_panel fill_in_values - rank_in_tier:"
+         $rank_in_tier
+         " tier:"
+         $tier
+         " rank:"
+         $rank
+         " progress_percent:"
+         $progress_percent
+         "\n"}
+      {$xp_player set rank_in_tier $rank_in_tier}
+      {$xp_player set tier $tier}
+      {if_else
+         {!= $rank_in_tier 0}
+         {do
+            {$xp_player set rank $rank}
+            {$xp_player
+               set
+               rank_text
+               {sprint $rank}}}
+         {do
+            {$xp_player set rank $rank}
+            {$xp_player
+               set
+               rank_text
+               ""}}}
+      {$this set_progress_percent $toaster $xp_player $progress_percent})
+   (update_xp_points_display
+      {do
+         ($xp_player
+            {$this
+               get_xp_player
+               [current_toaster]})
+         ($rank_to_use
+            {'+'
+               {$xp_player get rank_in_tier}
+               {'*'
+                  {-
+                     {$xp_player get tier}
+                     1}
+                  5}})
+         ($xp_of_rank
+            {[current_rank_mgr]
+               get_xp_of_rank
+               $rank_to_use})
+         ($current_anim_frame
+            {{[current_toaster]
+                  find
+                  meter_topbar.anim}
+               get
+               frame})
+         ($current_anim_percent
+            {/
+               $current_anim_frame
+               {{[current_toaster]
+                     find
+                     meter_topbar.anim}
+                  get
+                  end_frame}})
+         ($xp_in_rank
+            {'*' $current_anim_percent $xp_of_rank})
+         {if_else
+            {> $xp_of_rank 0}
+            {{[current_toaster]
+                  find
+                  xp_nextlevelxp.lbl}
+               set_token_fmt
+               fraction
+               $xp_in_rank
+               $xp_of_rank}
+            {{[current_toaster]
+                  find
+                  xp_nextlevelxp.lbl}
+               set_prelocalized_string
+               ""}}})
+   (handle_show_award
+      {if_else
+         [pending_award]
+         {do
+            {print
+               "xp_overlay_panel triggering award\n"}
+            {if_else
+               {xp_have_deferred_award}
+               {do
+                  {set
+                     [pending_award]
+                     FALSE}
+                  {set
+                     [pause_point_tally]
+                     1}
+                  {xp_reward_panel
+                     set
+                     prev_screen
+                     {ui current_screen}}
+                  {ui goto_screen xp_reward_screen_for_perform_endgame_screen}
+                  1}
+               {do
+                  {set
+                     [pending_award]
+                     FALSE}
+                  0}}}
+         0})}

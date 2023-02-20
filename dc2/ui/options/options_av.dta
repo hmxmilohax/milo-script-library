@@ -1,0 +1,184 @@
+{new
+   HamPanel
+   options_av_panel
+   (file
+      "options_av.milo")
+   (focus right_hand.hnl)
+   (pending_show_kinect_tuner FALSE)
+   (back_token back)
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)}
+      {set
+         [pending_show_kinect_tuner]
+         FALSE}
+      {$this update_checks}
+      {$this
+         update_description
+         {right_hand.hnl get_selected_sym}}
+      {hamprovider set ui_nav_mode shell})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (calibration
+            {ui goto_screen calibration_screen})
+         (natal_troubleshooter
+            {platform_mgr show_controller_required $this}
+            skip_select_anim)
+         (overscan
+            {profile_mgr
+               set_overscan
+               {!
+                  {profile_mgr get_overscan}}}
+            {$this update_checks}
+            skip_select_anim)
+         (crowd_volume
+            {ui goto_screen crowd_volume_screen})
+         (effects_volume
+            {ui goto_screen effects_volume_screen})
+         (dolby
+            {profile_mgr
+               set_dolby
+               {!
+                  {profile_mgr get_dolby}}}
+            {$this update_checks}
+            skip_select_anim)
+         (back
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})
+   (controller_req_op_complete
+      ($success)
+      {if
+         {== $success TRUE}
+         {if_else
+            {platform_mgr is_guide_showing}
+            {set
+               [pending_show_kinect_tuner]
+               TRUE}
+            {$this show_kinect_tuner}}})
+   (NAV_HIGHLIGHT_MSG
+      {$this update_description $name})
+   (update_checks
+      {provider.hnp
+         set_checked
+         dolby
+         {profile_mgr get_dolby}}
+      {provider.hnp
+         set_checked
+         overscan
+         {profile_mgr get_overscan}})
+   (update_description
+      ($name)
+      {switch
+         $name
+         (calibration
+            {description.lbl set text_token calibration_description})
+         (natal_troubleshooter
+            {description.lbl set text_token natal_troubleshooter_description})
+         (dolby
+            {description.lbl set text_token dolby_description})
+         (overscan
+            {description.lbl set text_token overscan_description})
+         (crowd_volume
+            {description.lbl set text_token crowd_volume_description})
+         (effects_volume
+            {description.lbl set text_token effects_volume_description})})
+   (show_kinect_tuner
+      {gesture_mgr show_gesture_troubleshooter})
+   (UI_CHANGED_MSG
+      {if
+         [pending_show_kinect_tuner]
+         {set
+            [pending_show_kinect_tuner]
+            FALSE}
+         {$this show_kinect_tuner}})}
+{new
+   HamScreen
+   options_av_screen
+   (panels meta background_panel options_av_panel)
+   (focus options_av_panel)
+   (back options_screen)}
+{new
+   HamPanel
+   options_volume_panel
+   (file
+      "options_volume.milo")
+   (focus right_hand.hnl)
+   (back_token back)
+   (enter
+      {right_hand.hnl set disable_select_sound TRUE}
+      {right_hand.hnl set disable_slide_sound TRUE}
+      {title.lbl
+         set
+         text_token
+         {{ui current_screen}
+            get
+            title_token}}
+      {$this update_checks})
+   (exit)
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {{ui current_screen}
+               set_volume
+               $index}
+            {{ui current_screen}
+               play_preview_sound}
+            {$this update_checks}
+            skip_select_anim)
+         (left_hand.hnl
+            {if
+               {== $name back}
+               {ui
+                  go_back_screen
+                  {{ui current_screen}
+                     get
+                     back}}})})
+   (update_checks
+      {do
+         ($volume
+            {{ui current_screen}
+               get_volume})
+         ($label
+            {sprintf
+               "volume_%d"
+               $volume})
+         {provider.hnp select_radio_button $label}})}
+{new
+   HamScreen
+   crowd_volume_screen
+   (panels meta background_panel options_volume_panel)
+   (focus options_volume_panel)
+   (back options_av_screen)
+   (title_token crowd_volume)
+   (set_volume
+      ($value)
+      {profile_mgr set_crowd_volume $value})
+   (get_volume
+      {profile_mgr get_crowd_volume})
+   (play_preview_sound
+      {{options_volume_panel find crowd_sample.flow}
+         activate})}
+{new
+   HamScreen
+   effects_volume_screen
+   (panels meta background_panel options_volume_panel)
+   (focus options_volume_panel)
+   (back options_av_screen)
+   (title_token effects_volume)
+   (set_volume
+      ($value)
+      {profile_mgr set_fx_volume $value})
+   (get_volume
+      {profile_mgr get_fx_volume})
+   (play_preview_sound
+      {{options_volume_panel find fx_sample.flow}
+         activate})}

@@ -1,0 +1,520 @@
+{new
+   CampaignSongSelectPanel
+   campaign_songselect_panel
+   (file
+      "campaign_songselect.milo")
+   (focus right_hand.hnl)
+   (focus_song_index 0)
+   (top_index 0)
+   (back_token screen_name_diff_select)
+   (use_gamertag_bg TRUE)
+   (card_highlight_frames
+      (0 10 20 30))
+   (num_cards 0)
+   (vo_prompt_timer 4.0)
+   (vo_prompt_count 0)
+   (enter
+      {player_provider_1
+         add_sink
+         $this
+         (on_player_present_change)
+         0
+         FALSE}
+      {player_provider_2
+         add_sink
+         $this
+         (on_player_present_change)
+         0
+         FALSE}
+      {hamprovider
+         add_sink
+         $this
+         (on_ui_nav_player_change)
+         0
+         FALSE}
+      {saveload_mgr autosave}
+      {set
+         [vo_prompt_timer]
+         4.0}
+      {set
+         [vo_prompt_count]
+         0}
+      {right_hand.hnl
+         scroll_to_index
+         [top_index]
+         [top_index]}
+      {$this
+         handle_highlight
+         [top_index]
+         TRUE}
+      {$this refresh}
+      SONG_SELECT_GRAMMAR_ENTER_COMMON
+      {meta music_start})
+   (init_cards
+      {if
+         flashcard_dock_panel
+         {flashcard_dock_panel
+            grid_layout
+            {campaign num_campaign_moves}}
+         {flashcard_dock_panel populate_with_campaign_data}
+         {flashcard_dock_panel update_flashcard_campaign_status}
+         {flashcard_dock_panel update_move_pct}})
+   (exit
+      {player_provider_1 remove_sink $this on_player_present_change}
+      {player_provider_2 remove_sink $this on_player_present_change}
+      {hamprovider remove_sink $this on_ui_nav_player_change}
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}}
+      SONG_SELECT_GRAMMAR_EXIT_COMMON)
+   SONG_SELECT_GRAMMAR_TOGGLE_BLACKLIGHT_COMMON
+   (update_era_instructions
+      {do
+         ($era
+            {meta_performer get_era})
+         {if_else
+            {meta_performer is_dance_craze_song_available $era}
+            {instructions.lbl
+               set
+               text_token
+               {sprint
+                  $era
+                  "_crewsong"}}
+            {instructions.lbl
+               set
+               text_token
+               {sprint
+                  $era
+                  "_start"}}}
+         {screentitle.lbl set text_token campaign_songselect}})
+   (update_era_meter
+      {do
+         ($old_stars
+            {meta_performer get_last_era_stars})
+         ($new_stars
+            {$this get_erasong_stars})
+         ($max_stars
+            {$this get_required_erasong_stars})
+         ($era
+            {meta_performer get_era})
+         {print
+            "\n----- old stars: "
+            $old_stars
+            "; new stars: "
+            $new_stars
+            "; max stars: "
+            $max_stars
+            "\n"}
+         {era.md set resource boomy}
+         {if
+            {meta_performer is_era_complete $era}
+            {do
+               {set
+                  $new_stars
+                  {meta_performer get_era_stars_earned $era}}
+               {if_else
+                  {meta_performer has_era_outfits $era}
+                  {set
+                     $max_stars
+                     {meta_performer get_required_mastery_stars $era}}
+                  {set
+                     $max_stars
+                     {meta_performer get_required_outfit_stars $era}}}}}
+         {if
+            {'||'
+               {< $old_stars 0}
+               {> $old_stars $new_stars}}
+            {set $old_stars $new_stars}}
+         {era.md set current_value $old_stars}
+         {era.md set max_value $max_stars}
+         {print
+            "----- old stars: "
+            $old_stars
+            "; new stars: "
+            $new_stars
+            "; max stars: "
+            $max_stars
+            "\n\n"}
+         {if_else
+            {&&
+               {meta_performer is_era_complete $era}
+               {!
+                  {meta_performer just_unlocked_erasong}}}
+            {era.md set current_value $new_stars}
+            {if
+               {< $old_stars $new_stars}
+               {era.md animate_to_value $new_stars 2000}
+               {if_else
+                  {meta_performer just_unlocked_erasong}
+                  {era_meter_finished.flow activate}
+                  {era_meter.flow activate}}}}
+         {meta_performer clear_last_era_stars}})
+   (choose_initial_song_highlight
+      {set $highlight_index -1}
+      {set
+         $song_cnt
+         {meta_performer num_era_songs}}
+      {foreach_int
+         $s
+         1
+         $song_cnt
+         {set
+            $song_index
+            {- $song_cnt $s}}
+         {set
+            $song
+            {meta_performer get_era_song $song_index}}
+         {set
+            $num_song_moves
+            {campaign num_campaign_song_moves $song}}
+         {set $mastered_cnt 0}
+         {foreach_int
+            $move_index
+            0
+            $num_song_moves
+            {if
+               {meta_performer is_era_move_mastered $song $move_index}
+               {'++' $mastered_cnt}}}
+         {if
+            {== $highlight_index -1}
+            {if_else
+               {> $num_song_moves $mastered_cnt}
+               {do
+                  {set $highlight_index $song_index}}
+               {if
+                  {'||'
+                     {== $num_song_moves 0}
+                     {> $num_song_moves $mastered_cnt}}
+                  {set
+                     $stars
+                     {meta_performer
+                        get_song_stars_earned
+                        {meta_performer get_era}
+                        $song}}
+                  {if
+                     {< $stars 1}
+                     {set $highlight_index $song_index}}}}}}
+      {if
+         {== $highlight_index -1}
+         {if_else
+            {meta_performer
+               is_dance_craze_song_available
+               {meta_performer get_era}}
+            {set $highlight_index 0}
+            {set $highlight_index 1}}}
+      {if_else
+         {==
+            {meta_performer get_era}
+            era_tan_battle}
+         {$this select_song_by_index 0}
+         {$this select_song_by_index $highlight_index}})
+   (select_song_by_index
+      ($index)
+      {print
+         "campaign_songselect_panel:select_song_by_index "
+         $index
+         "\n"}
+      {$this handle_highlight $index TRUE}
+      {right_hand.hnl
+         set_highlight
+         [focus_song_index]}
+      {right_hand.hnl refresh})
+   (animation_finished
+      {meta_performer clear_just_unlocked_erasong}
+      {$this refresh_ui})
+   (refresh_ui
+      {right_hand.hnl refresh})
+   (on_player_present_change
+      {$this refresh_ui})
+   (on_ui_nav_player_change
+      {$this refresh_ui})
+   (reset_list_memory
+      {set
+         [top_index]
+         0}
+      {set
+         [focus_song_index]
+         0})
+   (handle_highlight
+      ($index $first_time)
+      {set
+         [focus_song_index]
+         $index}
+      {if
+         {meta_performer
+            has_song_been_attempted
+            {$this get_selected_song}}
+         {do
+            ($song
+               {$this get_song $index})
+            {flashcard_dock_panel highlight_all_for_song $index}}})
+   (update_song_provider
+      ($provider)
+      {right_hand.hnl set_provider $provider}
+      {right_hand.hnl
+         scroll_to_index
+         [top_index]
+         [top_index]})
+   (get_selected_song_index
+      {right_hand.hnl get_selected})
+   (refresh_flashcard_dock
+      {if
+         flashcard_dock_panel
+         {flashcard_dock_panel update_flashcard_campaign_status}})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll
+      SLIDE_RIGHT_LIST_ITEM
+      {if
+         {!=
+            [vo_prompt_timer]
+            0}
+         {-=
+            [vo_prompt_timer]
+            {taskmgr ui_delta_seconds}}
+         {if
+            {<=
+               [vo_prompt_timer]
+               0}
+            {play_camp_vo camp_gameplay_songselect_rasa_01 0}
+            {'+='
+               [vo_prompt_count]
+               1}
+            {switch
+               [vo_prompt_count]
+               (1
+                  {set
+                     [vo_prompt_timer]
+                     30})
+               (2
+                  {set
+                     [vo_prompt_timer]
+                     120})
+               {set
+                  [vo_prompt_timer]
+                  300}}}})
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {$this handle_select_song})
+         (left_hand.hnl
+            {switch
+               $name
+               (screen_name_diff_select
+                  {$this handle_select_song_cancel})
+               (back
+                  {$this handle_select_song_cancel})})})
+   (NAV_HIGHLIGHT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set
+               [focus_song_index]
+               $index}
+            {$this handle_highlight $index FALSE})})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         ((kAction_Cancel)
+            {$this handle_select_song_cancel})
+         kDataUnhandled})
+   (handle_select_song
+      {if_else
+         {==
+            {meta_performer get_era}
+            era_tan_battle}
+         {$this handle_select_song_tan}
+         {$this handle_select_song_normal}})
+   (handle_select_song_tan
+      {campaign_commence_tan_battle})
+   (handle_select_song_normal
+      {meta_performer
+         set_era
+         {meta_performer get_era}}
+      {songseq clear}
+      {if_else
+         {$this can_select_current_song}
+         {do
+            {$this select_song}
+            {set
+               $prev_state
+               {campaign get_campaign_state}}
+            {set
+               $next_state
+               {step_campaign_state_forward}}
+            {switch
+               $next_state
+               (kCampaignStateModeSelect
+                  {update_campaign_work_it_flag}
+                  {ui
+                     goto_screen
+                     {gamemode get ready_screen}})
+               (kCampaignStateHollaback
+                  {gamemode set_mode campaign_holla_back}
+                  {update_campaign_work_it_flag}
+                  {switch
+                     {meta_performer get_era}
+                     (era01
+                        {do
+                           ($cur_song
+                              {gamedata get song})
+                           {songseq add hb_camp_70s $cur_song holla_back -1 -1 holla_back_config_craze_70s -1 -1 FALSE TRUE '' '' crew09 crew09}
+                           {songseq add $cur_song $cur_song perform -1 -1 '' -1 -1 FALSE FALSE '' '' crew04_alt crew04_alt}})
+                     (era02
+                        {do
+                           ($cur_song
+                              {gamedata get song})
+                           {songseq add hb_camp_80s $cur_song holla_back -1 -1 holla_back_config_craze_80s -1 -1 FALSE TRUE '' '' crew09 crew09}
+                           {songseq add $cur_song $cur_song perform -1 -1 '' -1 -1 FALSE FALSE '' '' crew02 crew02}})
+                     (era03
+                        {do
+                           ($cur_song
+                              {gamedata get song})
+                           {songseq add hb_camp_90s $cur_song holla_back -1 -1 holla_back_config_craze_90s -1 -1 FALSE TRUE '' '' crew09 crew09}
+                           {songseq add $cur_song $cur_song perform -1 -1 '' -1 -1 FALSE FALSE '' '' crew03 crew03}})
+                     (era04
+                        {do
+                           ($cur_song
+                              {gamedata get song})
+                           {songseq add hb_camp_00s $cur_song holla_back -1 -1 holla_back_config_craze_00s -1 -1 FALSE TRUE '' '' crew09 crew09}
+                           {songseq add $cur_song $cur_song perform -1 -1 '' -1 -1 FALSE FALSE '' '' crew01_alt crew01_alt}})
+                     (era05
+                        {do
+                           ($cur_song
+                              {gamedata get song})
+                           {songseq add hb_camp_10s $cur_song holla_back -1 -1 holla_back_config_craze_10s -1 -1 FALSE TRUE '' '' crew09 crew09}
+                           {songseq add $cur_song $cur_song perform -1 -1 '' -1 -1 FALSE FALSE '' '' crew10 crew10}})
+                     {do
+                        ($cur_song
+                           {gamedata get song})
+                        {songseq add hb_camp_70s $cur_song holla_back -1 -1 holla_back_config_craze_70s -1 -1 FALSE TRUE '' '' crew09 crew09}
+                        {songseq add $cur_song $cur_song perform -1 -1 '' -1 -1 FALSE FALSE '' '' crew05 crew05}}}
+                  {enter_gameplay})
+               {campaign_flow_failure campaign_songselect_panel $prev_state $next_state}}}
+         {if_else
+            {$this is_waiting_for_era_song_unlock}
+            {do
+               {run_flow invalid_select.flow activate}
+               skip_select_anim_and_sound}
+            {do
+               {campaign_songselect_screen set suppress_blacklight_text TRUE}
+               {locked_content_panel
+                  set_up_campaign_song
+                  {$this get_selected_song}}
+               {set
+                  [vo_prompt_timer]
+                  0.0}
+               {set $vo_line ''}
+               {set $vo_obj ''}
+               {set
+                  $cur_era
+                  {meta_performer get_era}}
+               {if_else
+                  {== $cur_era era01}
+                  {set $vo_line camp_gameplay_song6_failure_lima_01.snd}
+                  {set $vo_line camp_gameplay_song23_failure_lima_03.snd}}
+               {if
+                  $vo_line
+                  {set
+                     $vo_obj
+                     {find_obj
+                        {$this loaded_dir}
+                        $vo_line}}}
+               {locked_content_panel set_voice_over $vo_obj}
+               {ui push_screen locked_content_screen}}}})
+   (handle_select_song_cancel
+      {unless
+         {ui in_transition}
+         {set
+            $back_screen
+            {step_campaign_state_backward}}
+         {ui go_back_screen $back_screen}})}
+{new
+   HamScreen
+   campaign_songselect_screen
+   (panels meta background_panel campaign_songselect_panel flashcard_dock_panel)
+   (focus campaign_songselect_panel)
+   (back '')
+   (suppress_blacklight_text FALSE)
+   (enter
+      {if_else
+         {==
+            {meta_performer get_era}
+            era_tan_battle}
+         {flashcard_dock_panel set_showing FALSE}
+         {flashcard_dock_panel set_showing TRUE}}
+      {campaign_songselect_panel choose_initial_song_highlight}
+      {set
+         [suppress_blacklight_text]
+         FALSE})
+   (TRANSITION_COMPLETE_MSG
+      {voice_input_panel activate_voice_context campaign_song_select_screen}
+      {set
+         [suppress_blacklight_text]
+         FALSE}
+      {{flashcard_dock_panel find enter.flow}
+         activate}
+      {$this update_era_meter}
+      {$this update_era_instructions}
+      {{campaign_songselect_panel find enter.flow}
+         activate}
+      {campaign_songselect_panel init_cards}
+      {campaign_songselect_panel set vo_prompt_timer 4.0}
+      {campaign_songselect_panel set vo_prompt_count 0})
+   (select_song_by_index
+      ($index)
+      {campaign_songselect_panel select_song_by_index $index})
+   (on_say_song_name
+      ($song_name)
+      {set
+         $song_index
+         {$this get_song_index $song_name}}
+      {print
+         "campaign_songselect_screen on_say_song_name: song= "
+         $song_name
+         ", song_index= "
+         $song_index
+         "\n"}
+      {if
+         {>= $song_index 0}
+         {campaign_songselect_panel select_song_by_index $song_index}
+         {campaign_songselect_panel handle_select_song}})
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (campaign_song_locked
+            {campaign_songselect_panel select_right_list_item 0})
+         (screen_name_diff_select
+            {helpbar select_left_list_item 1})
+         BACRO
+         {campaign_songselect_panel select_right_list_token $command}})
+   (cheat_win_selected_song
+      ($num_stars)
+      {print
+         "campaign_songselect_screen: cheat_win_selected_song! $num_stars="
+         $num_stars
+         "\n"}
+      {set
+         $cur_sel
+         {$this get_selected_song}}
+      {campaign_songselect_panel cheat_win_era_song $cur_sel $num_stars}
+      {campaign_songselect_panel choose_initial_song_highlight}
+      {if
+         flashcard_dock_panel
+         {flashcard_dock_panel update_move_pct}}
+      {if
+         {!= $num_stars 0}
+         {campaign set work_it_active FALSE}
+         {campaign set_campaign_state kCampaignStatePerformIt}
+         {set
+            $next_screen
+            {get_campaign_newsong_screen}}
+         {if
+            {!= $next_screen campaign_songselect_screen}
+            {print
+               "  next cheat screen = "
+               $next_screen
+               "\n"}
+            {campaign_songselect_panel cheat_transition_pending}
+            {ui goto_screen $next_screen}}})}

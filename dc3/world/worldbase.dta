@@ -1,0 +1,723 @@
+#define WORLD_MODE_COMMON
+((first_shot_ok
+      {set
+         $shot_ok.bie
+         {&&
+            {exists game}
+            {game_panel is_playing}
+            {! $edit_mode}
+            {! $cameras.validating}}}))
+#define CROWD_ANIMATION_COMMON
+((crowd_bad
+      script
+      (script
+         {$hamwardrobe crowd bad})
+      (help
+         "play performance bad animations"))
+   (crowd_ok
+      script
+      (script
+         {$hamwardrobe crowd ok})
+      (help
+         "play performance ok animations"))
+   (crowd_great
+      script
+      (script
+         {$hamwardrobe crowd great})
+      (help
+         "play performance great animations"))
+   (crowd_realtime_idle
+      script
+      (script
+         {$hamwardrobe crowd realtime_idle})
+      (help
+         "play performance realtime_idle animations"))
+   (crowd_realtime_bad
+      script
+      (script
+         {$hamwardrobe crowd realtime_bad})
+      (help
+         "play performance realtime_bad animations"))
+   (crowd_realtime_ok
+      script
+      (script
+         {$hamwardrobe crowd realtime_ok})
+      (help
+         "play performance realtime_ok animations"))
+   (crowd_realtime_great
+      script
+      (script
+         {$hamwardrobe crowd realtime_great})
+      (help
+         "play performance realtime_great animations"))
+   (crowd_skills_bad
+      script
+      (script
+         {$hamwardrobe crowd bad})
+      (help
+         "play skills bad animations"))
+   (crowd_skills_ok
+      script
+      (script
+         {$hamwardrobe crowd ok})
+      (help
+         "play skills ok animations"))
+   (crowd_skills_great
+      script
+      (script
+         {$hamwardrobe crowd great})
+      (help
+         "play skills great animations"))
+   (crowd_skills_realtime_idle
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_idle})
+      (help
+         "play skills realtime_idle animations"))
+   (crowd_skills_realtime_bad
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_bad})
+      (help
+         "play skills realtime_bad animations"))
+   (crowd_skills_realtime_ok
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_ok})
+      (help
+         "play skills realtime_ok animations"))
+   (crowd_skills_realtime_great
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_great})
+      (help
+         "play skills realtime_great animations"))
+   (crowd_stop
+      script
+      (script
+         {$hamwardrobe crowd ''})
+      (help
+         "stop all crowd animation")))
+#define WORLD_OBJECT_EDITOR_COMMON
+((cam_validate
+      script
+      (script
+         {$this validate_cameras})
+      (help
+         "Test the camshots to see if all are there"))
+   CROWD_ANIMATION_COMMON)
+#include world_validate.dta
+#define WORLD_MIDI_PARSERS
+(((world_drum_triggers kSinkModeExport)
+      (world_crowd_parser kSinkModeExport)))
+#define WORLD_SETUP_CHARACTERS
+({if
+      {&&
+         $hamwardrobe
+         {! $hamdirector}}
+      {$hamwardrobe set_venue $this}}
+   {foreach_int
+      $i
+      0
+      2
+      {do
+         ($main_dancer
+            {find_obj
+               $this
+               {sprint
+                  "player"
+                  $i}})
+         {if
+            $main_dancer
+            {$main_dancer set_showing TRUE}}}}
+   {foreach_int
+      $i
+      0
+      2
+      {do
+         ($bk_dancer
+            {find_obj
+               $this
+               {sprint
+                  "backup"
+                  $i}})
+         {if
+            $bk_dancer
+            {$bk_dancer set_showing TRUE}}}})
+#define WORLD_OBJECT_BASE
+(WORLD_MODE_COMMON
+   (start kDataUnhandled)
+   (enter
+      WORLD_SETUP_CHARACTERS
+      {foreach
+         $parser
+         WORLD_MIDI_PARSERS
+         {handle
+            ({elem $parser 0}
+               add_sink
+               $world
+               ()
+               {elem $parser 1})}}
+      {if
+         {exists game_panel}
+         {game_panel
+            add_sink
+            $world
+            ()
+            kSinkModeExportType}}
+      {if
+         {exists milo}
+         {milo
+            add_sink
+            $this
+            (propanim_endscrub)
+            kSinkModeExportType}
+         {milo
+            add_sink
+            $this
+            (propanim_beginscrub)
+            kSinkModeExportType}})
+   (exit
+      {if
+         {exists game_panel}
+         {game_panel remove_sink $this}}
+      {if
+         {exists milo}
+         {milo remove_sink $this}})
+   (change_proxies)
+   (intro_start kDataUnhandled)
+   (intro_end kDataUnhandled)
+   (intro_skip
+      {handle
+         (game_panel intro_end)}
+      kDataUnhandled)
+   (get_win_cat_prefix
+      {do
+         ($stars
+            {game_panel get num_stars})
+         {cond
+            ({>= $stars 5}
+               WIN_HIGH)
+            ({'||'
+                  {>= $stars 3}
+                  {hamprovider get is_in_infinite_party_mode}}
+               WIN_MED)
+            WIN_LOW}})
+   (get_multiplayer_hype_shot
+      {do
+         ($crew0
+            {gamedata getp 0 crew})
+         ($crew1
+            {gamedata getp 1 crew})
+         {if_else
+            {== $crew0 $crew1}
+            {symbol
+               {sprint
+                  "WIN_HYPE_"
+                  {toupper $crew0}}}
+            WIN_HYPE_DIFF_CREW}})
+   (append_shot
+      ($first_cam $cat $flags)
+      {do
+         ($world
+            {$hamdirector get cur_world})
+         ($shot)
+         ($cammgr
+            {$world get_camera_mgr})
+         {print
+            "append_shot. world = "
+            $world
+            ",  venue = "
+            {gamedata get venue}
+            " $first_cam = "
+            $first_cam
+            " $cat = "
+            $cat
+            " $flags = "
+            $flags
+            "\n"}
+         {if
+            $world
+            {if
+               {! $flags}
+               {set
+                  $flags
+                  ((player_flag
+                        (kHamPlayerOff
+                           {hamprovider get cam_player_config})))}}
+            {set
+               $shot
+               {$cammgr find_shot $cat $flags}}}
+         {if_else
+            $shot
+            {do
+               {$first_cam
+                  clear
+                  (next_shots)}
+               {$first_cam
+                  append
+                  (next_shots)
+                  $shot}
+               {$first_cam set next_shot_added TRUE}}
+            {notify
+               "could not find "
+               $cat
+               " shot"}}
+         {print
+            "OK AND THE SHOT IS: "
+            $shot
+            " AND $first_cam = "
+            $first_cam
+            " and {$shot list_all_next_shots} = "
+            {$shot list_all_next_shots}
+            "\n"}
+         $shot})
+   (set_compound_shots
+      ($cat0 $cat1 $flags)
+      {print
+         "set_compound_shots: $cat0="
+         $cat0
+         ", $cat1="
+         $cat1
+         ", $flags="
+         $flags
+         "\n"}
+      {do
+         ($win)
+         {set
+            $win
+            {$hamdirector
+               set_dircut
+               $cat0
+               {if_else
+                  $flags
+                  {elem $flags 0}
+                  TRUE}}}
+         {if
+            $win
+            {do
+               ($append
+                  {array 1})
+               {$win
+                  clear
+                  (next_shots)}
+               {if
+                  $flags
+                  {set_elem
+                     $append
+                     0
+                     {elem $flags 1}}}
+               {$this
+                  append_shot
+                  $win
+                  $cat1
+                  {if_else $flags $append FALSE}}
+               {print
+                  "$append = "
+                  $append
+                  "\n"}}}
+         {print
+            "$win after == "
+            $win
+            "{$win list_all_next_shots} = "
+            {$win list_all_next_shots}
+            "\n"}
+         $win})
+   (make_win_shot_singleplayer
+      {do
+         ($active_player 0)
+         ($char_win '')
+         ($shot_type
+            "")
+         ($win_cat '')
+         ($cam_flag
+            {$hamdirector toggle_camshot_flag})
+         ($win_shot '')
+         ($funky_shot FALSE)
+         {if_else
+            {hamprovider get is_in_campaign_mode}
+            {do
+               {if_else
+                  {game is_song_default_player_playing}
+                  {do
+                     {if
+                        {gamedata getp 1 playing}
+                        {set $active_player 1}}}
+                  {do
+                     {set $funky_shot TRUE}
+                     {hamprovider set flip_camshot_targets TRUE}
+                     {if
+                        {&&
+                           {gamedata getp 0 playing}
+                           {!
+                              {gamedata getp 1 playing}}}
+                        {set $active_player 1}}}}}
+            {do
+               {if
+                  {gamedata getp 1 playing}
+                  {set $active_player 1}}}}
+         {set
+            $char_win
+            {toupper
+               {gamedata getp $active_player character}}}
+         {set
+            $shot_type
+            {if_else
+               $cam_flag
+               "MOV"
+               "DLG"}}
+         {set
+            $win_cat
+            {symbol
+               {sprint
+                  {$this get_win_cat_prefix}
+                  "_"
+                  $shot_type
+                  "_"
+                  $char_win}}}
+         {set
+            $win_shot
+            {$hamdirector set_dircut $win_cat TRUE}}
+         {if
+            $win_shot
+            {$win_shot set next_shot_added FALSE}
+            {if
+               $funky_shot
+               {$win_shot flip_target_anim_groups}}}
+         $win_shot})
+   (make_win_shot_specify_active_player
+      ($active_player)
+      {do
+         ($char_win
+            {toupper
+               {gamedata getp $active_player character}})
+         ($shot_type
+            "DLG")
+         ($win_cat
+            {symbol
+               {sprint
+                  {$this get_win_cat_prefix}
+                  "_"
+                  $shot_type
+                  "_"
+                  $char_win}})
+         ($win_shot
+            {$hamdirector
+               set_dircut
+               $win_cat
+               (player_flag
+                  (kHamPlayerOff kHamPlayer0))})
+         {print
+            "BLARG $win_cat = "
+            $win_cat
+            "\n"}
+         {if
+            $win_shot
+            {$win_shot set next_shot_added FALSE}}
+         $win_shot})
+   (make_win_shot_multiplayer
+      {do
+         ($char_win '')
+         ($char_lose '')
+         ($player_win 0)
+         ($win_cat '')
+         ($shot_type
+            "")
+         ($win_shot '')
+         ($cam_flag
+            {$hamdirector toggle_camshot_flag})
+         {if
+            {>
+               {{gamedata getp 1 provider}
+                  get
+                  score}
+               {{gamedata getp 0 provider}
+                  get
+                  score}}
+            {set $player_win 1}}
+         {set
+            $char_win
+            {toupper
+               {gamedata getp $player_win character}}}
+         {set
+            $shot_type
+            {if_else
+               $cam_flag
+               "MOV"
+               "DLG"}}
+         {set
+            $win_cat
+            {symbol
+               {sprint
+                  {$this get_win_cat_prefix}
+                  "_"
+                  $shot_type
+                  "_"
+                  $char_win}}}
+         {set
+            $win_shot
+            {$hamdirector
+               set_dircut
+               $win_cat
+               {if_else
+                  {== 0 $player_win}
+                  (player_flag
+                     (kHamPlayerOff kHamPlayer0))
+                  (player_flag
+                     (kHamPlayerOff kHamPlayer1))}}}
+         {if
+            $win_shot
+            {$win_shot set next_shot_added FALSE}}
+         $win_shot})
+   (make_win_shot_strikeapose
+      {do
+         ($char_win '')
+         ($char_lose '')
+         ($player_win 0)
+         ($win_cat '')
+         ($shot_type
+            "MOV")
+         ($win_shot '')
+         {if
+            {>
+               {{gamedata getp 1 provider}
+                  get
+                  score}
+               {{gamedata getp 0 provider}
+                  get
+                  score}}
+            {set $player_win 1}}
+         {set
+            $char_win
+            {toupper
+               {gamedata getp $player_win character}}}
+         {set
+            $win_cat
+            {symbol
+               {sprint
+                  "WIN_HIGH_"
+                  $shot_type
+                  "_"
+                  $char_win}}}
+         {set
+            $win_shot
+            {$hamdirector
+               set_dircut
+               $win_cat
+               {if_else
+                  {== 0 $player_win}
+                  (player_flag
+                     (kHamPlayerOff kHamPlayer0))
+                  (player_flag
+                     (kHamPlayerOff kHamPlayer1))}}}
+         {if
+            $win_shot
+            {$win_shot set next_shot_added FALSE}}
+         $win_shot})
+   (is_single_player
+      {'^^'
+         {gamedata getp 0 playing}
+         {gamedata getp 1 playing}})
+   (make_quickplay_win_shot
+      {do
+         ($single_player FALSE)
+         {if_else
+            {$this is_single_player}
+            {$this make_win_shot_singleplayer}
+            {$this make_win_shot_multiplayer}}})
+   (make_dance_battle_win_shot
+      {do
+         ($player_win 0)
+         ($crew_win)
+         ($crew_win_upper)
+         ($battle_outro_shot)
+         ($win_shot)
+         {if
+            {>
+               {{gamedata getp 1 provider}
+                  get
+                  score}
+               {{gamedata getp 0 provider}
+                  get
+                  score}}
+            {set $player_win 1}}
+         {set
+            $crew_win
+            {symbol
+               {gamedata getp $player_win crew}}}
+         {set
+            $crew_win_upper
+            {toupper $crew_win}}
+         {set
+            $battle_outro_shot
+            {symbol
+               {sprint
+                  "BATTLE_OUTRO_"
+                  $crew_win_upper}}}
+         {do
+            ($picking
+               {$hamdirector get disable_picking})
+            {$hamdirector set disable_picking FALSE}
+            {set
+               $win_shot
+               {$hamdirector
+                  set_dircut
+                  $battle_outro_shot
+                  {if_else
+                     {== 0 $player_win}
+                     (player_flag
+                        (kHamPlayerOff kHamPlayer0))
+                     (player_flag
+                        (kHamPlayerOff kHamPlayer1))}}}
+            {$hamdirector set disable_picking $picking}}
+         {if
+            $win_shot
+            {$win_shot set next_shot_added FALSE}}
+         $win_shot})
+   (make_quickplay_playlist_win_shot
+      {do
+         ($last_song
+            {meta_performer is_last_song})
+         {if_else
+            $last_song
+            {do
+               ($show_individual_hype_shot
+                  {'||'
+                     {$this is_single_player}
+                     {!=
+                        {gamedata getp 0 crew}
+                        {gamedata getp 1 crew}}})
+               {if_else
+                  $show_individual_hype_shot
+                  {$hamdirector set_dircut WIN_HYPE_SOLO TRUE}
+                  {do
+                     ($cam_flag
+                        {$hamdirector toggle_camshot_flag})
+                     ($win_cat '')
+                     ($win_shot '')
+                     {set
+                        $win_cat
+                        {if_else
+                           $cam_flag
+                           {symbol
+                              {sprint
+                                 "WIN_HYPE_"
+                                 {toupper
+                                    {gamedata getp 0 crew}}}}
+                           WIN_HYPE_DIFF_CREW}}
+                     {set
+                        $win_shot
+                        {$hamdirector
+                           set_dircut
+                           $win_cat
+                           (player_flag
+                              (kHamPlayerOff kHamPlayerBoth))}}
+                     {if
+                        $win_shot
+                        {$win_shot set next_shot_added FALSE}}
+                     $win_shot}}}
+            FALSE}})
+   (make_outro_shot
+      {do
+         ($outro_shot '')
+         {set
+            $outro_shot
+            {cond
+               ({gamemode in_mode dance_battle}
+                  {$this make_dance_battle_win_shot})
+               ({gamemode in_mode strike_a_pose}
+                  {$this make_win_shot_strikeapose})
+               ({gamemode in_mode campaign}
+                  {print
+                     "IGCIGCIGCIGCIGCIGCIGCIGCIGCIGCIGC: make_outro_shot - campaign\n"}
+                  {set
+                     $camp_cat
+                     {pick_campaign_outro_shot_cat}}
+                  {print
+                     "   make_outro_shot - campaign: $camp_cat = "
+                     $camp_cat
+                     "\n"}
+                  {cond
+                     ({== $camp_cat ''}
+                        {do
+                           {$this make_quickplay_win_shot}})
+                     ({== $camp_cat WIN_SHOT_SPECIFY_ACTIVE_PLAYER_0}
+                        {$this make_win_shot_specify_active_player 0})
+                     (TRUE
+                        {do
+                           {set
+                              $win_shot
+                              {$hamdirector set_dircut $camp_cat}}
+                           {print
+                              "   $win_shot = "
+                              $win_shot
+                              "\n"}
+                           {if
+                              $win_shot
+                              {$win_shot set next_shot_added FALSE}}
+                           $win_shot})})
+               {$this make_quickplay_win_shot}}}
+         {if
+            {&&
+               $outro_shot
+               {!
+                  {$outro_shot get next_shot_added}}
+               {!=
+                  {$outro_shot get_original_size_next_shots}
+                  {$outro_shot
+                     size
+                     (next_shots)}}}
+            {$outro_shot
+               clear
+               (next_shots)}}
+         {print
+            "IGCIGCIGCIGCIGCIGCIGCIGCIGCIGCIGC: make_outro_shot - campaign: returns "
+            $outro_shot
+            "\n"}
+         $outro_shot})
+   (game_win_camera
+      {if
+         $hamdirector
+         {$hamdirector set disabled TRUE}
+         {print
+            "Resetting facial animations\n"}
+         {$hamdirector reset_facial_animation}
+         {print
+            "IGCIGCIGCIGCIGCIGCIGCIGCIGCIGCIGC: game_win_camera\n"}
+         {print
+            "where {gamemode get gameplay_mode} = "
+            {gamemode get gameplay_mode}
+            "\n"}
+         {if
+            {'||'
+               {==
+                  practice
+                  {gamemode get gameplay_mode}}
+               {==
+                  just_intro
+                  {gamemode get gameplay_mode}}
+               {!
+                  {$this make_outro_shot}}}
+            {print
+               "IGCIGCIGCIGCIGCIGCIGCIGCIGCIGCIGC: {handle (game_panel game_outro)\n"}
+            {handle
+               (game_panel game_outro)}}})
+   (game_won
+      {if
+         {!
+            {$pose_fatalities fatal_active}}
+         {handle
+            (game_panel fatals_over)}}
+      kDataUnhandled)
+   (fatals_over
+      {$this game_win_camera})
+   ':'
+   The
+   game
+   is
+   'over,'
+   ignore
+   parsers.
+   (game_over
+      {$this delete_free_cam}
+      kDataUnhandled))

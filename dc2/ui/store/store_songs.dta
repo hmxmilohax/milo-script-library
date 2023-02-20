@@ -1,0 +1,340 @@
+{new
+   HamPanel
+   store_songs_panel
+   (file
+      "store_songs.milo")
+   (focus right_hand.hnl)
+   (top_index 0)
+   (focus_song_index 0)
+   (back_token back)
+   (tertiary_token songselect_sortoption)
+   (joypad
+      (hold_ms 100)
+      (repeat_ms 80))
+   (enter
+      {right_hand.hnl
+         set_provider
+         {store_panel offer_provider}}
+      {right_hand.hnl
+         scroll_to_index
+         [focus_song_index]
+         [top_index]}
+      {songs.lst
+         set_provider
+         {{store_panel offer_provider}
+            get_pack_provider}}
+      {store_info_panel set_song_list_mode TRUE}
+      {$this update_all}
+      {$this update_sort_label})
+   (enum_finished
+      {$this update_all})
+   (update_all
+      {right_hand.hnl refresh}
+      {$this
+         handle_highlight
+         [focus_song_index]}
+      {store_info_panel show_full_song_details})
+   (update_sort_label
+      {$this
+         set
+         tertiary_token
+         {{store_panel offer_provider}
+            get_current_sort_name}}
+      {helpbar resync})
+   (exit
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}})
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {$this view_details $index})
+         (left_hand.hnl
+            {switch
+               $name
+               (back
+                  {ui
+                     go_back_screen
+                     {{ui current_screen}
+                        get
+                        back}})
+               {do
+                  ($offer
+                     {{store_panel offer_provider}
+                        data_symbol
+                        {right_hand.hnl get_selected}})
+                  {{store_panel offer_provider}
+                     next_sort}
+                  {$this update_sort_label}
+                  {right_hand.hnl refresh}
+                  {do
+                     ($index
+                        {{store_panel offer_provider}
+                           data_index
+                           $offer})
+                     {right_hand.hnl scroll_to_index $index $index}
+                     {$this handle_highlight $index}
+                     {store_info_panel show_full_song_details}}}})})
+   (NAV_HIGHLIGHT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {$this handle_highlight $index})})
+   (NAV_HIGHLIGHT_SETTLED_MSG
+      {unless
+         {ui in_transition}
+         {switch
+            $component
+            (right_hand.hnl
+               {store_info_panel show_full_song_details})}})
+   (view_details
+      ($index)
+      {store_song_options_panel
+         set_offer
+         {{store_panel offer_provider}
+            get_offer
+            $index}}
+      {ui goto_screen store_song_options_screen})
+   (handle_highlight
+      ($index)
+      {do
+         ($offer
+            {{store_panel offer_provider}
+               get_offer
+               $index})
+         {set
+            [focus_song_index]
+            $index}
+         {store_info_panel set_offer $offer}
+         {details.grp
+            set
+            showing
+            {==
+               {$offer offer_type}
+               pack}}
+         {{store_panel offer_provider}
+            set_pack
+            $offer}
+         {songs.lst refresh}})}
+{new
+   HamPanel
+   store_info_panel
+   (file
+      "../song_info.milo")
+   (showing_offer '')
+   (showing_full FALSE)
+   (pending_offer '')
+   (list_mode TRUE)
+   (enter
+      {store_preview_mgr
+         add_sink
+         $this
+         (preview_download_complete_msg)}
+      {$this
+         set_offer
+         [pending_offer]}
+      {$this show_full_song_details}
+      {$this set pending_offer ''})
+   (exit
+      {store_preview_mgr remove_sink $this preview_download_complete_msg}
+      {store_panel cancel_art}
+      {store_preview_mgr clear_current_preview}
+      {meta music_start}
+      {preview.flow activate})
+   (set_song_list_mode
+      ($enabled)
+      {$this set song_list_mode $enabled}
+      {if_else
+         [showing_offer]
+         {$this refresh_song_details}
+         {$this clear_song_details}})
+   (set_offer
+      ($offer)
+      {if_else
+         {$this is_up}
+         {do
+            {if
+               {!=
+                  {object
+                     [showing_offer]}
+                  {object $offer}}
+               {$this set showing_offer $offer}
+               {$this hide_full_song_details}}
+            {if_else
+               [showing_offer]
+               {$this refresh_song_details}
+               {$this clear_song_details}}}
+         {do
+            {$this set pending_offer $offer}}})
+   (show_full_song_details
+      {$this set showing_full TRUE}
+      {$this play_song_preview}
+      {$this refresh_album_art})
+   (hide_full_song_details
+      {$this set showing_full FALSE}
+      {$this refresh_album_art})
+   (refresh_song_details
+      {do
+         ($offer_type
+            {[showing_offer]
+               offer_type})
+         {if_else
+            {==
+               $offer_type
+               "song"}
+            {do
+               {song.lbl
+                  set_offer_name
+                  [showing_offer]}
+               {song.lbl
+                  set
+                  showing
+                  {!
+                     [song_list_mode]}}
+               {if_else
+                  {&&
+                     [song_list_mode]
+                     {==
+                        {{store_panel offer_provider}
+                           get_current_sort_name}
+                        by_artist}}
+                  {artist.lbl
+                     set_offer_name
+                     [showing_offer]}
+                  {artist.lbl
+                     set_offer_artist
+                     [showing_offer]}}
+               {album.lbl
+                  set_offer_album
+                  [showing_offer]}
+               {intensity.sdd set showing TRUE}
+               {intensity.lbl set showing TRUE}
+               {intensity.sdd
+                  set_level
+                  {song_mgr
+                     rank_tier
+                     {[showing_offer]
+                        difficulty}}}
+               {dancer.lbl set text_token ''}}
+            {do
+               {song.lbl set text_token ''}
+               {artist.lbl
+                  set_offer_name
+                  [showing_offer]}
+               {album.lbl set text_token ''}
+               {intensity.sdd set showing FALSE}
+               {intensity.lbl set showing FALSE}
+               {dancer.lbl set text_token ''}}}})
+   (clear_song_details
+      {do
+         {song.lbl set text_token ''}
+         {artist.lbl set text_token ''}
+         {album.lbl set text_token ''}
+         {intensity.sdd set showing FALSE}
+         {intensity.lbl set showing FALSE}})
+   (refresh_album_art
+      {do
+         ($mesh
+            {album_art find album.mesh})
+         ($mat
+            {album_art find album.mat})
+         ($tex
+            {album_art find album_generic.tex})
+         {$mesh set showing TRUE}
+         {if_else
+            {&&
+               [showing_offer]
+               [showing_full]}
+            {do
+               {store_panel
+                  load_art
+                  {[showing_offer]
+                     art_path}
+                  $this}
+               {unless
+                  {net_cache_mgr
+                     is_local
+                     {[showing_offer]
+                        art_path}}
+                  {$mat set diffuse_tex $tex}}}
+            {$mat set diffuse_tex $tex}}})
+   (art_loaded
+      {if
+         {$this is_up}
+         {do
+            ($mat
+               {album_art find album.mat})
+            ($tex
+               {store_panel album_tex})
+            {$mat set diffuse_tex $tex}}})
+   (play_song_preview
+      {if_else
+         [showing_offer]
+         {do
+            ($preview_file
+               {[showing_offer]
+                  preview_path})
+            {if_else
+               {!=
+                  $preview_file
+                  ""}
+               {do
+                  {if
+                     {&&
+                        {!
+                           [song_list_mode]}
+                        {store_preview_mgr allow_preview_download $preview_file}}
+                     {store_preview_mgr download_preview_file $preview_file}}
+                  {store_preview_mgr set_current_preview_movie $preview_file preview.tmov}}
+               {store_preview_mgr clear_current_preview}}}
+         {store_preview_mgr clear_current_preview}}
+      {$this update_preview})
+   (stop_song_preview
+      {store_preview_mgr clear_current_preview}
+      {$this update_preview})
+   (preview_download_complete_msg
+      ($success $current_preview)
+      {if
+         {$this is_up}
+         {if
+            $current_preview
+            {$this update_preview}}})
+   (update_preview
+      {if_else
+         {store_preview_mgr is_playing}
+         {meta music_stop}
+         {meta music_start}}
+      {preview.flow activate}
+      {if
+         [showing_offer]
+         {do
+            ($preview_file
+               {[showing_offer]
+                  preview_path})
+            {if_else
+               {&&
+                  {!=
+                     $preview_file
+                     ""}
+                  {store_preview_mgr is_downloading_file $preview_file}}
+               {do
+                  {{loading_preview find loading.flow}
+                     activate}
+                  {{loading_preview find loading.grp}
+                     set
+                     showing
+                     TRUE}}
+               {do
+                  {{loading_preview find loading.grp}
+                     set
+                     showing
+                     FALSE}
+                  {{loading_preview find loading.anim}
+                     stop_animation}}}}})}
+{new
+   HamScreen
+   store_songs_screen
+   (panels meta background_panel store_songs_panel store_info_panel store_panel)
+   (focus store_songs_panel)
+   (back store_main_screen)}
