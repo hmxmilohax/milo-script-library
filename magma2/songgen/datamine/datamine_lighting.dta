@@ -1,0 +1,326 @@
+(songs_dta
+   "D:/prj/band2/band2/run/songs_download/songs_archive.dta")
+#define SECTION_CATEGORIES
+("intro"
+   "verse"
+   "chorus"
+   "bridge"
+   "solo"
+   "outro")
+#define LIGHTING_TYPES
+("()"
+   "(dischord)"
+   "(harmony)"
+   "(manual_cool)"
+   "(manual_warm)"
+   "(searchlights)"
+   "(silhouettes_spot)"
+   "(sweep)"
+   "(loop_cool)"
+   "(loop_warm)"
+   "(blackout_fast)"
+   "(blackout_slow)"
+   "(flare_fast)"
+   "(flare_slow)"
+   "(frenzy)"
+   "(silhouettes)"
+   "(stomp)"
+   "(strobe_fast)"
+   "(strobe_slow)"
+   "(win_bre)"
+   "(bre)")
+(process_single
+   {set
+      $lighting_types
+      (LIGHTING_TYPES)}
+   {set
+      $section_pools
+      (SECTION_CATEGORIES)}
+   {set
+      $results
+      {array 0}}
+   {foreach_int
+      $i
+      0
+      {size $section_pools}
+      {set
+         $lightingCounts
+         {array 0}}
+      {foreach_int
+         $j
+         0
+         {size $lighting_types}
+         {push_back
+            $lightingCounts
+            {int 0}}}
+      {push_back
+         $results
+         {array
+            ({elem $section_pools $i}
+               $lightingCounts)}}}
+   {set
+      $found_sections
+      {array 0}}
+   {set
+      $cur_section
+      ""}
+   {set $cur_section_starttick 0}
+   {set
+      [working_track]
+      "EVENTS"}
+   {$this
+      foreach_textevent
+      $text
+      $tick
+      {if
+         {has_substr
+            $text
+            "[section "}
+         {foreach_int
+            $i
+            0
+            {size $section_pools}
+            {if
+               {has_substr
+                  $text
+                  {elem $section_pools $i}}
+               {set
+                  $new_section
+                  {elem $section_pools $i}}
+               {print
+                  $text
+                  " is for pool "
+                  $new_section
+                  "\n"}
+               {if_else
+                  {==
+                     $cur_section
+                     ""}
+                  {do
+                     {set $cur_section $new_section}
+                     {set $cur_section_starttick $tick}}
+                  {do
+                     {if
+                        {!= $new_section $cur_section}
+                        {set
+                           $endTick
+                           {'+' $cur_section_starttick 1920}}
+                        {push_back
+                           $found_sections
+                           {array
+                              ($cur_section $cur_section_starttick $endTick)}}
+                        {print
+                           "added entry for old pool: ("
+                           $cur_section
+                           " "
+                           $cur_section_starttick
+                           " "
+                           $endTick
+                           ")\n"}
+                        {set $cur_section $new_section}
+                        {set $cur_section_starttick $tick}}}}}}}}
+   {if
+      {!=
+         $cur_section
+         ""}
+      {set
+         [working_track]
+         "EVENTS"}
+      {set $music_end 0}
+      {$this
+         foreach_textevent
+         $text
+         $tick
+         {if
+            {==
+               $text
+               "[music_end]"}
+            {set $music_end $tick}}}
+      {set
+         $endTick
+         {'+' $cur_section_starttick 1920}}
+      {push_back
+         $found_sections
+         {array
+            ($cur_section $cur_section_starttick $endTick)}}
+      {print
+         "added entry for last pool: ("
+         $cur_section
+         " "
+         $cur_section_starttick
+         " "
+         $endTick
+         ")\n"}}
+   {set
+      [working_track]
+      "VENUE"}
+   {foreach_int
+      $i
+      0
+      {size $found_sections}
+      {set
+         $sectionName
+         {elem
+            {elem $found_sections $i}
+            0}}
+      {set
+         $startTick
+         {elem
+            {elem $found_sections $i}
+            1}}
+      {set
+         $endTick
+         {elem
+            {elem $found_sections $i}
+            2}}
+      {set $resultsIdx -1}
+      {foreach_int
+         $i
+         0
+         {size $section_pools}
+         {if
+            {has_substr
+               $sectionName
+               {elem $section_pools $i}}
+            {set $resultsIdx $i}}}
+      {$this
+         foreach_textevent_inrange
+         $text
+         $tick
+         {int $startTick}
+         {int $endTick}
+         {if
+            {has_substr
+               $text
+               "[lighting"}
+            {set $lightingIdx -1}
+            {foreach_int
+               $i
+               0
+               {size $lighting_types}
+               {if
+                  {has_substr
+                     $text
+                     {elem $lighting_types $i}}
+                  {set $lightingIdx $i}}}
+            {unless
+               {== $lightingIdx -1}
+               {set
+                  $curResult
+                  {elem $results $resultsIdx}}
+               {set
+                  $curLightingResult
+                  {elem $curResult 1}}
+               {set
+                  $count
+                  {elem $curLightingResult $lightingIdx}}
+               {set
+                  $count
+                  {'+' $count 1}}
+               {set_elem $curLightingResult $lightingIdx $count}
+               {set_elem $curResult 1 $curLightingResult}
+               {set_elem $results $resultsIdx $curResult}}}}}
+   {print
+      "\n\n"}
+   $results)
+(tabulate_results
+   {print
+      "[tabulate_results]\n"}
+   {set
+      $totalsResult
+      {array 0}}
+   {$this
+      foreach_datamine_result
+      $result
+      {if_else
+         {==
+            {size $totalsResult}
+            0}
+         {set
+            $totalsResult
+            {array $result}}
+         {do
+            {foreach_int
+               $i
+               0
+               {size $result}
+               {set
+                  $curResultItem
+                  {elem $result $i}}
+               {set
+                  $curTotalsItem
+                  {elem $totalsResult $i}}
+               {set
+                  $curResultsLightingItem
+                  {elem $curResultItem 1}}
+               {set
+                  $curTotalsLightingItem
+                  {elem $curTotalsItem 1}}
+               {foreach_int
+                  $j
+                  0
+                  {size $curResultsLightingItem}
+                  {set
+                     $newTotal
+                     {'+'
+                        {elem $curResultsLightingItem $j}
+                        {elem $curTotalsLightingItem $j}}}
+                  {set_elem $curTotalsLightingItem $j $newTotal}}}}}}
+   {print
+      "\n\nFinal Totals:\n"
+      $totalsResult
+      "\n"}
+   {set
+      $lighting_types
+      (LIGHTING_TYPES)}
+   {set
+      $textFile
+      {new
+         File
+         {sprint
+            "d:/temp/datamine/datamine_lighting.csv"}}}
+   {$textFile
+      printf
+      " "}
+   {foreach_int
+      $i
+      0
+      {size $lighting_types}
+      {$textFile
+         printf
+         ",  %s"
+         {elem $lighting_types $i}}}
+   {$textFile
+      printf
+      "\n"}
+   {foreach_int
+      $i
+      0
+      {size $result}
+      {set
+         $curTotalsItem
+         {elem $totalsResult $i}}
+      {set
+         $curTotalsSectionName
+         {elem $curTotalsItem 0}}
+      {set
+         $curTotalsLighting
+         {elem $curTotalsItem 1}}
+      {$textFile
+         printf
+         "%s"
+         $curTotalsSectionName}
+      {foreach_int
+         $j
+         0
+         {size $curTotalsLighting}
+         {$textFile
+            printf
+            ", %d"
+            {elem $curTotalsLighting $j}}}
+      {$textFile
+         printf
+         "\n"}}
+   {$textFile
+      set_name
+      ""})

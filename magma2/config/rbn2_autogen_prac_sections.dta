@@ -1,0 +1,83 @@
+{func
+   CheckShouldAutogenPracticeSections
+   {set
+      [working_track]
+      "EVENTS"}
+   {set $should_autogen TRUE}
+   {$this
+      foreach_textevent
+      $text
+      $tick
+      {if
+         {'||'
+            {has_substr
+               $text
+               "[section "}
+            {has_substr
+               $text
+               "[prc_"}}
+         {set $should_autogen FALSE}}}
+   {&&
+      $should_autogen
+      {> $end 0}}}
+{func
+   DoAutogen_PracticeSections
+   {print
+      "MIDI Compiler: Autogenerating practice sections...\n"}
+   {do
+      ($song_length
+         {$this tick_to_time $end})
+      ($section_type 10)
+      ($num_sections 0)
+      ($current_section 0)
+      ($measures_per_section 0)
+      ($create_sections TRUE)
+      ($num_measures
+         {$this closest_measure $end})
+      {if
+         {<= $song_length 150000}
+         {set $section_type 20}}
+      {if
+         {> $song_length 300000}
+         {set $section_type 5}}
+      {set
+         $num_sections
+         {int
+            {/ 100 $section_type}}}
+      {set
+         $measures_per_section
+         {/ $num_measures $num_sections}}
+      {while
+         {&&
+            $create_sections
+            {< $measures_per_section 1.0}}
+         {if_else
+            {== $num_sections 5}
+            {set $create_sections FALSE}
+            {do
+               {set
+                  $section_type
+                  {'*' $section_type 2}}
+               {set
+                  $num_sections
+                  {int
+                     {/ 100 $section_type}}}
+               {set
+                  $measures_per_section
+                  {/ $num_measures $num_sections}}}}}
+      {if
+         $create_sections
+         {foreach_int
+            $section_index
+            0
+            $num_sections
+            {$this
+               add_midi_text
+               {sprintf
+                  "[prc_ugc_section_%d_%d]"
+                  $section_type
+                  {'*' $section_index $section_type}}
+               {$this
+                  measure_to_tick
+                  {int
+                     {'*' $measures_per_section $section_index}}}}}}}}
