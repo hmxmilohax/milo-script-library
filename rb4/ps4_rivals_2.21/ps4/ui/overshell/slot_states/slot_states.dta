@@ -69,7 +69,8 @@
       {$this hide_preview_char } 
       {$this deactivate_preview_scene_if_needed } 
       {$this end_somp_player_management_session } 
-      {$this clear_selected_emote_category }) 
+      {$this clear_selected_emote_category } 
+      {$this clear_volume_slider_last_state }) 
    (on_start 
       ($user) 
       {if 
@@ -99,6 +100,35 @@
             ($objId UIListCom)get_data_in_column platform_user_id }} 
       {$this add_profile_to_slot $list_data } 
       {$this trigger_select_effects }))
+(kState_ChooseProfileConfirm 
+   (view confirm_action) 
+   (prevents_override TRUE) 
+   (on_cancel 
+      {$this show_choose_profile } 
+      {$this trigger_cancel_effects }) 
+   (enter 
+      {$this setup_confirm_actions overshell_confirm_swap_profile 
+         (overshell_confirm_yes overshell_confirm_no)}) 
+   (SELECT_MSG 
+      {switch 
+         {$component selected_sym }
+         (overshell_confirm_yes 
+            {$this confirm_swap_user_profile })
+         (overshell_confirm_no 
+            {$this show_state kState_ChooseProfile })} 
+      {$this trigger_select_effects }))
+(kState_ChooseProfileDenial 
+   (view confirm_action) 
+   (prevents_override TRUE) 
+   (on_cancel 
+      {$this show_state kState_Options } 
+      {$this trigger_cancel_effects }) 
+   (enter 
+      {$this setup_confirm_actions overshell_confirm_cannot_switch_profile 
+         (overshell_continue)}) 
+   (SELECT_MSG 
+      {$this show_state kState_Options } 
+      {$this trigger_select_effects }))
 (kState_Options 
    (view 
       {$this get_auto_list_view }) 
@@ -108,7 +138,8 @@
       {$this hide_preview_char } 
       {$this deactivate_preview_scene_if_needed } 
       {$this end_somp_player_management_session } 
-      {$this clear_selected_emote_category }) 
+      {$this clear_selected_emote_category } 
+      {$this clear_volume_slider_last_state }) 
    (SELECT_MSG 
       {local $list_data 
          {
@@ -120,8 +151,7 @@
          {== $list_widget kOvershellText }
          {switch $list_data 
             (overshell_return 
-               {$this show_state kState_RB4DXEnter } 
-               {$this trigger_select_effects })
+               {$this leave_options })
             (overshell_change_character 
                {$this show_choose_char } 
                {$this trigger_select_effects })
@@ -154,6 +184,12 @@
                {$this trigger_select_effects })
             (overshell_online_emote 
                {$this show_somp_pick_emote_category } 
+               {$this trigger_select_effects })
+            (overshell_visit_rock_shop 
+               {$this start_generic_shop_session } 
+               {$this trigger_select_effects })
+            (overshell_rock_shop_tracktex 
+               {$this start_track_tex_shop_session } 
                {$this trigger_select_effects })}
          {$this trigger_select_disabled_effects }}) 
    (on_cancel 
@@ -162,27 +198,6 @@
       ($user) 
       {$this leave_options } 
       {$this trigger_start_effects }))
-(kState_RB4DXEnter 
-   (view confirm_action) 
-   (enter 
-      {$this setup_confirm_actions rb4dx_enter 
-         (overshell_return overshell_continue)}) 
-   (SELECT_MSG 
-      {local $list_data 
-         {
-            ($objId UIListCom)get_data_in_column token }} 
-      {switch $list_data 
-         (overshell_return 
-            {if_else 
-               {$this in_song }
-               {$this toggle_pause }
-               {$this leave_options }})
-         (overshell_continue 
-            {$this show_state kState_RB4DXMain })} 
-      {$this trigger_select_effects }) 
-   (on_cancel 
-      {$this show_state kState_Options } 
-      {$this trigger_cancel_effects }))
 (kState_OptionsEndGame 
    (view options_end_game) 
    (SELECT_MSG 
@@ -420,7 +435,8 @@
    (view 
       {$this get_auto_list_view }) 
    (enter 
-      {$this setup_instrument_options $this }) 
+      {$this setup_instrument_options $this } 
+      {$this clear_volume_slider_last_state }) 
    (SELECT_MSG 
       {local $list_data 
          {
@@ -440,25 +456,45 @@
          (mic_od_deploy 
             {$this toggle_mic_od_deploy } 
             {$this trigger_select_effects })
-         (mic_1_gain 
-            {$this activate_volume_slider } 
-            {$this trigger_select_effects })
-         (mic_2_gain 
-            {$this activate_volume_slider } 
-            {$this trigger_select_effects })
-         (mic_3_gain 
-            {$this activate_volume_slider } 
+         (overshell_mic_settings 
+            {$this show_state kState_VocalMicOptions } 
             {$this trigger_select_effects })
          (mod_no_fail_band 
             {if_else 
                {== $list_widget kOvershellCheckbox }
                {$this toggle_no_fail }
-               {$this trigger_select_disabled_effects }})}) 
+               {$this trigger_select_disabled_effects }})
+         (overshell_track_textures 
+            {$this show_track_texture_menu } 
+            {$this trigger_select_effects })}) 
    (on_cancel 
       {if_else 
          {$this in_song }
          {$this show_in_song_menu }
          {$this show_state kState_Options }} 
+      {$this trigger_cancel_effects }))
+(kState_VocalMicOptions 
+   (view 
+      {$this get_auto_list_view }) 
+   (enter 
+      {$this setup_vocal_mic_options }) 
+   (SELECT_MSG 
+      {local $list_data 
+         {
+            ($objId UIListCom)get_data_in_column token }} 
+      {local $list_widget 
+         {
+            ($objId UIListCom)get_data_in_column widget_type }} 
+      {switch $list_data 
+         (mic_1_gain 
+            {$this activate_volume_slider })
+         (mic_2_gain 
+            {$this activate_volume_slider })
+         (mic_3_gain 
+            {$this activate_volume_slider })} 
+      {$this trigger_select_effects }) 
+   (on_cancel 
+      {$this show_state kState_OptionsVocal } 
       {$this trigger_cancel_effects }))
 (kState_OptionsSlider 
    (view 
@@ -508,7 +544,8 @@
             {$this deactivate_text_slider } 
             {$this trigger_select_effects })}))
 (kState_OptionsGuitar 
-   (view list_medium) 
+   (view 
+      {$this get_auto_list_view }) 
    (enter 
       {$this setup_instrument_options $this }) 
    (SELECT_MSG 
@@ -540,7 +577,10 @@
             {if_else 
                {== $list_widget kOvershellCheckbox }
                {$this toggle_no_fail }
-               {$this trigger_select_disabled_effects }})}) 
+               {$this trigger_select_disabled_effects }})
+         (overshell_track_textures 
+            {$this show_track_texture_menu } 
+            {$this trigger_select_effects })}) 
    (on_cancel 
       {if_else 
          {$this in_song }
@@ -565,6 +605,45 @@
       {$this trigger_select_effects }) 
    (on_cancel 
       {$this revert_guitar_solo_mode } 
+      {$this trigger_cancel_effects }))
+(kState_TrackTextureOptions 
+   (view 
+      {$this get_auto_list_view }) 
+   (enter 
+      {$this setup_track_texture_options }) 
+   (SELECT_MSG 
+      {local $list_data 
+         {
+            ($objId UIListCom)get_data_in_column token }} 
+      {local $list_widget 
+         {
+            ($objId UIListCom)get_data_in_column widget_type }} 
+      {switch $list_data 
+         (overshell_rock_shop_tracktex 
+            {$this start_track_tex_shop_session } 
+            {$this trigger_select_effects })
+         (overshell_show_local_track_texture 
+            {$this toggle_show_local_track_texture } 
+            {$this trigger_select_effects })
+         (overshell_show_remote_track_textures 
+            {$this toggle_allow_remote_track_textures } 
+            {$this trigger_select_effects })
+         (overshell_use_random_track_texture 
+            {if_else 
+               {== $list_widget kOvershellCheckbox }
+               {do 
+                  {$this toggle_random_track_texture }
+                  {$this trigger_select_effects }}
+               {$this trigger_select_disabled_effects }})
+         (overshell_use_random_track_color 
+            {if_else 
+               {== $list_widget kOvershellCheckbox }
+               {do 
+                  {$this toggle_random_track_color }
+                  {$this trigger_select_effects }}
+               {$this trigger_select_disabled_effects }})}) 
+   (on_cancel 
+      {$this show_instrument_options } 
       {$this trigger_cancel_effects }))
 (kState_Modifiers 
    (view modifiers) 
@@ -838,11 +917,7 @@
    (server_wait TRUE))
 (kState_OptionsDrum 
    (view 
-      {local $score_type 
-         {
-            {$this get_user }get_preferred_score_type }} 
-      {if_else 
-         {== $score_type kScoreRealDrum }list_long list_medium }) 
+      {$this get_auto_list_view }) 
    (enter 
       {$this setup_instrument_options $this }) 
    (SELECT_MSG 
@@ -876,14 +951,9 @@
                   {$this cycle_drum_fills_forward }
                   {$this trigger_widget_scroll_effects }}
                {$this trigger_select_disabled_effects }})
-         (overshell_yellow_cym 
-            {$this try_toggle_cymbal kCymbalSlotYellow })
-         (overshell_blue_cym 
-            {$this try_toggle_cymbal kCymbalSlotBlue })
-         (overshell_green_cym 
-            {$this try_toggle_cymbal kCymbalSlotGreen })
-         (overshell_red_cym 
-            {$this try_toggle_cymbal kCymbalSlotGreen })
+         (overshell_cymbal_options 
+            {$this show_state kState_ProDrumCymbalOptions } 
+            {$this trigger_select_effects })
          (mod_doublespeed 
             {$this activate_text_slider } 
             {$this trigger_select_effects })
@@ -891,7 +961,10 @@
             {if_else 
                {== $list_widget kOvershellCheckbox }
                {$this toggle_no_fail }
-               {$this trigger_select_disabled_effects }})}) 
+               {$this trigger_select_disabled_effects }})
+         (overshell_track_textures 
+            {$this show_track_texture_menu } 
+            {$this trigger_select_effects })}) 
    (UI_BUTTON_DOWN_MSG 
       {local $list_widget 
          {
@@ -915,6 +988,31 @@
          {$this show_state kState_Options }} 
       {$this finish_cymbal_selection FALSE } 
       {$this trigger_cancel_effects }))
+(kState_ProDrumCymbalOptions 
+   (view 
+      {$this get_auto_list_view }) 
+   (enter 
+      {$this setup_pro_drum_cymbal_options }) 
+   (SELECT_MSG 
+      {local $list_data 
+         {
+            ($objId UIListCom)get_data_in_column token }} 
+      {local $list_widget 
+         {
+            ($objId UIListCom)get_data_in_column widget_type }} 
+      {switch $list_data 
+         (overshell_yellow_cym 
+            {$this try_toggle_cymbal kCymbalSlotYellow })
+         (overshell_blue_cym 
+            {$this try_toggle_cymbal kCymbalSlotBlue })
+         (overshell_green_cym 
+            {$this try_toggle_cymbal kCymbalSlotGreen })
+         (overshell_red_cym 
+            {$this try_toggle_cymbal kCymbalSlotGreen })} 
+      {$this trigger_select_effects }) 
+   (on_cancel 
+      {$this show_state kState_OptionsDrum } 
+      {$this trigger_cancel_effects }))
 (kState_ToggleCymbalConfirm 
    (view confirm_action) 
    (enter 
@@ -926,17 +1024,17 @@
       {switch $list_data 
          (overshell_continue 
             {$this confirm_toggle_cymbal } 
-            {$this show_state kState_OptionsDrum })
+            {$this show_state kState_ProDrumCymbalOptions })
          (overshell_restart 
             {$this confirm_toggle_cymbal } 
             {$this restart_song })
          (overshell_cancel 
             {$this cancel_toggle_cymbal } 
-            {$this show_state kState_OptionsDrum })} 
+            {$this show_state kState_ProDrumCymbalOptions })} 
       {$this trigger_select_effects }) 
    (on_cancel 
       {$this cancel_toggle_cymbal } 
-      {$this show_state kState_OptionsDrum } 
+      {$this show_state kState_ProDrumCymbalOptions } 
       {$this trigger_cancel_effects }))
 (kState_OptionsDrumMessage 
    (view confirm_action) 
@@ -1108,11 +1206,11 @@
             (char_type_player 
                {$this select_band_char 
                   {symbol $list_text }
-                  {symbol $char_type }})
+                  {symbol $char_type } })
             (char_type_prefab 
                {$this select_band_char 
                   {symbol $list_text }
-                  {symbol $char_type }})
+                  {symbol $char_type } })
             (char_type_other_user 
                {$this select_band_char 
                   {symbol $list_text }
@@ -1176,11 +1274,11 @@
             (char_type_player 
                {$this select_char 
                   {symbol $list_text }
-                  {symbol $char_type }})
+                  {symbol $char_type } })
             (char_type_prefab 
                {$this select_char 
                   {symbol $list_text }
-                  {symbol $char_type }})
+                  {symbol $char_type } })
             (char_type_other_user 
                {$this select_char 
                   {symbol $list_text }
@@ -1207,7 +1305,7 @@
                {do 
                   {$this start_char_management_session 
                      {symbol $list_text }
-                     {symbol $char_type }}
+                     {symbol $char_type } }
                   {$this show_manage_char }}
                {if_else 
                   {== $char_type char_type_other_user }
@@ -1710,6 +1808,3 @@
    (SELECT_MSG 
       {$this show_somp_pick_specific_emote } 
       {$this trigger_select_effects }))
-
-#merge ../../../config/include/track_graphics.dta
-
