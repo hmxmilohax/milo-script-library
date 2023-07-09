@@ -1,0 +1,160 @@
+{new
+   HamPanel
+   about_panel
+   (file
+      "about.milo")
+   (show_hand_help FALSE)
+   (focus right_hand.hnl)
+   (selected_index 0)
+   (back_token back)
+   (enter
+      {meta music_start}
+      {hamprovider set ui_nav_mode shell}
+      {right_hand.hnl
+         set_selected
+         [selected_index]}
+      {voice_input_panel activate_voice_context about_screen})
+   (exit
+      {hamprovider set ui_nav_mode title}
+      {set
+         [selected_index]
+         {'+'
+            {right_hand.hnl get_selected}
+            1}}
+      {if
+         {>
+            [selected_index]
+            4}
+         {set
+            [selected_index]
+            0}})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set $about_selection $name}
+            {ui goto_screen about_info_screen})
+         (left_hand.hnl
+            {switch
+               $name
+               (back
+                  #ifdef DEMO
+                  {ui go_back_screen choose_mode_screen}
+                  #else
+                  {ui go_back_screen title_screen}
+                  #endif)})})}
+{new
+   HamScreen
+   about_screen
+   (panels meta background_panel about_panel)
+   #ifdef DEMO
+   (back choose_mode_screen)
+   #else
+   (back title_screen)
+   #endif
+   (focus about_panel)
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         BACRO
+         {about_panel select_right_list_token $command}})}
+{new
+   HamPanel
+   about_info_panel
+   (file
+      "about_info.milo")
+   (continue_token continue)
+   (helpbar_confirm_label continue)
+   (focus right_hand.hnl)
+   (hide_helpbar
+      {!
+         {shell_input in_controller_mode}})
+   (show_hand_help FALSE)
+   (helpbar_allow_controller FALSE)
+   (ready_disable_controller FALSE)
+   (controller_mode_entered
+      {if
+         {!
+            {show_safety.flow is_running}}
+         {right_hand.hnl set showing FALSE}})
+   (controller_mode_exited
+      {if
+         {!
+            {show_safety.flow is_running}}
+         {right_hand.hnl set showing TRUE}})
+   (enter
+      {$this reveal}
+      {voice_input_panel activate_voice_context about_info_screen})
+   (TRANSITION_COMPLETE_MSG
+      {{helpbar find provider.hnp}
+         set_label
+         0
+         [continue_token]})
+   (NAV_SELECT_MSG
+      {if_else
+         {!= $about_selection ''}
+         {$this reveal}
+         {ui
+            goto_screen
+            {{ui current_screen}
+               get
+               next_screen}}})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll
+      SLIDE_RIGHT_LIST_ITEM
+      {if
+         {!
+            [helpbar_allow_controller]}
+         {set
+            [helpbar_allow_controller]
+            TRUE}
+         {helpbar resync}})
+   (exit
+      {set
+         [ready_disable_controller]
+         FALSE}
+      {set
+         [helpbar_allow_controller]
+         FALSE})
+   (reveal
+      {switch
+         $about_selection
+         (about_menu_safety_warning
+            {show_safety.flow activate}
+            {set $about_selection ''})
+         (about_menu_kinect_warning
+            {show_kinect_1.flow activate}
+            {set $about_selection about_menu_kinect_warning_2})
+         (about_menu_kinect_warning_2
+            {show_kinect_2.flow activate}
+            {set $about_selection ''})
+         (about_menu_warranty
+            {show_warranty_1.flow activate}
+            {set $about_selection about_menu_warranty_2})
+         (about_menu_warranty_2
+            {show_warranty_2.flow activate}
+            {set $about_selection about_menu_warranty_3})
+         (about_menu_warranty_3
+            {show_warranty_3.flow activate}
+            {set $about_selection ''})
+         (about_menu_customer_support
+            {show_support.flow activate}
+            {set $about_selection ''})
+         (about_menu_credits
+            {set $about_selection ''}
+            {text_credits_screen set next_screen about_screen}
+            {ui goto_screen movie_credits_screen})})
+   (on_voice_command
+      ($command)
+      {if
+         {right_hand.hnl showing}
+         {$this select_right_list_token $command}})}
+{new
+   HamScreen
+   about_info_screen
+   (panels meta about_info_panel)
+   (focus about_info_panel)
+   (next_screen about_screen)}

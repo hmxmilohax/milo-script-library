@@ -1,0 +1,518 @@
+{new
+   HamStorePanel
+   store_panel
+   (back_token
+      {if_else
+         {store_panel allow_cancel}
+         back
+         ''})
+   (allow_voice_control FALSE)
+   (load
+      {content_loading_panel allowed_to_show TRUE})
+   (finish_load
+      {content_loading_panel allowed_to_show FALSE})}
+{new
+   HamPanel
+   store_main_panel
+   (file
+      "store_main.milo")
+   (focus right_hand.hnl)
+   (top_index 0)
+   (focus_song_index 0)
+   (back_token screen_name_main)
+   (clear_cart_needed FALSE)
+   (allow_voice_control FALSE)
+   (joypad
+      (hold_ms 100)
+      (repeat_ms 80))
+   (enter
+      {right_hand.hnl
+         set_provider
+         {store_panel filter_provider}}
+      {right_hand.hnl
+         scroll_to_index
+         [focus_song_index]
+         [top_index]}
+      {if
+         {==
+            [clear_cart_needed]
+            TRUE}
+         {set
+            [clear_cart_needed]
+            FALSE}
+         {store_panel empty_cart}}
+      {{profile_mgr get_active_profile}
+         set_last_new_song})
+   (exit
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}})
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {switch
+               $name
+               (store_filter_song_import_offers
+                  {if_else
+                     {profile_mgr has_active_profile}
+                     {do
+                        ($profile
+                           {profile_mgr get_active_profile})
+                        {if_else
+                           {platform_mgr
+                              is_pad_signed_into_live
+                              {$profile get_pad_num}}
+                           {if_else
+                              {rock_central is_online}
+                              {do
+                                 {ui goto_screen store_redeem_screen}}
+                              {do
+                                 {store_token_redemption_failed_screen set error leaderboard_no_net}
+                                 {ui goto_screen store_token_redemption_failed_screen}}}
+                           {do
+                              {store_token_redemption_failed_screen set error options_need_to_sign_in}
+                              {ui goto_screen store_token_redemption_failed_screen}}}}
+                     {do
+                        {store_token_redemption_failed_screen set error options_need_to_sign_in}
+                        {ui goto_screen store_token_redemption_failed_screen}}}
+                  skip_select_anim)
+               {$this view_filtered_songs $index}})
+         (left_hand.hnl
+            {switch
+               $name
+               (screen_name_main
+                  {ui
+                     go_back_screen
+                     {{ui current_screen}
+                        get
+                        back}})
+               (back
+                  {ui
+                     go_back_screen
+                     {{ui current_screen}
+                        get
+                        back}})})})
+   (NAV_HIGHLIGHT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set
+               [focus_song_index]
+               $index})})
+   (view_filtered_songs
+      ($index)
+      {store_panel set_filter $index}
+      {if_else
+         {&&
+            {store_panel is_curr_filter_cart $index}
+            {store_panel is_cart_empty}}
+         {ui push_screen store_cart_empty_screen}
+         {do
+            {store_songs_panel set top_index 0}
+            {store_songs_panel set focus_song_index 0}
+            {ui goto_screen store_songs_screen}}})
+   (enum_finished
+      {right_hand.hnl refresh})}
+{new
+   HamScreen
+   store_main_screen
+   (panels meta background_panel store_panel store_main_panel)
+   (focus store_main_panel)
+   (back main_screen)
+   (enter
+      {hamprovider set ui_nav_mode store})}
+{new
+   HamScreen
+   store_loading_screen
+   (panels meta background_confirmation_panel store_panel dialog_panel)
+   (focus store_panel)
+   (helpbar_confirm_label none)
+   (redirect_to_code_redemption FALSE)
+   (advertised_songid 0)
+   (enter
+      {hamprovider set ui_nav_mode store}
+      {dialog_panel set_msg store_loading FALSE}
+      {store_panel lock_cart}
+      {voice_input_panel activate_voice_context ''})
+   (enum_finished
+      {{store_panel offer_provider}
+         refresh}
+      {if_else
+         {!=
+            [advertised_songid]
+            0}
+         {$this handle_song_advertisement}
+         {if_else
+            [redirect_to_code_redemption]
+            {do
+               {set
+                  [redirect_to_code_redemption]
+                  FALSE}
+               {ui goto_screen store_redeem_screen}}
+            {ui goto_screen store_main_screen}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {shell_input in_controller_mode}
+            {== $action kAction_Cancel}}
+         {$this cancel}}
+      kDataUnhandled)
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (left_hand.hnl
+            {switch
+               $name
+               (back
+                  {$this cancel})})})
+   (cancel
+      {if
+         {store_panel allow_cancel}
+         {set
+            [advertised_songid]
+            0}
+         {ui go_back_screen main_screen}})
+   (handle_song_advertisement
+      {do
+         ($filter_index
+            {store_panel set_filter_to_songs})
+         {if_else
+            {>= $filter_index 0}
+            {do
+               ($offer
+                  {{store_panel offer_provider}
+                     find_song
+                     [advertised_songid]})
+               {set
+                  [advertised_songid]
+                  0}
+               {store_main_panel set top_index -1}
+               {store_main_panel set focus_song_index $filter_index}
+               {if_else
+                  $offer
+                  {do
+                     ($offer_index
+                        {{store_panel offer_provider}
+                           get_offer_index
+                           $offer})
+                     {if_else
+                        {>= $offer_index 0}
+                        {do
+                           {store_songs_panel set top_index -1}
+                           {store_songs_panel set focus_song_index $offer_index}}
+                        {do
+                           {store_songs_panel set top_index 0}
+                           {store_songs_panel set focus_song_index 0}}}
+                     {store_song_options_panel set_offer $offer}
+                     {ui goto_screen store_song_options_screen}}
+                  {do
+                     {store_main_panel set top_index 0}
+                     {store_main_panel set focus_song_index 0}
+                     {ui goto_screen store_main_screen}}}}
+            {do
+               {set
+                  [advertised_songid]
+                  0}
+               {ui goto_screen store_main_screen}}}})}
+{new
+   HamScreen
+   store_cart_empty_screen
+   (panels background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok store_cart_empty FALSE})
+   (NAV_SELECT_MSG
+      {ui pop_screen})}
+{new
+   HamPanel
+   store_redeem_panel
+   (file
+      "store_redeem.milo")
+   (focus right_hand.hnl)
+   (top_index 0)
+   (focus_song_index 0)
+   (back_token back)
+   (user_selected 0)
+   (allow_voice_control FALSE)
+   (joypad
+      (hold_ms 100)
+      (repeat_ms 80))
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)}
+      {right_hand.hnl
+         scroll_to_index
+         [focus_song_index]
+         [top_index]}
+      {right_hand_provider.hnp set_enabled redeem_offer_dc1 1}
+      {right_hand_provider.hnp set_enabled redeem_offer_dc2 1}
+      {right_hand_provider.hnp set_enabled redeem_offer_other 1}
+      {set
+         [user_selected]
+         0})
+   (exit
+      {platform_mgr remove_sink $this ui_changed}
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}})
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set
+               [user_selected]
+               $name}
+            {switch
+               [user_selected]
+               (redeem_offer_dc1
+                  {print
+                     "redeem: selected redeem_offer_dc1\n"}
+                  {cond
+                     ({store_panel check_owned dc1_import}
+                        {print
+                           "redeem: you already own that!\n"}
+                        {store_panel buy_special dc1_import})
+                     {ui goto_screen store_redeem_token_screen}})
+               (redeem_offer_dc2
+                  {print
+                     "redeem: selected redeem_offer_dc2\n"}
+                  {cond
+                     ({store_panel check_owned dc2_import}
+                        {print
+                           "redeem: you already own that!\n"}
+                        {store_panel buy_special dc2_import})
+                     ({store_panel check_owned dc2_pop}
+                        {print
+                           "redeem: you own Proof of purchase for turbo!\n"}
+                        {store_panel buy_special dc2_import})
+                     ({store_panel check_owned dc2_gond}
+                        {print
+                           "redeem: you own turbo!\n"}
+                        {store_panel buy_special dc2_import})
+                     {store_redeem_token_panel
+                        xbox_token_redemption
+                        {{profile_mgr get_active_profile}
+                           get_pad_num}}})
+               (redeem_offer_other
+                  {print
+                     "redeem: selected redeem_offer_other\n"}
+                  {ui goto_screen store_redeem_token_screen})})
+         (left_hand.hnl
+            {switch
+               $name
+               (back
+                  {ui
+                     go_back_screen
+                     {{ui current_screen}
+                        get
+                        back}})})})
+   (NAV_HIGHLIGHT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set
+               [focus_song_index]
+               $index}
+            {switch
+               $name
+               (redeem_offer_dc1
+                  {description.lbl set text_token redeem_offer_dc1_hint})
+               (redeem_offer_dc2
+                  {description.lbl set text_token redeem_offer_dc2_hint})
+               (redeem_offer_other
+                  {description.lbl set text_token redeem_offer_other_hint})})})
+   (UI_CHANGED_MSG
+      {unless
+         $showing
+         {right_hand_provider.hnp set_enabled redeem_offer_dc1 0}
+         {right_hand_provider.hnp set_enabled redeem_offer_dc2 0}
+         {right_hand_provider.hnp set_enabled redeem_offer_other 0}
+         {store_panel refresh_special_offers}})
+   (refresh_complete
+      ($success)
+      {right_hand_provider.hnp set_enabled redeem_offer_dc1 1}
+      {right_hand_provider.hnp set_enabled redeem_offer_dc2 1}
+      {right_hand_provider.hnp set_enabled redeem_offer_other 1}
+      {if
+         $success
+         {switch
+            [user_selected]
+            (redeem_offer_dc1
+               {print
+                  "redeem: done buying redeem_offer_dc1\n"}
+               {ui
+                  go_back_screen
+                  {{ui current_screen}
+                     get
+                     back}})
+            (redeem_offer_dc2
+               {print
+                  "redeem: done buying redeem_offer_dc2\n"}
+               {cond
+                  ({store_panel check_owned dc2_import}
+                     {print
+                        "redeem: you own dc2 import now\n"}
+                     {ui
+                        go_back_screen
+                        {{ui current_screen}
+                           get
+                           back}})
+                  ({store_panel check_owned dc2_pop}
+                     {print
+                        "redeem: you own Proof of purchase for turbo, now buy the pack!\n"}
+                     {store_panel buy_special dc2_import})
+                  ({store_panel check_owned dc2_gond}
+                     {print
+                        "redeem: you own turbo, now buy the pack!\n"}
+                     {store_panel buy_special dc2_import})})}}
+      {set
+         [user_selected]
+         0})}
+{new
+   HamScreen
+   store_redeem_screen
+   (panels
+      meta
+      background_panel
+      store_panel
+      store_redeem_panel
+      (store_main_panel
+         (active 0)))
+   (focus store_redeem_panel)
+   (back store_main_screen)}
+{new
+   OptionsPanel
+   store_redeem_token_panel
+   (allow_voice_control FALSE)
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)}
+      {set
+         [pending_show_keyboard]
+         FALSE}
+      {set
+         [pending_purchase_offer]
+         FALSE}
+      {set
+         [offer_string]
+         ""}
+      {profile_mgr
+         set_critical_profile
+         {profile_mgr get_active_profile}}
+      {platform_mgr show_controller_required $this})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (controller_req_op_complete
+      ($success)
+      {if
+         {== $success TRUE}
+         {shell_input set_last_select_in_controller_mode TRUE}
+         {if_else
+            {platform_mgr is_guide_showing}
+            {set
+               [pending_show_keyboard]
+               TRUE}
+            {$this show_keyboard}}})
+   (token_redeemed
+      ($status $offer_string $error)
+      {store_token_redemption_failed_screen set error $error}
+      {set
+         [offer_string]
+         $offer_string}
+      {if_else
+         {== $status TRUE}
+         {do
+            {if_else
+               {platform_mgr is_guide_showing}
+               {set
+                  [pending_purchase_offer]
+                  TRUE}
+               {$this
+                  purchase_offer_by_offer_string
+                  {{profile_mgr get_active_profile}
+                     get_pad_num}
+                  [offer_string]}}
+            {{profile_mgr get_active_profile}
+               complete_nag
+               0
+               TRUE}}
+         {ui goto_screen store_token_redemption_failed_screen}})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if_else
+         {== $ok TRUE}
+         {do
+            ($active_profile
+               {profile_mgr get_active_profile_no_override})
+            {if_else
+               {&&
+                  {platform_mgr is_ethernet_cable_connected}
+                  {platform_mgr
+                     is_pad_signed_into_live
+                     {$active_profile get_pad_num}}}
+               {$this
+                  redeem_token
+                  {{profile_mgr get_active_profile}
+                     get_pad_num}
+                  $text}
+               {do
+                  {store_token_redemption_failed_screen set error error_ethernet_unplugged}
+                  {ui goto_screen store_token_redemption_failed_screen}}}}
+         {do
+            {ui goto_screen store_redeem_screen}}})
+   (show_keyboard
+      {virtual_keyboard
+         show_keyboard
+         {{profile_mgr get_active_profile}
+            get_pad_num}
+         17
+         {localize store_filter_song_import_offers}
+         {localize redeem_code_desc}
+         ""
+         $this})
+   (UI_CHANGED_MSG
+      {if
+         [pending_show_keyboard]
+         {set
+            [pending_show_keyboard]
+            FALSE}
+         {$this show_keyboard}}
+      {if
+         [pending_purchase_offer]
+         {set
+            [pending_purchase_offer]
+            FALSE}
+         {$this
+            purchase_offer_by_offer_string
+            {{profile_mgr get_active_profile}
+               get_pad_num}
+            [offer_string]}}
+      {unless
+         {'||'
+            $showing
+            [pending_show_keyboard]
+            [pending_purchase_offer]}
+         {ui goto_screen store_redeem_screen}})}
+{new
+   HamScreen
+   store_redeem_token_screen
+   (panels meta background_panel store_panel store_main_panel store_redeem_token_panel)
+   (focus store_redeem_token_panel)
+   (back store_redeem_screen)}
+{new
+   HamScreen
+   store_token_redemption_failed_screen
+   (panels meta background_confirmation_panel store_panel dialog_panel)
+   (focus dialog_panel)
+   (error token_redemption_error)
+   (enter
+      {dialog_panel
+         set_ok
+         [error]
+         FALSE})
+   (NAV_SELECT_MSG
+      {ui goto_screen store_main_screen})}

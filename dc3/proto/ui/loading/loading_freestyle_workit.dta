@@ -1,0 +1,208 @@
+(in_zone FALSE)
+(work_it_count_p0 0)
+(work_it_count_p1 0)
+(in_zone_count_p0 0)
+(in_zone_count_p1 0)
+(vo_idx 0)
+#define ERA_WORKIT_VO
+(((era01
+         (intro camp_gameplay_workit_70s_rasa_01.snd)
+         (grooving camp_gameplay_workit_70s_lima_01.snd)
+         (groovebad camp_gameplay_workit_70s_rasa_02.snd camp_gameplay_workit_70s_rasa_03.snd camp_gameplay_workit_70s_lima_02.snd camp_gameplay_workit_80s_rasa_01.snd camp_gameplay_workit_80s_rasa_02.snd camp_gameplay_workit_80s_rasa_03.snd))
+      (era02
+         (intro camp_gameplay_workit_80s_lima_01.snd)
+         (grooving camp_gameplay_workit_70s_lima_01.snd)
+         (groovebad camp_gameplay_workit_70s_rasa_02.snd camp_gameplay_workit_70s_rasa_03.snd camp_gameplay_workit_70s_lima_02.snd camp_gameplay_workit_80s_rasa_01.snd camp_gameplay_workit_80s_rasa_02.snd camp_gameplay_workit_80s_rasa_03.snd))
+      (era03
+         (intro camp_gameplay_workit_80s_lima_01.snd)
+         (grooving camp_gameplay_workit_70s_lima_01.snd)
+         (groovebad camp_gameplay_workit_70s_rasa_02.snd camp_gameplay_workit_70s_rasa_03.snd camp_gameplay_workit_70s_lima_02.snd camp_gameplay_workit_80s_rasa_01.snd camp_gameplay_workit_80s_rasa_02.snd camp_gameplay_workit_80s_rasa_03.snd))
+      (era04
+         (intro camp_gameplay_workit_80s_lima_01.snd)
+         (grooving camp_gameplay_workit_70s_lima_01.snd)
+         (groovebad camp_gameplay_workit_70s_rasa_02.snd camp_gameplay_workit_70s_rasa_03.snd camp_gameplay_workit_70s_lima_02.snd camp_gameplay_workit_80s_rasa_01.snd camp_gameplay_workit_80s_rasa_02.snd camp_gameplay_workit_80s_rasa_03.snd))
+      (era05
+         (intro camp_gameplay_workit_80s_lima_01.snd)
+         (grooving camp_gameplay_workit_70s_lima_01.snd)
+         (groovebad camp_gameplay_workit_70s_rasa_02.snd camp_gameplay_workit_70s_rasa_03.snd camp_gameplay_workit_70s_lima_02.snd camp_gameplay_workit_80s_rasa_01.snd camp_gameplay_workit_80s_rasa_02.snd camp_gameplay_workit_80s_rasa_03.snd))))
+(play_vo
+   ($era $type)
+   {if
+      {<
+         {'+' $workit_ms 5000}
+         {system_ms}}
+      {'++'
+         [vo_idx]}
+      {do
+         ($block
+            {find ERA_WORKIT_VO $era})
+         ($sounds
+            {find $block $type})
+         ($len
+            {size $sounds})
+         ($rhythmbattle_vo
+            {elem
+               $sounds
+               {'+'
+                  {mod
+                     [vo_idx]
+                     {- $len 1}}
+                  1}})
+         {if
+            {exists $rhythmbattle_vo}
+            {set
+               $workit_ms
+               {int
+                  {'+'
+                     {system_ms}
+                     {'*'
+                        1000
+                        {{$rhythmbattle_vo get sample}
+                           sample_length}}}}}
+            {$rhythmbattle_vo play}}}})
+(exiting
+   {do
+      ($notdone
+         {&&
+            {==
+               {{ui transition_screen}
+                  name}
+               game_screen}
+            {campaign get work_it_active}
+            {!
+               [in_zone]}})
+      {if
+         {== $notdone FALSE}
+         {hamprovider set rhythmbattle_trick1 ''}
+         {hamprovider set rhythmbattle_trick2 ''}}
+      $notdone})
+(worked_it_progress
+   ($in_zone_progress)
+   {if
+      {&&
+         {!=
+            {campaign get_campaign_state}
+            kCampaignStateInactive}
+         {campaign get work_it_active}}
+      {if_else
+         {>= $in_zone_progress 32}
+         {set
+            [in_zone]
+            TRUE}
+         {if_else
+            {> $in_zone_progress 0}
+            {$this
+               play_vo
+               {hamprovider get current_campaign_era}
+               grooving}
+            {$this
+               play_vo
+               {hamprovider get current_campaign_era}
+               groovebad}}}})
+(enter_workit
+   {if
+      {&&
+         {!=
+            {campaign get_campaign_state}
+            kCampaignStateInactive}
+         {campaign get work_it_active}}
+      {set
+         [in_zone]
+         FALSE}
+      {set
+         [vo_idx]
+         {random_int 1 6}}
+      {$this
+         play_vo
+         {hamprovider get current_campaign_era}
+         intro}})
+(hamprovider_export
+   ($handler $param1 $param2 $delay)
+   {if_else
+      {<= $delay 0}
+      {handle
+         (hamprovider $handler $param1 $param2)}
+      {script_task
+         kTaskSeconds
+         (delay $delay)
+         (script
+            {handle
+               (hamprovider $handler $param1 $param2)})}})
+(groove_passed
+   ($player $rating $jacked $trick1 $trick2)
+   {if
+      {&&
+         {!=
+            {campaign get_campaign_state}
+            kCampaignStateInactive}
+         {campaign get work_it_active}}
+      {hamprovider set rhythmbattle_jackedhelper TRUE}
+      {if
+         {!= $rating move_bad}
+         {if
+            {== $player 0}
+            {'++'
+               [work_it_count_p0]}
+            {if_else
+               {<
+                  [work_it_count_p0]
+                  5}
+               {hamprovider
+                  set
+                  rhythmbattle_trick1
+                  {sprint
+                     workit_
+                     {hamprovider get current_campaign_era}
+                     _0
+                     [work_it_count_p0]}}
+               {hamprovider set rhythmbattle_trick1 ''}}}
+         {if
+            {== $player 1}
+            {'++'
+               [work_it_count_p1]}
+            {if_else
+               {<
+                  [work_it_count_p1]
+                  5}
+               {hamprovider
+                  set
+                  rhythmbattle_trick2
+                  {sprint
+                     workit_
+                     {hamprovider get current_campaign_era}
+                     _0
+                     [work_it_count_p1]}}
+               {hamprovider set rhythmbattle_trick2 ''}}}}
+      {if
+         {== $rating move_bad}
+         {if
+            {== $player 0}
+            {set
+               [work_it_count_p0]
+               0}
+            {hamprovider set rhythmbattle_trick1 ''}}
+         {if
+            {== $player 1}
+            {set
+               [work_it_count_p1]
+               0}
+            {hamprovider set rhythmbattle_trick2 ''}}}
+      {if
+         {== $player 0}
+         {if_else
+            [in_zone]
+            {'++'
+               [in_zone_count_p0]}
+            {set
+               [in_zone_count_p0]
+               0}}}
+      {if
+         {== $player 1}
+         {if_else
+            [in_zone]
+            {'++'
+               [in_zone_count_p1]}
+            {set
+               [in_zone_count_p1]
+               0}}}
+      {$this hamprovider_export move_finished $player $rating 2.0e-2}})

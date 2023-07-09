@@ -1,0 +1,1447 @@
+#define SKIPPED_GOAL
+(5)
+{func
+   enter_infinite_party_mode
+   {if
+      {!
+         {hamprovider get is_in_infinite_party_mode}}
+      {print
+         "----- entering infinite party mode\n"}
+      {hamprovider set is_in_infinite_party_mode TRUE}
+      {partymode_mgr setup_infinite_party_mode}
+      #ifdef DEMO
+      #else
+      {partymode_mgr set is_using_per_song_options FALSE}
+      {partymode_mgr set_difficulty kDifficultyEasy}
+      {partymode_mgr use_selected_playlist FALSE}
+      {partymode_mgr use_full_length_songs FALSE}
+      {partymode_mgr toggle_included_mode_on perform TRUE}
+      {partymode_mgr toggle_included_mode_on bustamove TRUE}
+      {partymode_mgr toggle_included_mode_on rhythm_battle TRUE}
+      {partymode_mgr toggle_included_mode_on dance_battle TRUE}
+      {partymode_mgr toggle_included_mode_on strike_a_pose TRUE}
+      #endif
+      {partymode_mgr start_party_stats}}}
+{func
+   exit_infinite_party_mode
+   {if
+      {hamprovider get is_in_infinite_party_mode}
+      {print
+         "----- exit_infinite_party_mode\n"}
+      {hamprovider set is_in_infinite_party_mode FALSE}
+      {partymode_mgr end_party_stats}
+      {partymode_mgr set_custom_party FALSE}}}
+{new
+   HamScreen
+   infinite_party_mode_confirm_quit_to_main_menu_screen
+   (panels dialog_panel)
+   (back_screen '')
+   (enter
+      {dialog_panel set_ok_no are_you_sure_you_want_to_quit_party_time TRUE})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {exit_infinite_party_mode}
+            {if_else
+               {==
+                  {ui bottom_screen}
+                  {ui current_screen}}
+               {do
+                  {ui goto_screen main_screen}}
+               {do
+                  {game_panel end_game kQuit}
+                  {ui pop_screen meta_loading_main_screen}}})
+         (no
+            {ui
+               goto_screen
+               [back_screen]})})}
+{func
+   quit_infinite_party_mode_to_main_menu
+   ($back_screen)
+   {infinite_party_mode_confirm_quit_to_main_menu_screen set back_screen $back_screen}
+   {ui goto_screen infinite_party_mode_confirm_quit_to_main_menu_screen}}
+{new
+   HamPanel
+   infinite_party_confirmation_panel
+   (file
+      "infinite_party_confirmation.milo")}
+{new
+   HamPanel
+   infinite_party_confirmation_swipe_panel
+   (file
+      "../low_button.milo")
+   (draw_after_letterbox TRUE)
+   (focus right_hand.hnl)
+   (hide_helpbar FALSE)
+   (helpbar_allow_controller TRUE)
+   (helpbar_confirm_label ok)
+   (show_hand_help TRUE)
+   (hide_letterbox FALSE)
+   (back_token
+      {if_else
+         {partymode_mgr is_custom_party}
+         screen_name_mode_select
+         screen_name_title})
+   (enter
+      {right_hand.hnl
+         set
+         showing
+         {!
+            {shell_input in_controller_mode}}}
+      {right_hand.hnl set_provider provider_ok.hnp}
+      {voice_input_panel activate_voice_context party_mode_confirmation_screen})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {if_else
+               {!
+                  {profile_mgr has_seen_tutorial kTutorialPartyMode}}
+               {enter_tutorial tutorial_party_mode_screen_0 FALSE}
+               {if_else
+                  {partymode_mgr is_custom_party}
+                  {do
+                     #ifdef DEMO
+                     {party_mode_options_screen set back_screen choose_mode_screen}
+                     #else
+                     {party_mode_options_screen set back_screen main_screen}
+                     #endif
+                     {ui goto_screen party_mode_options_screen}}
+                  {do
+                     {sync_party_with_rc_panel set next_screen infinite_party_hub_screen}
+                     {ui goto_screen fake_infinite_party_confirmation_screen}}}})
+         (back
+            {$this on_back})
+         (screen_name_title
+            {if
+               {!
+                  {partymode_mgr is_custom_party}}
+               {$this on_back}})
+         (screen_name_mode_select
+            {if
+               {partymode_mgr is_custom_party}
+               {$this on_back}})})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         ((kAction_Cancel)
+            {$this on_back})
+         kDataUnhandled})
+   (on_back
+      {exit_infinite_party_mode}
+      {ui
+         goto_screen
+         {{ui current_screen}
+            get
+            back_screen}})
+   (controller_mode_entered
+      {right_hand.hnl set showing FALSE})
+   (controller_mode_exited
+      {right_hand.hnl set showing TRUE})}
+{new
+   HamPanel
+   infinite_party_wait_for_content_panel
+   (load
+      {content_loading_panel allowed_to_show TRUE})
+   (is_loaded
+      {content_mgr refresh_done})
+   (finish_load
+      {content_loading_panel allowed_to_show FALSE})}
+{new
+   HamScreen
+   infinite_party_confirmation_screen
+   (panels infinite_party_confirmation_panel infinite_party_confirmation_swipe_panel infinite_party_wait_for_content_panel meta)
+   (focus infinite_party_confirmation_swipe_panel)
+   (back choose_mode_screen)
+   (back_screen choose_mode_screen)
+   (enter
+      {meta music_start}
+      {enter_infinite_party_mode})
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (okay
+            {infinite_party_confirmation_swipe_panel select_right_list_token ok})
+         (screen_name_title
+            {if
+               {!
+                  {partymode_mgr is_custom_party}}
+               {helpbar select_left_list_item 1}})
+         (screen_name_mode_select
+            {if
+               {partymode_mgr is_custom_party}
+               {helpbar select_left_list_item 1}})
+         BACRO})}
+{new
+   HamScreen
+   fake_infinite_party_confirmation_screen
+   (panels infinite_party_confirmation_panel infinite_party_confirmation_swipe_panel meta sync_party_with_rc_panel)
+   (focus sync_party_with_rc_panel)}
+{new
+   HamPanel
+   infinite_party_mode_branch_panel
+   (file
+      "infinite_party_mode_branch.milo")
+   (hide_helpbar FALSE)
+   (helpbar_allow_controller TRUE)
+   (back_token screen_name_mode_select)
+   (hide_letterbox FALSE)
+   (handle_global_commands TRUE)
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (start_the_party
+            {partymode_mgr set_custom_party FALSE}
+            {sync_party_with_rc_panel set next_screen infinite_party_hub_screen}
+            {ui goto_screen fake_infinite_party_confirmation_screen})
+         (party_time_settings
+            {party_mode_options_screen set back_screen infinite_party_mode_branch_screen}
+            {ui goto_screen party_mode_options_screen})
+         (screen_name_mode_select
+            {exit_infinite_party_mode}
+            {ui goto_screen choose_mode_screen})
+         (back
+            {exit_infinite_party_mode}
+            {partymode_mgr set_custom_party FALSE}
+            {ui goto_screen choose_mode_screen})})}
+{new
+   HamScreen
+   infinite_party_mode_branch_screen
+   (panels meta background_panel infinite_party_mode_branch_panel party_mode_options_info_panel)
+   (focus infinite_party_mode_branch_panel)
+   (back choose_mode_screen)
+   (enter
+      {meta music_start}
+      {party_mode_options_info_panel refresh}
+      {voice_input_panel activate_voice_context party_mode_branch_screen})
+   (exit
+      {voice_input_panel activate_voice_context ''})
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Cancel}
+         {exit_infinite_party_mode}}
+      kDataUnhandled)
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (screen_name_mode_select
+            {helpbar select_left_list_item 1})
+         BACRO
+         {infinite_party_mode_branch_panel select_right_list_token $command}})
+   (on_global_voice_command
+      ($command)
+      {switch
+         $command
+         (hidden_global_start_the_party
+            {infinite_party_mode_branch_panel select_right_list_token start_the_party})
+         {on_global_voice_command $command}})
+   (options_updated
+      {party_mode_options_info_panel refresh})}
+{new
+   HamPanel
+   infinite_party_hub_panel
+   (file
+      "infinite_party_nextsong.milo")
+   (hide_letterbox FALSE)
+   (song_name '')
+   (timer_time 20.0)
+   (timer 0.0)
+   (timer_int 0)
+   (prev_timer_int 0)
+   (hand_up_timer -1.0)
+   (hand_up_time 3.0)
+   (use_1p_instead FALSE)
+   (force_perform TRUE)
+   (going_to_load FALSE)
+   (doing_preload_text FALSE)
+   (player_present FALSE)
+   (player_idle_vo_timer -1.0)
+   (player_idle_vo_time 70.0)
+   (player_raise_hands_vo_timer -1.0)
+   (player_raise_hands_vo_time 4.0)
+   (player_state
+      (away away))
+   (waiting_for_hi_five FALSE)
+   (smart_glass_connected FALSE)
+   (enter
+      {set
+         [song_name]
+         ''}
+      {set
+         [hand_up_timer]
+         -1.0}
+      {set
+         [use_1p_instead]
+         FALSE}
+      {set_elem
+         [player_state]
+         0
+         away}
+      {set_elem
+         [player_state]
+         1
+         away}
+      {set
+         [waiting_for_hi_five]
+         FALSE}
+      {set
+         [doing_preload_text]
+         FALSE}
+      {timer hide}
+      {set
+         [player_idle_vo_timer]
+         [player_idle_vo_time]}
+      {set
+         [player_raise_hands_vo_timer]
+         -1.0}
+      {if_else
+         {partymode_mgr get is_using_per_song_options}
+         {do
+            {left_difficulty.grp set_showing FALSE}
+            {right_difficulty.grp set_showing FALSE}}
+         {do
+            ($p1_diff
+               {localize
+                  {sprint
+                     {player_provider_1 get difficulty}
+                     "_title"}})
+            ($p2_diff
+               {localize
+                  {sprint
+                     {player_provider_2 get difficulty}
+                     "_title"}})
+            {if_else
+               {==
+                  {player_provider_1 get side}
+                  kSkeletonLeft}
+               {left_difficulty.lbl set_token_fmt party_mode_options_skill_level $p1_diff}
+               {right_difficulty.lbl set_token_fmt party_mode_options_skill_level $p1_diff}}
+            {if_else
+               {==
+                  {player_provider_2 get side}
+                  kSkeletonLeft}
+               {left_difficulty.lbl set_token_fmt party_mode_options_skill_level $p2_diff}
+               {right_difficulty.lbl set_token_fmt party_mode_options_skill_level $p2_diff}}
+            #ifdef DEMO
+            {do
+               ($diff
+                  {difficulty_to_sym
+                     {partymode_mgr get_difficulty}})
+               {if_else
+                  {==
+                     {player_provider_1 get side}
+                     kSkeletonLeft}
+                  {left_difficulty.lbl set_token_fmt party_mode_options_skill_level $diff}
+                  {right_difficulty.lbl set_token_fmt party_mode_options_skill_level $diff}}
+               {if_else
+                  {==
+                     {player_provider_2 get side}
+                     kSkeletonLeft}
+                  {left_difficulty.lbl set_token_fmt party_mode_options_skill_level $diff}
+                  {right_difficulty.lbl set_token_fmt party_mode_options_skill_level $diff}}}
+            #endif}}
+      {$this
+         set_player_state
+         0
+         ""}
+      {$this
+         set_player_state
+         1
+         ""}
+      {if_else
+         {player_provider_1 get player_present}
+         {if_else
+            {==
+               {player_provider_1 get side}
+               kSkeletonLeft}
+            {$this set_player_state 0 stepped_up}
+            {$this set_player_state 1 stepped_up}}
+         {if_else
+            {==
+               {player_provider_1 get side}
+               kSkeletonLeft}
+            {$this set_player_state 0 away}
+            {$this set_player_state 1 away}}}
+      {if_else
+         {player_provider_2 get player_present}
+         {if_else
+            {==
+               {player_provider_2 get side}
+               kSkeletonLeft}
+            {$this set_player_state 0 stepped_up}
+            {$this set_player_state 1 stepped_up}}
+         {if_else
+            {==
+               {player_provider_2 get side}
+               kSkeletonLeft}
+            {$this set_player_state 0 away}
+            {$this set_player_state 1 away}}}
+      {if_else
+         {'||'
+            {&&
+               {player_provider_1 get player_present}
+               {!
+                  {player_provider_2 get player_present}}}
+            {&&
+               {!
+                  {player_provider_1 get player_present}}
+               {player_provider_2 get player_present}}}
+         {do
+            {set
+               [force_perform]
+               TRUE}
+            {gamemode set_mode perform}
+            {$this on_change_mode}}
+         {do
+            {set
+               [force_perform]
+               FALSE}}}
+      {hamprovider
+         add_sink
+         $this
+         ((high_five on_high_five))
+         0
+         FALSE}
+      {hamprovider
+         add_sink
+         $this
+         ((party_pause on_party_pause))
+         0
+         FALSE})
+   (exit
+      {hamprovider remove_sink $this high_five}
+      {hamprovider remove_sink $this party_pause}
+      {song_info stop_song_preview})
+   (reset_loading
+      {set
+         [going_to_load]
+         FALSE})
+   (smart_glass_msg
+      {if
+         [smart_glass_connected]
+         {on_smartglass_message.flow activate}})
+   (poll
+      #ifdef DEMO
+      {mic.grp set showing FALSE}
+      #endif
+      {if_else
+         {platform_mgr is_smart_glass_connected}
+         {unless
+            [smart_glass_connected]
+            {on_smartglass_connect.flow activate}
+            {set
+               [smart_glass_connected]
+               TRUE}}
+         {if
+            [smart_glass_connected]
+            {on_smartglass_disconnect.flow activate}
+            {set
+               [smart_glass_connected]
+               FALSE}}}
+      {if_else
+         [doing_preload_text]
+         {do
+            {if
+               {!
+                  {blooming_sparkles.anim is_animating}}
+               {set
+                  [doing_preload_text]
+                  FALSE}
+               {enter_gameplay}}}
+         {if
+            {!
+               [going_to_load]}
+            {partymode_mgr check_for_midnight}
+            {if_else
+               {$this check_players_present}
+               {do
+                  {if
+                     {!
+                        [player_present]}
+                     {set
+                        [player_idle_vo_timer]
+                        [player_idle_vo_time]}
+                     {set
+                        [player_raise_hands_vo_timer]
+                        [player_raise_hands_vo_time]}
+                     {play_player_detected_vo.flow activate}}
+                  {set
+                     [player_present]
+                     TRUE}
+                  {set $hand_up FALSE}
+                  {if_else
+                     {&&
+                        {skeleton_chooser is_left_player_hand_raised}
+                        {!
+                           [waiting_for_hi_five]}}
+                     {do
+                        {set $hand_up TRUE}
+                        {if
+                           {>
+                              [hand_up_timer]
+                              0.3}
+                           {$this set_player_state 0 raised_hand}}}
+                     {do
+                        {if
+                           {==
+                              {elem
+                                 [player_state]
+                                 0}
+                              raised_hand}
+                           {$this set_player_state 0 stepped_up}}}}
+                  {if_else
+                     {&&
+                        {skeleton_chooser is_right_player_hand_raised}
+                        {!
+                           [waiting_for_hi_five]}}
+                     {do
+                        {set $hand_up TRUE}
+                        {if
+                           {>
+                              [hand_up_timer]
+                              0.3}
+                           {$this set_player_state 1 raised_hand}}}
+                     {do
+                        {if
+                           {==
+                              {elem
+                                 [player_state]
+                                 1}
+                              raised_hand}
+                           {$this set_player_state 1 stepped_up}}}}
+                  {if_else
+                     [waiting_for_hi_five]
+                     {do
+                        {set
+                           [player_raise_hands_vo_timer]
+                           [player_raise_hands_vo_time]}
+                        {set
+                           [hand_up_timer]
+                           0}}
+                     {if_else
+                        $hand_up
+                        {do
+                           {set
+                              [player_raise_hands_vo_timer]
+                              [player_raise_hands_vo_time]}
+                           {'+='
+                              [hand_up_timer]
+                              {taskmgr ui_delta_seconds}}}
+                        {do
+                           {set
+                              [hand_up_timer]
+                              0.0}
+                           {if
+                              {>
+                                 [player_raise_hands_vo_timer]
+                                 0.0}
+                              {-=
+                                 [player_raise_hands_vo_timer]
+                                 {taskmgr ui_delta_seconds}}
+                              {if
+                                 {<=
+                                    [player_raise_hands_vo_timer]
+                                    0.0}
+                                 {play_raise_hands_vo.flow activate}}}}}}
+                  {if
+                     {timer is_done}
+                     {$this start_event}}
+                  {set
+                     [timer]
+                     [timer_time]}}
+               {do
+                  {if
+                     [player_present]
+                     {set
+                        [player_idle_vo_timer]
+                        [player_idle_vo_time]}
+                     {$this set_player_state 0 away}
+                     {$this set_player_state 1 away}}
+                  {set
+                     [player_present]
+                     FALSE}
+                  {if
+                     {timer is_started}
+                     {timer hide}}
+                  {-=
+                     [timer]
+                     {taskmgr ui_delta_seconds}}
+                  {set
+                     [prev_timer_int]
+                     [timer_int]}
+                  {set
+                     [timer_int]
+                     {int
+                        [timer]}}
+                  {if
+                     {<=
+                        [timer_int]
+                        0}
+                     {$this goto_next_song_and_mode}}}}
+            {if
+               {>
+                  [player_idle_vo_timer]
+                  0.0}
+               {-=
+                  [player_idle_vo_timer]
+                  {taskmgr ui_delta_seconds}}
+               {if
+                  {<=
+                     [player_idle_vo_timer]
+                     0.0}
+                  {set
+                     [player_idle_vo_timer]
+                     [player_idle_vo_time]}
+                  {if_else
+                     [player_present]
+                     {if_else
+                        {&&
+                           {player_provider_1 get player_present}
+                           {player_provider_2 get player_present}}
+                        {play_present_idle_vo2.flow activate}
+                        {play_present_idle_vo1.flow activate}}
+                     {play_nonpresent_idle_vo.flow activate}}}}}})
+   (start_event
+      {set
+         [going_to_load]
+         TRUE}
+      {set
+         [waiting_for_hi_five]
+         FALSE}
+      {$this show_dance_text}
+      {if
+         {'||'
+            [use_1p_instead]
+            [force_perform]}
+         {do
+            {gamemode set_mode perform}
+            {$this on_change_mode}}}
+      {play_start_sound.flow activate}
+      {song_info stop_song_preview}
+      {infinite_party_skip_nextsong_panel disable_swipe}
+      {hamprovider remove_sink $this party_pause}
+      {hide_right_hand_icons.flow activate}
+      {if_else
+         {&&
+            {partymode_mgr get is_using_per_song_options}
+            {'||'
+               {==
+                  {partymode_mgr get_curr_event_name}
+                  perform}
+               {==
+                  {partymode_mgr get_curr_event_name}
+                  dance_battle}}}
+         {do
+            {ui goto_screen multiuser_screen}}
+         {do
+            {set
+               $partymode_diff
+               {partymode_mgr get_difficulty}}
+            {print
+               "----- difficulty: "
+               $partymode_diff
+               "\n"}
+            {gamedata setp 0 difficulty $partymode_diff}
+            {gamedata setp 1 difficulty $partymode_diff}
+            {set
+               [doing_preload_text]
+               TRUE}
+            {play.lbl
+               set
+               text_token
+               {$this get_random_start_token}}
+            {blooming_sparkles.anim animate}}}
+      {if
+         {ui is_blacklight_mode}
+         {ui toggle_letterbox}}
+      {voice_input_panel activate_voice_context ''})
+   (get_random_start_token
+      {set
+         $random_start_text_index
+         {random_int 0 76}}
+      {if_else
+         {< $random_start_text_index 10}
+         {set
+            $random_start_text_token
+            {sprint
+               "dance_exclamation_0"
+               $random_start_text_index}}
+         {set
+            $random_start_text_token
+            {sprint
+               "dance_exclamation_"
+               $random_start_text_index}}}
+      $random_start_text_token)
+   (set_song
+      ($song $mode)
+      {if
+         {!=
+            {gamemode get_mode}
+            $mode}
+         {$this on_change_mode}}
+      {partymode_mgr set_song_and_defaults $song $mode}
+      {set
+         [timer]
+         [timer_time]}
+      {gamedata
+         set
+         song
+         {partymode_mgr get_curr_event_song_shortname}}
+      {gamemode
+         set_mode
+         {partymode_mgr get_curr_event_name}}
+      {set
+         $curr_event_song
+         {partymode_mgr get_curr_event_song_shortname}}
+      {if
+         {!=
+            $curr_event_song
+            {song_info get curr_song}}
+         {song_info set_song $curr_event_song}})
+   (goto_next_song
+      {$this
+         set_song
+         {partymode_mgr get_next_song}
+         {partymode_mgr get_curr_event_name}}
+      {if
+         {profile_mgr has_active_profile}
+         {set
+            $profile
+            {profile_mgr get_active_profile}}
+         {$profile increment_skipped_song_count}
+         {if
+            {>=
+               {$profile get_skipped_song_count}
+               SKIPPED_GOAL}
+            {acc_mgr earn_accomplishment $profile acc_song_skip}}})
+   (goto_next_song_and_mode
+      {if_else
+         [force_perform]
+         {$this
+            set_song
+            {partymode_mgr get_next_song}
+            {partymode_mgr get_curr_event_name}}
+         {do
+            {$this
+               set_song
+               {partymode_mgr get_next_song}
+               ''}
+            {$this on_change_mode}}})
+   (on_say_song_name
+      ($song_name)
+      {$this
+         set_song
+         $song_name
+         {partymode_mgr get_curr_event_name}})
+   (on_change_mode
+      {on_change_mode.flow activate})
+   (refresh_song_details
+      {song_info refresh_song_details})
+   (either_handup
+      {'||'
+         {==
+            {elem
+               [player_state]
+               0}
+            raised_hand}
+         {==
+            {elem
+               [player_state]
+               1}
+            raised_hand}})
+   (set_player_state
+      ($player $new_state)
+      {do
+         ($old_state
+            {elem
+               [player_state]
+               $player})
+         ($on_stepped_away
+            {if_else
+               {== $player 0}
+               on_stepped_away_left.flow
+               on_stepped_away_right.flow})
+         ($on_stepped_up
+            {if_else
+               {== $player 0}
+               on_stepped_up_left.flow
+               on_stepped_up_right.flow})
+         ($on_stepped_up_other
+            {if_else
+               {== $player 0}
+               on_stepped_up_right.flow
+               on_stepped_up_left.flow})
+         ($on_raise_hand on_raise_hand.flow)
+         ($on_drop_hand on_drop_hand.flow)
+         ($either_handup
+            {'||'
+               {==
+                  {elem
+                     [player_state]
+                     0}
+                  raised_hand}
+               {==
+                  {elem
+                     [player_state]
+                     1}
+                  raised_hand}})
+         ($other_handup
+            {if_else
+               {== $player 0}
+               {==
+                  {elem
+                     [player_state]
+                     1}
+                  raised_hand}
+               {==
+                  {elem
+                     [player_state]
+                     0}
+                  raised_hand}})
+         ($other_away
+            {if_else
+               {== $player 0}
+               {==
+                  {elem
+                     [player_state]
+                     1}
+                  away}
+               {==
+                  {elem
+                     [player_state]
+                     0}
+                  away}})
+         {set_elem
+            [player_state]
+            $player
+            $new_state}
+         {if
+            {!= $old_state $new_state}
+            {print
+               "set_player_state "
+               $player
+               " to "
+               $new_state
+               "\n"}
+            {cond
+               ({== $new_state away}
+                  {infinite_party_skip_nextsong_panel set two_players_present FALSE}
+                  {helpbar resync}
+                  {if_else
+                     [waiting_for_hi_five]
+                     {do
+                        {$on_stepped_away activate}
+                        {$on_stepped_up_other activate}
+                        {if_else
+                           {== $player 0}
+                           {do
+                              {if
+                                 {!
+                                    {partymode_mgr get is_using_per_song_options}}
+                                 {right_difficulty.grp set_showing TRUE}}}
+                           {do
+                              {if
+                                 {!
+                                    {partymode_mgr get is_using_per_song_options}}
+                                 {left_difficulty.grp set_showing TRUE}}}}
+                        {set
+                           [waiting_for_hi_five]
+                           FALSE}}
+                     {if
+                        {! $other_handup}
+                        {set
+                           [force_perform]
+                           FALSE}
+                        {$on_stepped_away activate}}})
+               ({== $new_state stepped_up}
+                  {if_else
+                     {! $other_away}
+                     {do
+                        {on_stepped_up_both.flow activate}
+                        {if
+                           {!
+                              {partymode_mgr get is_using_per_song_options}}
+                           {left_difficulty.grp set_showing TRUE}
+                           {right_difficulty.grp set_showing TRUE}}
+                        {set
+                           [waiting_for_hi_five]
+                           TRUE}
+                        {set
+                           [force_perform]
+                           FALSE}
+                        {infinite_party_skip_nextsong_panel set two_players_present TRUE}
+                        {helpbar resync}}
+                     {do
+                        {if_else
+                           $either_handup
+                           {if
+                              {! $other_handup}
+                              {$on_drop_hand activate}
+                              {if
+                                 {==
+                                    {elem
+                                       [player_state]
+                                       0}
+                                    away}
+                                 {on_stepped_away_left.flow activate}}
+                              {if
+                                 {==
+                                    {elem
+                                       [player_state]
+                                       1}
+                                    away}
+                                 {on_stepped_away_right.flow activate}}
+                              {if
+                                 {==
+                                    {elem
+                                       [player_state]
+                                       0}
+                                    stepped_up}
+                                 {on_stepped_up_left.flow activate}
+                                 {if
+                                    {!
+                                       {partymode_mgr get is_using_per_song_options}}
+                                    {left_difficulty.grp set_showing TRUE}}}
+                              {if
+                                 {==
+                                    {elem
+                                       [player_state]
+                                       1}
+                                    stepped_up}
+                                 {on_stepped_up_right.flow activate}
+                                 {if
+                                    {!
+                                       {partymode_mgr get is_using_per_song_options}}
+                                    {right_difficulty.grp set_showing TRUE}}}}
+                           {do
+                              {$on_stepped_up activate}
+                              {if_else
+                                 {== $player 0}
+                                 {do
+                                    {if
+                                       {!
+                                          {partymode_mgr get is_using_per_song_options}}
+                                       {left_difficulty.grp set_showing TRUE}}}
+                                 {do
+                                    {if
+                                       {!
+                                          {partymode_mgr get is_using_per_song_options}}
+                                       {right_difficulty.grp set_showing TRUE}}}}}}}})
+               ({== $new_state raised_hand}
+                  {if_else
+                     [waiting_for_hi_five]
+                     {set_player_state $player stepped_up}
+                     {if
+                        {! $other_handup}
+                        {print
+                           "on_raise_hand activate\n"}
+                        {if
+                           {'||'
+                              [use_1p_instead]
+                              [force_perform]}
+                           {gamemode set_mode perform}
+                           {$this on_change_mode}}
+                        {$on_raise_hand activate}
+                        {if
+                           {!
+                              {==
+                                 {elem
+                                    [player_state]
+                                    0}
+                                 away}}
+                           {show_left_countdown.flow activate}}
+                        {if
+                           {!
+                              {==
+                                 {elem
+                                    [player_state]
+                                    1}
+                                 away}}
+                           {show_right_countdown.flow activate}}}})}}})
+   (check_players_present
+      {set $player_present FALSE}
+      {set $players_present 0}
+      {if_else
+         {{gamedata getp 0 provider}
+            get
+            player_present}
+         {do
+            {set $player_present TRUE}
+            {'++' $players_present}
+            {if_else
+               {==
+                  {{gamedata getp 0 provider}
+                     get
+                     side}
+                  kSkeletonLeft}
+               {if
+                  {==
+                     {elem
+                        [player_state]
+                        0}
+                     away}
+                  {$this set_player_state 0 stepped_up}}
+               {if
+                  {==
+                     {elem
+                        [player_state]
+                        1}
+                     away}
+                  {$this set_player_state 1 stepped_up}}}}
+         {do
+            {if_else
+               {==
+                  {{gamedata getp 0 provider}
+                     get
+                     side}
+                  kSkeletonLeft}
+               {$this set_player_state 0 away}
+               {$this set_player_state 1 away}}}}
+      {if_else
+         {{gamedata getp 1 provider}
+            get
+            player_present}
+         {do
+            {set $player_present TRUE}
+            {'++' $players_present}
+            {if_else
+               {==
+                  {{gamedata getp 1 provider}
+                     get
+                     side}
+                  kSkeletonLeft}
+               {if
+                  {==
+                     {elem
+                        [player_state]
+                        0}
+                     away}
+                  {$this set_player_state 0 stepped_up}}
+               {if
+                  {==
+                     {elem
+                        [player_state]
+                        1}
+                     away}
+                  {$this set_player_state 1 stepped_up}}}}
+         {do
+            {if_else
+               {==
+                  {{gamedata getp 1 provider}
+                     get
+                     side}
+                  kSkeletonLeft}
+               {$this set_player_state 0 away}
+               {$this set_player_state 1 away}}}}
+      {set
+         [use_1p_instead]
+         {&&
+            {gamemode get requires_2_players}
+            {!= $players_present 2}}}
+      $player_present)
+   (show_dance_text)
+   (play_hand_raise_select_sound
+      {hand_raise_select.sound play})
+   (play_voice_select_sound
+      {voice_select.sound play})
+   (stop_song_preview
+      {song_info stop_song_preview})
+   (set_party_difficulty_text
+      {if_else
+         {partymode_mgr get is_using_per_song_options}
+         {do
+            {left_difficulty.grp set_showing FALSE}
+            {right_difficulty.grp set_showing FALSE}}
+         {do
+            ($diff
+               {difficulty_to_sym
+                  {partymode_mgr get_difficulty}})
+            {left_difficulty.lbl set_token_fmt party_mode_options_skill_level $diff}
+            {right_difficulty.lbl set_token_fmt party_mode_options_skill_level $diff}}})
+   (on_high_five
+      {if
+         [waiting_for_hi_five]
+         {$this start_event}})
+   (on_party_pause
+      {if
+         {!
+            [going_to_load]}
+         {infinite_party_hub_screen on_party_pause}})
+   (show_mic_activity
+      {mic_activity.anim animate})}
+{new
+   HamPanel
+   infinite_party_skip_nextsong_panel
+   (file
+      "../low_button.milo")
+   (draw_after_letterbox TRUE)
+   (focus right_hand.hnl)
+   (allow_doubleuser_swipe TRUE)
+   #ifdef DEMO
+   (show_back_controller_icon FALSE)
+   #endif
+   (hide_helpbar FALSE)
+   #ifdef DEMO
+   (back_token '')
+   #else
+   (back_token change_mode)
+   #endif
+   (two_players_present FALSE)
+   (helpbar_confirm_label change_song)
+   (hide_letterbox FALSE)
+   (can_change_song TRUE)
+   (enable_change_song_mode TRUE)
+   (enter
+      #ifdef DEMO
+      {$this set show_back_controller_icon FALSE}
+      #endif
+      {set
+         [can_change_song]
+         TRUE}
+      {right_hand.hnl
+         set
+         showing
+         {!
+            {shell_input in_controller_mode}}}
+      {right_hand.hnl set_provider provider_change_song.hnp}
+      SONG_SELECT_GRAMMAR_ENTER_COMMON
+      {voice_input_panel activate_voice_context party_mode_hub_screen})
+   (exit
+      SONG_SELECT_GRAMMAR_EXIT_COMMON
+      {set
+         [hide_helpbar]
+         FALSE})
+   SONG_SELECT_GRAMMAR_TOGGLE_BLACKLIGHT_COMMON
+   SELECT_RIGHT_LIST_TOKEN
+   (poll
+      SLIDE_RIGHT_LIST_ITEM
+      {if_else
+         {infinite_party_hub_panel either_handup}
+         {if
+            [enable_change_song_mode]
+            {set
+               [helpbar_confirm_label]
+               ''}
+            {right_hand.hnl disable_navigation}
+            {right_hand.hnl set showing FALSE}
+            {helpbar resync}
+            {set
+               [enable_change_song_mode]
+               FALSE}}
+         {if
+            {!
+               [enable_change_song_mode]}
+            {set
+               [helpbar_confirm_label]
+               change_song}
+            {right_hand.hnl enable_navigation}
+            {right_hand.hnl
+               set
+               showing
+               {!
+                  {shell_input in_controller_mode}}}
+            {helpbar resync}
+            {set
+               [enable_change_song_mode]
+               TRUE}}}
+      {if_else
+         {&&
+            [two_players_present]
+            [enable_change_song_mode]}
+         {if
+            {!=
+               [back_token]
+               change_mode}
+            {set
+               [back_token]
+               change_mode}
+            {helpbar resync}}
+         {if
+            {!=
+               [back_token]
+               ''}
+            {set
+               [back_token]
+               ''}
+            {helpbar resync}}})
+   (on_change_song
+      {if
+         {==
+            [can_change_song]
+            TRUE}
+         {set
+            [can_change_song]
+            FALSE}
+         {partymode_mgr get_party_song_queue_from_rc}})
+   (on_change_mode
+      {partymode_mgr change_to_another_game_mode}
+      {infinite_party_hub_panel
+         set_song
+         {partymode_mgr get_curr_event_song_shortname}
+         {partymode_mgr get_curr_event_name}}
+      {infinite_party_hub_panel on_change_mode})
+   (NAV_SELECT_MSG
+      {print
+         "infinite_party_skip_nextsong_panel handling NAV_SELECT_MSG $name = "
+         $name
+         "\n"}
+      {switch
+         $name
+         (change_song
+            {$this on_change_song})
+         (change_mode
+            {$this on_change_mode})
+         (back
+            {ui goto_screen main_screen})})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {if
+            {infinite_party_hub_panel get waiting_for_hi_five}
+            {$this on_change_mode}}
+         kDataUnhandled})
+   (controller_mode_entered
+      {right_hand.hnl set showing FALSE})
+   (controller_mode_exited
+      {if
+         {&&
+            {!
+               {infinite_party_hub_panel get going_to_load}}
+            [enable_change_song_mode]}
+         {right_hand.hnl set showing TRUE}})
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (change_song
+            {$this select_right_list_token $command})
+         (change_mode
+            {if
+               [back_token]
+               {helpbar select_left_list_item 1}})})
+   (do_change_song
+      {infinite_party_hub_panel goto_next_song})
+   (skipped_sync
+      {$this do_change_song}
+      {set
+         [can_change_song]
+         TRUE})
+   (song_queue_updated
+      {$this do_change_song}
+      {set
+         [can_change_song]
+         TRUE})
+   (enable_swipe
+      {right_hand.hnl set showing TRUE}
+      {right_hand.hnl enable_navigation}
+      {set
+         [hide_helpbar]
+         FALSE}
+      {helpbar resync})
+   (disable_swipe
+      {right_hand.hnl set showing FALSE}
+      {right_hand.hnl disable_navigation}
+      {set
+         [hide_helpbar]
+         TRUE}
+      {helpbar resync})}
+{new
+   HamScreen
+   infinite_party_hub_screen
+   (panels meta_game infinite_party_hub_panel infinite_party_skip_nextsong_panel meta)
+   (focus infinite_party_skip_nextsong_panel)
+   (back main_screen)
+   (shell_pause_return_time 30.0)
+   (returning_from_confirm_quit FALSE)
+   (enter
+      #ifdef DEMO
+      {hamprovider set is_in_infinite_party_mode TRUE}
+      #else
+      #endif
+      {meta music_stop}
+      {gesture_mgr set_identification_enabled FALSE}
+      {infinite_party_hub_panel reset_loading}
+      {if_else
+         {!
+            [returning_from_confirm_quit]}
+         {infinite_party_hub_panel goto_next_song_and_mode}
+         {do
+            {set
+               [returning_from_confirm_quit]
+               FALSE}
+            {infinite_party_hub_panel
+               set_song
+               {partymode_mgr get_curr_event_song_shortname}
+               {partymode_mgr get_curr_event_name}}}}
+      {if
+         {==
+            {$this focus_panel}
+            infinite_party_skip_nextsong_panel}
+         {$this check_custom_playlist_achievement}}
+      {partymode_mgr smart_glass_listen 1}
+      {infinite_party_skip_nextsong_panel enable_swipe})
+   (exit
+      {gesture_mgr set_identification_enabled TRUE}
+      {partymode_mgr smart_glass_listen 0})
+   (on_say_song_name
+      ($song_name)
+      {infinite_party_hub_panel show_mic_activity}
+      {infinite_party_hub_panel on_say_song_name $song_name})
+   (on_voice_command
+      ($command)
+      {infinite_party_hub_panel show_mic_activity}
+      {switch
+         $command
+         (perform_it
+            {infinite_party_hub_panel
+               set_song
+               {partymode_mgr get_curr_event_song_shortname}
+               perform})
+         (dance_battle
+            {infinite_party_hub_panel
+               set_song
+               {partymode_mgr get_curr_event_song_shortname}
+               dance_battle})
+         (bustamove
+            {infinite_party_hub_panel
+               set_song
+               {partymode_mgr get_curr_event_song_shortname}
+               bustamove})
+         (strike_a_pose
+            {infinite_party_hub_panel
+               set_song
+               {partymode_mgr get_curr_event_song_shortname}
+               strike_a_pose})
+         (rhythm_battle
+            {infinite_party_hub_panel
+               set_song
+               {partymode_mgr get_curr_event_song_shortname}
+               rhythm_battle})
+         (beginner
+            {$this
+               set_party_difficulty
+               {sym_to_difficulty beginner}})
+         (easy
+            {$this
+               set_party_difficulty
+               {sym_to_difficulty easy}})
+         (medium
+            {$this
+               set_party_difficulty
+               {sym_to_difficulty medium}})
+         (hard
+            {$this
+               set_party_difficulty
+               {sym_to_difficulty expert}})
+         (per_song
+            {partymode_mgr set is_using_per_song_options TRUE}
+            {infinite_party_hub_panel set_party_difficulty_text})
+         (pause
+            {$this on_party_pause})
+         (dance
+            {infinite_party_hub_panel start_event})
+         (back
+            {$this go_back})
+         {{$this focus_panel}
+            on_voice_command
+            $command}}
+      {infinite_party_hub_panel refresh_song_details}
+      {infinite_party_hub_panel play_voice_select_sound})
+   (set_party_difficulty
+      ($difficulty)
+      {partymode_mgr set_difficulty $difficulty}
+      {gamedata setp 0 difficulty $difficulty}
+      {gamedata setp 1 difficulty $difficulty}
+      {partymode_mgr set is_using_per_song_options FALSE}
+      {infinite_party_hub_panel set_party_difficulty_text})
+   (go_back
+      {set
+         [returning_from_confirm_quit]
+         TRUE}
+      {infinite_party_confirm_quit_screen
+         set
+         back_screen
+         {ui current_screen}}
+      {ui goto_screen infinite_party_confirm_quit_screen})
+   (check_custom_playlist_achievement
+      {if
+         {partymode_mgr is_using_playlist}
+         {if
+            {meta_performer is_playlist_custom}
+            {acc_mgr earn_accomplishment_for_all acc_party_with_custom_playlist}}})
+   (update_party_from_rc
+      {print
+         "SmartGlass: got signal to update party from server\n"}
+      {infinite_party_hub_panel smart_glass_msg})
+   (BUTTON_DOWN_MSG
+      {switch
+         $raw_button
+         (kPad_Xbox_Y
+            {if_else
+               {shell_input in_controller_mode}
+               {$this on_party_pause}
+               kDataUnhandled})
+         kDataUnhandled})
+   (on_party_pause
+      {print
+         "on_party_pause\n"}
+      {party_mode_options_screen
+         set
+         back_screen
+         {ui current_screen}}
+      {ui goto_screen party_mode_options_screen})
+   (TRANSITION_COMPLETE_MSG
+      {letterbox on_hide_mic})}
+{new
+   HamScreen
+   infinite_party_hub_preload_screen
+   (panels meta_game infinite_party_hub_panel playlist_loading_spinner_panel playlist_preload_panel)
+   (focus playlist_preload_panel)
+   (enter
+      {playlist_preload_panel set loading_screen infinite_party_hub_loading_screen})}
+{new
+   HamScreen
+   infinite_party_hub_loading_screen
+   (panels meta_game infinite_party_hub_panel playlist_loading_spinner_panel playlist_loading_panel)
+   (focus playlist_loading_spinner_panel)
+   (enter
+      {ui goto_screen infinite_party_hub_loading_game_screen})}
+{new
+   HamScreen
+   infinite_party_hub_loading_game_screen
+   (panels meta_game infinite_party_hub_panel playlist_loading_spinner_panel playlist_loading_game_panel)
+   (focus playlist_loading_spinner_panel)
+   (enter
+      {meta music_stop}
+      {game_restart})}
+{new
+   HamScreen
+   infinite_party_confirm_quit_screen
+   (panels background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (helpbar
+      ((confirm helpbar_confirm)))
+   (back_screen)
+   (ok_screen)
+   (enter
+      {dialog_panel set_ok_no confirm_quit_mainmenu TRUE})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (no
+            {ui
+               goto_screen
+               [back_screen]})
+         (ok
+            {exit_infinite_party_mode}
+            {infinite_party_hub_screen set returning_from_confirm_quit FALSE}
+            {ui
+               goto_screen
+               [ok_screen]})})}

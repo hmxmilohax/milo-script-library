@@ -1,0 +1,222 @@
+(holla_back_config_craze_70s
+   ((initial_move_count 4)
+      (max_routine_size 4)
+      (initial_music_jump 16)
+      (specify_first_move_measure 20)
+      (intro_shoutout hb_intro_70s)
+      (win_shoutouts hb_crazedeciphered100pct_70s nar_hb_exit70s)))
+(holla_back_config_craze_80s
+   ((initial_move_count 4)
+      (max_routine_size 4)
+      (initial_music_jump 3)
+      (specify_first_move_measure 7)
+      (intro_shoutout hb_intro_80s)
+      (win_shoutouts hb_crazedeciphered100pct_80s nar_hb_exit80s)))
+(holla_back_config_craze_90s
+   ((initial_move_count 4)
+      (max_routine_size 4)
+      (initial_music_jump 12)
+      (specify_first_move_measure 16)
+      (intro_shoutout hb_intro_90s)
+      (win_shoutouts hb_crazedeciphered100pct_90s nar_hb_exit90s)))
+(holla_back_config_craze_00s
+   ((initial_move_count 8)
+      (max_routine_size 8)
+      (initial_music_jump 20)
+      (specify_first_move_measure 24)
+      (intro_shoutout hb_intro_00s)
+      (win_shoutouts hb_crazedeciphered100pct_00s)))
+(holla_back_config_craze_10s
+   ((initial_move_count 8)
+      (max_routine_size 8)
+      (initial_music_jump 28)
+      (specify_first_move_measure 32)
+      (intro_shoutout hb_intro_10s)
+      (win_shoutouts hb_crazedeciphered100pct_10s nar_hb_exit10s)))
+(init
+   {hamprovider set gameplay_mode holla_back}
+   {$this common_init})
+(reset_count 0)
+(reset
+   {'++'
+      [reset_count]}
+   {print
+      "[reset_count] = "
+      [reset_count]
+      "\n"}
+   {$this do_reset})
+(do_reset
+   {if
+      {!=
+         [mini_game]
+         {{$hud_panel find holla_back_hud}
+            find
+            HollaBackMinigame.rhb}}
+      {set
+         [mini_game]
+         {{$hud_panel find holla_back_hud}
+            find
+            HollaBackMinigame.rhb}}}
+   {[mini_game]
+      end_minigame}
+   {$this common_reset}
+   {midi_player init}
+   {hamprovider
+      add_sink
+      $this
+      ((player_join on_player_join))
+      kSinkModeHandle
+      FALSE}
+   {player_provider_1
+      add_sink
+      $this
+      (on_player_present_change)
+      0
+      FALSE}
+   {player_provider_2
+      add_sink
+      $this
+      (on_player_present_change)
+      0
+      FALSE}
+   {{find_obj
+         {$hamdirector get cur_world}
+         animate_timeywimey.flow}
+      activate}
+   {$this begin_minigame})
+(get_move_state
+   ($measure)
+   {[mini_game]
+      get_move_state
+      {int $measure}})
+(set_move_state
+   ($measure $state)
+   {[mini_game]
+      set_move_state
+      {int $measure}
+      $state})
+(on_player_join
+   ($index)
+   {game reset_detection $index}
+   {{gamedata getp $index provider}
+      set
+      start_score_move_index
+      0})
+(on_player_present_change
+   {if
+      {&&
+         {!=
+            title
+            {hamprovider get holla_back_stage}}
+         [mini_game]}
+      {[mini_game]
+         set_default_shot}})
+(mini_game
+   "")
+(begin_minigame
+   {$hamdirector set freestyle_enabled FALSE}
+   {set
+      [mini_game]
+      {{$hud_panel find holla_back_hud}
+         find
+         HollaBackMinigame.rhb}}
+   {do
+      ($config
+         {if_else
+            {!=
+               {hamprovider get holla_back_config}
+               none}
+            {hamprovider get holla_back_config}
+            holla_back_config_default})
+      {[mini_game]
+         begin_minigame
+         [$config]}})
+(intro_over
+   {hamprovider set game_stage playing})
+(exit_to_perform
+   {gamemode set gameplay_mode perform}
+   {game_screen reset_game_mode}
+   {gamemode set endgame_continue_screen perform_continue_screen}
+   {$hamdirector
+      force_shot
+      ""}
+   {hamprovider set visible_flashcard_btm -1}
+   {hamprovider set visible_flashcard_top -1}
+   {handle
+      (hamprovider enter_nottimeywimey)})
+(convert_beat
+   ($beat $player)
+   {$this convert_beat_common_looped $beat $player})
+(num_in_range
+   ($num $min $max)
+   {&&
+      {>= $num $min}
+      {<= $num $max}})
+(pause_on_skeleton_loss
+   {if_else
+      {!=
+         title
+         {hamprovider get holla_back_stage}}
+      {do
+         ($cur_measure
+            {{$hud_panel get moves_dir}
+               get_cur_measure})
+         ($start_play
+            {hamprovider get visible_flashcard_btm})
+         ($end_play
+            {hamprovider get visible_flashcard_top})
+         {>=
+            $cur_measure
+            {- $start_play 4}}}
+      FALSE})
+(in_play_range
+   ($b)
+   TRUE)
+(num_rated_measures
+   {$this num_rated_measures_common})
+(earn_acc
+   ($acc_name)
+   {acc_mgr earn_accomplishment_for_player 0 $acc_name}
+   {acc_mgr earn_accomplishment_for_player 1 $acc_name})
+(game_outro
+   {$this game_outro_common})
+(move_passed
+   ($player $move $detect_frac)
+   {print
+      "move_passed $player = "
+      $player
+      " $move = "
+      $move
+      " $detect_frac = "
+      $detect_frac
+      "\n"}
+   {do
+      ($move_index
+         {$hud_panel get cur_move_index})
+      ($rating
+         "")
+      ($rating_idx 0)
+      ($bonus 0)
+      ($difficulty
+         {gamedata getp $player difficulty})
+      ($player_provider
+         {gamedata getp $player provider})
+      ($num_playing 0)
+      ($moves_dir
+         {$hud_panel get moves_dir})
+      {if
+         {&&
+            {!
+               {$move is_rest}}
+            $hud_panel
+            {>
+               $move_index
+               {[mini_game]
+                  get_first_move_idx}}}
+         {set
+            $rating
+            {detect_frac_to_rating $detect_frac $move}}
+         {set
+            $rating_idx
+            {rating_state_to_index $rating}}
+         {$this hamprovider_export move_finished $player $rating 2.0e-2}}})

@@ -1,0 +1,556 @@
+{new
+   HamScreen
+   song_select_playlist_tutorial_check_screen
+   (panels background_confirmation_panel)
+   (enter
+      {if_else
+         {!
+            {profile_mgr has_seen_tutorial kTutorialPlaylists}}
+         {enter_tutorial tutorial_playlist_screen_0 FALSE}
+         {ui goto_screen song_select_playlist_screen}})}
+{new
+   SongSelectPlaylistPanel
+   song_select_playlist_panel
+   (file
+      "song_select_playlist.milo")
+   (focus right_hand.hnl)
+   (focus_song_index 0)
+   (top_index 0)
+   (back_token back)
+   (use_gamertag_bg TRUE)
+   (storage_changed_error FALSE)
+   (show_playlist_options FALSE)
+   (selected_playlist_index 0)
+   (selected_custom_playlist FALSE)
+   (selected_header FALSE)
+   (is_loading FALSE)
+   (load
+      {ui_event_mgr
+         add_sink
+         $this
+         (event_dialog_dismiss)}
+      {platform_mgr
+         add_sink
+         $this
+         (storage_changed)})
+   (unload
+      {ui_event_mgr remove_sink $this event_dialog_dismiss}
+      {platform_mgr remove_sink $this storage_changed})
+   (enter
+      {playlist_sort_mgr smart_glass_listen 1}
+      {do
+         {$this set storage_changed_error FALSE}
+         {hamprovider
+            add_sink
+            $this
+            (on_ui_nav_player_change)
+            0
+            FALSE}
+         {player_provider_1
+            add_sink
+            $this
+            (padnum_updated)}
+         {player_provider_2
+            add_sink
+            $this
+            (padnum_updated)}
+         {profile_mgr
+            add_sink
+            $this
+            (profile_changed_msg)
+            0
+            FALSE}
+         {profile_mgr clear_critical_profile}
+         {gamemode set_mode playlist_perform}
+         {songs.lst allow_highlight FALSE}
+         {playlist_sort_mgr sort_with_headers TRUE}
+         {if_else
+            {playlist_sort_mgr has_valid_profile}
+            {$this sync_playlists_with_rc}
+            {$this rebuild_playlists}}})
+   (exit
+      {playlist_sort_mgr smart_glass_listen 0}
+      {hamprovider remove_sink $this on_ui_nav_player_change}
+      {player_provider_1 remove_sink $this padnum_updated}
+      {player_provider_2 remove_sink $this padnum_updated}
+      {profile_mgr remove_sink $this profile_changed_msg}
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}}
+      {playlist_sort_mgr sort_with_headers FALSE})
+   HIGHLIGHT_RIGHT_LIST_ITEM
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (update_all
+      {$this refresh})
+   (handle_select_playlist
+      {if_else
+         [selected_custom_playlist]
+         {if_else
+            {profile_mgr has_active_profile}
+            {do
+               {$this select_playlist}
+               {if_else
+                  {meta_performer is_playlist_playable}
+                  {do
+                     {set
+                        [show_playlist_options]
+                        TRUE}}
+                  {do
+                     {profile_mgr
+                        set_critical_profile
+                        {profile_mgr get_active_profile}}
+                     {ui goto_screen song_select_playlist_customize_screen}}}}
+            {if_else
+               {$this is_waiting_for_active_profile}
+               {do
+                  {run_flow invalid_select.flow}
+                  skip_select_anim_and_sound}
+               {do
+                  {ui goto_screen song_select_playlist_need_signin_screen}
+                  skip_select_anim}}}
+         {do
+            {$this select_playlist}
+            {set
+               [show_playlist_options]
+               TRUE}}})
+   (handle_select_party_mode_playlist
+      {if_else
+         [selected_custom_playlist]
+         {if_else
+            {profile_mgr has_active_profile}
+            {do
+               {$this select_playlist}
+               {if_else
+                  {meta_performer is_playlist_playable}
+                  {do
+                     {partymode_mgr use_selected_playlist TRUE}
+                     {ui goto_screen party_mode_options_screen}}
+                  {do
+                     {profile_mgr
+                        set_critical_profile
+                        {profile_mgr get_active_profile}}
+                     {ui goto_screen song_select_playlist_customize_screen}}}}
+            {if_else
+               {$this is_waiting_for_active_profile}
+               {do
+                  {run_flow invalid_select.flow}
+                  skip_select_anim_and_sound}
+               {do
+                  {ui goto_screen song_select_playlist_need_signin_screen}
+                  skip_select_anim}}}
+         {do
+            {$this select_playlist}
+            {partymode_mgr use_selected_playlist TRUE}
+            {ui goto_screen party_mode_options_screen}}})
+   (handle_select_playlist_option
+      ($option)
+      {switch
+         $option
+         (playlist_play
+            {meta_performer start_playlist}
+            {ui
+               goto_screen
+               {gamemode get seldiff_screen}})
+         (playlist_shuffle
+            {meta_performer shuffle_playlist}
+            {meta_performer start_playlist}
+            {ui
+               goto_screen
+               {gamemode get seldiff_screen}})
+         (playlist_edit
+            {profile_mgr
+               set_critical_profile
+               {profile_mgr get_active_profile}}
+            {ui goto_screen song_select_playlist_customize_screen})
+         (playlist_delete
+            {ui goto_screen delete_playlist_confirm_screen})}
+      {set
+         [show_playlist_options]
+         FALSE})
+   (handle_select_header
+      ($index)
+      {playlist_sort_mgr on_select $index})
+   (hide_playlist_options
+      {playlist_sort_mgr enter}
+      {right_hand.hnl set_provider playlist_sort_mgr}
+      {right_hand.hnl refresh}
+      {right_hand.hnl play_enter_anim}
+      {set
+         [show_playlist_options]
+         FALSE})
+   (NAV_SELECT_MSG
+      {set
+         [selected_custom_playlist]
+         FALSE}
+      {set
+         [selected_header]
+         FALSE}
+      {switch
+         $component
+         (right_hand.hnl
+            {if
+               {!
+                  [show_playlist_options]}
+               {set
+                  [selected_custom_playlist]
+                  {$this is_selecting_custom_playlist}}
+               {set
+                  [selected_header]
+                  {playlist_sort_mgr is_data_header $index}}}
+            {if_else
+               {'||'
+                  {partymode_mgr is_custom_party}
+                  {hamprovider get is_in_infinite_party_mode}
+                  {hamprovider get is_in_party_mode}}
+               {if_else
+                  [selected_header]
+                  {$this handle_select_header $index}
+                  {$this handle_select_party_mode_playlist}}
+               {if_else
+                  [show_playlist_options]
+                  {do
+                     {$this handle_select_playlist_option $name}}
+                  {if_else
+                     [selected_header]
+                     {$this handle_select_header $index}
+                     {$this handle_select_playlist}}}})
+         (left_hand.hnl
+            {switch
+               $name
+               (back
+                  {$this on_back})})})
+   (NAV_HIGHLIGHT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set
+               [focus_song_index]
+               $index}
+            {$this display_songs $index}
+            {if
+               {!
+                  [show_playlist_options]}
+               {$this set_selected_playlist_index $index}})})
+   (NAV_SELECT_DONE_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {if_else
+               [show_playlist_options]
+               {do
+                  {if_else
+                     [selected_custom_playlist]
+                     {right_hand.hnl set_provider custom_options_provider.hnp}
+                     {right_hand.hnl set_provider authored_options_provider.hnp}}
+                  {right_hand.hnl refresh}
+                  {right_hand.hnl play_enter_anim}}
+               {if_else
+                  [selected_header]
+                  {do
+                     {$this uncollapse_headers $index}}
+                  {do
+                     {right_hand.hnl set_provider playlist_sort_mgr}
+                     {$this refresh}
+                     {right_hand.hnl play_enter_anim}
+                     {$this update_song_list}
+                     {print
+                        "deleted a playlist. index = "
+                        $index
+                        "\n"}}}})})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {$this on_back}
+         kDataUnhandled})
+   (on_back
+      {if_else
+         [show_playlist_options]
+         {$this hide_playlist_options}
+         {if_else
+            {hamprovider get sided_colors_locked}
+            {do
+               {ui goto_screen party_mode_options_screen}}
+            {do
+               {gamemode set_mode init}
+               {ui
+                  go_back_screen
+                  {{ui current_screen}
+                     get
+                     back_screen}}}}})
+   (uncollapse_headers
+      ($header_index)
+      {do
+         ($header_name
+            {playlist_sort_mgr get_token $header_index})
+         ($new_index)
+         {playlist_sort_mgr on_select_done $header_index}
+         {right_hand.hnl refresh}
+         {set
+            $new_index
+            {playlist_sort_mgr first_data_index $header_name}}
+         {right_hand.hnl scroll_to_index $new_index $new_index}
+         {right_hand.hnl play_enter_anim}})
+   (display_songs
+      ($index)
+      {if
+         {!
+            [show_playlist_options]}
+         {$this update_songs $index}})
+   (update_playlist_provider
+      ($provider)
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}}
+      {right_hand.hnl refresh}
+      {right_hand.hnl
+         scroll_to_index
+         [focus_song_index]
+         [top_index]})
+   (update_song_provider
+      ($provider)
+      {songs.lst set_provider $provider})
+   (get_selected_playlist_index
+      [selected_playlist_index])
+   (set_selected_playlist_index
+      ($index)
+      {print
+         "selecting playlist "
+         $index
+         "\n"}
+      {set
+         [selected_playlist_index]
+         $index})
+   (update_songcount
+      ($count)
+      {if_else
+         {playlist_sort_mgr
+            is_data_header
+            [focus_song_index]}
+         {do
+            {if
+               {!
+                  [show_playlist_options]}
+               {description.lbl
+                  set
+                  text_token
+                  {sprint
+                     {playlist_sort_mgr
+                        get_token
+                        [focus_song_index]}
+                     "_description"}}
+               {description.lbl set showing TRUE}
+               {no_songs.lbl set showing FALSE}}}
+         {do
+            {description.lbl set showing FALSE}
+            {if_else
+               {> $count 0}
+               {no_songs.lbl set showing FALSE}
+               {no_songs.lbl set showing TRUE}}}})
+   (update_song_list
+      {songs.lst refresh})
+   (storage_changed
+      {if_else
+         {!
+            {ui_event_mgr has_active_dialog_event}}
+         {ui_event_mgr trigger_event storage_changed}
+         {set
+            [storage_changed_error]
+            TRUE}})
+   (event_dialog_dismiss
+      {if
+         [storage_changed_error]
+         {ui_event_mgr trigger_event storage_changed}
+         {set
+            [storage_changed_error]
+            FALSE}})
+   (padnum_updated
+      {$this check_profile})
+   (profile_changed_msg
+      {$this check_profile})
+   (on_ui_nav_player_change
+      {$this check_profile})
+   (controller_mode_entered
+      {$this update_all})
+   (controller_mode_exited
+      {$this update_all})
+   (TRANSITION_COMPLETE_MSG
+      {$this update_all})
+   (on_collapse_command
+      {if
+         {!
+            {playlist_sort_mgr get_header_mode}}
+         {$this
+            select_right_list_item
+            {playlist_sort_mgr
+               get_header_index_from_child_list_index
+               {right_hand.hnl get_selected}}}})
+   (on_expand_command
+      {if
+         {playlist_sort_mgr get_header_mode}
+         {$this
+            select_right_list_item
+            {right_hand.hnl get_selected}}})
+   (on_page_up_command
+      {set
+         $up_index
+         {-
+            {right_hand.hnl get_selected}
+            {right_hand.hnl get_num_display}}}
+      {if
+         {< $up_index 0}
+         {set $up_index 0}}
+      {$this highlight_right_list_item $up_index})
+   (on_page_down_command
+      {set
+         $down_index
+         {'+'
+            {right_hand.hnl get_selected}
+            {right_hand.hnl get_num_display}}}
+      {if
+         {>
+            $down_index
+            {playlist_sort_mgr num_data}}
+         {set
+            $down_index
+            {-
+               {playlist_sort_mgr num_data}
+               1}}}
+      {$this highlight_right_list_item $down_index})
+   (sync_failed
+      {$this rebuild_playlists})
+   (playlists_synced
+      {$this rebuild_playlists})
+   (sync_playlists_with_rc
+      {set
+         [is_loading]
+         TRUE}
+      {start_loading.flow activate}
+      {right_hand.hnl set_provider empty.hnp}
+      {right_hand.hnl disable_navigation}
+      {playlist_sort_mgr get_playlists_from_rc})
+   (rebuild_playlists
+      {playlist_sort_mgr enter}
+      {set
+         [focus_song_index]
+         0}
+      {set
+         [top_index]
+         0}
+      {$this
+         display_songs
+         [focus_song_index]}
+      {if
+         [is_loading]
+         {set
+            [is_loading]
+            FALSE}
+         {finish_loading.flow activate}}
+      {right_hand.hnl set_provider playlist_sort_mgr}
+      {right_hand.hnl enable_navigation}
+      {right_hand.hnl
+         scroll_to_index
+         [focus_song_index]
+         [top_index]})
+   (check_profile
+      {if_else
+         {playlist_sort_mgr is_profile_changed}
+         {if_else
+            {playlist_sort_mgr has_valid_profile}
+            {$this sync_playlists_with_rc}
+            {$this rebuild_playlists}}
+         {$this update_all}})}
+{new
+   HamScreen
+   song_select_playlist_screen
+   (panels meta background_panel song_select_playlist_panel infinite_party_mode_timeout_panel)
+   (focus song_select_playlist_panel)
+   (back_screen song_select_screen)
+   (enter
+      {infinite_party_mode_timeout_panel
+         set_paused
+         {'||'
+            {!
+               {hamprovider get is_in_infinite_party_mode}}
+            {partymode_mgr is_custom_party}}}
+      {voice_input_panel activate_voice_context song_select_playlist_screen})
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (page_up
+            {song_select_playlist_panel on_page_up_command})
+         (page_down
+            {song_select_playlist_panel on_page_down_command})
+         (collapse
+            {song_select_playlist_panel on_collapse_command})
+         (expand
+            {song_select_playlist_panel on_expand_command})
+         (xbox)
+         BACRO
+         {song_select_playlist_panel select_right_list_token $command}})}
+{new
+   HamScreen
+   song_select_playlist_editplay_screen
+   (panels meta background_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_custom_ok_no playlist_editplay playlist_play playlist_edit 0 TRUE}
+      {infinite_party_mode_timeout_panel
+         set_paused
+         {'||'
+            {!
+               {hamprovider get is_in_infinite_party_mode}}
+            {partymode_mgr is_custom_party}}})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (playlist_play
+            {meta_performer start_playlist}
+            {ui
+               goto_screen
+               {gamemode get seldiff_screen}})
+         (playlist_edit
+            {ui goto_screen song_select_playlist_customize_screen})})}
+{new
+   HamScreen
+   song_select_playlist_need_signin_screen
+   (panels meta background_confirmation_panel infinite_party_mode_timeout_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok playlist_need_to_sign_in TRUE}
+      {infinite_party_mode_timeout_panel
+         set_paused
+         {'||'
+            {!
+               {hamprovider get is_in_infinite_party_mode}}
+            {partymode_mgr is_custom_party}}})
+   (NAV_SELECT_MSG
+      {ui goto_screen song_select_playlist_screen})}
+{new
+   HamScreen
+   delete_playlist_confirm_screen
+   (panels background_confirmation_panel dialog_panel song_select_playlist_panel)
+   (focus dialog_panel)
+   (return_screen song_select_playlist_screen)
+   (enter
+      {dialog_panel set_ok_no delete_playlist_confirm TRUE}
+      {song_select_playlist_panel set_showing FALSE})
+   (go_back
+      {script_task
+         kTaskSeconds
+         (delay 1)
+         (script
+            {song_select_playlist_panel set_showing TRUE}
+            {ui
+               goto_screen
+               [return_screen]})})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {song_select_playlist_panel delete_playlist}
+            {playlist_sort_mgr enter}
+            {$this go_back})
+         (no
+            {$this go_back})})}

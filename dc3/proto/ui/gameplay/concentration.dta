@@ -1,0 +1,560 @@
+#include performance.dta
+(mg_panel
+   "")
+(song_measures)
+(game_is_over)
+(log_cat 1)
+(log
+   ($category $text)
+   {if
+      {&
+         $category
+         [log_cat]}
+      {print
+         "concentration:"
+         $text
+         "\n"}})
+(init
+   {$this
+      log
+      1
+      "----------- concentration init -----------"}
+   {hamprovider set gameplay_mode concentration}
+   {$this common_init}
+   {master
+      add_sink
+      $this
+      (on_beat on_stream_jump)}
+   {hamprovider
+      add_sink
+      $this
+      ((player_join on_player_join)
+         (on_game_stage_change on_game_stage)
+         (camshot_changed on_camshot_changed)
+         (post_move_finished on_post_move_finished)
+         (final_pose_photo on_final_pose_photo)
+         (post_sides_switched on_side_moved))
+      kSinkModeHandle
+      FALSE}
+   {hamprovider
+      add_sink
+      $this
+      ((on_ui_nav_player_change on_ui_nav_player_changed))
+      0
+      FALSE}
+   {player_provider_1
+      add_sink
+      $this
+      ((count_in on_p1_count_in)
+         (on_player_present_change on_player_present_change))
+      0
+      FALSE}
+   {player_provider_2
+      add_sink
+      $this
+      ((count_in on_p2_count_in)
+         (on_player_present_change on_player_present_change))
+      0
+      FALSE}
+   {gamedata setp 0 difficulty kDifficultyEasy}
+   {gamedata setp 1 difficulty kDifficultyEasy}
+   {mini_game_mgr
+      init_cascade
+      {{find_obj $hud_panel twelve_card_hud}
+         get
+         number_of_cards}
+      2})
+(on_player_present_change
+   {do
+      ($p1
+         {player_provider_1 get player_present})
+      ($p2
+         {player_provider_2 get player_present})
+      {$this
+         log
+         1
+         {sprintf
+            "on_player_present_change p1=%d p2=%d"
+            $p1
+            $p2}}})
+(end
+   {$this
+      log
+      1
+      "midi end marker hit"
+      "\n"}
+   {if
+      [mg_panel]
+      {[mg_panel]
+         end_game}})
+(test_stuff
+   {$this do_test 1}
+   {$this do_test 10}
+   {$this do_test 100})
+(do_test
+   ($input)
+   {do
+      ($local_list
+         {array 0})
+      ($i 0)
+      ($var
+         "")
+      {push_back $local_list $input}
+      {print
+         "var list start\n"}
+      {foreach
+         $var
+         $local_list
+         {print
+            "var"
+            $i
+            "="
+            $var
+            "\n"}
+         {'++' $i}}
+      {print
+         "var list end\n"}})
+(reset
+   {$this
+      log
+      1
+      "----------- concentration reset -----------"}
+   {set
+      [game_is_over]
+      FALSE}
+   {overshell resolve_skeletons}
+   {$this common_reset}
+   {hamprovider set performance high}
+   {if
+      {&&
+         $hamdirector
+         {$hamdirector get cur_world}}
+      {{$hamdirector get cur_world}
+         set_showing
+         TRUE}}
+   {$hamdirector set disable_picking FALSE}
+   {foreach_int
+      $i
+      0
+      {gamedata max_players}
+      {do
+         ($provider
+            {gamedata getp $i provider})
+         {$provider set score 0}
+         {$provider
+            clear
+            (tagged_moves)}
+         {$provider set start_score_move_index 0}
+         {$this
+            performance_ladder
+            $i
+            [initial_performance_state_index]}}}
+   {set
+      [player_encouraged]
+      -1}
+   {game reset_detection}
+   {$hamdirector set freestyle_enabled FALSE}
+   {hamprovider set cam_player_config kHamPlayerBoth}
+   {$this show_venue TRUE}
+   {$this show_flashcards FALSE}
+   {if
+      [mg_panel]
+      {delete
+         [mg_panel]}
+      {set
+         [mg_panel]
+         ""}}
+   {set
+      [song_measures]
+      {-
+         {{$hamdirector player_song_anim 0}
+            num_keys
+            $hamdirector
+            (move)}
+         2}}
+   {$this
+      log
+      1
+      "game panel type = "
+      {game_panel get_type}})
+(cheat_choose_card
+   ($ans))
+(show_chars
+   ($show)
+   {if
+      $hamdirector
+      {do
+         ($world
+            {$hamdirector get cur_world})
+         ($show_p0 $show)
+         ($show_p1 $show)
+         {$world
+            iterate
+            Character
+            $c
+            {if
+               {has_substr
+                  {$c name}
+                  "player0"}
+               {$c set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$c name}
+                  "player1"}
+               {$c set_showing $show_p1}}
+            {if
+               {has_substr
+                  {$c name}
+                  "backup0"}
+               {$c set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$c name}
+                  "backup1"}
+               {$c set_showing $show_p1}}}
+         {$world
+            iterate
+            RndDir
+            $r
+            {if
+               {has_substr
+                  {$r name}
+                  "backup0"}
+               {$r set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$r name}
+                  "backup1"}
+               {$r set_showing $show_p1}}
+            {if
+               {has_substr
+                  {$r name}
+                  "player0"}
+               {$r set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$r name}
+                  "player1"}
+               {$r set_showing $show_p1}}
+            {if
+               {has_substr
+                  {$r name}
+                  "feedback0"}
+               {$r set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$r name}
+                  "feedback1"}
+               {$r set_showing $show_p1}}
+            {if
+               {has_substr
+                  {$r name}
+                  "meter0"}
+               {$r set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$r name}
+                  "meter1"}
+               {$r set_showing $show_p1}}
+            {if
+               {has_substr
+                  {$r name}
+                  "spiral0"}
+               {$r set_showing $show_p0}}
+            {if
+               {has_substr
+                  {$r name}
+                  "spiral1"}
+               {$r set_showing $show_p1}}}}})
+(show_flashcards
+   ($show)
+   {handle
+      ({gamedata getp 0 provider}
+         hide_hud
+         {! $show})}
+   {handle
+      ({gamedata getp 1 provider}
+         hide_hud
+         {! $show})})
+(show_venue
+   ($show)
+   {$this show_chars $show}
+   {$this show_flashcards $show}
+   {{$hamdirector get cur_world}
+      set_showing
+      $show})
+(create_mini_game
+   {set
+      [mg_panel]
+      {new Object concentration_mini_game}}
+   {[mg_panel]
+      set
+      type
+      concentration_scriptobj}
+   {handle
+      ([mg_panel]
+         enter
+         [song_measures])}
+   {$this show_venue FALSE})
+(end_mini_game
+   {$this
+      log
+      1
+      "game over"}
+   {handle
+      ([mg_panel]
+         exit)}
+   {delete
+      [mg_panel]}
+   {set
+      [mg_panel]
+      ""}
+   {set
+      [game_is_over]
+      TRUE}
+   {hamprovider set game_stage outro}
+   {$this show_venue TRUE}
+   {game_panel win})
+(poll
+   {$this
+      log
+      0
+      "poll"}
+   {if
+      [mg_panel]
+      {[mg_panel]
+         poll}})
+FINAL_POSE_HANDLERS
+(end
+   {$this
+      log
+      2
+      "end"})
+(move_passed
+   ($player $move $detect_frac)
+   {$this
+      log
+      2
+      "move_passed"}
+   {{gamedata getp $player provider}
+      set
+      last_move_index
+      {$hud_panel get cur_move_index}})
+(show_venue
+   {if
+      $hamdirector
+      {if
+         {&&
+            $hamdirector
+            {$hamdirector get cur_world}}
+         {{$hamdirector get cur_world}
+            set_showing
+            TRUE}
+         {$hamdirector set disable_picking FALSE}
+         {$hamdirector set_force_postproc performance_awesome 1}
+         {$hamdirector set force_postproc_blend 1}}})
+(on_post_move_finished
+   {$this
+      log
+      2
+      "on_post_move_finished"}
+   {if
+      {!
+         [game_is_over]}
+      {if_else
+         [mg_panel]
+         {do
+            {if
+               {==
+                  {[mg_panel]
+                     get
+                     game_is_over}
+                  TRUE}
+               {$this end_mini_game}}}
+         {do
+            ($player_index 0)
+            ($move_name
+               {$hamdirector
+                  beat_to_movename
+                  {'+'
+                     1
+                     {taskmgr beat}}
+                  $player_index})
+            ($ham_move
+               {$hud_panel get_move $move_name})
+            ($is_rest
+               {$ham_move is_rest})
+            {$this
+               log
+               2
+               {sprintf
+                  "move=%s, is_rest=%d"
+                  $move_name
+                  $is_rest}}
+            {if
+               {! $is_rest}
+               {if_else
+                  {$hamdirector is_world_loaded}
+                  {$this create_mini_game}
+                  {$this
+                     log
+                     1
+                     "cant create_mini_game: world is NOT loaded"}}}}}})
+(on_ui_nav_player_changed
+   {$this
+      log
+      1
+      "on_ui_nav_player_changed"}
+   kDataUnhandled)
+(on_player_join
+   ($index)
+   {$this
+      log
+      2
+      "on_player_join"}
+   {game reset_detection $index}
+   kDataUnhandled)
+(on_game_stage
+   {$this
+      log
+      2
+      "on_game_stage"}
+   {if
+      $hamdirector
+      {switch
+         {hamprovider get game_stage}
+         (playing
+            {if
+               $hamwardrobe
+               {$hamwardrobe crowd_end_override}
+               {$hamwardrobe crowd great}})
+         (outro)}})
+(pause_on_skeleton_loss
+   {$this
+      log
+      1
+      "pause_on_skeleton_loss"}
+   {do
+      ($cur_beat
+         {int
+            {taskmgr beat}})
+      {> $cur_beat 4}})
+(on_p1_count_in
+   {$this
+      log
+      2
+      "on_p1_count_in"})
+(on_p2_count_in
+   {$this
+      log
+      2
+      "on_p2_count_in"})
+(on_side_moved
+   {$this
+      log
+      1
+      "on_side_moved"})
+(on_stream_jump
+   {$this
+      log
+      2
+      "stream_jump"})
+(on_beat
+   {if
+      {!
+         [mg_panel]}
+      {$this
+         log
+         1
+         "on_beat "
+         {round
+            {taskmgr beat}}}})
+(set_shot
+   ($category)
+   {$this
+      log
+      2
+      "set_shot"}
+   {$hamdirector set disable_picking FALSE}
+   {$hamdirector select_camera}
+   {$hamdirector set shot $category}
+   {$hamdirector select_camera}
+   {$hamdirector set disable_picking TRUE})
+(on_camshot_changed
+   {$this
+      log
+      2
+      "on_camshot_changed"}
+   {do
+      ($other_player_char '')
+      ($other_phrase_meter '')
+      ($other_player_action '')
+      ($cur_world
+         {$hamdirector get cur_world})
+      ($player0
+         {find_obj $cur_world player0})
+      ($player1
+         {find_obj $cur_world player1})
+      ($phrase_meter0
+         {find_obj $cur_world phrase_meter0 draw.grp})
+      ($phrase_meter1
+         {find_obj $cur_world phrase_meter1 draw.grp})
+      ($bk_dancer
+         "")
+      {switch
+         {hamprovider get cam_player_config}
+         (kHamPlayer0
+            {set $other_player_char $player1}
+            {set $other_phrase_meter $phrase_meter1})
+         (kHamPlayer1
+            {set $other_player_char $player0}
+            {set $other_phrase_meter $phrase_meter0})}
+      {$phrase_meter0 set_showing TRUE}
+      {$phrase_meter1 set_showing TRUE}
+      {if
+         $other_player_char
+         {$other_phrase_meter set_showing FALSE}
+         {switch
+            $other_player_action
+            (idle
+               {{find_obj $other_player_char main.drv}
+                  play_group
+                  rest_clip
+                  {'|' kPlayNoBlend kPlayNodeLoop}})}}
+      {if
+         {==
+            {hamprovider get game_stage}
+            playing}
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {set
+               $bk_dancer
+               {find_obj
+                  $cur_world
+                  {sprint
+                     "backup"
+                     $i}}}
+            {if
+               $bk_dancer
+               {$bk_dancer set_showing FALSE}}}}})
+(performance_ladder
+   ($player_index $state_index)
+   {$this
+      log
+      1
+      {sprintf
+         "performance_ladder %d %d"
+         $player_index
+         $state_index}})
+(in_play_range
+   ($b)
+   TRUE)
+(num_rated_measures
+   {$this num_rated_measures_common})
+(convert_beat
+   ($b $player_index)
+   0)
+(game_outro
+   {$this game_outro_common})

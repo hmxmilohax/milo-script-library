@@ -1,0 +1,133 @@
+{new
+   Object
+   startgame_pane
+   (enter
+      ($side)
+      {multiuser_panel set_ready $side FALSE}
+      #ifdef DEMO
+      {while
+         {>
+            {{multiuser_panel find startgame_dance_battle.hnp}
+               size
+               (nav_items)}
+            1}
+         {{multiuser_panel find startgame_dance_battle.hnp}
+            remove
+            (nav_items 1)}}
+      {while
+         {>
+            {{multiuser_panel find startgame_campaign.hnp}
+               size
+               (nav_items)}
+            1}
+         {{multiuser_panel find startgame_campaign.hnp}
+            remove
+            (nav_items 1)}}
+      {while
+         {>
+            {{multiuser_panel find startgame_practice.hnp}
+               size
+               (nav_items)}
+            1}
+         {{multiuser_panel find startgame_practice.hnp}
+            remove
+            (nav_items 1)}}
+      {while
+         {>
+            {{multiuser_panel find startgame.hnp}
+               size
+               (nav_items)}
+            1}
+         {{multiuser_panel find startgame.hnp}
+            remove
+            (nav_items 1)}}
+      #endif
+      {if_else
+         {hamprovider get is_in_infinite_party_mode}
+         {do
+            {multiuser_panel set_provider $side startgame_infinite_party_mode.hnp}}
+         {if_else
+            {gamemode in_mode dance_battle}
+            {multiuser_panel set_provider $side startgame_dance_battle.hnp}
+            {if_else
+               {gamemode in_mode campaign}
+               {multiuser_panel set_provider $side startgame_campaign.hnp}
+               {if_else
+                  {gamemode in_mode practice}
+                  {multiuser_panel set_provider $side startgame_practice.hnp}
+                  {multiuser_panel set_provider $side startgame.hnp}}}}}
+      {multiuser_panel set_list_dir $side label_checkbox}
+      {$this update_checks}
+      {multiuser_panel refresh_player_character $side})
+   (exit
+      ($side))
+   (refresh
+      ($side)
+      {multiuser_panel enable_list $side})
+   (highlight
+      ($side $name $index))
+   (select
+      ($side $name $index)
+      {switch
+         $name
+         (play
+            {multiuser_panel set_ready $side TRUE}
+            {if_else
+               {multiuser_panel can_enter_game}
+               {do
+                  ($other_side
+                     {multiuser_panel get_other_side $side})
+                  {if
+                     {&&
+                        {!
+                           {multiuser_panel is_ready $other_side}}
+                        {!
+                           {shell_input in_controller_mode}}}
+                     {multiuser_panel force_other_to_difficulty $side}}
+                  {do
+                     ($ret
+                        {multiuser_panel start_game})
+                     {if_else
+                        {== $ret 0}
+                        skip_select_sound
+                        $ret}}}
+               {multiuser_panel set_pending_pane $side readywait_pane}})
+         (select_difficulty
+            {seldiff_pane set next_pane startgame_pane}
+            {seldiff_pane set back_pane startgame_pane}
+            {multiuser_panel set_pending_pane $side seldiff_pane})
+         (select_character
+            {character_select_pane set next_pane startgame_pane}
+            {character_select_pane set back_pane startgame_pane}
+            {multiuser_panel set_pending_pane $side character_select_pane})
+         (select_venue
+            {multiuser_panel set_pending_pane $side venue_select_pane})
+         (select_crew
+            {crew_select_pane set next_pane character_select_pane}
+            {crew_select_pane set back_pane startgame_pane}
+            {character_select_pane set back_pane crew_select_pane}
+            {multiuser_panel set_pending_pane $side crew_select_pane})
+         (back
+            {multiuser_panel set_pending_pane $side seldiff_pane})})
+   (get_voice_command_index
+      ($command $side)
+      {switch
+         $command
+         (play
+            {set $startgame_pane_index 0})
+         (select_character
+            {set $startgame_pane_index 1})
+         (select_crew
+            {set $startgame_pane_index 1})
+         (select_venue
+            {set $startgame_pane_index 2})
+         {set
+            $startgame_pane_index
+            {- 1}}})
+   (get_speech_rule
+      {set $rule startgame_screen}
+      $rule)
+   (get_voice_context
+      {set $context startgame_screen}
+      $context)
+   (update_checks)}

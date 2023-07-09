@@ -1,0 +1,440 @@
+#define CMMG_NUM_COLUMNS
+(4)
+#define CMMG_MOVE_PASS_FRACTION
+(0.7)
+(choose_move
+   (hud
+      "")
+   (columns
+      ())
+   (move_dir
+      "")
+   (point_curve
+      "")
+   (active FALSE)
+   (cur_measure -1)
+   (player_index 0)
+   (selected_move_index -1)
+   (move_choice_list
+      ())
+   (player_difficulty
+      ())
+   (scores
+      (0 0))
+   (cards_are_set_up 0)
+   (next_gold -1)
+   (save_difficulty
+      {resize
+         [player_difficulty]
+         0}
+      {push_back
+         [player_difficulty]
+         {gamedata getp 0 difficulty}}
+      {push_back
+         [player_difficulty]
+         {gamedata getp 1 difficulty}})
+   (restore_difficulty
+      {gamedata
+         setp
+         0
+         difficulty
+         {elem
+            [player_difficulty]
+            0}}
+      {gamedata
+         setp
+         1
+         difficulty
+         {elem
+            [player_difficulty]
+            1}})
+   (enter
+      ($move_choice_list $player_index)
+      {set
+         [cur_measure]
+         {beat_to_measure
+            {taskmgr beat}}}
+      {hamprovider
+         add_sink
+         $this
+         (post_move_finished)
+         kSinkModeHandle
+         FALSE}
+      {hamprovider
+         add_sink
+         $this
+         (on_ui_nav_mode_change)
+         kSinkModeHandle
+         FALSE}
+      {master
+         add_sink
+         $this
+         (stream_jump beat)}
+      {set
+         [hud]
+         {find_obj $hud_panel point_chase_hud}}
+      {set
+         [point_curve]
+         {find_obj
+            [hud]
+            "score_curve.anim"}}
+      {set
+         [move_dir]
+         {$hud_panel get moves_dir}}
+      {set
+         [player_index]
+         $player_index}
+      {set
+         [selected_move_index]
+         -1}
+      {print
+         "choose_move:enter"
+         ", player="
+         [player_index]
+         "\n"}
+      {resize
+         [move_choice_list]
+         0}
+      {foreach
+         $move
+         $move_choice_list
+         {push_back
+            [move_choice_list]
+            $move}}
+      {resize
+         [columns]
+         0}
+      {do
+         ($postproc
+            "")
+         {[hud]
+            iterate
+            PostProc
+            $pp
+            {set $postproc $pp}}
+         {if
+            $postproc
+            {$hamdirector set force_postproc $postproc}
+            {$hamdirector set force_postproc_blend 0}
+            {$hamdirector set force_postproc_blend_rate 1}}
+         {{$hamdirector get_world}
+            set
+            explicit_postproc
+            FALSE}}
+      {set
+         [cards_are_set_up]
+         0})
+   (init_point_chase_hud
+      {do
+         ($anim)
+         {set
+            $anim
+            {find_obj
+               [hud]
+               "background.anim"}}
+         {$anim
+            animate
+            (range 0 960)}})
+   (exit
+      {hamprovider set game_stage playing}
+      {$this
+         run_flow
+         "fade_out.flow"}
+      {$this
+         run_flow
+         "deactivate.flow"}
+      {[move_dir]
+         disable_all_detectors}
+      {handle
+         (hamprovider
+            setup_0_alert
+            none
+            "")}
+      {handle
+         (hamprovider
+            setup_1_alert
+            none
+            "")}
+      {{$hamdirector get_world}
+         set
+         explicit_postproc
+         TRUE}
+      {handle
+         ($hamdirector on_performance_change)}
+      {hamprovider remove_sink $this}
+      {hamprovider remove_sink $this}
+      {master remove_sink $this})
+   (choose_move_cheat
+      ($idx)
+      {print
+         "choose_move: cheat "
+         $idx
+         "\n"}
+      {set
+         [selected_move_index]
+         {- $idx 1}})
+   (poll
+      {do
+         ($results
+            (0 0))
+         ($move
+            "")
+         ($raw_detection_val 0)
+         ($normalized_result 0)
+         ($col 0)
+         {if
+            {&&
+               [cards_are_set_up]
+               [move_dir]
+               {==
+                  -1
+                  [selected_move_index]}}
+            {foreach
+               $column
+               [columns]
+               {set
+                  $move
+                  {$column get move}}
+               {foreach_int
+                  $i
+                  0
+                  {gamedata max_players}
+                  {set $raw_detection_val 0}
+                  {set $normalized_result 0}
+                  {if
+                     {==
+                        [player_index]
+                        $i}
+                     {set
+                        $raw_detection_val
+                        {[move_dir]
+                           active_detector_result
+                           $i
+                           $move}}
+                     {if
+                        $move
+                        {set
+                           $normalized_result
+                           {detect_frac_to_rating_frac $raw_detection_val $move}}}}
+                  {if
+                     [point_curve]
+                     {set
+                        $normalized_result
+                        {[point_curve]
+                           value_from_frame
+                           [hud]
+                           (point_curve)
+                           $normalized_result}}}
+                  {set_elem $results $i $normalized_result}}
+               {$column
+                  update_feedback
+                  0
+                  {elem $results 0}}
+               {$column
+                  update_feedback
+                  1
+                  {elem $results 1}}
+               {'++' $col}}}})
+   (on_ui_nav_mode_change
+      {do
+         ($ui_nav_mode
+            {hamprovider get ui_nav_mode})
+         {switch
+            $ui_nav_mode
+            (game
+               {handle
+                  (hamprovider
+                     setup_0_alert
+                     free4all
+                     {localize_separated_int
+                        {elem
+                           [scores]
+                           0}})}
+               {handle
+                  (hamprovider
+                     setup_1_alert
+                     free4all
+                     {localize_separated_int
+                        {elem
+                           [scores]
+                           1}})})
+            {handle
+               (hamprovider
+                  setup_0_alert
+                  none
+                  "")}
+            {handle
+               (hamprovider
+                  setup_1_alert
+                  none
+                  "")}}})
+   (post_move_finished
+      {$this do_scoring})
+   (beat
+      {set
+         [cur_measure]
+         {beat_to_measure
+            {taskmgr beat}}}
+      {if
+         {&&
+            {!
+               [cards_are_set_up]}
+            {$hamdirector is_world_loaded}}
+         {set
+            [cards_are_set_up]
+            1}
+         {if
+            [hud]
+            {$this init_point_chase_hud}
+            {do
+               ($column)
+               ($i 0)
+               ($first_measure)
+               ($last_measure)
+               {foreach_int
+                  $i
+                  0
+                  CMMG_NUM_COLUMNS
+                  {if
+                     {<
+                        $i
+                        {size
+                           [move_choice_list]}}
+                     {set
+                        $column
+                        {find_obj
+                           [hud]
+                           {sprint
+                              "column_"
+                              $i}}}
+                     {push_back
+                        [columns]
+                        $column}
+                     {$this setup_column $i}}}}}
+         {hamprovider set game_stage omg}
+         {if
+            {&&
+               $hamdirector
+               {$hamdirector get cur_world}}
+            {{$hamdirector get cur_world}
+               set_showing
+               FALSE}}
+         {game reset_detection}})
+   (stream_jump
+      {game reset_detection})
+   (do_scoring
+      {do
+         ($score)
+         ($move)
+         ($col_idx 0)
+         ($chosen_idx -1)
+         {if
+            {==
+               -1
+               [selected_move_index]}
+            {foreach
+               $column
+               [columns]
+               {if
+                  {>
+                     {size
+                        [move_choice_list]}
+                     $col_idx}
+                  {set
+                     $move
+                     {$column get move}}
+                  {set
+                     $score
+                     {[move_dir]
+                        last_detector_result
+                        [player_index]
+                        $move}}
+                  {if
+                     {>= $score CMMG_MOVE_PASS_FRACTION}
+                     {set $chosen_idx $col_idx}}
+                  {'++' $col_idx}}}
+            {if
+               {< -1 $chosen_idx}
+               {set
+                  [selected_move_index]
+                  $chosen_idx}
+               {$this
+                  do_score
+                  [player_index]
+                  {elem
+                     [columns]
+                     $chosen_idx}}}}})
+   (do_score
+      ($player_index $column)
+      {print
+         "choose_move: move selected: "
+         {elem
+            [move_choice_list]
+            [selected_move_index]}
+         "\n"}
+      {if
+         [move_dir]
+         {[move_dir]
+            disable_all_detectors}}
+      {$column win $player_index})
+   (setup_column
+      ($column_index)
+      {do
+         ($column
+            {elem
+               [columns]
+               $column_index})
+         ($move
+            {elem
+               [move_choice_list]
+               $column_index})
+         ($song_move
+            {movemgr get_ham_move $move})
+         ($anim)
+         {print
+            "setup column "
+            $column_index
+            ", 1st measure="
+            $first_measure
+            ", last measure="
+            $last_measure
+            "\n"}
+         {set
+            $anim
+            {find_obj
+               $column
+               "advance_flashcard.anim"}}
+         {$anim set_frame 5280}
+         {$column set move $song_move}
+         {$column set move_variant $move}
+         {$column update_feedback 0 0}
+         {$column update_feedback 1 0}
+         {$column setup_static_flashcard}
+         {set
+            $anim
+            {find_obj
+               $column
+               "reset_results.anim"}}
+         {$anim set_frame 120}
+         {$column setup_iconman}
+         {set
+            $anim
+            {find_obj
+               $column
+               "master_advance.anim"}}
+         {$anim
+            animate
+            (loop 0 3840)}
+         {[move_dir]
+            enable_detector
+            $song_move}})
+   (run_flow
+      ($flow_name)
+      {do
+         ($flow
+            {find_obj
+               [hud]
+               $flow_name})
+         {if
+            $flow
+            {$flow activate}}}))

@@ -1,0 +1,66 @@
+#include performance.dta
+(reset
+   {overshell resolve_skeletons}
+   {$hamdirector set_player_spotlights_enabled FALSE}
+   {$this common_reset}
+   {hamprovider set performance high}
+   {if
+      {&&
+         $hamdirector
+         {$hamdirector get cur_world}}
+      {{$hamdirector get cur_world}
+         set_showing
+         TRUE}}
+   {$hamdirector set disable_picking TRUE}
+   {switch
+      {campaign get_campaign_state}
+      (kCampaignStateTanBattle
+         {campaign set_campaign_state kCampaignStateTanBattleComplete}
+         {saveload_mgr autosave})
+      (kCampaignStatePostCreditsGlitterati
+         {meta_performer award_boss_accomplishment})})
+(on_rhythm_battle_combo_full
+   {set
+      [combo_full]
+      TRUE})
+(init
+   {hamprovider set gameplay_mode just_intro}
+   {$this common_init}
+   {hamprovider
+      add_sink
+      $this
+      ((on_game_stage_change on_game_stage))
+      kSinkModeHandle
+      FALSE})
+(poll)
+FINAL_POSE_HANDLERS
+(end)
+(on_game_stage
+   {if
+      $hamdirector
+      {print
+         "JUST_INTRO on_game_stage: "
+         {hamprovider get game_stage}
+         "\n"}
+      {switch
+         {hamprovider get game_stage}
+         (playing
+            {game_panel win})
+         (outro
+            {print
+               "on_game_stage:outro \n"}
+            {if
+               $hamdirector
+               {$hamdirector unload_all}})}})
+(pause_on_skeleton_loss FALSE)
+(in_play_range
+   ($b)
+   TRUE)
+(num_rated_measures
+   {$this num_rated_measures_common})
+(convert_beat
+   ($b $player_index)
+   {$this convert_beat_common_looped $beat $player})
+(is_tracking_score TRUE)
+(game_outro
+   {$this game_outro_common})

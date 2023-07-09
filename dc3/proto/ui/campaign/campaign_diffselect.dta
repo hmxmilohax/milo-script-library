@@ -1,0 +1,192 @@
+{new CampaignDiffProvider campaign_diff_provider}
+{new
+   CampaignDiffSelectPanel
+   campaign_diffselect_panel
+   (file
+      "campaign_diffselect.milo")
+   (focus right_hand.hnl)
+   (focus_index 0)
+   (top_index 0)
+   (back_token screen_name_camp_choose_profile)
+   (tertiary_token option_erasecampaign)
+   (enter
+      {gamemode set_mode campaign}
+      {hamprovider set is_in_campaign_mode TRUE}
+      {hamprovider set is_in_campaign_master_quest_mode FALSE}
+      {campaign set_campaign_state kCampaignStateDiffSelect}
+      {meta_performer bookmark_current_progress}
+      {$this refresh}
+      {right_hand.hnl
+         scroll_to_index
+         [focus_index]
+         [top_index]}
+      {meta music_start}
+      {voice_input_panel activate_voice_context campaign_diffselect_screen}
+      {set $global_camp_peakstate_vo_triggered 0}
+      {set $global_camp_first_power_move_approaching_vo_triggered 0}
+      {set $global_camp_first_power_move_detected_vo_triggered 0})
+   (exit
+      {set
+         [top_index]
+         {right_hand.hnl get_top_index}})
+   (update_diff_provider
+      ($provider)
+      {$provider
+         update_list
+         {ui show_dev_menu}}
+      {right_hand.hnl set_provider $provider}
+      {right_hand.hnl
+         scroll_to_index
+         [top_index]
+         [top_index]})
+   (refresh
+      {$this update_diff_provider campaign_diff_provider})
+   (get_selected_diff_index
+      {right_hand.hnl get_selected})
+   SELECT_RIGHT_LIST_TOKEN
+   (poll SLIDE_RIGHT_LIST_ITEM)
+   (NAV_SELECT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {$this handle_select_diff})
+         (left_hand.hnl
+            {switch
+               $name
+               (screen_name_camp_choose_profile
+                  {$this handle_diff_select_cancel})
+               (back
+                  {$this handle_diff_select_cancel})})}
+      {switch
+         $name
+         (option_erasecampaign
+            {$this select_diff}
+            {ui goto_screen campaign_clear_confirm_screen})})
+   (NAV_HIGHLIGHT_MSG
+      {switch
+         $component
+         (right_hand.hnl
+            {set
+               [focus_index]
+               $index})})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         ((kAction_Confirm)
+            {$this handle_select_diff})
+         ((kAction_Cancel)
+            {$this handle_diff_select_cancel})
+         kDataUnhandled})
+   (handle_select_diff
+      {$this select_diff}
+      {if
+         {<
+            {$this get_selected_diff_index}
+            3}
+         {do
+            {set
+               $prev_state
+               {campaign get_campaign_state}}
+            {set
+               $next_state
+               {step_campaign_state_forward}}
+            {set
+               $mq_difficulty
+               {$this get_selected_diff}}
+            {cond
+               ({== $next_state kCampaignStatePerformIt}
+                  {gamemode set_mode campaign_intro}
+                  {meta_performer setup_campaign_intro_playlist}
+                  {meta_performer start_playlist}
+                  {enter_gameplay})
+               ({== $next_state kCampaignStateEraIntroMovie}
+                  {if_else
+                     {meta_performer get_era_intro_movie}
+                     {ui goto_screen campaign_era_intro_movie_screen}
+                     {ui goto_screen campaign_era_no_intro_movie_screen}})
+               ({== $next_state kCampaignStateTanBattle}
+                  {ui goto_screen tan_battle_start_screen})
+               ({== $next_state kCampaignStateMasterQuestCrewSelect}
+                  {gamemode set_mode perform}
+                  {hamprovider set is_in_campaign_mode FALSE}
+                  {hamprovider set is_in_campaign_master_quest_mode TRUE}
+                  {if_else
+                     {!
+                        {profile_mgr has_seen_tutorial kTutorialMasterQuest}}
+                     {enter_tutorial tutorial_master_quest_screen_0 FALSE}
+                     {ui goto_screen campaign_master_quest_crew_select_screen}})
+               ({== $next_state kCampaignStateSongSelect}
+                  {ui goto_screen campaign_songselect_screen})
+               ({== $next_state kCampaignStatePostCreditsGlitterati}
+                  {ui goto_screen campaign_postcredits_glitterati_screen})
+               ({== $next_state kCampaignStateTanBattleComplete}
+                  {ui goto_screen campaign_tan_battle_complete_screen})
+               {campaign_flow_failure campaign_diffselect_screen $prev_state $next_state}}}})
+   (handle_diff_select_cancel
+      {unless
+         {ui in_transition}
+         {hamprovider set is_in_campaign_mode FALSE}
+         {hamprovider set is_in_campaign_master_quest_mode FALSE}
+         {set
+            $back_screen
+            {step_campaign_state_backward}}
+         {ui go_back_screen $back_screen}})}
+{new
+   HamScreen
+   campaign_diffselect_screen
+   (panels meta background_panel campaign_diffselect_panel)
+   (focus campaign_diffselect_panel)
+   (back '')
+   (on_voice_command
+      ($command)
+      {switch
+         $command
+         (option_erasecampaign
+            {helpbar select_left_list_item 0})
+         (screen_name_camp_choose_profile
+            {helpbar select_left_list_item 1})
+         BACRO
+         {campaign_diffselect_panel select_right_list_token $command}})
+   (cheat_win_selected_diff
+      ($num_stars)
+      {print
+         "campaign_diffselect_screen: cheat_win_selected_diff!\n"}
+      {$this select_diff}
+      {$this cheat_win_diff $num_stars})}
+{new
+   HamScreen
+   campaign_clear_confirm_screen
+   (panels background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (return_screen campaign_diffselect_screen)
+   (enter
+      {dialog_panel set_ok_no erasecampaign_confirm TRUE})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {ui goto_screen campaign_clear_double_confirm_screen})
+         (no
+            {ui
+               goto_screen
+               [return_screen]})})}
+{new
+   HamScreen
+   campaign_clear_double_confirm_screen
+   (panels background_confirmation_panel dialog_panel)
+   (focus dialog_panel)
+   (return_screen campaign_diffselect_screen)
+   (enter
+      {dialog_panel set_ok_no erasecampaign_confirmagain TRUE})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (ok
+            {meta_performer clear_all_campaign_progress}
+            {ui
+               goto_screen
+               [return_screen]})
+         (no
+            {ui
+               goto_screen
+               [return_screen]})})}

@@ -1,0 +1,255 @@
+{new
+   HamPanel
+   fitness_keepmoving_panel
+   (file
+      "fitness_keepmoving.milo")
+   (fitness_filters '')
+   #include fitness_keepmoving_config.dta
+   (monitor_time 0.0)
+   (monitor_calories
+      ())
+   (monitor_effortlevels
+      ())
+   (panel_dir '')
+   (iconman '')
+   (iconman_clip '')
+   (enter
+      {if_else
+         {&&
+            {is_active_profile_in_fitness_mode}
+            {gamemode in_mode playlist_perform}
+            {!
+               {meta_performer is_last_song}}}
+         {do
+            {set
+               [fitness_filters]
+               {array
+                  {gamedata max_players}}}
+            {foreach_int
+               $i
+               0
+               {gamedata max_players}
+               {do
+                  ($fit
+                     {new FitnessFilter})
+                  ($profile
+                     {get_fitness_profile $i})
+                  {$fit set_player_index $i}
+                  {if
+                     $profile
+                     {$fit start_tracking}}
+                  {set_elem
+                     [fitness_filters]
+                     $i
+                     $fit}}}
+            {set
+               [monitor_time]
+               {'+'
+                  {taskmgr ui_seconds}
+                  [monitor_delta]
+                  [monitor_delay]}}
+            {resize
+               [monitor_calories]
+               {gamedata max_players}}
+            {resize
+               [monitor_effortlevels]
+               {gamedata max_players}}
+            {foreach_int
+               $i
+               0
+               {gamedata max_players}
+               {set_elem
+                  [monitor_calories]
+                  $i
+                  -1.0}
+               {set_elem
+                  [monitor_effortlevels]
+                  $i
+                  -1}}
+            {sort
+               [monitor_effortlevel_calories_per_hr]}
+            {set
+               [panel_dir]
+               {$this loaded_dir}}
+            {set
+               [iconman]
+               {find_obj
+                  [panel_dir]
+                  iconman.iconman}}
+            {set
+               [iconman_clip]
+               {find_obj
+                  [panel_dir]
+                  step_side_and_clap_sandstorm_v0}}
+            {[iconman]
+               set
+               char_clip
+               [iconman_clip]}
+            {[iconman]
+               set
+               bpm_override
+               120}
+            {$this set_showing TRUE}
+            {$this set_paused FALSE}}
+         {do
+            {$this set_showing FALSE}
+            {$this set_paused TRUE}
+            {set
+               [fitness_filters]
+               ''}}})
+   (exit
+      {if
+         [fitness_filters]
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {do
+               ($fit
+                  {elem
+                     [fitness_filters]
+                     $i})
+               ($profile
+                  {get_fitness_profile $i})
+               ($calories 0.0)
+               ($seconds 0.0)
+               {if
+                  $profile
+                  {if
+                     {$fit get_fitness_data_and_reset $calories $seconds}
+                     {print
+                        "fitness_keepmoving_panel - exit - calories:"
+                        $calories
+                        " seconds:"
+                        $seconds
+                        "\n"}
+                     {$profile set_fitness_stats $i $calories $seconds}}}
+               {delete $fit}}}
+         {set
+            [fitness_filters]
+            ''}
+         {$this set_showing FALSE}
+         {$this set_paused TRUE}})
+   (poll
+      {if
+         [fitness_filters]
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {if
+               {get_fitness_profile $i}
+               {{elem
+                     [fitness_filters]
+                     $i}
+                  poll}}}
+         {if
+            {>=
+               {taskmgr ui_seconds}
+               [monitor_time]}
+            {$this perform_monitoring}
+            {'+='
+               [monitor_time]
+               [monitor_delta]}}})
+   (perform_monitoring
+      {do
+         ($cal 0.0)
+         ($cal_delta 0.0)
+         ($cal_per_hour 0.0)
+         ($success_cal FALSE)
+         ($success_effort FALSE)
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {set $success_cal FALSE}
+            {set $success_effort FALSE}
+            {if
+               {get_fitness_profile $i}
+               {if
+                  {{elem
+                        [fitness_filters]
+                        $i}
+                     get_fitness_data
+                     $cal}
+                  {if
+                     {>=
+                        {elem
+                           [monitor_calories]
+                           $i}
+                        0}
+                     {set
+                        $cal_delta
+                        {-
+                           $cal
+                           {elem
+                              [monitor_calories]
+                              $i}}}
+                     {set
+                        $cal_per_hour
+                        {/
+                           {'*' $cal_delta 3600}
+                           [monitor_delta]}}
+                     {set_elem
+                        [monitor_effortlevels]
+                        $i
+                        0}
+                     {foreach_int
+                        $effortlevel
+                        0
+                        {size
+                           [monitor_effortlevel_calories_per_hr]}
+                        {if
+                           {>=
+                              $cal_per_hour
+                              {elem
+                                 [monitor_effortlevel_calories_per_hr]
+                                 $effortlevel}}
+                           {set_elem
+                              [monitor_effortlevels]
+                              $i
+                              {'+' $effortlevel 1}}}}
+                     {print
+                        "fitness_keepmoving_panel-monitoring p:"
+                        $i
+                        " total_cal:"
+                        $cal
+                        " cal:"
+                        $cal_delta
+                        " calPerHr:"
+                        $cal_per_hour
+                        " effort:"
+                        {elem
+                           [monitor_effortlevels]
+                           $i}
+                        "\n"}
+                     {set $success_effort TRUE}}
+                  {set_elem
+                     [monitor_calories]
+                     $i
+                     $cal}
+                  {set $success_cal TRUE}}}
+            {if
+               {! $success_cal}
+               {set_elem
+                  [monitor_calories]
+                  $i
+                  -1.0}}
+            {if
+               {! $success_effort}
+               {set_elem
+                  [monitor_effortlevels]
+                  $i
+                  -1}}}}
+      {do
+         ($report_level -1)
+         {foreach
+            $val_i
+            [monitor_effortlevels]
+            {set
+               $report_level
+               {max $report_level $val_i}}}
+         {if
+            {>= $report_level 0}
+            {effort.flow set effortlevel $report_level}
+            {effort.flow activate}}})}

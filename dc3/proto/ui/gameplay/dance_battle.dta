@@ -1,0 +1,1274 @@
+#define DB_CALL_UP_COUNT
+(2)
+#define DB_ENCOURGE_PLAYER_DELTA
+(100000)
+#include performance.dta
+(score_chart
+   ((5000 3000 1000 0)
+      (5000 3000 1000 0)
+      (5000 3000 1000 0)
+      (5000 3000 1000 0)))
+(solo_score_chart
+   ((10000 6000 2000 0)
+      (10000 6000 2000 0)
+      (10000 6000 2000 0)
+      (10000 6000 2000 0)))
+(battle_obj
+   "")
+(battle_index -1)
+(winning -1)
+(streaks
+   (0 0))
+(count_ins
+   (0 0))
+(called_up
+   (FALSE FALSE))
+(mini_game
+   "")
+(scored_moves
+   (()
+      ()))
+(player_encouraged -1)
+(battle_config kHamPlayerBoth)
+(battle_obj_name
+   "HamBattleData.btl")
+(battle_obj_shortened_name
+   "HamPartyBattleData.btl")
+(remixer '')
+(reset
+   {overshell resolve_skeletons}
+   {$this common_reset}
+   {hamprovider set performance high}
+   {if
+      [mini_game]
+      {delete
+         [mini_game]}
+      {set
+         [mini_game]
+         ""}}
+   {if
+      {&&
+         $hamdirector
+         {$hamdirector get cur_world}}
+      {{$hamdirector get cur_world}
+         set_showing
+         TRUE}
+      {{{$hamdirector get cur_world}
+            find
+            score_star_display}
+         set_showing
+         FALSE}}
+   {$hamdirector set disable_picking FALSE}
+   {game reset_detection}
+   {[remixer]
+      start_reset}
+   {do
+      ($moves
+         {{$hamdirector get_world}
+            find
+            moves})
+      ($battle_obj_list
+         {array 0})
+      {$moves
+         iterate
+         HamBattleData
+         $bd
+         {push_back $battle_obj_list $bd}}
+      {set
+         [battle_obj]
+         ""}
+      {if_else
+         {size $battle_obj_list}
+         {do
+            ($preferred_btl_name
+               {if_else
+                  {hamprovider get song_shortening_enabled}
+                  [battle_obj_shortened_name]
+                  [battle_obj_name]})
+            {set
+               [battle_obj]
+               {find_obj $moves $preferred_btl_name}}
+            {if
+               {!
+                  [battle_obj]}
+               {set
+                  [battle_obj]
+                  {random_elem $battle_obj_list}}}}
+         {fail
+            "This song has not been authored for Dance Battle. No HamBattleObj found in "
+            {path_name $moves}
+            ".\n"}}}
+   {do
+      ($start_mes
+         {[battle_obj]
+            get
+            (steps 0 music_range start)})
+      {set
+         [battle_index]
+         -1}
+      {if_else
+         {> $start_mes 1}
+         {audio
+            set_loop
+            {measure_to_beat $start_mes}
+            {measure_to_beat 1.0025}}
+         {$this set_battle_index 0}}}
+   {foreach_int
+      $i
+      0
+      {gamedata max_players}
+      {do
+         ($provider
+            {gamedata getp $i provider})
+         {$provider set score 0}
+         {$provider
+            clear
+            (tagged_moves)}
+         {$provider set start_score_move_index 0}
+         {set_elem
+            [streaks]
+            $i
+            0}
+         {set_elem
+            [count_ins]
+            $i
+            0}
+         {set_elem
+            [called_up]
+            $i
+            FALSE}
+         {resize
+            {elem
+               [scored_moves]
+               $i}
+            0}
+         {$this
+            performance_ladder
+            $i
+            [initial_performance_state_index]}}}
+   {set
+      [player_encouraged]
+      -1}
+   {set
+      [battle_config]
+      kHamPlayerBoth}
+   {$hamdirector set freestyle_enabled FALSE}
+   {hamprovider set cam_player_config kHamPlayerBoth}
+   {set
+      [winning]
+      -1}
+   {if
+      {&&
+         $hamdirector
+         {$hamdirector get cur_world}}
+      {do
+         ($hud
+            {find_obj $hud_panel point_chase_hud})
+         ($fade_out
+            {find_obj $hud fade_out.flow})
+         ($deactivate
+            {find_obj $hud deactivate.flow})
+         {$fade_out activate}
+         {$deactivate activate}
+         {handle
+            (hamprovider
+               setup_0_alert
+               none
+               "")}
+         {handle
+            (hamprovider
+               setup_1_alert
+               none
+               "")}
+         {{$hamdirector get_world}
+            set
+            explicit_postproc
+            TRUE}
+         {handle
+            ($hamdirector on_performance_change)}}}
+   {gamedata
+      setp
+      0
+      crew
+      {gamedata getp 0 crew}}
+   {gamedata
+      setp
+      1
+      crew
+      {gamedata getp 1 crew}})
+(init
+   {hamprovider set gameplay_mode dance_battle}
+   {$this common_init}
+   {master
+      add_sink
+      $this
+      (stream_jump beat)}
+   {hamprovider
+      add_sink
+      $this
+      ((player_join on_player_join)
+         (on_game_stage_change on_game_stage)
+         (camshot_changed on_camshot_changed)
+         (post_move_finished on_post_move_finished)
+         (final_pose_photo on_final_pose_photo)
+         (post_sides_switched on_side_moved))
+      kSinkModeHandle
+      FALSE}
+   {player_provider_1
+      add_sink
+      $this
+      ((count_in on_p1_count_in))
+      0
+      FALSE}
+   {player_provider_2
+      add_sink
+      $this
+      ((count_in on_p2_count_in))
+      0
+      FALSE}
+   {if
+      {hamprovider get is_in_party_mode}
+      {gamemode
+         set
+         battle_mode
+         {partymode_mgr get_curr_event_microgame_name}}}
+   {print
+      "dance battle mode="
+      {gamemode get battle_mode}}
+   {set
+      [remixer]
+      {movemgr get_remixer}}
+   {[remixer]
+      init})
+(deinit
+   {if
+      [mini_game]
+      {handle
+         ([mini_game]
+            exit)}
+      {delete
+         [mini_game]}
+      {set
+         [mini_game]
+         ""}})
+(poll
+   {if
+      [mini_game]
+      {[mini_game]
+         poll}})
+FINAL_POSE_HANDLERS
+(end
+   {game_panel win})
+(move_passed
+   ($player $move $detect_frac)
+   {do
+      ($base_points 0)
+      ($rating '')
+      ($rating_idx 0)
+      ($bonus 0)
+      ($difficulty
+         {gamedata getp $player difficulty})
+      ($player_provider
+         {gamedata getp $player provider})
+      ($moves_dir
+         {$hud_panel get moves_dir})
+      {$player_provider set rating ''}
+      {if
+         {&&
+            {!
+               {$move is_rest}}
+            $hud_panel}
+         {set
+            $detect_frac
+            {$moves_dir last_detector_result $player $move}}
+         {set
+            $rating
+            {detect_frac_to_rating $detect_frac $move}}
+         {set
+            $rating_idx
+            {rating_state_to_index $rating}}
+         {set
+            $bonus
+            {get_score_bonus $detect_frac $move}}
+         {[remixer]
+            update_player_performance
+            $player
+            $rating
+            {$move get name}}
+         {$this hamprovider_export move_finished $player $rating 2.0e-2}
+         {$player_provider set rating $rating}
+         {do
+            ($streak
+               {elem
+                  [streaks]
+                  $player})
+            {set
+               $streak
+               {if_else
+                  {<=
+                     $rating_idx
+                     {rating_state_to_index move_awesome}}
+                  {'+' $streak 1}
+                  0}}
+            {set_elem
+               [streaks]
+               $player
+               $streak}}
+         {switch
+            $rating
+            (move_perfect
+               {$player_provider
+                  set
+                  num_perfect
+                  {'+'
+                     1
+                     {$player_provider get num_perfect}}})
+            (move_awesome
+               {$player_provider
+                  set
+                  num_awesome
+                  {'+'
+                     1
+                     {$player_provider get num_awesome}}})}
+         {meta_performer move_passed $player $move $rating_idx $detect_frac}
+         {do
+            ($score_chart
+               {if_else
+                  {==
+                     [battle_config]
+                     kHamPlayerBoth}
+                  [score_chart]
+                  [solo_score_chart]})
+            {set
+               $base_points
+               {elem
+                  {elem
+                     $score_chart
+                     {gamedata getp $player difficulty}}
+                  $rating_idx}}}
+         {do
+            ($player_score
+               {$player_provider get score})
+            {$player_provider
+               set
+               score
+               {'+' $player_score $base_points}}}
+         {$this record_move_score $player $move $detect_frac}
+         {do
+            ($next_state_index
+               {$this
+                  next_performance_state_index
+                  $rating_idx
+                  {$player_provider get performance_index}})
+            {$this performance_ladder $player $next_state_index}}}
+      {$player_provider
+         set
+         last_move_index
+         {$hud_panel get cur_move_index}}
+      {[remixer]
+         move_passed
+         $player
+         $move
+         $rating}})
+(on_post_move_finished
+   {do
+      ($old_winning
+         [winning])
+      ($score_diff
+         {-
+            {player_provider_1 get score}
+            {player_provider_2 get score}})
+      ($played_vo FALSE)
+      ($final_pose FALSE)
+      ($was_scored_move FALSE)
+      {foreach_int
+         $i
+         0
+         {gamedata max_players}
+         {if
+            {{gamedata getp $i provider}
+               get
+               rating}
+            {set $was_scored_move TRUE}}}
+      {foreach_int
+         $i
+         0
+         {gamedata max_players}
+         {set
+            $provider
+            {gamedata getp $i provider}}
+         {if
+            {!=
+               {$provider get final_pose_rating}
+               ''}
+            {set $final_pose TRUE}}}
+      {if
+         $final_pose
+         {handle
+            (hamprovider final_pose)}
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {{gamedata getp $i provider}
+               set
+               final_pose_rating
+               ''}}}
+      {do
+         ($call_p1
+            {==
+               {elem
+                  [count_ins]
+                  0}
+               DB_CALL_UP_COUNT})
+         ($call_p2
+            {==
+               {elem
+                  [count_ins]
+                  1}
+               DB_CALL_UP_COUNT})
+         ($call_player_index
+            {if_else $call_p1 0 1})
+         ($provider
+            {gamedata getp $call_player_index provider})
+         {if
+            {!= $call_p1 $call_p2}
+            {if
+               {!
+                  {elem
+                     [called_up]
+                     $call_player_index}}
+               {set_elem
+                  [called_up]
+                  $call_player_index
+                  TRUE}
+               {$hud_panel
+                  play
+                  {if_else
+                     {==
+                        {$provider get side}
+                        kSkeletonRight}
+                     nar_multi_next_r
+                     nar_multi_next_l}}
+               {set $played_vo TRUE}}}}
+      {foreach_int
+         $i
+         0
+         2
+         {set_elem
+            [count_ins]
+            $i
+            {-
+               {elem
+                  [count_ins]
+                  $i}
+               1}}}
+      {set
+         [winning]
+         {cond
+            ({> $score_diff 0}
+               0)
+            ({< $score_diff 0}
+               1)
+            -1}}
+      {if
+         {!=
+            [winning]
+            $old_winning}
+         {handle
+            (hamprovider
+               db_overtake
+               [winning])}}
+      {if
+         $was_scored_move
+         {if
+            {!=
+               [winning]
+               $old_winning}
+            {if
+               {&&
+                  {! $played_vo}
+                  {!=
+                     [winning]
+                     -1}
+                  {!
+                     [mini_game]}}
+               {handle
+                  (hamprovider
+                     nar_play_crew_vo
+                     lead
+                     {gamedata
+                        getp
+                        [winning]
+                        crew})}
+               {set $played_vo TRUE}}}
+         {if
+            {! $played_vo}
+            {if
+               {&&
+                  {> $score_diff DB_ENCOURGE_PLAYER_DELTA}
+                  {!=
+                     [player_encouraged]
+                     1}}
+               {handle
+                  (hamprovider
+                     nar_play_crew_vo
+                     encourage
+                     {gamedata getp 1 crew})}
+               {set $played_vo TRUE}
+               {set
+                  [player_encouraged]
+                  1}}
+            {if
+               {&&
+                  {<
+                     $score_diff
+                     {- DB_ENCOURGE_PLAYER_DELTA}}
+                  {!=
+                     [player_encouraged]
+                     0}}
+               {handle
+                  (hamprovider
+                     nar_play_crew_vo
+                     encourage
+                     {gamedata getp 0 crew})}
+               {set $played_vo TRUE}
+               {set
+                  [player_encouraged]
+                  0}}}}
+      {set
+         [battle_config]
+         {hamprovider get dance_battle_config}}
+      {[remixer]
+         post_move_finished}})
+(on_player_join
+   ($index)
+   {game reset_detection $index})
+(on_game_stage
+   {if
+      $hamdirector
+      {switch
+         {hamprovider get game_stage}
+         (intro
+            {$hamdirector set_player_spotlights_enabled FALSE})
+         (playing
+            {$hamdirector set_player_spotlights_enabled TRUE}
+            {if
+               $hamwardrobe
+               {$hamwardrobe crowd_end_override}
+               {$hamwardrobe crowd skills_great}})
+         (outro
+            {$hamdirector set_player_spotlights_enabled FALSE})}})
+(pause_on_skeleton_loss
+   {do
+      ($cur_beat
+         {taskmgr beat})
+      {> $cur_beat 4}})
+(record_move_score
+   ($player_index $move $score)
+   {do
+      ($array
+         {elem
+            [scored_moves]
+            $player})
+      ($entered FALSE)
+      ($new_entry
+         ())
+      {foreach
+         $scored_move
+         $array
+         {if
+            {&&
+               {! $entered}
+               {==
+                  $move
+                  {elem $scored_move 1}}}
+            {set_elem $scored_move 0 $score}
+            {set $entered TRUE}}}
+      {if
+         {! $entered}
+         {set
+            $new_entry
+            {array 3}}
+         {set_elem $new_entry 0 $score}
+         {set_elem $new_entry 1 $move}
+         {set_elem
+            $new_entry
+            2
+            {[remixer]
+               move_variant_from_ham_move
+               $move}}
+         {push_back $array $new_entry}}})
+(on_p1_count_in
+   {set_elem
+      [count_ins]
+      0
+      3})
+(on_p2_count_in
+   {set_elem
+      [count_ins]
+      1
+      3})
+(on_side_moved
+   {if
+      $hamdirector
+      {$hamdirector
+         set
+         shot
+         {$hamdirector get shot}}}
+   {if
+      $hud_panel
+      {do
+         ($hud0
+            {$hud_panel get_player_hud 1})
+         ($hud1
+            {$hud_panel get_player_hud 0})
+         ($counting0
+            {$hud0 counting_in})
+         ($counting1
+            {$hud1 counting_in})
+         ($count_frame0
+            {$hud0 count_in_frame})
+         ($count_frame1
+            {$hud1 count_in_frame})
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {$hud_panel clear_flash_cards $i}}
+         {$hud_panel update_flashcards $beat TRUE}
+         {switch
+            {[battle_obj]
+               get
+               (steps
+                  [battle_index]
+                  players)}
+            (kHamPlayer0
+               {handle
+                  ({gamedata getp 0 provider}
+                     show_hud
+                     FALSE)}
+               {handle
+                  ({gamedata getp 1 provider}
+                     {if_else $counting1 show_hud hide_hud}
+                     FALSE)})
+            (kHamPlayer1
+               {handle
+                  ({gamedata getp 0 provider}
+                     {if_else $counting0 show_hud hide_hud}
+                     FALSE)}
+               {handle
+                  ({gamedata getp 1 provider}
+                     show_hud
+                     FALSE)})}
+         {if
+            $counting0
+            {$hud1 do_count_in $count_frame0 FALSE}
+            {if
+               {! $counting1}
+               {$hud0 do_count_in 8 FALSE}}}
+         {if
+            $counting1
+            {$hud0 do_count_in $count_frame1 FALSE}
+            {if
+               {! $counting0}
+               {$hud1 do_count_in 8 FALSE}}}}})
+(stream_jump
+   {$this
+      set_battle_index
+      {'+'
+         [battle_index]
+         1}}
+   {$this rekick_crowd})
+(beat
+   {do
+      ($s)
+      ($e)
+      ($next_index
+         {'+'
+            [battle_index]
+            1})
+      ($num_steps
+         {[battle_obj]
+            size
+            (steps)})
+      {if
+         {&&
+            [battle_obj]
+            {audio get_loop_beats $s $e}
+            {< $next_index $num_steps}}
+         {set
+            $s
+            {round $s}}
+         {set
+            $e
+            {round $e}}
+         {if
+            {==
+               {'+' $beat 1}
+               $e}
+            {if
+               {!=
+                  $e
+                  {measure_to_beat
+                     {[battle_obj]
+                        get
+                        (steps $next_index music_range start)}}}
+               {$hud_panel play db_hide_transition}}}}})
+(set_shot
+   ($category)
+   {$hamdirector set disable_picking FALSE}
+   {$hamdirector select_camera}
+   {$hamdirector set shot $category}
+   {$hamdirector select_camera}
+   {$hamdirector set disable_picking TRUE})
+(on_camshot_changed
+   {do
+      ($other_player_char '')
+      ($other_phrase_meter '')
+      ($other_player_action '')
+      ($cur_world
+         {$hamdirector get cur_world})
+      ($player0
+         {find_obj $cur_world player0})
+      ($player1
+         {find_obj $cur_world player1})
+      ($phrase_meter0
+         {find_obj $cur_world phrase_meter0 draw.grp})
+      ($phrase_meter1
+         {find_obj $cur_world phrase_meter1 draw.grp})
+      ($bk_dancer
+         "")
+      {switch
+         {hamprovider get cam_player_config}
+         (kHamPlayer0
+            {set $other_player_char $player1}
+            {set $other_phrase_meter $phrase_meter1})
+         (kHamPlayer1
+            {set $other_player_char $player0}
+            {set $other_phrase_meter $phrase_meter0})}
+      {if
+         {&&
+            [battle_obj]
+            {<
+               [battle_index]
+               {[battle_obj]
+                  size
+                  (steps)}}}
+         {set
+            $other_player_action
+            {[battle_obj]
+               get
+               (steps
+                  [battle_index]
+                  nonplay_action)}}}
+      {$phrase_meter0 set_showing TRUE}
+      {$phrase_meter1 set_showing TRUE}
+      {if
+         $other_player_char
+         {$other_phrase_meter set_showing FALSE}
+         {switch
+            $other_player_action
+            (idle
+               {{find_obj $other_player_char main.drv}
+                  play_group
+                  rest_clip
+                  {'|' kPlayNoBlend kPlayNodeLoop}})}}
+      {if
+         {==
+            {hamprovider get game_stage}
+            playing}
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {set
+               $bk_dancer
+               {find_obj
+                  $cur_world
+                  {sprint
+                     "backup"
+                     $i}}}
+            {if
+               $bk_dancer
+               {$bk_dancer set_showing FALSE}}}}})
+(start_ffa
+   ($show_start $show_end $play_start $play_end)
+   {set
+      [mini_game]
+      {new Object dance_battle_mini_game}}
+   {[mini_game]
+      set
+      type
+      point_value_chase}
+   {foreach
+      $entry
+      [scored_moves]
+      {sort $entry}}
+   {handle
+      ([mini_game]
+         enter
+         $show_start
+         $show_end
+         $play_start
+         $play_end
+         [scored_moves])})
+(set_battle_index
+   ($idx)
+   {set
+      [battle_index]
+      $idx}
+   {do
+      ($num_steps
+         {[battle_obj]
+            size
+            (steps)})
+      ($has_cur_step
+         {<
+            [battle_index]
+            $num_steps})
+      ($next_step_idx
+         {'+'
+            [battle_index]
+            1})
+      ($has_next_step
+         {< $next_step_idx $num_steps})
+      ($prev_step_idx
+         {-
+            [battle_index]
+            1})
+      ($has_prev_step
+         {>= $prev_step_idx 0})
+      {if
+         $has_cur_step
+         {do
+            ($cam_cat
+               {[battle_obj]
+                  get
+                  (steps
+                     [battle_index]
+                     cam)})
+            ($player_flag
+               {[battle_obj]
+                  get
+                  (steps
+                     [battle_index]
+                     players)})
+            ($state
+               {[battle_obj]
+                  get
+                  (steps
+                     [battle_index]
+                     state)})
+            {if_else
+               $has_next_step
+               {do
+                  ($jump_from
+                     {'+'
+                        1
+                        {[battle_obj]
+                           get
+                           (steps
+                              [battle_index]
+                              music_range
+                              end)}})
+                  ($jump_to
+                     {[battle_obj]
+                        get
+                        (steps $next_step_idx music_range start)})
+                  {[remixer]
+                     set_jump
+                     $jump_from
+                     $jump_to}}
+               {[remixer]
+                  clear_jump}}
+            {if
+               {! $cam_cat}
+               {set
+                  $cam_cat
+                  {$hamdirector get shot}}}
+            {if
+               $hamdirector
+               {if
+                  {&&
+                     $hamdirector
+                     {$hamdirector get cur_world}}
+                  {{$hamdirector get cur_world}
+                     set_showing
+                     TRUE}
+                  {$hamdirector set disable_picking FALSE}
+                  {$hamdirector set_force_postproc performance_high 1}
+                  {$hamdirector set force_postproc_blend 1}}}
+            {if_else
+               {== $state minigame}
+               {do
+                  ($prev_step_is_minigame
+                     {&&
+                        $has_prev_step
+                        {==
+                           {[battle_obj]
+                              get
+                              (steps $prev_step_idx state)}
+                           minigame}})
+                  ($minigame_end_idx
+                     [battle_index])
+                  {if
+                     {! $prev_step_is_minigame}
+                     {while
+                        {&&
+                           {<
+                              {'+' $minigame_end_idx 1}
+                              $num_steps}
+                           {==
+                              {[battle_obj]
+                                 get
+                                 (steps
+                                    {'+' $minigame_end_idx 1}
+                                    state)}
+                              minigame}}
+                        {set
+                           $minigame_end_idx
+                           {'+' $minigame_end_idx 1}}}
+                     {do
+                        ($show_start
+                           {[battle_obj]
+                              get
+                              (steps
+                                 [battle_index]
+                                 music_range
+                                 start)})
+                        ($play_start
+                           {[battle_obj]
+                              get
+                              (steps
+                                 [battle_index]
+                                 play_range
+                                 start)})
+                        ($show_end
+                           {[battle_obj]
+                              get
+                              (steps $minigame_end_idx music_range end)})
+                        ($play_end
+                           {[battle_obj]
+                              get
+                              (steps $minigame_end_idx play_range end)})
+                        {$this start_ffa $show_start $show_end $play_start $play_end}
+                        {$hamdirector set disable_picking TRUE}}}}
+               {do
+                  {if
+                     [mini_game]
+                     {handle
+                        ([mini_game]
+                           exit)}
+                     {delete
+                        [mini_game]}
+                     {set
+                        [mini_game]
+                        ""}}}}
+            {switch
+               $player_flag
+               (kHamPlayer0
+                  {handle
+                     ({gamedata getp 1 provider}
+                        hide_hud
+                        TRUE)})
+               (kHamPlayer1
+                  {handle
+                     ({gamedata getp 0 provider}
+                        hide_hud
+                        TRUE)})}
+            {hamprovider set dance_battle_config $player_flag}
+            {if
+               $has_prev_step
+               {do
+                  ($cur_step_start
+                     {[battle_obj]
+                        get
+                        (steps
+                           [battle_index]
+                           music_range
+                           start)})
+                  ($prev_step_end
+                     {[battle_obj]
+                        get
+                        (steps $prev_step_idx music_range end)})
+                  {if
+                     {< $cur_step_start $prev_step_end}
+                     {foreach_int
+                        $p
+                        0
+                        {gamedata max_players}
+                        {[remixer]
+                           clear_unscored_measures
+                           $p}}
+                     {game reset_detection}}}}
+            {$this
+               set_unscored_measures
+               [battle_index]}}}})
+(set_unscored_measures
+   ($idx)
+   {foreach_int
+      $p
+      0
+      {gamedata max_players}
+      {do
+         ($state
+            {[battle_obj]
+               get
+               (steps $idx state)})
+         ($player_flag
+            {[battle_obj]
+               get
+               (steps
+                  [battle_index]
+                  players)})
+         ($is_dancing)
+         ($first_unscored)
+         ($last_unscored)
+         {if_else
+            {== $state minigame}
+            {set $is_dancing FALSE}
+            {if_else
+               {'||'
+                  {== $player_flag kHamPlayerBoth}
+                  {==
+                     $player_flag
+                     {'+' kHamPlayer0 $p}}}
+               {set $is_dancing TRUE}
+               {set $is_dancing FALSE}}}
+         {if_else
+            $is_dancing
+            {do
+               {set
+                  $first_unscored
+                  {[battle_obj]
+                     get
+                     (steps $idx music_range start)}}
+               {set
+                  $last_unscored
+                  {-
+                     {[battle_obj]
+                        get
+                        (steps $idx play_range start)}
+                     1}}
+               {if
+                  {< $first_unscored $last_unscored}
+                  {[remixer]
+                     set_unscored_measure_range
+                     $p
+                     $first_unscored
+                     $last_unscored}}
+               {set
+                  $first_unscored
+                  {'+'
+                     {[battle_obj]
+                        get
+                        (steps $idx play_range end)}
+                     1}}
+               {set
+                  $last_unscored
+                  {[battle_obj]
+                     get
+                     (steps $idx music_range end)}}
+               {if
+                  {< $first_unscored $last_unscored}
+                  {[remixer]
+                     set_unscored_measure_range
+                     $p
+                     $first_unscored
+                     $last_unscored}}}
+            {do
+               {set
+                  $first_unscored
+                  {[battle_obj]
+                     get
+                     (steps $idx music_range start)}}
+               {set
+                  $last_unscored
+                  {[battle_obj]
+                     get
+                     (steps $idx music_range end)}}
+               {[remixer]
+                  set_unscored_measure_range
+                  $p
+                  $first_unscored
+                  $last_unscored}}}}})
+(performance_ladder
+   ($player_index $state_index)
+   {do
+      ($player_provider
+         {gamedata getp $player_index provider})
+      ($old_state_index
+         {$player_provider get performance_index})
+      ($performance_state '')
+      {set
+         $state_index
+         {max
+            {min
+               $state_index
+               {-
+                  {size
+                     [performance_state_chart]}
+                  1}}
+            0}}
+      {$player_provider set performance_index $state_index}
+      {set
+         $performance_state
+         {elem
+            {elem
+               [performance_state_chart]
+               $state_index}
+            0}}
+      {$player_provider set performance_state $performance_state}})
+(rekick_crowd
+   {script_task
+      kTaskUISeconds
+      (delay 0.7)
+      (script
+         {do
+            {handle
+               ($hamwardrobe crowd skills_great)}})})
+(in_play_range
+   ($b)
+   {if_else
+      [battle_obj]
+      {do
+         ($measure
+            {'+'
+               1
+               {int
+                  {/ $b 4}}})
+         ($battle_step_index
+            {min
+               [battle_index]
+               {-
+                  {[battle_obj]
+                     size
+                     (steps)}
+                  1}})
+         {>=
+            $measure
+            {[battle_obj]
+               get
+               (steps
+                  [battle_index]
+                  music_range
+                  start)}}}
+      TRUE})
+(num_rated_measures
+   {$this num_rated_measures_common})
+(convert_beat
+   ($b $player_index)
+   {do
+      ($cur_measure
+         {'+'
+            1
+            {int
+               {/ $beat 4}}})
+      ($offset
+         {-
+            {round
+               {'+'
+                  1
+                  {/ $b 4}}}
+            $cur_measure})
+      ($battle_step_index
+         {min
+            [battle_index]
+            {-
+               {[battle_obj]
+                  size
+                  (steps)}
+               1}})
+      {while
+         {!= 0 $offset}
+         {if_else
+            {< $offset 0}
+            {do
+               {'++' $offset}
+               {-- $cur_measure}
+               {if
+                  {<
+                     $cur_measure
+                     {[battle_obj]
+                        get
+                        (steps $battle_step_index music_range start)}}
+                  {-- $battle_step_index}
+                  {if_else
+                     {>= $battle_step_index 0}
+                     {set
+                        $cur_measure
+                        {-
+                           {[battle_obj]
+                              get
+                              (steps $battle_step_index music_range end)}
+                           1}}
+                     {do
+                        {set $offset 0}
+                        {set $battle_step_index 0}
+                        {set $cur_measure -1}}}}}
+            {do
+               {-- $offset}
+               {'++' $cur_measure}
+               {if
+                  {>
+                     $cur_measure
+                     {[battle_obj]
+                        get
+                        (steps $battle_step_index music_range end)}}
+                  {'++' $battle_step_index}
+                  {if_else
+                     {<
+                        $battle_step_index
+                        {[battle_obj]
+                           size
+                           (steps)}}
+                     {set
+                        $cur_measure
+                        {[battle_obj]
+                           get
+                           (steps $battle_step_index music_range start)}}
+                     {do
+                        {set $offset 0}
+                        {set $battle_step_index 0}
+                        {set $cur_measure -1}}}}}}}
+      {if
+         {>= $cur_measure 0}
+         {do
+            ($players
+               {[battle_obj]
+                  get
+                  (steps $battle_step_index players)})
+            ($state
+               {[battle_obj]
+                  get
+                  (steps $battle_step_index state)})
+            {cond
+               ({== $state minigame}
+                  {set $cur_measure -1})
+               ({&&
+                     {== $players kHamPlayer0}
+                     {== $player_index 1}}
+                  {set $cur_measure -1})
+               ({&&
+                     {== $players kHamPlayer1}
+                     {== $player_index 0}}
+                  {set $cur_measure -1})
+               ({<
+                     $cur_measure
+                     {[battle_obj]
+                        get
+                        (steps $battle_step_index play_range start)}}
+                  {set $cur_measure -1})
+               ({>
+                     $cur_measure
+                     {[battle_obj]
+                        get
+                        (steps $battle_step_index play_range end)}}
+                  {set $cur_measure -1})}}}
+      {'*'
+         {- $cur_measure 1}
+         4}})
+(is_tracking_score TRUE)
+(game_outro
+   {$this game_outro_common})

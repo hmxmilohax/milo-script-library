@@ -1,0 +1,1529 @@
+#define NUM_COLUMNS
+(4)
+#define POINT_VALUES
+((5000.0 20000.0))
+#define STREAK_MULTIPLIER
+((1.0 2.0 3.0 4.0))
+#define CAP_STREAK_MESSAGING
+(TRUE)
+#define STEAL_MULTIPLIER
+(1.0)
+#define ALLOW_STREAK
+(TRUE)
+#define GOLD_FLASHCARD_FREQUENCY
+((2 3 3 3 4))
+#define MOVE_PASS_FRACTION
+(0.7)
+#define CONFUSABILITY_TOLERANCE
+(1)
+#define POINTS_FOR_acc_dance_battle_points
+(100000)
+(point_value_chase
+   (music_start -1)
+   (music_end -1)
+   (play_start -1)
+   (play_end -1)
+   (hud
+      "")
+   (columns
+      ())
+   (scored_moves
+      ())
+   (move_dir
+      "")
+   (point_curve
+      "")
+   (active FALSE)
+   (scores
+      (0 0))
+   (cur_measure -1)
+   (ended FALSE)
+   (next_gold -1)
+   (streak
+      (0 0))
+   (last_passed_measure
+      (-2 -2))
+   (enter
+      ($music_start_measure $music_end_measure $play_start_measure $play_end_measure $scored_moves)
+      {$hamdirector start_stop_visualizer 1 1}
+      {hamprovider
+         add_sink
+         $this
+         (post_move_finished)
+         kSinkModeHandle
+         FALSE}
+      {hamprovider
+         add_sink
+         $this
+         (on_ui_nav_mode_change)
+         kSinkModeHandle
+         FALSE}
+      {master
+         add_sink
+         $this
+         (beat)}
+      {set
+         [play_start]
+         $play_start_measure}
+      {set
+         [play_end]
+         $play_end_measure}
+      {set
+         [music_start]
+         $music_start_measure}
+      {set
+         [music_end]
+         $music_end_measure}
+      {set
+         [hud]
+         {find_obj $hud_panel point_chase_hud}}
+      {set
+         [point_curve]
+         {find_obj
+            [hud]
+            "score_curve.anim"}}
+      {set
+         [move_dir]
+         {$hud_panel get moves_dir}}
+      {do
+         ($left_toaster
+            {cursor_panel find toaster_left})
+         ($right_toaster
+            {cursor_panel find toaster_right})
+         {{find_obj $left_toaster p1_message_free4all.lbl}
+            set_prelocalized_string
+            ""}
+         {{find_obj $left_toaster p1_message_free4all_streak.lbl}
+            set_prelocalized_string
+            ""}
+         {{find_obj $right_toaster p1_message_free4all.lbl}
+            set_prelocalized_string
+            ""}
+         {{find_obj $right_toaster p1_message_free4all_streak.lbl}
+            set_prelocalized_string
+            ""}
+         {if_else
+            {==
+               {hamprovider get right_side_color}
+               blue}
+            {do
+               {{find_obj $right_toaster blue.flow}
+                  activate}
+               {{find_obj $left_toaster pink.flow}
+                  activate}}
+            {do
+               {{find_obj $right_toaster pink.flow}
+                  activate}
+               {{find_obj $left_toaster blue.flow}
+                  activate}}}}
+      {resize
+         [streak]
+         2}
+      {resize
+         [last_passed_measure]
+         2}
+      {foreach_int
+         $i
+         0
+         2
+         {$this zero_streak_for_player $i}
+         {set_elem
+            [last_passed_measure]
+            $i
+            -2}}
+      {resize
+         [scored_moves]
+         0}
+      {foreach_int
+         $i
+         0
+         {gamedata max_players}
+         {do
+            ($list
+               {elem $scored_moves $i})
+            ($add_move
+               "")
+            ($pair
+               "")
+            {foreach
+               $elem
+               $list
+               {set
+                  $add_move
+                  {elem $elem 1}}
+               {do
+                  ($original TRUE)
+                  {foreach
+                     $val
+                     [scored_moves]
+                     {if
+                        {==
+                           $add_move
+                           {elem $val 0}}
+                        {set $original FALSE}}}
+                  {if
+                     {&&
+                        $original
+                        {!
+                           {$add_move get omit_minigame}}
+                        {$add_move is_loopable}}
+                     {set
+                        $pair
+                        {array 2}}
+                     {set_elem $pair 0 $add_move}
+                     {set_elem
+                        $pair
+                        1
+                        {if_else
+                           {>
+                              {size $elem}
+                              2}
+                           {elem $elem 2}
+                           ''}}
+                     {push_back
+                        [scored_moves]
+                        $pair}}}}
+            {$this set_score $i 0}}}
+      {if
+         {! $kill_omg_shuffle}
+         {random_sort
+            [scored_moves]}}
+      {do
+         ($column_order
+            {array 0})
+         {resize
+            [columns]
+            0}
+         {if
+            [hud]
+            {foreach_int
+               $i
+               0
+               NUM_COLUMNS
+               {push_back
+                  [columns]
+                  {find_obj
+                     [hud]
+                     {sprint
+                        "column_"
+                        $i}}}}
+            {set
+               [next_gold]
+               {'+' NUM_COLUMNS 1}}
+            {foreach_int
+               $i
+               0
+               {size
+                  [columns]}
+               {do
+                  ($column
+                     {elem
+                        [columns]
+                        $i})
+                  {$column
+                     init
+                     {-
+                        [play_end]
+                        [music_start]}}
+                  {push_back $column_order $i}}}
+            {if
+               {! $kill_omg_shuffle}
+               {random_sort $column_order}}
+            {foreach
+               $i
+               $column_order
+               {$this
+                  set_new_move_for_column
+                  $i
+                  {-
+                     [play_start]
+                     [music_start]}}}
+            {set
+               [next_gold]
+               {random_elem
+                  (1 2)}}
+            {do
+               ($postproc
+                  "")
+               {[hud]
+                  iterate
+                  PostProc
+                  $pp
+                  {set $postproc $pp}}
+               {if
+                  $postproc
+                  {$hamdirector set force_postproc $postproc}
+                  {$hamdirector set force_postproc_blend 0}
+                  {$hamdirector set force_postproc_blend_rate 1}}
+               {{$hamdirector get_world}
+                  set
+                  explicit_postproc
+                  FALSE}}}}
+      {hamprovider set game_stage omg}
+      {set
+         [ended]
+         FALSE})
+   (exit
+      {$hamdirector start_stop_visualizer 0 1}
+      {hamprovider set game_stage playing}
+      {$this
+         run_flow
+         "fade_out.flow"}
+      {$this
+         run_flow
+         "deactivate.flow"}
+      {[move_dir]
+         disable_all_detectors}
+      {handle
+         (hamprovider
+            setup_0_alert
+            none
+            "")}
+      {handle
+         (hamprovider
+            setup_1_alert
+            none
+            "")}
+      {{$hamdirector get_world}
+         set
+         explicit_postproc
+         TRUE}
+      {handle
+         ($hamdirector on_performance_change)}
+      {meta_performer
+         send_omg_score_datapoint
+         {elem
+            [scores]
+            0}
+         {elem
+            [scores]
+            1}}
+      {hamprovider remove_sink $this}
+      {hamprovider remove_sink $this}
+      {master remove_sink $this})
+   (get_raw_val
+      ($i $move $active $looped)
+      {do
+         ($raw_detection_val 0.0)
+         ($raw_looped
+            {[move_dir]
+               active_detector_looped_result
+               $i
+               $move})
+         ($raw_unlooped
+            {if_else
+               $active
+               {[move_dir]
+                  active_detector_result
+                  $i
+                  $move}
+               {[move_dir]
+                  last_detector_result
+                  $i
+                  $move}})
+         {set $looped FALSE}
+         {if_else
+            $looped
+            {if_else
+               {> $raw_looped $raw_unlooped}
+               {set $raw_detection_val $raw_looped}
+               {set $raw_detection_val $raw_unlooped}}
+            {set $raw_detection_val $raw_unlooped}}
+         {if
+            $move
+            {set
+               $raw_detection_val
+               {detect_frac_to_rating_frac $raw_detection_val $move}}}
+         $raw_detection_val})
+   (poll
+      {do
+         ($cur_offset
+            {-
+               [cur_measure]
+               [music_start]})
+         ($move
+            "")
+         ($raw_detection_val 0)
+         ($normalized_result 0)
+         ($col_idx -1)
+         ($moves0
+            (""
+               ""
+               ""
+               ""))
+         ($moves1
+            (""
+               ""
+               ""
+               ""))
+         ($norm_results0
+            (0 0 0 0))
+         ($norm_results1
+            (0 0 0 0))
+         ($max_col
+            (0 0))
+         ($max_score
+            (0 0))
+         {set_elem $max_col 0 0}
+         {set_elem $max_col 1 0}
+         {set_elem $max_score 0 0}
+         {set_elem $max_score 1 0}
+         {if
+            {&&
+               {> $cur_offset 0}
+               [move_dir]}
+            {foreach
+               $column
+               [columns]
+               {'++' $col_idx}
+               {foreach_int
+                  $i
+                  0
+                  {gamedata max_players}
+                  {$column update_feedback $i 0.0}}
+               {if
+                  {>=
+                     $cur_offset
+                     {$column get move_start}}
+                  {foreach_int
+                     $i
+                     0
+                     {gamedata max_players}
+                     {set
+                        $move
+                        {$column get move}}
+                     {set
+                        $raw_detection_val
+                        {$this get_raw_val $i $move TRUE TRUE}}
+                     {set
+                        $normalized_result
+                        {if_else
+                           $move
+                           {detect_frac_to_rating_frac $raw_detection_val $move}
+                           0.0}}
+                     {if
+                        [point_curve]
+                        {set
+                           $normalized_result
+                           {[point_curve]
+                              value_from_frame
+                              [hud]
+                              (point_curve)
+                              $normalized_result}}}
+                     {if
+                        {>
+                           $normalized_result
+                           {elem $max_score $i}}
+                        {set_elem $max_col $i $col_idx}
+                        {set_elem $max_score $i $normalized_result}}
+                     {if_else
+                        {== $i 0}
+                        {do
+                           {set_elem $norm_results0 $col_idx $normalized_result}
+                           {set_elem $moves0 $col_idx $move}}
+                        {do
+                           {set_elem $norm_results1 $col_idx $normalized_result}
+                           {set_elem $moves1 $col_idx $move}}}}}}
+            {set $col_idx -1}
+            {foreach
+               $column
+               [columns]
+               {'++' $col_idx}
+               {if
+                  {>=
+                     $cur_offset
+                     {$column get move_start}}
+                  {foreach_int
+                     $i
+                     0
+                     {gamedata max_players}
+                     {do
+                        ($results
+                           {if_else
+                              {== $i 0}
+                              $norm_results0
+                              $norm_results1})
+                        ($moves
+                           {if_else
+                              {== $i 0}
+                              $moves0
+                              $moves1})
+                        ($move
+                           {elem $moves $col_idx})
+                        ($confus
+                           {if_else
+                              $move
+                              {$move confusability_with_move_data_array $moves}
+                              0.5})
+                        ($adj_res
+                           {if_else
+                              $move
+                              {$move
+                                 adjust_normalized_percent_to_confusability
+                                 {elem $results $col_idx}
+                                 $confus}
+                              0})
+                        {if_else
+                           {<
+                              {elem $max_score $i}
+                              $confus}
+                           {$column update_feedback $i $adj_res}
+                           {if_else
+                              {==
+                                 $col_idx
+                                 {elem $max_col $i}}
+                              {do
+                                 {$column update_feedback $i $adj_res $col_idx}
+                                 {if
+                                    {&&
+                                       {> $adj_res 0.4}
+                                       {>
+                                          {elem
+                                             [streak]
+                                             $i}
+                                          0}}
+                                    {$column set streaking TRUE}}}
+                              {$column update_feedback $i 0.0}}}}}}}}})
+   (on_ui_nav_mode_change
+      {do
+         ($ui_nav_mode
+            {hamprovider get ui_nav_mode})
+         {switch
+            $ui_nav_mode
+            (game
+               {handle
+                  (hamprovider
+                     setup_0_alert
+                     free4all
+                     {localize_separated_int
+                        {elem
+                           [scores]
+                           0}})}
+               {handle
+                  (hamprovider
+                     setup_1_alert
+                     free4all
+                     {localize_separated_int
+                        {elem
+                           [scores]
+                           1}})})
+            {handle
+               (hamprovider
+                  setup_0_alert
+                  none
+                  "")}
+            {handle
+               (hamprovider
+                  setup_1_alert
+                  none
+                  "")}}})
+   (post_move_finished
+      {set
+         [cur_measure]
+         {beat_to_measure
+            {taskmgr beat}}}
+      {if
+         {==
+            [cur_measure]
+            [music_start]}
+         {$this
+            run_flow
+            "fade_in.flow"}}
+      {if
+         {==
+            [cur_measure]
+            [music_start]
+            1}
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {handle
+               ({gamedata getp $i provider}
+                  hide_hud
+                  TRUE)}}
+         {$hud_panel play nar_omg}}
+      {if
+         [active]
+         {$this
+            do_scoring
+            {- $measure 1}}}
+      {do
+         ($end_margin
+            {-
+               [music_end]
+               [play_end]})
+         {if_else
+            {== $end_margin 1}
+            {if
+               {==
+                  [cur_measure]
+                  {'+'
+                     [play_end]
+                     1}}
+               {$this award_omg_scores}}
+            {if
+               {==
+                  [cur_measure]
+                  {'+'
+                     [play_end]
+                     2}}
+               {$this award_omg_scores}}}}
+      {cond
+         ({==
+               [cur_measure]
+               {max
+                  {-
+                     [play_start]
+                     1}
+                  {'+'
+                     [music_start]
+                     1}}}
+            {$this
+               run_flow
+               "activate.flow"}
+            {set
+               [active]
+               TRUE})
+         ({==
+               [cur_measure]
+               {'+'
+                  [play_end]
+                  1}}
+            {print
+               "We just finished! {elem [scores] 0} = "
+               {elem
+                  [scores]
+                  0}
+               " {elem [scores] 1} = "
+               {elem
+                  [scores]
+                  1}
+               "\n"}
+            {set
+               [ended]
+               TRUE}
+            {if
+               {!=
+                  {elem
+                     [scores]
+                     0}
+                  {elem
+                     [scores]
+                     1}}
+               {do
+                  ($winning_idx
+                     {if_else
+                        {>
+                           {elem
+                              [scores]
+                              0}
+                           {elem
+                              [scores]
+                              1}}
+                        0
+                        1})
+                  {print
+                     "$winning_idx = "
+                     $winning_idx
+                     "\n"}
+                  {print
+                     "{gamedata getp $winning_idx crew} = "
+                     {gamedata getp $winning_idx crew}
+                     "\n"}
+                  {print
+                     "{{gamedata getp $winning_idx provider} get crew} = "
+                     {{gamedata getp $winning_idx provider}
+                        get
+                        crew}
+                     "\n"}
+                  {print
+                     "{{gamedata getp $winning_idx provider} get side} = "
+                     {{gamedata getp $winning_idx provider}
+                        get
+                        side}
+                     "\n"}
+                  {handle
+                     (hamprovider
+                        nar_play_crew_vo
+                        omg_win
+                        {gamedata getp $winning_idx crew})}}})}
+      {foreach
+         $column
+         [columns]
+         {$column
+            update
+            {-
+               [cur_measure]
+               [music_start]}}})
+   (beat
+      {if
+         {==
+            {round $beat}
+            {'+'
+               {'*'
+                  4
+                  [music_start]}}
+            3}
+         {if
+            {&&
+               $hamdirector
+               {$hamdirector get cur_world}}
+            {{$hamdirector get cur_world}
+               set_showing
+               FALSE}}})
+   (award_omg_scores
+      {do
+         ($score_delta
+            {-
+               {{gamedata getp 0 provider}
+                  get
+                  score}
+               {{gamedata getp 1 provider}
+                  get
+                  score}})
+         ($previous_winner
+            {cond
+               ({> $score_delta 0}
+                  0)
+               ({< $score_delta 0}
+                  1)
+               (TRUE -1)})
+         ($cur_winner -1)
+         {foreach_int
+            $i
+            0
+            {gamedata max_players}
+            {do
+               ($provider
+                  {gamedata getp $i provider})
+               {$provider
+                  set
+                  score
+                  {'+'
+                     {$provider get score}
+                     {elem
+                        [scores]
+                        $i}}}}}
+         {set
+            $score_delta
+            {-
+               {{gamedata getp 0 provider}
+                  get
+                  score}
+               {{gamedata getp 1 provider}
+                  get
+                  score}}}
+         {set
+            $cur_winner
+            {cond
+               ({> $score_delta 0}
+                  0)
+               ({< $score_delta 0}
+                  1)
+               (TRUE -1)}}
+         {cond
+            ({&&
+                  {== $previous_winner 1}
+                  {== $cur_winner 0}}
+               {acc_mgr earn_accomplishment_for_player 0 acc_dance_battle_behind})
+            ({&&
+                  {== $previous_winner 0}
+                  {== $cur_winner 1}}
+               {acc_mgr earn_accomplishment_for_player 1 acc_dance_battle_behind})}
+         {$this
+            run_flow
+            "display_scores.flow"}})
+   (do_scoring
+      ($measure)
+      {print
+         "\n********\n$measure = "
+         $measure
+         "\n"}
+      {if
+         [move_dir]
+         {do
+            ($best_scores
+               (0 0))
+            ($best_columns
+               (-1 -1))
+            ($best_hit '')
+            ($stolen FALSE)
+            {foreach_int
+               $i
+               0
+               {gamedata max_players}
+               {set_elem $best_scores $i 0}
+               {set_elem $best_columns $i -1}
+               {do
+                  ($score 0)
+                  ($move
+                     "")
+                  ($column)
+                  {if
+                     {size
+                        [columns]}
+                     {foreach_int
+                        $j
+                        0
+                        NUM_COLUMNS
+                        {set
+                           $column
+                           {elem
+                              [columns]
+                              $j}}
+                        {$column set breaking FALSE}
+                        {set
+                           $move
+                           {$column get move}}
+                        {set
+                           $score
+                           {$this get_raw_val $i $move FALSE TRUE}}
+                        {print
+                           "player "
+                           $i
+                           " move "
+                           $move
+                           " score "
+                           $score
+                           "\n"}
+                        {if
+                           {&&
+                              {>
+                                 $score
+                                 {elem $best_scores $i}}
+                              {>=
+                                 {'+'
+                                    1
+                                    {-
+                                       $measure
+                                       [music_start]}}
+                                 {$column get move_start}}}
+                           {set_elem $best_scores $i $score}
+                           {set_elem $best_columns $i $j}}}}}}
+            {if
+               {==
+                  {elem $best_columns 0}
+                  {elem $best_columns 1}}
+               {do
+                  ($winning_idx 0)
+                  {cond
+                     ({==
+                           {elem $best_scores 0}
+                           {elem $best_scores 1}}
+                        {set
+                           $winning_idx
+                           {if_else
+                              {>
+                                 {'+'
+                                    {player_provider_1 get score}
+                                    {elem
+                                       [scores]
+                                       0}}
+                                 {'+'
+                                    {player_provider_2 get score}
+                                    {elem
+                                       [scores]
+                                       1}}}
+                              1
+                              0}})
+                     ({>
+                           {elem $best_scores 0}
+                           {elem $best_scores 1}}
+                        {set $winning_idx 0})
+                     (TRUE
+                        {set $winning_idx 1})}
+                  {if
+                     {!=
+                        {elem
+                           $best_scores
+                           {- 1 $winning_idx}}
+                        0}
+                     {print
+                        "$winning_idx = "
+                        $winning_idx
+                        " {elem $best_scores 0} = "
+                        {elem $best_scores 0}
+                        " {elem $best_scores 1} = "
+                        {elem $best_scores 1}
+                        "\n"}
+                     {if
+                        {== $winning_idx 0}
+                        {if
+                           {&&
+                              {>=
+                                 {elem $best_scores 0}
+                                 MOVE_PASS_FRACTION}
+                              {>=
+                                 {elem $best_scores 1}
+                                 MOVE_PASS_FRACTION}}
+                           {print
+                              "{elem $best_scores 0} = "
+                              {elem $best_scores 0}
+                              " MOVE_PASS_FRACTION = "
+                              MOVE_PASS_FRACTION
+                              " P0 stole!\n"}
+                           {set $stolen ALLOW_STREAK}}}
+                     {if
+                        {== $winning_idx 1}
+                        {if
+                           {&&
+                              {>=
+                                 {elem $best_scores 0}
+                                 MOVE_PASS_FRACTION}
+                              {>=
+                                 {elem $best_scores 1}
+                                 MOVE_PASS_FRACTION}}
+                           {print
+                              "{elem $best_scores 1} = "
+                              {elem $best_scores 1}
+                              " MOVE_PASS_FRACTION = "
+                              MOVE_PASS_FRACTION
+                              " P1 stole!\n"}
+                           {set $stolen ALLOW_STREAK}}}}
+                  {set_elem
+                     $best_scores
+                     {- 1 $winning_idx}
+                     0}}}
+            {foreach_int
+               $i
+               0
+               {size $best_scores}
+               {do
+                  ($best_column_index
+                     {elem $best_columns $i})
+                  {if
+                     {>= $best_column_index 0}
+                     {do
+                        ($column
+                           {elem
+                              [columns]
+                              $best_column_index})
+                        ($move
+                           {$column get move})
+                        ($rating
+                           "")
+                        ($rating_idx -1)
+                        {$column set breaking FALSE}
+                        {if
+                           $move
+                           {if
+                              {>=
+                                 {elem $best_scores $i}
+                                 MOVE_PASS_FRACTION}
+                              {if
+                                 {!= $best_hit omg_hit_gold}
+                                 {set
+                                    $best_hit
+                                    {if_else
+                                       {$column get gold}
+                                       omg_hit_gold
+                                       omg_hit}}}
+                              {set
+                                 $rating
+                                 {detect_frac_to_rating
+                                    {[move_dir]
+                                       last_detector_result
+                                       $i
+                                       $move}
+                                    $move}}
+                              {set
+                                 $rating_idx
+                                 {rating_state_to_index $rating}}
+                              {if_else
+                                 {<= $rating_idx 0}
+                                 {$this do_score $i $column $best_column_index $measure $stolen TRUE}
+                                 {$this do_score $i $column $best_column_index $measure $stolen FALSE}}
+                              {set_elem
+                                 [last_passed_measure]
+                                 $i
+                                 $measure}}}}}}}
+            {if
+               {!= $best_hit ''}
+               {handle
+                  (hamprovider $best_hit)}}
+            {foreach_int
+               $i
+               0
+               {size
+                  [last_passed_measure]}
+               {if_else
+                  {==
+                     {elem
+                        [last_passed_measure]
+                        $i}
+                     $measure}
+                  {do
+                     {$this inc_streak_for_player $i}
+                     {if
+                        {==
+                           {elem
+                              [streak]
+                              $i}
+                           2}
+                        {if_else
+                           CAP_STREAK_MESSAGING
+                           {handle
+                              (hamprovider
+                                 {symbol
+                                    {sprintf
+                                       "omg_begin_streak_p%d"
+                                       {'+'
+                                          1
+                                          {min
+                                             $i
+                                             {-
+                                                {size STREAK_MULTIPLIER}
+                                                1}}}}})}
+                           {handle
+                              (hamprovider
+                                 {symbol
+                                    {sprintf
+                                       "omg_begin_streak_p%d"
+                                       {'+' 1 $i}}})}}
+                        {$this alert $i free4all_hud_streak}}}
+                  {do
+                     {if
+                        {&&
+                           {!
+                              [ended]}
+                           {>=
+                              {elem
+                                 [streak]
+                                 $i}
+                              2}}
+                        {if_else
+                           $stolen
+                           {do
+                              {handle
+                                 (hamprovider
+                                    {symbol
+                                       {sprintf
+                                          "omg_reset_break_p%d"
+                                          {'+' 1 $i}}})}
+                              {print
+                                 "Stolen! zeroing streak for player "
+                                 $i
+                                 "\n"}
+                              {$this zero_streak_for_player $i}
+                              {$this alert $i free4all_hud_break}}
+                           {do
+                              {print
+                                 "now nothing happens here. at one time, this would've been breaking the streak\n"}}}}}}}}}
+      {print
+         "streak[0] = "
+         {$this get_streak_for_player 0}
+         " streak[1] = "
+         {$this get_streak_for_player 1}
+         "\n"})
+   (get_streak_mult
+      ($streak)
+      {do
+         ($ret 1.0)
+         {if
+            {>= $streak 0}
+            {if_else
+               {<
+                  $streak
+                  {size STREAK_MULTIPLIER}}
+               {set
+                  $ret
+                  {elem STREAK_MULTIPLIER $streak}}
+               {set
+                  $ret
+                  {elem
+                     STREAK_MULTIPLIER
+                     {-
+                        {size STREAK_MULTIPLIER}
+                        1}}}}}
+         $ret})
+   (get_streak_for_player
+      ($player_index)
+      {elem
+         [streak]
+         $player_index})
+   (set_streak_for_player
+      ($player_index $streak_count)
+      {set_elem
+         [streak]
+         $player_index
+         $streak_count})
+   (zero_streak_for_player
+      ($player_index)
+      {print
+         "zeroed streak for player "
+         $player_index
+         "\n"}
+      {set_elem
+         [streak]
+         $player_index
+         0})
+   (inc_streak_for_player
+      ($player_index)
+      {set_elem
+         [streak]
+         $player_index
+         {'+'
+            1
+            {elem
+               [streak]
+               $player_index}}}
+      {print
+         "inc'd streak for player "
+         $player_index
+         " now "
+         {elem
+            [streak]
+            $player_index}
+         "\n"})
+   (get_streak_mult_for_player
+      ($player_index)
+      {$this
+         get_streak_mult
+         {$this get_streak_for_player $player_index}})
+   (do_score
+      ($player_index $column $column_index $measure $stolen $flawless)
+      {do
+         ($player_score
+            {elem
+               [scores]
+               $player_index})
+         ($gold
+            {$column get gold})
+         ($move_start_measure
+            {'+'
+               {-
+                  [cur_measure]
+                  [music_start]}
+               2})
+         ($streak
+            {int
+               {elem
+                  [streak]
+                  $player_index}})
+         ($streak_anim
+            {find_obj
+               $column
+               "streak.anim"})
+         ($streak_lbl
+            {find_obj
+               $column
+               "streaking.lbl"})
+         ($steal_mult
+            {if_else $stolen STEAL_MULTIPLIER 1.0})
+         ($streak_mult
+            {-
+               {$this get_streak_mult_for_player $player_index}
+               1})
+         ($point_val
+            {elem
+               POINT_VALUES
+               {if_else $gold 1 0}})
+         ($std_point_val
+            {elem POINT_VALUES 0})
+         ($on_flawless
+            {find_obj $column on_flawless.flow})
+         ($flawless_mult
+            {if_else $flawless 1.0 1.0})
+         ($flawless_add
+            {if_else $flawless 0.0 0.0})
+         ($other
+            {if_else
+               {== $player_index 0}
+               1
+               0})
+         {print
+            "do_score "
+            "$player_index = "
+            $player_index
+            " $column_index = "
+            $column_index
+            " $stolen = "
+            $stolen
+            " $gold = "
+            $gold
+            " $streak = "
+            $streak
+            " $streak_mult = "
+            $streak_mult
+            "\n"}
+         {if
+            $stolen
+            {if
+               {<
+                  {elem
+                     [streak]
+                     $other}
+                  2}
+               {print
+                  "- unbreaking because streak of other = "
+                  {elem
+                     [streak]
+                     $other}
+                  " where $other = "
+                  $other
+                  "\n"}
+               {set $stolen FALSE}
+               {set $steal_mult 1.0}}}
+         {$column
+            set_value
+            {'+'
+               {int
+                  {'*'
+                     $steal_mult
+                     {'+' $streak_mult 1.0}
+                     $point_val
+                     $flawless_mult}}}}
+         {$streak_anim
+            set_frame
+            {'||' $streak $stolen}}
+         {if_else
+            $stolen
+            {$streak_lbl set_token_fmt free4all_card_break}
+            {if_else
+               CAP_STREAK_MESSAGING
+               {$streak_lbl
+                  set_token_fmt
+                  "omg_streaking"
+                  {'+'
+                     1
+                     {min
+                        $streak
+                        {-
+                           {size STREAK_MULTIPLIER}
+                           1}}}}
+               {$streak_lbl
+                  set_token_fmt
+                  "omg_streaking"
+                  {'+' 1 $streak}}}}
+         {'+='
+            $player_score
+            {$column get value}}
+         {$this set_score $player_index $player_score}
+         {if
+            [move_dir]
+            {[move_dir]
+               disable_detector
+               {$column get move}}
+            {[move_dir]
+               detector_clear_looped_result
+               {$column get move}}}
+         {$column set breaking $stolen}
+         {$column win $player_index}
+         {if
+            {>= $player_score POINTS_FOR_acc_dance_battle_points}
+            {acc_mgr earn_accomplishment_for_player $player_index acc_dance_battle_points}}
+         {do
+            ($all_columns TRUE)
+            {foreach
+               $col
+               [columns]
+               {if
+                  {!
+                     {elem
+                        {$col get completed}
+                        $player_index}}
+                  {set $all_columns FALSE}}}
+            {if
+               $all_columns
+               {acc_mgr earn_accomplishment_for_player $player_index acc_dance_battle_moves}}}
+         {$this set_new_move_for_column $column_index $move_start_measure}
+         {foreach_int
+            $i
+            0
+            {size
+               [columns]}
+            {if
+               {==
+                  {{elem
+                        [columns]
+                        $i}
+                     get
+                     move}
+                  ""}
+               {$this set_new_move_for_column $i $move_start_measure}}}})
+   (run_flow
+      ($flow_name)
+      {do
+         ($flow
+            {find_obj
+               [hud]
+               $flow_name})
+         {if
+            $flow
+            {$flow activate}}})
+   (set_score
+      ($player_index $score)
+      {do
+         ($old_score
+            {elem
+               [scores]
+               $player_index})
+         ($message
+            {if_else
+               {== $player_index 0}
+               setup_0_alert
+               setup_1_alert})
+         {set_elem
+            [scores]
+            $player_index
+            $score}
+         {script_task
+            kTaskSeconds
+            (delay 1.2)
+            (script
+               {if
+                  {==
+                     {hamprovider get ui_nav_mode}
+                     game}
+                  {handle
+                     (hamprovider
+                        $message
+                        free4all
+                        {localize_separated_int $score})}})}})
+   (alert
+      ($player_index $tok)
+      {do
+         ($message
+            {if_else
+               {== $player_index 0}
+               setup_0_alert_alt
+               setup_1_alert_alt})
+         {script_task
+            kTaskSeconds
+            (delay 1.2)
+            (script
+               {if
+                  {==
+                     {hamprovider get ui_nav_mode}
+                     game}
+                  {handle
+                     (hamprovider
+                        $message
+                        free4all_streak
+                        {localize $tok})}})}}
+      {print
+         ""})
+   (set_new_move_for_column
+      ($column_index $start_measure)
+      {do
+         ($column
+            {elem
+               [columns]
+               $column_index})
+         ($cur_col_move
+            {$column get move})
+         ($cur_col_move_variant
+            {$column get move_variant})
+         ($cur_pair
+            {array 2})
+         ($pair
+            ('' ''))
+         {if
+            {!=
+               $cur_col_move
+               ""}
+            {set_elem $cur_pair 0 $cur_col_move}
+            {set_elem $cur_pair 1 $cur_col_move_variant}
+            {push_back
+               [scored_moves]
+               $cur_pair}
+            {$column
+               set
+               move
+               ""}
+            {$column
+               set
+               move_variant
+               ""}}
+         {if
+            {<=
+               $start_measure
+               {$column get last_measure}}
+            {set
+               $pair
+               {$this next_move $column_index}}}
+         {$column
+            set
+            move
+            {elem $pair 0}}
+         {$column
+            set
+            move_variant
+            {elem $pair 1}}
+         {if_else
+            {==
+               [next_gold]
+               0}
+            {do
+               {$column set gold TRUE}
+               {set
+                  [next_gold]
+                  {random_elem GOLD_FLASHCARD_FREQUENCY}}}
+            {do
+               {$column set gold FALSE}
+               {--
+                  [next_gold]}}}
+         {$column
+            set
+            value
+            {elem POINT_VALUES 0}}
+         {$column set move_start $start_measure}
+         {[move_dir]
+            enable_detector
+            {elem $pair 0}}})
+   (next_move
+      ($column_index)
+      {do
+         ($found_valid_move FALSE)
+         ($index 0)
+         ($redundant FALSE)
+         ($pair
+            ('' ''))
+         {while
+            {&&
+               {! $found_valid_move}
+               {<
+                  $index
+                  {size
+                     [scored_moves]}}}
+            {set
+               $pair
+               {elem
+                  [scored_moves]
+                  $index}}
+            {set
+               $redundant
+               {$this
+                  check_redundancy
+                  {elem $pair 0}
+                  $column_index}}
+            {if
+               {! $redundant}
+               {remove_elem
+                  [scored_moves]
+                  $pair}
+               {set $found_valid_move TRUE}}
+            {'++' $index}}
+         {if
+            {! $found_valid_move}
+            {set
+               $pair
+               {$this find_unlisted_move $column_index}}}
+         $pair})
+   (check_redundancy
+      ($move $for_column)
+      {do
+         ($retVal FALSE)
+         ($column -1)
+         ($column_move
+            "")
+         {foreach_int
+            $i
+            0
+            {size
+               [columns]}
+            {set
+               $column
+               {elem
+                  [columns]
+                  $i}}
+            {set
+               $column_move
+               {$column get move}}
+            {if
+               {&&
+                  {! $retVal}
+                  {!= $i $for_column}
+                  {>
+                     {$move confusability $column_move}
+                     CONFUSABILITY_TOLERANCE}
+                  {== $move $column_move}}
+               {set $retVal TRUE}}}
+         $retVal})
+   (find_unlisted_move
+      ($column_index)
+      {do
+         ($move
+            "")
+         ($easiest_player
+            {if_else
+               {is_easier_difficulty
+                  {gamedata getp 0 difficulty}
+                  {gamedata getp 1 difficulty}}
+               0
+               1})
+         ($easiest_diff
+            {gamedata getp $easiest_player difficulty})
+         ($song_anim
+            "")
+         ($song_move
+            "")
+         ($move_variant
+            "")
+         ($pair
+            {array 2})
+         {if
+            $hamdirector
+            {set
+               $song_anim
+               {$hamdirector player_song_anim $easiest_player}}
+            {if
+               $song_anim
+               {$song_anim
+                  foreach_keyframe
+                  $hamdirector
+                  (move)
+                  $frame
+                  $value
+                  {if
+                     {! $move}
+                     {set
+                        $song_move
+                        {$hud_panel get_move $value}}
+                     {if
+                        {&&
+                           $song_move
+                           {$song_move get scored}
+                           {!
+                              {$song_move get omit_minigame}}
+                           {!
+                              {$song_move get final_pose}}
+                           {!
+                              {$this check_redundancy $song_move $column_index}}
+                           {$song_move is_loopable}}
+                        {set $move $song_move}}}}}
+            {if
+               {&&
+                  {! $move}
+                  [move_dir]}
+               {[move_dir]
+                  iterate
+                  HamMove
+                  $m
+                  {if
+                     {&&
+                        {$m get scored}
+                        {!
+                           {$m get omit_minigame}}
+                        {!
+                           {$m get final_pose}}
+                        {!
+                           {is_harder_difficulty
+                              {$m get difficulty}
+                              $easiest_diff}}
+                        {!
+                           {$this check_redundancy $m $column_index}}}
+                     {set $move $m}}}}
+            {if
+               {&&
+                  $move
+                  {hamprovider get use_movegraph}}
+               {set
+                  $move_variant
+                  {movemgr
+                     variant_name_from_move_name
+                     {$move get name}}}}}
+         {set_elem $pair 0 $move}
+         {set_elem $pair 1 $move_variant}
+         $pair}))
