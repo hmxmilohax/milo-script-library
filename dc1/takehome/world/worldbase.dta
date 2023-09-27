@@ -1,0 +1,359 @@
+#define WORLD_MODE_COMMON
+((first_shot_ok
+      {set
+         $shot_ok.bie
+         {&&
+            {exists game}
+            {game_panel is_playing}
+            {! $edit_mode}
+            {! $cameras.validating}}}))
+#define WORLD_EDITOR_PLAYMODE
+((play_mode
+      symbol
+      (list
+         (solo))
+      (help
+         "set the mode")
+      (post_sync
+         {set
+            $ham.play_mode
+            [play_mode]})))
+#define WORLD_OBJECT_EDITOR_COMMON
+((cam_validate
+      script
+      (script
+         {$this validate_cameras})
+      (help
+         "Test the camshots to see if all are there"))
+   (crowd_bad
+      script
+      (script
+         {$hamwardrobe crowd bad})
+      (help
+         "play performance bad animations"))
+   (crowd_ok
+      script
+      (script
+         {$hamwardrobe crowd ok})
+      (help
+         "play performance ok animations"))
+   (crowd_great
+      script
+      (script
+         {$hamwardrobe crowd great})
+      (help
+         "play performance great animations"))
+   (crowd_realtime_idle
+      script
+      (script
+         {$hamwardrobe crowd realtime_idle})
+      (help
+         "play performance realtime_idle animations"))
+   (crowd_realtime_bad
+      script
+      (script
+         {$hamwardrobe crowd realtime_bad})
+      (help
+         "play performance realtime_bad animations"))
+   (crowd_realtime_ok
+      script
+      (script
+         {$hamwardrobe crowd realtime_ok})
+      (help
+         "play performance realtime_ok animations"))
+   (crowd_realtime_great
+      script
+      (script
+         {$hamwardrobe crowd realtime_great})
+      (help
+         "play performance realtime_great animations"))
+   (crowd_skills_bad
+      script
+      (script
+         {$hamwardrobe crowd bad})
+      (help
+         "play skills bad animations"))
+   (crowd_skills_ok
+      script
+      (script
+         {$hamwardrobe crowd ok})
+      (help
+         "play skills ok animations"))
+   (crowd_skills_great
+      script
+      (script
+         {$hamwardrobe crowd great})
+      (help
+         "play skills great animations"))
+   (crowd_skills_realtime_idle
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_idle})
+      (help
+         "play skills realtime_idle animations"))
+   (crowd_skills_realtime_bad
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_bad})
+      (help
+         "play skills realtime_bad animations"))
+   (crowd_skills_realtime_ok
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_ok})
+      (help
+         "play skills realtime_ok animations"))
+   (crowd_skills_realtime_great
+      script
+      (script
+         {$hamwardrobe crowd skills_realtime_great})
+      (help
+         "play skills realtime_great animations"))
+   (crowd_stop
+      script
+      (script
+         {$hamwardrobe crowd ''})
+      (help
+         "stop all crowd animation"))
+   (test_light_preset
+      object
+      (class LightPreset)
+      (help
+         "The light preset to start"))
+   (start_preset
+      script
+      (help
+         "Starts the selected preset")
+      (script
+         {$this start_test_preset}))
+   (stop_preset
+      script
+      (help
+         "Stops any currently animating light preset")
+      (script
+         {if
+            {exists test_light_preset_anim}
+            {delete test_light_preset_anim}}
+         {if
+            {exists test_light_preset_task}
+            {delete test_light_preset_task}}
+         {if
+            {exists cycle_presets_task}
+            {delete cycle_presets_task}}))
+   (cycle_presets
+      script
+      (help
+         "Cycle through the different presets.")
+      (script
+         {if
+            {exists cycle_presets_task}
+            {delete cycle_presets_task}}
+         {thread_task
+            kTaskSeconds
+            (preserve)
+            (name cycle_presets_task)
+            (script
+               {set
+                  [test_light_preset]
+                  {$this
+                     next_preset
+                     [test_light_preset]}}
+               {if
+                  {exists milo}
+                  {milo update_open_editor $this}}
+               {$this start_test_preset}
+               {$task sleep 8}
+               {if
+                  {!=
+                     [test_light_preset]
+                     ""}
+                  {$task loop}})}))
+   (custom_start_trigger
+      object
+      (class EventTrigger)
+      (help
+         "Override for ns_start.trig.  Triggered when a new world is set.")))
+#include world_validate.dta
+#define WORLD_MIDI_PARSERS
+(((world_drum_triggers kSinkModeExport)
+      (world_crowd_parser kSinkModeExport)))
+#define WORLD_SETUP_CHARACTERS
+({if
+      {&&
+         $hamwardrobe
+         {! $hamdirector}}
+      {$hamwardrobe set_venue $this}})
+#define WORLD_OBJECT_BASE
+(WORLD_MODE_COMMON
+   (start kDataUnhandled)
+   (coda_success
+      {handle
+         ($this bre_success)})
+   (enter
+      WORLD_SETUP_CHARACTERS
+      {foreach
+         $parser
+         WORLD_MIDI_PARSERS
+         {handle
+            ({elem $parser 0}
+               add_sink
+               $world
+               ()
+               {elem $parser 1})}}
+      {set $camera.num_players_failed 0}
+      {if
+         {exists game_panel}
+         {game_panel
+            add_sink
+            $world
+            ()
+            kSinkModeExportType}})
+   (exit
+      {if
+         {exists game_panel}
+         {game_panel remove_sink $this}})
+   (change_proxies)
+   (intro_start kDataUnhandled)
+   (intro_end kDataUnhandled)
+   (intro_skip
+      {handle
+         (game_panel intro_end)}
+      kDataUnhandled)
+   (next_outro_camera
+      {do
+         ($mode)
+         ($shot
+            {$this pick_shot OUTRO_MULTI})
+         {if
+            $shot
+            {if
+               {>
+                  {$shot duration_seconds}
+                  0}
+               {script_task
+                  kTaskSeconds
+                  (delay
+                     {$shot duration_seconds})
+                  (script
+                     {handle
+                        ($this next_outro_camera)})}}}})
+   (get_win_cat_prefix
+      {do
+         ($stars
+            {game_panel get num_stars})
+         {cond
+            ({>= $stars 5}
+               WIN_HIGH)
+            ({>= $stars 3}
+               WIN_MEDIUM)
+            WIN_LOW}})
+   (get_char_name
+      {if_else
+         $hamdirector
+         {do
+            ($char_name
+               {$hamdirector get_character_name})
+            ($len
+               {strlen $char_name})
+            {if_else
+               {> $len 2}
+               {set
+                  $char_name
+                  {substr
+                     $char_name
+                     0
+                     {- $len 2}}}
+               ""}}
+         ""})
+   (get_win_category
+      {if_else
+         {==
+            {game_panel get_type}
+            skillz}
+         ''
+         {do
+            ($cat
+               {$this get_win_cat_prefix})
+            {symbol
+               {toupper
+                  {strcat
+                     $cat
+                     "_"
+                     {$this get_char_name}}}}}})
+   (append_shot
+      ($first_cam $cat)
+      {do
+         ($world
+            {$hamdirector get cur_world})
+         ($shot NULL)
+         {if
+            $world
+            {set
+               $shot
+               {$world find_shot $cat}}}
+         {if_else
+            $shot
+            {$first_cam
+               append
+               (next_shots)
+               $shot}
+            {notify
+               "could not find "
+               $cat
+               " shot"}}
+         $shot})
+   (make_win_shot
+      ($win_char_cat)
+      {do
+         ($win
+            {$hamdirector set_dircut WIN_BOOMBOX})
+         {if_else
+            $win
+            {do
+               {$win
+                  clear
+                  (next_shots)}
+               {$this append_shot $win $win_char_cat}}
+            {$hamdirector set_dircut $win_char_cat}}})
+   (game_win_camera
+      {if
+         $hamdirector
+         {do
+            ($category
+               {$this get_win_category})
+            {$hamdirector set disabled TRUE}
+            {if
+               {'||'
+                  {==
+                     {game_panel get_type}
+                     skillz}
+                  {!
+                     {$this make_win_shot $category}}}
+               {handle
+                  (game_panel game_outro)}}}})
+   (game_won
+      {$this game_win_camera}
+      kDataUnhandled)
+   ':'
+   The
+   game
+   is
+   'over,'
+   ignore
+   parsers.
+   (game_over
+      {$this delete_free_cam}
+      kDataUnhandled)
+   (player_failed
+      ($inst)
+      {'++' $camera.num_players_failed})
+   (player_saved
+      ($savior)
+      {script_task
+         kTaskSeconds
+         (delay 0.35)
+         (script
+            {$this player_saved_activate $savior})})
+   (player_saved_activate
+      ($inst)
+      {-- $camera.num_players_failed}))

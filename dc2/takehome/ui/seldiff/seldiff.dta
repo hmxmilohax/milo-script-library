@@ -1,0 +1,262 @@
+{new
+   HamPanel
+   seldiff_panel
+   (file
+      "seldiff.milo")
+   (focus right_hand.hnl)
+   (back_token back)
+   (enter
+      {player_provider_1
+         add_sink
+         $this
+         (on_player_present_change)
+         0
+         FALSE}
+      {player_provider_2
+         add_sink
+         $this
+         (on_player_present_change)
+         0
+         FALSE}
+      {hamprovider
+         add_sink
+         $this
+         (on_ui_nav_player_change)
+         0
+         FALSE}
+      {$this set_up}
+      {$this update_all}
+      {song_info_panel set_song_list_mode FALSE})
+   (exit
+      {player_provider_1 remove_sink $this on_player_present_change}
+      {player_provider_2 remove_sink $this on_player_present_change}
+      {hamprovider remove_sink $this on_ui_nav_player_change})
+   (update_all
+      {right_hand.hnl
+         set_provider
+         {multiuser_panel
+            get_difficulty_provider
+            {hamprovider get ui_nav_player}}}
+      {right_hand.hnl refresh})
+   (on_player_present_change
+      {$this update_all})
+   (on_ui_nav_player_change
+      {$this update_all})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (back
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})
+         {if_else
+            {$this is_difficulty_unlocked $name}
+            {{ui current_screen}
+               difficulty_selected
+               $name}
+            {do
+               {locked_content_panel
+                  set_up_difficulty_locked
+                  {gamedata get song}
+                  $name}
+               {ui push_screen locked_content_screen}}}})
+   (set_up
+      {do
+         ($songid
+            {song_mgr
+               get_song_id
+               {gamedata get song}})
+         {easy_stars.std set_song_with_diff $songid kDifficultyEasy}
+         {medium_stars.std set_song_with_diff $songid kDifficultyMedium}
+         {expert_stars.std set_song_with_diff $songid kDifficultyExpert}
+         {best_score.lbl set_best_score $songid}}
+      {switch
+         {$this focus_name}
+         (medium.btn
+            {if
+               {!
+                  {seldiff_panel is_difficulty_unlocked medium}}
+               {$this set_focus easy.btn}})
+         (expert.btn
+            {if
+               {!
+                  {seldiff_panel is_difficulty_unlocked expert}}
+               {$this set_focus medium.btn}}
+            {if
+               {!
+                  {seldiff_panel is_difficulty_unlocked medium}}
+               {$this set_focus easy.btn}})})
+   (is_difficulty_unlocked
+      ($diff)
+      {meta_performer is_difficulty_unlocked $diff})}
+{new
+   HamScreen
+   ingame_seldiff_screen
+   (panels background_panel seldiff_panel song_info_panel)
+   (focus seldiff_panel)
+   (old_difficulty none)
+   (back_screen none)
+   (back
+      {do
+         {gamedata
+            setp
+            0
+            difficulty
+            {ingame_seldiff_screen get old_difficulty}}
+         {ingame_seldiff_screen get back_screen}})
+   (enter
+      {unless
+         {ui went_back}
+         {ingame_seldiff_screen
+            set
+            old_difficulty
+            {gamedata getp 0 difficulty}}})
+   (difficulty_selected
+      ($diff)
+      {if_else
+         {seldiff_panel is_difficulty_unlocked $diff}
+         {do
+            {gamedata
+               setp
+               0
+               difficulty
+               {sym_to_difficulty $diff}}
+            {if_else
+               {game_panel is_game_over}
+               {do
+                  {meta_performer restart}
+                  {game_restart}}
+               {game_panel end_game kRestart}}}
+         {do
+            {locked_content_panel
+               set_up_difficulty_locked
+               {gamedata get song}
+               $diff}
+            {ui goto_screen ingame_locked_difficulty_screen}}})}
+{new
+   HamScreen
+   ingame_locked_difficulty_screen
+   (panels background_panel seldiff_panel song_info_panel locked_content_panel)
+   (focus locked_content_panel)
+   (dismiss
+      {ui goto_screen ingame_seldiff_screen})}
+{new
+   HamPanel
+   seldiff_practice_panel
+   (file
+      "seldiff_practice.milo")
+   (focus right_hand.hnl)
+   (back_token back)
+   (enter
+      {player_provider_1
+         add_sink
+         $this
+         (on_player_present_change)}
+      {player_provider_2
+         add_sink
+         $this
+         (on_player_present_change)}
+      {hamprovider
+         add_sink
+         $this
+         (on_ui_nav_player_change)
+         0
+         FALSE}
+      {$this update_all})
+   (exit
+      {player_provider_1 remove_sink $this on_player_present_change}
+      {player_provider_2 remove_sink $this on_player_present_change}
+      {hamprovider remove_sink $this on_ui_nav_player_change})
+   (update_all
+      {right_hand.hnl
+         set_provider
+         {multiuser_panel
+            get_difficulty_provider
+            {hamprovider get ui_nav_player}}}
+      {right_hand.hnl refresh})
+   (on_player_present_change
+      {$this update_all})
+   (on_ui_nav_player_change
+      {$this update_all})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (back
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})
+         {if_else
+            {$this is_difficulty_unlocked $name}
+            {{ui current_screen}
+               difficulty_selected
+               $name}
+            {do
+               {locked_content_panel
+                  set_up_difficulty_locked
+                  {gamedata get song}
+                  $name}
+               {ui push_screen locked_content_screen}}}})
+   (is_difficulty_unlocked
+      ($diff)
+      {meta_performer is_difficulty_unlocked $diff})}
+{new
+   HamScreen
+   seldiff_practice_screen
+   (panels meta background_panel seldiff_practice_panel song_info_panel)
+   (focus seldiff_practice_panel)
+   (back
+      {gamemode get ready_screen})
+   (enter
+      {meta_performer set_default_crews})
+   (difficulty_selected
+      ($diff)
+      {gamedata
+         setp
+         0
+         difficulty
+         {sym_to_difficulty $diff}}
+      {gamedata
+         setp
+         1
+         difficulty
+         {sym_to_difficulty $diff}}
+      {ui goto_screen startgame_practice_screen})}
+{new
+   HamScreen
+   ingame_seldiff_practice_screen
+   (panels background_panel seldiff_practice_panel song_info_panel)
+   (focus seldiff_practice_panel)
+   (old_difficulty none)
+   (back_screen none)
+   (back
+      {do
+         {gamedata
+            setp
+            0
+            difficulty
+            {ingame_seldiff_practice_screen get old_difficulty}}
+         {ingame_seldiff_practice_screen get back_screen}})
+   (enter
+      {unless
+         {ui went_back}
+         {ingame_seldiff_practice_screen
+            set
+            old_difficulty
+            {gamedata getp 0 difficulty}}})
+   (difficulty_selected
+      ($diff)
+      {gamedata
+         setp
+         0
+         difficulty
+         {sym_to_difficulty $diff}}
+      {if_else
+         {game_panel is_game_over}
+         {do
+            {meta_performer restart}
+            {game_restart}}
+         {game_panel end_game kRestart}})}
