@@ -1,0 +1,724 @@
+{new
+   MetaPanel
+   meta
+   (playing_post_set FALSE)
+   (is_crowd_playing FALSE)
+   (unload)
+   (finish_load)
+   (enter
+      {set
+         [playing_post_set]
+         FALSE})
+   (exit
+      {set
+         [is_crowd_playing]
+         FALSE}
+      {$this music_stop})
+   (music_start
+      {if
+         {&&
+            {$this is_up}
+            {! $mute_shell_music}}
+         {{$this meta_music}
+            start}
+         {hamprovider set shellmusic_on TRUE}
+         {unless
+            [is_crowd_playing]
+            {set
+               [is_crowd_playing]
+               TRUE}}
+         {platform_mgr enable_xmp}})
+   (music_stop
+      {hamprovider set shellmusic_on FALSE}
+      {{$this meta_music}
+         stop}
+      {set
+         [is_crowd_playing]
+         FALSE}
+      {platform_mgr disable_xmp})
+   (play_postset_loop
+      ($play)
+      {set
+         [playing_post_set]
+         $play})}
+#define COMMON_DIALOG_PANEL_HANDLERS
+((focus right_hand.hnl)
+   (set_custom
+      ($msg $opt1 $opt2)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {right_hand.hnl set nav_provider provider_2btn.hnp}
+      {provider_2btn.hnp set_label 0 $opt1}
+      {provider_2btn.hnp set_label 1 $opt2})
+   (set_yesno
+      ($msg)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {right_hand.hnl set nav_provider provider_2btn.hnp}
+      {provider_2btn.hnp set_label 0 yes}
+      {provider_2btn.hnp set_label 1 no}
+      {right_hand.hnl set_controller_focus 1})
+   (set_ok
+      ($msg)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {right_hand.hnl set nav_provider provider_1btn.hnp}
+      {provider_1btn.hnp set_label 0 ok})
+   (set_msg
+      ($msg)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {right_hand.hnl set nav_provider provider_0btn.hnp}))
+{new
+   HamPanel
+   dialog_panel
+   COMMON_DIALOG_PANEL_HANDLERS
+   (file
+      "dialog.milo")
+   (show_hand_help FALSE)}
+{new
+   EventDialogPanel
+   event_dialog_panel
+   (file
+      "dialog.milo")
+   (show_hand_help FALSE)}
+{new
+   VoiceControlPanel
+   voice_control_panel
+   (file
+      "voice/voice_commander.milo")
+   (show_hand_help FALSE)
+   (back_token back)
+   (song_name '')
+   (set_song
+      ($song)
+      {set
+         [song_name]
+         $song}
+      {song.lbl
+         set_song_name
+         [song_name]}
+      {album.lbl
+         set_album_name
+         [song_name]}
+      {artist.lbl
+         set_artist_name
+         [song_name]}
+      {$this refresh_album_art})
+   (song_data_mounted
+      ($song)
+      {if
+         {==
+            $song
+            [song_name]}
+         {$this refresh_album_art}})
+   (refresh_album_art
+      {if_else
+         {!=
+            [song_name]
+            ''}
+         {do
+            ($content_name
+               {song_mgr
+                  content_name_from_sym
+                  [song_name]})
+            {if_else
+               {'||'
+                  {==
+                     $content_name
+                     ""}
+                  {content_mgr is_mounted $content_name}}
+               {do
+                  ($pic
+                     {album_art find album_art.pic})
+                  ($mesh
+                     {album_art find album.mesh})
+                  {$pic
+                     set
+                     tex_file
+                     {song_mgr
+                        album_art_path
+                        [song_name]}}
+                  {$mesh set showing TRUE}}
+               {do
+                  ($mesh
+                     {album_art find album.mesh})
+                  {$mesh set showing FALSE}}}}
+         {{album_art find album.mesh}
+            set
+            showing
+            FALSE}})
+   (NAV_SELECT_MSG
+      {switch
+         $name
+         (back
+            {$this dismiss})})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {$this dismiss}
+            0)})}
+{new
+   ContentLoadingPanel
+   content_loading_panel
+   (file content_loading.milo)}
+{new
+   PassiveMessagesPanel
+   cursor_panel
+   (file
+      "cursor.milo")
+   (message_dir cursor_panel)}
+{new
+   HelpBarPanel
+   helpbar
+   (file
+      "helpbar.milo")}
+{new
+   HamPanel
+   song_info_panel
+   (file
+      "song_info.milo")
+   (song_name '')
+   (showing_full FALSE)
+   (pending_song '')
+   (song_list_mode TRUE)
+   (playlist_mode FALSE)
+   (enter
+      {if_else
+         {!=
+            [pending_song]
+            ''}
+         {$this
+            set_song
+            [pending_song]}
+         {$this
+            set_song
+            {gamedata get song}}}
+      {$this show_full_song_details}
+      {$this set pending_song ''}
+      {meta music_stop}
+      {if
+         {==
+            [playlist_mode]
+            TRUE}
+         {playlist.flow activate}})
+   (exit
+      {song_preview start ''}
+      {meta music_start}
+      {$this set playlist_mode FALSE})
+   (set_song_list_mode
+      ($enabled)
+      {$this set song_list_mode $enabled}
+      {if_else
+         {!=
+            [song_name]
+            ''}
+         {$this refresh_song_details}
+         {$this clear_song_details}})
+   (song_data_mounted
+      ($song)
+      {if
+         {==
+            $song
+            [song_name]}
+         {$this refresh_album_art}})
+   (set_song
+      ($song)
+      {if_else
+         {$this is_up}
+         {do
+            {$this set song_name $song}
+            {$this hide_full_song_details}
+            {if_else
+               {!=
+                  [song_name]
+                  ''}
+               {$this refresh_song_details}
+               {$this clear_song_details}}}
+         {do
+            {$this set pending_song $song}}})
+   (show_full_song_details
+      {$this set showing_full TRUE}
+      {$this play_song_preview}
+      {$this refresh_album_art})
+   (hide_full_song_details
+      {$this set showing_full FALSE}
+      {$this refresh_album_art})
+   (refresh_song_details
+      {do
+         ($songid
+            {song_mgr
+               get_song_id
+               [song_name]})
+         {song.lbl
+            set_song_name
+            [song_name]}
+         {song.lbl
+            set
+            showing
+            {!
+               [song_list_mode]}}
+         {album.lbl
+            set_album_name
+            [song_name]}
+         {if_else
+            {&&
+               [song_list_mode]
+               {==
+                  {song_offer_provider get_current_sort_name}
+                  by_artist}}
+            {artist.lbl
+               set_song_name
+               [song_name]}
+            {artist.lbl
+               set_artist_name
+               [song_name]}}
+         {intensity.sdd set showing TRUE}
+         {intensity.lbl set showing TRUE}
+         {intensity.sdd
+            set_level
+            {song_mgr
+               rank_tier_for_song
+               [song_name]}}
+         {dancer.lbl
+            set_token_fmt
+            song_dancer
+            {song_mgr
+               dancer_for_song
+               [song_name]}}})
+   (clear_song_details
+      {do
+         {song.lbl set text_token ''}
+         {album.lbl set text_token ''}
+         {artist.lbl set text_token ''}
+         {intensity.sdd set showing FALSE}
+         {intensity.lbl set showing FALSE}
+         {dancer.lbl set text_token ''}})
+   (refresh_album_art
+      {if_else
+         {&&
+            {!=
+               [song_name]
+               ''}
+            [showing_full]}
+         {do
+            ($content_name
+               {song_mgr
+                  content_name_from_sym
+                  [song_name]})
+            {if_else
+               {'||'
+                  {==
+                     $content_name
+                     ""}
+                  {content_mgr is_mounted $content_name}}
+               {do
+                  ($pic
+                     {album_art find album_art.pic})
+                  ($mesh
+                     {album_art find album.mesh})
+                  {$pic
+                     set
+                     tex_file
+                     {song_mgr
+                        album_art_path
+                        [song_name]}}
+                  {$mesh set showing TRUE}}
+               {do
+                  ($mesh
+                     {album_art find album.mesh})
+                  {$mesh set showing FALSE}}}}
+         {{album_art find album.mesh}
+            set
+            showing
+            FALSE}})
+   (restart_preview_flow
+      {preview.flow activate})
+   (play_song_preview
+      {song_preview
+         start_video
+         [song_name]
+         preview.tmov}
+      {preview.flow activate})}
+#define MOVIE_PANEL_STUFF
+((file
+      "movie_pause.milo")
+   (preload FALSE)
+   (audio TRUE)
+   (loop FALSE)
+   (enter
+      {if_else
+         {$this
+            has
+            (skip_text)}
+         {skip.btn
+            set
+            text_token
+            [skip_text]}
+         {skip.btn set text_token story_movie_pause_skip}}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (show_menu
+      {$this set_paused TRUE}
+      {$this set_menu_shown TRUE}
+      {fade.anim animate})
+   (hide_menu
+      {$this set_paused FALSE}
+      {fade.anim stop_animation}
+      {fade.anim set_frame 0}
+      {$this set_menu_shown FALSE})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Start}
+         {do
+            {if_else
+               {$this is_menu_shown}
+               {do
+                  {$this hide_menu}}
+               {do
+                  {$this show_menu}}}
+            kDataUnhandled}
+         {if_else
+            {$this is_menu_shown}
+            {do
+               {if
+                  {== $action kAction_Cancel}
+                  {$this hide_menu}}
+               kDataUnhandled}
+            {do
+               {$this show_hint}
+               0}}})
+   (SELECT_DONE_MSG
+      {if
+         {$this is_menu_shown}
+         {switch
+            $component
+            (resume.btn
+               {$this hide_menu})
+            (skip.btn
+               {$this movie_done})}})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {platform_mgr guide_showing}
+            {!
+               {$this is_menu_shown}}}
+         {$this show_menu}}))
+#ifndef _SHIP
+{new
+   UIPanel
+   helpbar_test_panel
+   (confirm_state 3)
+   (cancel_state 3)
+   (option_state 3)
+   (start_state 3)
+   (view_state 3)
+   (up_state 3)
+   (right_state 3)
+   (left_state 3)
+   (down_state 3)
+   (update
+      {do
+         ($config
+            {array 0})
+         {if_else
+            {==
+               [confirm_state]
+               1}
+            {push_back
+               $config
+               (confirm helpbar_select)}
+            {if
+               {==
+                  [confirm_state]
+                  2}
+               {push_back
+                  $config
+                  (confirm helpbar_chosediff)}}}
+         {if_else
+            {==
+               [cancel_state]
+               1}
+            {push_back
+               $config
+               (cancel helpbar_select)}
+            {if
+               {==
+                  [cancel_state]
+                  2}
+               {push_back
+                  $config
+                  (cancel helpbar_chosediff)}}}
+         {if_else
+            {==
+               [option_state]
+               1}
+            {push_back
+               $config
+               (option helpbar_select)}
+            {if
+               {==
+                  [option_state]
+                  2}
+               {push_back
+                  $config
+                  (option helpbar_chosediff)}}}
+         {if_else
+            {==
+               [start_state]
+               1}
+            {push_back
+               $config
+               (state_confirm helpbar_select)}
+            {if
+               {==
+                  [start_state]
+                  2}
+               {push_back
+                  $config
+                  (state_confirm helpbar_chosediff)}}}
+         {if_else
+            {==
+               [view_state]
+               1}
+            {push_back
+               $config
+               (view_modify helpbar_select)}
+            {if
+               {==
+                  [view_state]
+                  2}
+               {push_back
+                  $config
+                  (view_modify helpbar_chosediff)}}}
+         {if_else
+            {==
+               [up_state]
+               1}
+            {push_back
+               $config
+               (option2 helpbar_select)}
+            {if
+               {==
+                  [up_state]
+                  2}
+               {push_back
+                  $config
+                  (option2 helpbar_chosediff)}}}
+         {if_else
+            {==
+               [down_state]
+               1}
+            {push_back
+               $config
+               (option1 helpbar_select)}
+            {if
+               {==
+                  [down_state]
+                  2}
+               {push_back
+                  $config
+                  (option1 helpbar_chosediff)}}}
+         {if_else
+            {==
+               [left_state]
+               1}
+            {push_back
+               $config
+               (waiting helpbar_select)}
+            {if
+               {==
+                  [left_state]
+                  2}
+               {push_back
+                  $config
+                  (waiting helpbar_chosediff)}}}
+         {helpbar set_config $config}})
+   (BUTTON_DOWN_MSG
+      {do
+         {switch
+            $action
+            ((kAction_Confirm)
+               {if_else
+                  {==
+                     [confirm_state]
+                     1}
+                  {set
+                     [confirm_state]
+                     2}
+                  {if_else
+                     {==
+                        [confirm_state]
+                        2}
+                     {set
+                        [confirm_state]
+                        3}
+                     {set
+                        [confirm_state]
+                        1}}})
+            ((kAction_Cancel)
+               {if_else
+                  {==
+                     [cancel_state]
+                     1}
+                  {set
+                     [cancel_state]
+                     2}
+                  {if_else
+                     {==
+                        [cancel_state]
+                        2}
+                     {set
+                        [cancel_state]
+                        3}
+                     {set
+                        [cancel_state]
+                        1}}})
+            ((kAction_Option)
+               {if_else
+                  {==
+                     [option_state]
+                     1}
+                  {set
+                     [option_state]
+                     2}
+                  {if_else
+                     {==
+                        [option_state]
+                        2}
+                     {set
+                        [option_state]
+                        3}
+                     {set
+                        [option_state]
+                        1}}})
+            ((kAction_Start)
+               {if_else
+                  {==
+                     [start_state]
+                     1}
+                  {set
+                     [start_state]
+                     2}
+                  {if_else
+                     {==
+                        [start_state]
+                        2}
+                     {set
+                        [start_state]
+                        3}
+                     {set
+                        [start_state]
+                        1}}})
+            ((kAction_ViewModify)
+               {if_else
+                  {==
+                     [view_state]
+                     1}
+                  {set
+                     [view_state]
+                     2}
+                  {if_else
+                     {==
+                        [view_state]
+                        2}
+                     {set
+                        [view_state]
+                        3}
+                     {set
+                        [view_state]
+                        1}}})
+            ((kAction_Up)
+               {if_else
+                  {==
+                     [up_state]
+                     1}
+                  {set
+                     [up_state]
+                     2}
+                  {if_else
+                     {==
+                        [up_state]
+                        2}
+                     {set
+                        [up_state]
+                        3}
+                     {set
+                        [up_state]
+                        1}}})
+            ((kAction_Right)
+               {if_else
+                  {==
+                     [right_state]
+                     1}
+                  {set
+                     [right_state]
+                     2}
+                  {if_else
+                     {==
+                        [right_state]
+                        2}
+                     {set
+                        [right_state]
+                        3}
+                     {set
+                        [right_state]
+                        1}}})
+            ((kAction_Down)
+               {if_else
+                  {==
+                     [down_state]
+                     1}
+                  {set
+                     [down_state]
+                     2}
+                  {if_else
+                     {==
+                        [down_state]
+                        2}
+                     {set
+                        [down_state]
+                        3}
+                     {set
+                        [down_state]
+                        1}}})
+            ((kAction_Left)
+               {if_else
+                  {==
+                     [left_state]
+                     1}
+                  {set
+                     [left_state]
+                     2}
+                  {if_else
+                     {==
+                        [left_state]
+                        2}
+                     {set
+                        [left_state]
+                        3}
+                     {set
+                        [left_state]
+                        1}}})
+            TRUE}
+         {$this update}})}
+{new
+   HamScreen
+   helpbar_test_screen
+   (panels meta helpbar_test_panel)
+   (focus helpbar_test_panel)
+   (back story_hub_screen)}
+#endif
