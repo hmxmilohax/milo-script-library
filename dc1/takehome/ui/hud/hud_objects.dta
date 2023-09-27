@@ -1,0 +1,2001 @@
+(PanelDir
+   (types
+      (hud
+         (editor
+            (cur_hud
+               object
+               (class RndDir)
+               (obj_flags allow_null)
+               (help
+                  "Currently selected hud"))
+            (move
+               symbol
+               (list
+                  {do
+                     ($dir
+                        {{milo cur_dir}
+                           find
+                           moves
+                           FALSE})
+                     ($list
+                        {array 0})
+                     {if_else
+                        $dir
+                        {$dir
+                           iterate
+                           HamMove
+                           $move
+                           {push_back
+                              $list
+                              {symbol
+                                 {$move name}}}}
+                        {push_back $list ''}}
+                     $list})
+               (interp_handlers update_move)
+               (propanim_safetoadd update_move_keys)
+               (help
+                  "current move changed by the song.anim"))
+            (toggle_speed
+               script
+               (script
+                  {if
+                     midi_player
+                     {midi_player set active TRUE}}
+                  {$this
+                     set_slow
+                     {!
+                        [slow_speed]}
+                     TRUE})
+               (help
+                  "Tests the speed animation"))
+            (toggle_barking
+               script
+               (script
+                  {if
+                     {&& action_bark_player master}
+                     {do
+                        ($was_active
+                           {action_bark_player get active})
+                        {action_bark_player set_active FALSE}
+                        {if
+                           {! $was_active}
+                           {$this add_all_barks}}}}))
+            (freestyle_movement
+               float
+               (range 0 1)))
+         (cur_hud
+            "")
+         (move '')
+         (cur_move_index -1)
+         (loop_start 0)
+         (loop_end 0)
+         (moves_dir
+            "")
+         (special_move_list
+            ())
+         (slow_speed FALSE)
+         (freestyle_movement 0)
+         (show_photo_tags TRUE)
+         (last_narrated_seq
+            "")
+         (added_freestyle_beat -1)
+         (force_longest_sfx FALSE)
+         (enter
+            {set $hud_panel $this}
+            {set
+               [move]
+               "rest.move"}
+            {set
+               [cur_move_index]
+               -1}
+            {do
+               ($ham_world
+                  {if_else
+                     $hamdirector
+                     {$hamdirector get_world}
+                     ""})
+               {if
+                  $ham_world
+                  {set
+                     [moves_dir]
+                     {$ham_world find moves FALSE}}
+                  {$ham_world
+                     add_sink
+                     $this
+                     (skills_review move_perfect move_awesome move_ok move_bad)}}}
+            {if
+               {exists master}
+               {master
+                  add_sink
+                  $this
+                  (downbeat beat halfbeat quarterbeat first_beat)}}
+            {if
+               {==
+                  [cur_hud]
+                  ""}
+               {set
+                  [cur_hud]
+                  {$this
+                     find
+                     "static_hud"
+                     FALSE}}}
+            {if
+               {exists move_sound_player}
+               {move_sound_player init}}
+            {if
+               {&&
+                  $edit_mode
+                  {exists audio}}
+               {audio set_track_volume multi -96}})
+         (music_start
+            {if
+               {&&
+                  $edit_mode
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {handle
+                  ({$hamdirector get_world}
+                     beat_animation_start)}}
+            kDataUnhandled)
+         (set_look_behind_result
+            ($result)
+            {do
+               ($look_behind_beat
+                  {'*'
+                     {-
+                        [cur_move_index]
+                        1}
+                     4})
+               ($scrolling_flash_card
+                  {[cur_hud]
+                     find_flashcard
+                     $look_behind_beat})
+               ($scrolling_trig
+                  {find_obj
+                     $scrolling_flash_card
+                     {sprint
+                        $result
+                        ".trig"}})
+               ($skills_hud
+                  {$this find dynamic_hud FALSE})
+               ($skills_flash_card
+                  {if_else
+                     $skills_hud
+                     {$skills_hud find_flashcard $look_behind_beat}
+                     ""})
+               ($skills_trig
+                  {find_obj
+                     $skills_flash_card
+                     {sprint
+                        $result
+                        ".trig"}})
+               {if
+                  $scrolling_trig
+                  {$scrolling_trig trigger}}
+               {if
+                  $skills_trig
+                  {$skills_trig trigger}}})
+         (move_perfect
+            {$this set_look_behind_result move_perfect}
+            kDataUnhandled)
+         (move_awesome
+            {$this set_look_behind_result move_awesome}
+            kDataUnhandled)
+         (move_ok
+            {$this set_look_behind_result move_ok}
+            kDataUnhandled)
+         (move_bad
+            {$this set_look_behind_result move_bad}
+            kDataUnhandled)
+         (music_end
+            {if
+               {&&
+                  $edit_mode
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {handle
+                  ({$hamdirector get_world}
+                     beat_animation_stop)}}
+            kDataUnhandled)
+         (skills_review
+            {if
+               [cur_hud]
+               {[cur_hud]
+                  reset_beats}}
+            kDataUnhandled)
+         (set_score_multiplier
+            ($mult)
+            {if
+               {!=
+                  {game_panel get_type}
+                  skillz}
+               {do
+                  ($mult_anim
+                     {find_obj
+                        {game_panel get star_display}
+                        multiplier_meter
+                        set_multiplier.anim})
+                  {if
+                     $mult_anim
+                     {$mult_anim set_frame $mult}}}})
+         (set_miss_streak_pct
+            ($val)
+            {do
+               ($meter
+                  {$this find miss_streak.anim FALSE})
+               {if
+                  $meter
+                  {$meter
+                     animate
+                     (dest
+                        {'*'
+                           $val
+                           {$meter end_frame}})}}})
+         (set_num_photos
+            ($num)
+            {do
+               ($photo_counter
+                  {$this find photo_award_counter FALSE})
+               ($photo_fill
+                  {find_obj $this photo_award_counter award_fill.anim})
+               {set
+                  [show_photo_tags]
+                  {< $num 4}}
+               {if
+                  {!
+                     [show_photo_tags]}
+                  {foreach
+                     $flash_card
+                     {[cur_hud]
+                        get
+                        (flash_cards)}
+                     {if
+                        {>
+                           {$flash_card get beat}
+                           $beat}
+                        {$flash_card set_tagged FALSE}}}}
+               {$photo_fill
+                  set_frame
+                  {'*'
+                     2
+                     {'*' $num 480}}}})
+         (reset_snapshots
+            {ui reset_snapshots}
+            {do
+               ($photo_display
+                  {find_obj $this photo_display})
+               {if
+                  $photo_display
+                  {$photo_display
+                     clear
+                     (textures)}}})
+         (take_snapshot
+            {if
+               gesture_mgr
+               {ui take_snapshot}
+               {do
+                  ($num_snapshots
+                     {gesture_mgr num_snapshots})
+                  ($photo_display
+                     {find_obj $this photo_display})
+                  {if
+                     {&&
+                        $photo_display
+                        {> $num_snapshots 0}}
+                     {$photo_display
+                        append
+                        (textures)
+                        {gesture_mgr
+                           snapshot_tex
+                           {- $num_snapshots 1}}}}}})
+         (show_snapshots
+            ($visible $display_token)
+            {do
+               ($cycle_photos
+                  {find_obj
+                     $this
+                     photo_display
+                     {sprint
+                        $display_token
+                        ".anim"}})
+               ($photo_show_anim
+                  {find_obj $this display_photos.anim})
+               {if
+                  $cycle_photos
+                  {$cycle_photos
+                     animate
+                     (loop
+                        0
+                        {$cycle_photos end_frame})}}
+               {if
+                  $photo_show_anim
+                  {$photo_show_anim
+                     animate
+                     (dest
+                        {if_else
+                           $visible
+                           {$photo_show_anim end_frame}
+                           0})}}})
+         (set_photo_op_result
+            ($move_index $result)
+            {if
+               [cur_hud]
+               {do
+                  ($flash_card
+                     {[cur_hud]
+                        find_flashcard
+                        {round
+                           {$this beat_from_move_index $move_index}}})
+                  ($trig)
+                  {if
+                     $flash_card
+                     {if_else
+                        $result
+                        {$flash_card set_tagged FALSE}
+                        {do
+                           {set
+                              $trig
+                              {find_obj $flash_card photo_op_fail.trig}}
+                           {if
+                              $trig
+                              {$trig trigger}}}}}}})
+         (update_move_keys
+            ($safe)
+            {if
+               {&&
+                  $safe
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {do
+                  ($song_anim
+                     {$hamdirector song_anim})
+                  ($frame_measure 0)
+                  {$song_anim
+                     foreach_keyframe
+                     $hamdirector
+                     (move)
+                     $frame
+                     $value
+                     {set
+                        $frame_measure
+                        {/
+                           {seconds_to_beat
+                              {/ $frame 30}}
+                           4}}
+                     {$song_anim
+                        replace_frame
+                        {'*'
+                           30
+                           {beat_to_seconds
+                              {'*'
+                                 4
+                                 {round $frame_measure}}}}}}}})
+         (get_move
+            ($name)
+            {if
+               {&&
+                  {!
+                     [moves_dir]}
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {set
+                  [moves_dir]
+                  {{$hamdirector get_world}
+                     find
+                     moves}}}
+            {if_else
+               [moves_dir]
+               {do
+                  ($retVal)
+                  {set
+                     $retVal
+                     {[moves_dir]
+                        find
+                        $name}}
+                  {if
+                     {&&
+                        {! $retVal}
+                        {!=
+                           $name
+                           "rest.move"}
+                        {!=
+                           $name
+                           ""}}
+                     {notify_once
+                        "WARNING: No move called "
+                        $name
+                        ". Found in authoring."}}
+                  $retVal}
+               ""})
+         (is_special_move
+            ($index)
+            {find_elem
+               [special_move_list]
+               $index})
+         (move_from_beat
+            ($b)
+            {do
+               ($move)
+               ($practice_start)
+               ($practice_end)
+               {cond
+                  ({&&
+                        {$hamdirector practice_beats $practice_start $practice_end}
+                        {'||'
+                           {<
+                              {int $b}
+                              {round $practice_start}}
+                           {>=
+                              {int $b}
+                              {round $practice_end}}}}
+                     {$this
+                        get_move
+                        "rest.move"})
+                  ({&&
+                        {>=
+                           [added_freestyle_beat]
+                           0}
+                        {==
+                           [added_freestyle_beat]
+                           {round $b}}}
+                     {$this
+                        get_move
+                        "Freestyle.move"})
+                  (TRUE
+                     {if
+                        {==
+                           {mod
+                              {int $b}
+                              4}
+                           0}
+                        {'+=' $b 1}}
+                     {$this
+                        get_move
+                        {$hamdirector beat_to_movename $b}})}})
+         (beat_from_move_index
+            ($index)
+            {if_else
+               {&&
+                  $hamdirector
+                  {$hamdirector song_anim}}
+               {seconds_to_beat
+                  {/
+                     {{$hamdirector song_anim}
+                        frame_from_index
+                        $hamdirector
+                        (move)
+                        $index}
+                     30}}
+               -1})
+         (move_interp
+            ($a $b $r)
+            {if
+               {&&
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {do
+                  ($song_anim
+                     {$hamdirector song_anim})
+                  ($beat
+                     {seconds_to_beat
+                        {/
+                           {$song_anim frame}
+                           30}})
+                  ($cur_index
+                     {$song_anim
+                        index_from_frame
+                        $hamdirector
+                        (move)
+                        {$song_anim frame}})
+                  ($now
+                     {$this move_from_beat $beat})
+                  ($start)
+                  ($end)
+                  {if
+                     {'||'
+                        {!=
+                           $a
+                           [move]}
+                        {!=
+                           $cur_index
+                           [cur_move_index]}}
+                     {if
+                        {exists game}
+                        {game set move $now}}
+                     {if
+                        {exists move_sound_player}
+                        {move_sound_player set_move $now $beat}}
+                     {set
+                        [cur_move_index]
+                        $cur_index}
+                     {set
+                        [move]
+                        {if_else
+                           $now
+                           {$now name}
+                           ''}}
+                     {if
+                        {&&
+                           $now
+                           {!
+                              {$now is_rest}}}
+                        {[cur_hud]
+                           do_now_effect}}
+                     {do
+                        ($flash_card_count
+                           {size
+                              {[cur_hud]
+                                 get
+                                 (flash_cards)}})
+                        ($num_look_aheads
+                           {-
+                              {-
+                                 $flash_card_count
+                                 {[cur_hud]
+                                    get
+                                    num_look_behinds}}
+                              1})
+                        ($flash_card_beat
+                           {'+'
+                              $beat
+                              {'*' 4 $num_look_aheads}})
+                        ($measure
+                           {int
+                              {/ $flash_card_beat 4}})
+                        ($my_beat)
+                        ($flash_card_measure)
+                        ($flash_card)
+                        ($i 0)
+                        {foreach
+                           $flash_card
+                           {[cur_hud]
+                              get
+                              (flash_cards)}
+                           {set
+                              $flash_card_measure
+                              {'+'
+                                 $i
+                                 {'*'
+                                    $flash_card_count
+                                    {int
+                                       {/
+                                          {- $measure $i}
+                                          $flash_card_count}}}}}
+                           {set
+                              $my_beat
+                              {'*' 4 $flash_card_measure}}
+                           {if
+                              {!=
+                                 $my_beat
+                                 {$flash_card get beat}}
+                              {do
+                                 ($my_move
+                                    {$this move_from_beat $my_beat})
+                                 {$flash_card set beat $my_beat}
+                                 {$flash_card set_move $my_move}
+                                 {if
+                                    {&&
+                                       $my_move
+                                       {==
+                                          Freestyle.move
+                                          {$my_move name}}
+                                       {> $my_beat $beat}}
+                                    {do
+                                       ($freestyle_card
+                                          {find_obj
+                                             [cur_hud]
+                                             freestyle_card})
+                                       ($freestyle_reset
+                                          {find_obj
+                                             [cur_hud]
+                                             setup_freestyle_card.trig})
+                                       {if
+                                          {&& $freestyle_card $freestyle_reset}
+                                          {$freestyle_card set trans_parent $flash_card}
+                                          {$freestyle_reset trigger}
+                                          {$freestyle_card
+                                             iterate
+                                             ParticleSys
+                                             $part
+                                             {$part clear_all_particles}}}}}
+                                 {if_else
+                                    [show_photo_tags]
+                                    {$flash_card
+                                       set_tagged
+                                       {$this
+                                          is_special_move
+                                          {int
+                                             {/ $my_beat 4}}}}
+                                    {$flash_card set_tagged FALSE}}}}
+                           {'++' $i}}}}
+                  {[cur_hud]
+                     set_anim_frame
+                     $beat}}})
+         (reset
+            {[cur_hud]
+               reset}
+            {handle
+               (reset.trig trigger)}
+            {$this set_slow FALSE FALSE}
+            {if
+               {&&
+                  $edit_mode
+                  {exists active_events_parser}}
+               {active_events_parser
+                  add_sink
+                  $this
+                  ()
+                  kSinkModeExportType}}
+            {$this clear_flash_cards}
+            {set
+               [last_narrated_seq]
+               ""}
+            {set
+               [added_freestyle_beat]
+               -1})
+         (set_score
+            ($score $old_score $best_possible $player_idx)
+            {do
+               ($boombox_score
+                  {if_else
+                     $hamdirector
+                     {find_obj
+                        {$hamdirector get cur_world}
+                        score
+                        {sprint
+                           "score_player_"
+                           $player_idx
+                           ".lbl"}}
+                     ""})
+               ($race_arrow
+                  {find_obj
+                     $this
+                     multiplayer_meter
+                     {sprint
+                        "arrow_"
+                        $player_idx
+                        ".anim"}})
+               {if
+                  $boombox_score
+                  {$boombox_score start_count $old_score $score 500 score_fmt}}
+               {if
+                  $race_arrow
+                  {do
+                     ($pct
+                        {if_else
+                           {== $best_possible 0}
+                           0
+                           {/ $score $best_possible}})
+                     {$race_arrow
+                        animate
+                        (dest
+                           {'*'
+                              $pct
+                              {$race_arrow end_frame}})
+                        (period 0.2)}}}})
+         (set_review_result
+            ($num $den)
+            {do
+               ($boombox_score
+                  {if_else
+                     $hamdirector
+                     {find_obj
+                        {$hamdirector get cur_world}
+                        score
+                        score_player_1.lbl}
+                     ""})
+               ($recap_restults
+                  {find_obj $this text_recap})
+               ($results_num
+                  {find_obj $recap_restults numerator})
+               ($results_den
+                  {find_obj $recap_restults denominator})
+               ($results_pct
+                  {find_obj $recap_restults percentage})
+               {if
+                  $boombox_score
+                  {$boombox_score set_token_fmt fraction $num $den}}
+               {if
+                  $results_num
+                  {$results_num set_number $num}}
+               {if
+                  $results_den
+                  {$results_den set_number $den}}
+               {if
+                  $results_pct
+                  {$results_pct
+                     set_number
+                     {/
+                        {'*' 100 $num}
+                        $den}}}})
+         (clear_flash_cards
+            {if
+               [cur_hud]
+               {foreach
+                  $flash_card
+                  {[cur_hud]
+                     get
+                     (flash_cards)}
+                  {$flash_card set beat -1}
+                  {$flash_card
+                     set_move
+                     ""}}})
+         (get_seq
+            ($seq)
+            {if
+               {!=
+                  {type $seq}
+                  kDataObject}
+               {set
+                  $seq
+                  {find_obj
+                     $this
+                     sound_bank
+                     {sprint
+                        $seq
+                        ".cue"}}}}
+            $seq)
+         (play
+            ($seq)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if_else
+               $seq
+               {do
+                  {$seq play}
+                  {if
+                     {startswith
+                        {$seq name}
+                        "nar_"}
+                     {set
+                        [last_narrated_seq]
+                        $seq}}}
+               {notify
+                  "could not play "
+                  $seq}})
+         (get_seq_length
+            ($seq)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if_else
+               $seq
+               {switch
+                  {$seq class_name}
+                  (RandomGroupSeq
+                     {if_else
+                        {$seq
+                           size
+                           (children)}
+                        {$this
+                           get_seq_length
+                           {$seq
+                              get
+                              (children
+                                 {mod
+                                    {$seq get_next_play_index}
+                                    {$seq
+                                       size
+                                       (children)}})}}
+                        0})
+                  (Sfx
+                     {do
+                        ($length 0)
+                        ($samp_length 0)
+                        {foreach_int
+                           $i
+                           0
+                           {$seq
+                              size
+                              (sfxmaps)}
+                           {set
+                              $samp_length
+                              {{$seq
+                                    get
+                                    (sfxmaps $i sample)}
+                                 sample_length}}
+                           {if
+                              {> $samp_length $length}
+                              {set $length $samp_length}}}
+                        $length})}
+               0})
+         (get_longest_seq
+            ($seq)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if
+               {==
+                  {$seq class_name}
+                  RandomGroupSeq}
+               {do
+                  ($longest 0)
+                  ($child_length 0)
+                  ($children
+                     {$seq get_array children})
+                  {foreach
+                     $child
+                     $children
+                     {set
+                        $child_length
+                        {$this get_seq_length $child}}
+                     {if
+                        {> $child_length $longest}
+                        {set $seq $child}
+                        {set $longest $child_length}}}}}
+            $seq)
+         (pick_shorter_seq
+            ($seq $highest_length)
+            {set
+               $seq
+               {$this get_seq $seq}}
+            {if
+               {==
+                  {$seq class_name}
+                  RandomGroupSeq}
+               {do
+                  ($legal
+                     ())
+                  ($children
+                     {$seq get_array children})
+                  ($longest 0)
+                  ($child_length)
+                  ($longest_legal)
+                  ($index 0)
+                  {resize $legal 0}
+                  {foreach
+                     $child
+                     $children
+                     {set
+                        $child_length
+                        {$this get_seq_length $child}}
+                     {if
+                        {<= $child_length $highest_length}
+                        {push_back $legal $index}
+                        {if
+                           {> $child_length $longest}
+                           {set $longest_legal $index}
+                           {set $longest $child_length}}}
+                     {'++' $index}}
+                  {if
+                     {size $legal}
+                     {if_else
+                        [force_longest_sfx]
+                        {$seq force_next_play_index $longest_legal}
+                        {$seq
+                           force_next_play_index
+                           {elem
+                              $legal
+                              {random_int
+                                 0
+                                 {size $legal}}}}}}}})
+         (stop_narrator
+            {if
+               [last_narrated_seq]
+               {[last_narrated_seq]
+                  stop}
+               {set
+                  [last_narrated_seq]
+                  ""}})
+         (toggle_force_longest_sfx
+            {set
+               [force_longest_sfx]
+               {!
+                  [force_longest_sfx]}}
+            {do
+               ($sound_bank
+                  {find_obj $this sound_bank})
+               {if
+                  $sound_bank
+                  {$sound_bank
+                     iterate
+                     RandomGroupSeq
+                     $seq
+                     {if_else
+                        [force_longest_sfx]
+                        {do
+                           ($children
+                              {$seq get_array children})
+                           ($longest 0)
+                           ($child_length)
+                           ($longest_index)
+                           ($index 0)
+                           {foreach
+                              $child
+                              $children
+                              {set
+                                 $child_length
+                                 {$this get_seq_length $child}}
+                              {if
+                                 {> $child_length $longest}
+                                 {set $longest_index $index}
+                                 {set $longest $child_length}}
+                              {'++' $index}}
+                           {$seq set force_choose_index $longest_index}}
+                        {$seq set force_choose_index -1}}}}})
+         (set_helper_frame
+            ($state $animate)
+            {if
+               {exists depth_buffer}
+               {do
+                  ($trans
+                     {find_obj
+                        $this
+                        {switch
+                           $state
+                           (learn
+                              "depth_buffer_skills.trans")
+                           (player_switch
+                              "depth_buffer_player_switch.trans")
+                           "depth_buffer.trans"}})
+                  {if
+                     $trans
+                     {depth_buffer move_to $trans $animate}}}})
+         (set_slow
+            ($slow $fade)
+            {set
+               [slow_speed]
+               $slow}
+            {do
+               ($fade_anim
+                  {sound_bank find skills_cross_fade.anim FALSE})
+               ($dest_frame
+                  {if_else
+                     {&& $fade_anim $slow}
+                     {$fade_anim end_frame}
+                     0})
+               {if_else
+                  $fade
+                  {$fade_anim
+                     animate
+                     (dest $dest_frame)}
+                  {$fade_anim
+                     animate
+                     (range $dest_frame $dest_frame)}}}
+            {if
+               {&&
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {handle
+                  ({$hamdirector get_world}
+                     {if_else
+                        [slow_speed]
+                        skills_slowdown_start
+                        skills_slowdown_stop})}})
+         (feedback_instruction
+            ($text)
+            {instructional_message.lbl set text_token $text}
+            {instructional_message.anim animate})
+         (add_all_barks
+            {if
+               {&& action_bark_player master}
+               {do
+                  ($last_beat
+                     {seconds_to_beat
+                        {/
+                           {master song_duration_ms}
+                           1000}})
+                  ($i 0)
+                  {action_bark_player set_active FALSE}
+                  {while
+                     {< $i $last_beat}
+                     {if_else
+                        [slow_speed]
+                        {action_bark_player
+                           add_barks
+                           {$this move_from_beat $i}
+                           (verb_slow)
+                           $i}
+                        {action_bark_player
+                           add_barks
+                           {$this move_from_beat $i}
+                           (verb)
+                           $i}}
+                     {'+=' $i 4}}
+                  {action_bark_player set_active TRUE}}}))
+      (shell
+         (editor
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use when this panel is on screen")
+               (post_sync
+                  {$this update_postproc}))
+            (refresh_postproc
+               script
+               (script
+                  {$this update_postproc})
+               (help
+                  "Refresh postprocessor selection on the tool")))
+         (postprocess '')
+         (enter
+            {$this update_postproc})
+         (update_postproc
+            {if_else
+               [postprocess]
+               {[postprocess]
+                  select}
+               {rnd reset_postproc}}))
+      (shell_in_game
+         (editor
+            (postprocess
+               object
+               (class PostProc)
+               (help
+                  "Post process object to use when this panel is on screen")
+               (post_sync
+                  {$this update_postproc}))
+            (refresh_postproc
+               script
+               (script
+                  {$this update_postproc})
+               (help
+                  "Refresh postprocessor selection on the tool")))
+         (postprocess '')
+         (enter
+            {$this
+               override_postproc
+               [postprocess]})
+         (override_postproc
+            ($pp)
+            {rnd set_postproc_override $pp})
+         (exit_complete
+            {$this override_postproc ''})
+         (update_postproc
+            {if_else
+               [postprocess]
+               {[postprocess]
+                  select}
+               {rnd reset_postproc}}))))
+(RndDir
+   (types
+      (4beatscrolling
+         (measure_anim
+            "")
+         (flash_cards
+            ())
+         (flash_card_animations
+            ())
+         (num_look_behinds 1)
+         (editor
+            (measure_anim
+               object
+               (class Anim)
+               (help
+                  "Animation to use on the measure"))
+            (flash_cards
+               (array
+                  object
+                  (class RndDir move_display))
+               (help
+                  "Sequence of the flashcards starting with the lookbehind"))
+            (flash_card_animations
+               (array
+                  object
+                  (class PropAnim))
+               (help
+                  "Sequence of the PropAnims which animate flashcards through the UI"))
+            (num_look_behinds
+               int
+               (range 0 5)
+               (help
+                  "How many of the flashcards in the list are 'look behinds'?")))
+         (reset
+            {reset.trig trigger})
+         (do_now_effect
+            {do
+               ($effect
+                  {find_obj $this now_sparkles.anim})
+               {if
+                  $effect
+                  {$effect animate}}})
+         (set_anim_frame
+            ($beat)
+            {do
+               ($flash_card_count
+                  {size
+                     [flash_cards]})
+               ($num_look_aheads
+                  {-
+                     {-
+                        $flash_card_count
+                        [num_look_behinds]}
+                     1})
+               ($flash_card_beat
+                  {'+'
+                     $beat
+                     {'*' 4 $num_look_aheads}})
+               ($measure
+                  {/ $flash_card_beat 4})
+               ($flash_card_measure)
+               ($anim)
+               ($i 0)
+               {foreach
+                  $anim
+                  [flash_card_animations]
+                  {set
+                     $flash_card_measure
+                     {if_else
+                        {> $i $measure}
+                        0
+                        {mod
+                           {- $measure $i}
+                           $flash_card_count}}}
+                  {$anim
+                     set_frame
+                     {'*'
+                        {'*' 4 480}
+                        $flash_card_measure}}
+                  {'++' $i}}})
+         (reset_beats
+            {foreach
+               $elem
+               [flash_cards]
+               {$elem reset}})
+         (find_flashcard
+            ($beat)
+            {do
+               ($found
+                  "")
+               {foreach
+                  $flash_card
+                  [flash_cards]
+                  {if
+                     {==
+                        $beat
+                        {$flash_card get beat}}
+                     {set $found $flash_card}}}
+               $found}))
+      (move_display
+         (beat_anim
+            "")
+         (cur_move
+            "")
+         (tagged FALSE)
+         (beat -10)
+         (active FALSE)
+         (beat_frame 0)
+         (use_small_tex FALSE)
+         (editor
+            (reset
+               script
+               (script
+                  {$this reset}))
+            (tagged
+               bool
+               (help
+                  "Tells us if this move is tagged for photo opportunity")
+               (post_sync
+                  {$this
+                     set_tagged
+                     [tagged]}))
+            (active
+               bool
+               (post_sync
+                  {$this
+                     activate
+                     [active]})
+               (help
+                  "Test for activation of the flashcard"))
+            (beat_anim
+               object
+               (class Anim)
+               (help
+                  "Animation to play along with the beat"))
+            (beat_frame
+               float
+               (interp_handlers set_beat_frame)
+               (help
+                  "Frame of animation for the beat animation"))
+            (use_small_tex
+               bool
+               (interp_handlers set_use_small_tex)
+               (help
+                  "Use the small texture \\"
+                  '_sm.tex\\"'
+                  'instead."')))
+         (reset
+            {reset.trig trigger}
+            {$this move_to $this FALSE}
+            {$this set_award_fade}
+            {set
+               [beat]
+               -10})
+         (set_use_small_tex
+            ($value)
+            {set
+               [use_small_tex]
+               $value}
+            {if
+               {!=
+                  [cur_move]
+                  ""}
+               {icon.mat
+                  set
+                  diffuse_tex
+                  {[cur_move]
+                     get
+                     {if_else
+                        [use_small_tex]
+                        small_tex
+                        tex}}}})
+         (set_beat_frame
+            ($a $b $r)
+            {if
+               [beat_anim]
+               {[beat_anim]
+                  set_frame
+                  {'*'
+                     {'*' 4 480}
+                     {'+'
+                        $a
+                        {'*'
+                           $r
+                           {- $b $a}}}}}})
+         (set_move
+            ($move)
+            {set
+               [cur_move]
+               $move}
+            {if_else
+               {!=
+                  [cur_move]
+                  ""}
+               {do
+                  ($tex
+                     {$move
+                        get
+                        {if_else
+                           [use_small_tex]
+                           small_tex
+                           tex}})
+                  {icon.mat set diffuse_tex $tex}
+                  {icon_state.anim
+                     set_frame
+                     {[cur_move]
+                        get
+                        tex_state}}
+                  {if
+                     {&&
+                        $edit_mode
+                        {!=
+                           {move_name.lbl get edit_text}
+                           ""}}
+                     {move_name.lbl
+                        set
+                        edit_text
+                        ""}}
+                  {paradiddle.anim
+                     set_frame
+                     {[cur_move]
+                        get
+                        paradiddle}}
+                  {move_name.lbl set_move_name $move}
+                  {icon.grp
+                     set_showing
+                     {!=
+                        $tex
+                        ""}}}
+               {do
+                  ($icon_state
+                     {$this find icon_state.anim FALSE})
+                  {icon.mat
+                     set
+                     diffuse_tex
+                     ""}
+                  {move_name.lbl
+                     set_move_name
+                     ""}
+                  {paradiddle.anim set_frame 0}
+                  {if
+                     $icon_state
+                     {$icon_state set_frame kTexNone}}
+                  {icon.grp set_showing FALSE}}})
+         (set_tagged
+            ($val)
+            {set
+               [tagged]
+               $val}
+            {do
+               ($tag_anim
+                  {$this find tag.anim FALSE})
+               {if
+                  $tag_anim
+                  {$tag_anim
+                     set_frame
+                     {if_else
+                        [tagged]
+                        1
+                        0}}}})
+         (activate
+            ($active)
+            {do
+               ($active_anim
+                  {find_obj $this activate.anim})
+               ($active_award
+                  {find_obj $this current_award})
+               ($persistent_award
+                  {find_obj $this persistent_award})
+               ($persistent_hide
+                  {find_obj $this hide_persistent.anim})
+               ($end_frame 0)
+               ($anim_time 0)
+               {if
+                  $active_anim
+                  {set
+                     $end_frame
+                     {$active_anim end_frame}}
+                  {set
+                     $anim_time
+                     {/ $end_frame 30}}
+                  {$active_anim
+                     animate
+                     (dest
+                        {if_else $active $end_frame 0})}}
+               {if
+                  {! $active}
+                  {$this move_to $this TRUE}
+                  {if
+                     {&&
+                        $active_award
+                        $persistent_award
+                        $persistent_hide
+                        {$active_award showing}}
+                     {$persistent_hide
+                        animate
+                        (dest
+                           {$persistent_hide end_frame})}}}
+               {if
+                  $active
+                  {$this set_award kSkillsAward_Unplayed FALSE FALSE}
+                  {if
+                     $active_award
+                     {$active_award set_showing TRUE}}}})
+         (set_award
+            ($award $play $persistent)
+            {do
+               ($award_display
+                  {$this
+                     find
+                     {if_else $persistent persistent_award current_award}})
+               ($award_select_anim
+                  {$award_display find setup.anim FALSE})
+               ($effect_anim
+                  {find_obj $award_display effect.anim})
+               {if
+                  $award_select_anim
+                  {$award_select_anim set_frame $award}}
+               {if
+                  $effect_anim
+                  {if_else
+                     $play
+                     {$effect_anim animate}
+                     {$effect_anim
+                        set_frame
+                        {$effect_anim end_frame}}}}
+               {$this set_award_fade}})
+         (retract_award
+            {do
+               ($effect_anim
+                  {find_obj $this current_award effect.anim})
+               {if
+                  $effect_anim
+                  {$effect_anim
+                     animate
+                     (dest 0)}}})
+         (replay_effect
+            {do
+               ($anim
+                  {find_obj $this current_award effect.anim})
+               {if
+                  {&&
+                     $anim
+                     {>
+                        {$anim frame}
+                        0}}
+                  {$anim animate}}})
+         (set_award_fade
+            {do
+               ($fade_anim
+                  {find_obj $this persistent_award fade_setup.anim})
+               {if
+                  $fade_anim
+                  {$fade_anim set_frame 1}}})
+         (move_to
+            ($location_trans $animate)
+            {if
+               {&&
+                  {$this exists move_to.anim}
+                  {$this exists flash_card.grp}}
+               {do
+                  ($end
+                     {move_to.anim end_frame})
+                  {flash_card.grp set_trans_parent $location_trans TRUE}
+                  {move_to.anim stop_animation}
+                  {if_else
+                     {! $animate}
+                     {do
+                        {flash_card.grp set_local_rot_mat 1 0 0 0 1 0 0 0 1}
+                        {flash_card.grp set_local_pos 0 0 0}}
+                     {do
+                        {move_to.anim
+                           set_key
+                           flash_card.grp
+                           (scale)
+                           0}
+                        {move_to.anim
+                           set_key
+                           flash_card.grp
+                           (rotation)
+                           0}
+                        {move_to.anim
+                           set_key
+                           flash_card.grp
+                           (position)
+                           0}
+                        {if_else
+                           {== $location_trans $this}
+                           {do
+                              {move_to.anim
+                                 set_key_val
+                                 flash_card.grp
+                                 (scale)
+                                 480
+                                 (1 1 1)
+                                 TRUE}
+                              {move_to.anim
+                                 set_key_val
+                                 flash_card.grp
+                                 (rotation)
+                                 480
+                                 (0 0 0 0)
+                                 TRUE}
+                              {move_to.anim
+                                 set_key_val
+                                 flash_card.grp
+                                 (position)
+                                 480
+                                 (0 0 0)
+                                 TRUE}}
+                           {do
+                              {move_to.anim
+                                 set_key
+                                 flash_card.grp
+                                 (scale)
+                                 480}
+                              {move_to.anim
+                                 set_key
+                                 flash_card.grp
+                                 (rotation)
+                                 480}
+                              {move_to.anim
+                                 set_key
+                                 flash_card.grp
+                                 (position)
+                                 480}}}
+                        {move_to.anim animate}}}}})
+         (set_num_links
+            ($count)
+            {if
+               {$this exists link_bracket.anim}
+               {link_bracket.anim set_frame $count}}))
+      (multiplier_meter
+         (editor
+            (channel1_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame channel1 from narrator audio"))
+            (channel2_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame channel2 from narrator audio"))
+            (average_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame average of channel1 and channel2"))
+            (multiply_anim
+               object
+               (class Anim)
+               (help
+                  "animation to set_frame multiplication of channel1 and channel2")))
+         (channel1_anim
+            "")
+         (channel2_anim
+            "")
+         (average_anim
+            "")
+         (multiply_anim
+            "")
+         (high_water_mark 0)
+         (channel_data
+            ($ch1 $ch2)
+            {set
+               [high_water_mark]
+               {max
+                  [high_water_mark]
+                  {max $ch1 $ch2}}}
+            {if
+               {>
+                  [high_water_mark]
+                  0}
+               {/=
+                  $ch1
+                  {'*'
+                     1.5
+                     [high_water_mark]}}
+               {/=
+                  $ch2
+                  {'*'
+                     1.5
+                     [high_water_mark]}}}
+            {if
+               [channel1_anim]
+               {[channel1_anim]
+                  set_frame
+                  $ch1}}
+            {if
+               [channel2_anim]
+               {[channel2_anim]
+                  set_frame
+                  $ch2}}
+            {if
+               [average_anim]
+               {[average_anim]
+                  set_frame
+                  {/
+                     {'+' $ch1 $ch2}
+                     2}}}
+            {if
+               [multiply_anim]
+               {[multiply_anim]
+                  set_frame
+                  {'*' $ch1 $ch2}}})
+         (enter
+            {if
+               {&&
+                  $hamdirector
+                  {$hamdirector get_world}}
+               {do
+                  ($fx
+                     {find_obj
+                        {$hamdirector get_world}
+                        hud
+                        sound_bank
+                        narrator_monitor.effmon})
+                  {$fx
+                     add_sink
+                     $this
+                     (channel_data)}}}
+            {$this channel_data 0 0}
+            {foreach_int
+               $i
+               0
+               5
+               {do
+                  ($mult_label
+                     {sprint
+                        $i
+                        ".lbl"})
+                  ($lbl
+                     {find_obj $this $mult_label})
+                  {if
+                     $lbl
+                     {$lbl set_int $i}}}}))
+      (score_star_display
+         (editor
+            (stars
+               (array
+                  object
+                  (class RndDir))
+               (help
+                  "Stars in the list"))
+            (cur_star
+               int
+               (range
+                  0
+                  {'+'
+                     {size
+                        [stars]}
+                     1})
+               (help
+                  "Current selected star for testing"))
+            (star_progress
+               float
+               (range 0 1)
+               (post_sync
+                  {$this
+                     set_star_progress
+                     [cur_star]
+                     [star_progress]})
+               (help
+                  "Star progress for testing"))
+            (star_complete
+               script
+               (script
+                  {$this
+                     set_star_complete
+                     [cur_star]}))
+            (reset
+               script
+               (script
+                  {$this reset})))
+         (stars
+            ())
+         (cur_star 0)
+         (star_progress 0)
+         (set_star_progress
+            ($index $progress)
+            {if
+               {<
+                  $index
+                  {size
+                     [stars]}}
+               {do
+                  ($anim
+                     {{elem
+                           [stars]
+                           $index}
+                        find
+                        "score.anim"
+                        FALSE})
+                  {if
+                     $anim
+                     {$anim
+                        set_frame
+                        {'*'
+                           $progress
+                           {$anim end_frame}}}}}})
+         (set_star_complete
+            ($index)
+            {if
+               {<
+                  $index
+                  {size
+                     [stars]}}
+               {do
+                  ($anim
+                     {{elem
+                           [stars]
+                           $index}
+                        find
+                        "award.anim"
+                        FALSE})
+                  {if
+                     $anim
+                     {$anim animate}}
+                  {$this set_star_progress $index 1}}}))
+      (skills_timeline
+         (editor
+            (flash_cards
+               (array
+                  object
+                  (class RndDir))
+               (help
+                  "All the flash cards we have to use"))
+            (num_moves
+               int
+               (range
+                  0
+                  {size
+                     [flash_cards]})
+               (post_sync
+                  {$this
+                     set_num_moves
+                     [num_moves]}))
+            (deactivate
+               script
+               (script
+                  {$this deactivate}))
+            (introduce_1
+               script
+               (script
+                  {$this test_introduce 1}))
+            (introduce_2
+               script
+               (script
+                  {$this test_introduce 2}))
+            (introduce_3
+               script
+               (script
+                  {$this test_introduce 3}))
+            (introduce_4
+               script
+               (script
+                  {$this test_introduce 4})))
+         (flash_cards
+            ())
+         (num_moves 1)
+         (reset_results
+            {foreach
+               $flashcard
+               [flash_cards]
+               {do
+                  ($trig
+                     {find_obj $flashcard reset_result.trig})
+                  {if
+                     $trig
+                     {$trig trigger}}}})
+         (set_num_moves
+            ($num_moves)
+            {do
+               ($setup_anim
+                  {$this find setup.anim FALSE})
+               {set
+                  [num_moves]
+                  $num_moves}
+               {if
+                  $setup_anim
+                  {$setup_anim
+                     set_frame
+                     [num_moves]}}
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [flash_cards]}
+                  {{elem
+                        [flash_cards]
+                        $i}
+                     set_showing
+                     {<
+                        $i
+                        [num_moves]}}}})
+         (clear_moves
+            {foreach
+               $flashcard
+               [flash_cards]
+               {$flashcard reset}}
+            {$this set_num_moves 0}
+            {$this deactivate}
+            {if
+               {$this exists reset.trig}
+               {reset.trig trigger}})
+         (add_move
+            ($move $beat)
+            {if
+               {&&
+                  $move
+                  {<
+                     [num_moves]
+                     {-
+                        {size
+                           [flash_cards]}
+                        1}}}
+               {do
+                  ($flash_card
+                     {elem
+                        [flash_cards]
+                        [num_moves]})
+                  {$flash_card set_move $move}
+                  {$flash_card set beat $beat}
+                  {$this
+                     set_num_moves
+                     {'+'
+                        [num_moves]
+                        1}}}})
+         (deactivate
+            {$this reset_results}
+            {$this show_tick_meter FALSE 0}
+            {foreach
+               $flashcard
+               [flash_cards]
+               {$flashcard activate FALSE}})
+         (find_flashcard
+            ($beat)
+            {do
+               ($found
+                  "")
+               {foreach_int
+                  $i
+                  0
+                  [num_moves]
+                  {do
+                     ($flash_card
+                        {elem
+                           [flash_cards]
+                           $i})
+                     {if
+                        {==
+                           $beat
+                           {$flash_card get beat}}
+                        {set $found $flash_card}}}}
+               $found})
+         (set_active
+            ($beat $activate)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {$flash_card activate $activate}}})
+         (award
+            ($index)
+            {do
+               ($tick_anim
+                  {find_obj
+                     $this
+                     skillz_gate_meter
+                     {sprint
+                        "tick_"
+                        $index
+                        "_fire.anim"}})
+               {if
+                  $tick_anim
+                  {$tick_anim animate}}})
+         (set_move_award
+            ($beat $award $play $persistent)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {$flash_card set_award $award $play $persistent}}})
+         (retract_move_award
+            ($beat)
+            {do
+               ($flash_card
+                  {$this find_flashcard $beat})
+               {if
+                  $flash_card
+                  {$flash_card retract_award}}})
+         (highlight_flashcard
+            ($beat)
+            {do
+               ($highlight_trig
+                  {find_obj
+                     {$this find_flashcard $beat}
+                     highlight_result.trig})
+               {if
+                  $highlight_trig
+                  {$highlight_trig trigger}}})
+         (highlight_awards
+            {foreach
+               $flash_card
+               [flash_cards]
+               {$flash_card replay_effect}})
+         (introduce
+            ($flashcard_beat $index $total)
+            {do
+               ($flash_card
+                  {$this find_flashcard $flashcard_beat})
+               ($trans
+                  {$this
+                     find
+                     {sprint
+                        "introduce_"
+                        $total
+                        "_move_"
+                        {'+' $index 1}
+                        ".trans"}
+                     FALSE})
+               {if
+                  {&& $flash_card $trans}
+                  {$flash_card move_to $trans TRUE}}
+               {$this reset_ticks}})
+         (show_tick_meter
+            ($show $beat_delay)
+            {do
+               ($anim
+                  {find_obj $this show_meter.anim})
+               {if
+                  $anim
+                  {if
+                     {&&
+                        $beat_delay
+                        {!
+                           {$anim is_animating}}}
+                     {$anim
+                        set_frame
+                        {if_else
+                           {>=
+                              {$anim frame}
+                              {/
+                                 {$anim end_frame}
+                                 2}}
+                           {'+'
+                              {$anim end_frame}
+                              {'*' $beat_delay 480}}
+                           {-
+                              0
+                              {'*' $beat_delay 480}}}}}
+                  {$anim
+                     animate
+                     (dest
+                        {if_else
+                           $show
+                           {$anim end_frame}
+                           0})}}})
+         (reset_ticks
+            {do
+               ($reset_ticks
+                  {find_obj $this skillz_gate_meter reset.trig})
+               {if
+                  $reset_ticks
+                  {$reset_ticks trigger}}})
+         (test_introduce
+            ($count)
+            {foreach_int
+               $i
+               0
+               $count
+               {do
+                  ($flash_card
+                     {elem
+                        [flash_cards]
+                        $i})
+                  ($trans
+                     {$this
+                        find
+                        {sprint
+                           "introduce_"
+                           $count
+                           "_move_"
+                           {'+' $i 1}
+                           ".trans"}
+                        FALSE})
+                  {if
+                     $trans
+                     {$flash_card move_to $trans TRUE}}
+                  {$flash_card activate TRUE}}}))
+      (numbers_3D
+         (editor
+            (alignment
+               int
+               (list
+                  ("kMiddleRight"
+                     "kMiddleLeft"))
+               (post_sync
+                  {$this set_alignment_anim})
+               (refresh alignment_anim)))
+         (alignment_anim
+            "")
+         (alignment kMiddleRight proxy_save)
+         (enter
+            {$this set_alignment_anim})
+         (set_number
+            ($num)
+            {if
+               [alignment_anim]
+               {[alignment_anim]
+                  set_frame
+                  $num}})
+         (set_alignment_anim
+            {set
+               [alignment_anim]
+               {find_obj
+                  $this
+                  {switch
+                     [alignment]
+                     (kMiddleRight
+                        "right_justify.anim")
+                     (kMiddleLeft
+                        "left_justify.anim")}}}
+            {$this set_number 100}))))
+(Object
+   (types
+      (music_speed_controller
+         (speed 1.0)
+         (editor
+            (speed
+               float
+               (range 0 1.0)
+               (interp_handlers update_speed)
+               (help
+                  "Animates the song speed")))
+         (update_speed
+            ($a $b $r)
+            {if
+               {exists audio}
+               {audio
+                  set
+                  speed
+                  {'+'
+                     $a
+                     {'*'
+                        $r
+                        {- $b $a}}}}}))))

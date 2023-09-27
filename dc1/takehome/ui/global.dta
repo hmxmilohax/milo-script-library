@@ -1,0 +1,151 @@
+{func
+   setup_game
+   ($song $venue $player_list)
+   {do
+      ($i 0)
+      {song_mgr
+         add_songs
+         (#include ../songs/songs.dta)}
+      {gamemode set_mode perform}
+      {foreach
+         $player
+         $player_list
+         {do
+            ($user
+               {user_mgr get_user_from_pad_num $i})
+            {user_mgr set_slot $user $slot}
+            {meta_performer
+               set_difficulty
+               {elem $player 0}}
+            {$user
+               set
+               autoplay
+               {if_else
+                  {>
+                     {size $player}
+                     1}
+                  {elem $player 1}
+                  FALSE}}}
+         {'++' $i}}
+      {if
+         {!= $venue ''}
+         {meta_performer set_venue_pref $venue}}
+      {meta_performer set_song $song}}}
+{func
+   game_restart
+   {if_else
+      {&&
+         {ui current_screen}
+         {!=
+            {ui current_screen}
+            {gamemode get game_screen}}}
+      {ui goto_screen restart_screen}
+      {ui push_screen restart_screen}}
+   {game_panel clear_draw_glitch}
+   {game_screen reset_game_mode}}
+{func
+   set_all_hud_showing
+   ($show)}
+{func
+   reset_all_callbacks
+   {func hopo_callback}
+   {func swingAtHopo_callback}
+   {func whammy_start_callback}
+   {func whammy_end_callback}
+   {func star_phrase_miss_callback}
+   {func star_phrase_captured_callback}
+   {func star_use_begin_callback}
+   {func star_use_end_callback}
+   {func hopo_hit}}
+{reset_all_callbacks}
+{func
+   player_pan
+   ($user)
+   {if_else
+      {game_panel multiplayer}
+      {elem
+         (-0.5 0.5 -0.5 0.5)
+         {$user get_slot_num}}
+      0}}
+{func
+   play_game_seq
+   ($sfx)
+   {synth play $sfx}}
+{func
+   play_game_seq_player
+   ($sfx_single $sfx_multi $user)
+   {do
+      ($sfx
+         {if_else
+            {game_panel multiplayer}
+            $sfx_multi
+            $sfx_single})
+      {synth
+         play
+         $sfx
+         (pan
+            {player_pan $user})}}}
+{func
+   play_sfx
+   ($sfx)
+   {synth play $sfx}}
+{func
+   update_meta_performer
+   {ui
+      foreach_screen
+      $s
+      {$s
+         foreach_panel
+         $p
+         {if
+            {$p is_up}
+            {handle
+               ($p update_meta_performer)}}}}}
+{func
+   get_user_name_from_player
+   ($player)
+   {if_else
+      $player
+      {do
+         ($user
+            {$player get_user})
+         {$user get_user_name}}
+      ""}}
+{func
+   get_player_name_from_slot
+   ($slot)
+   {do
+      ($user
+         {user_mgr get_user_from_slot $slot})
+      {if_else
+         $user
+         {$user get_user_name}
+         ""}}}
+{func
+   frac
+   ($x)
+   {int
+      {'*' $x 256}}}
+{func
+   defrac
+   ($x)
+   {/ $x 256.0}}
+{func
+   enter_gameplay
+   {ui goto_screen loading_screen}}
+{func
+   enter_tutorial
+   ($from_options)
+   {if_else
+      $from_options
+      {tutorial_next_panel set on_complete options}
+      {tutorial_next_panel set on_complete start_game}}
+   {if
+      {gamemode in_mode practice}
+      {ui goto_screen tutorial_practice_intro_screen}}
+   {if
+      {gamemode in_mode perform}
+      {ui goto_screen tutorial_perform_intro_screen}}
+   {if
+      {gamemode in_mode multiplayer}
+      {ui goto_screen tutorial_multiplayer_intro_screen}}}

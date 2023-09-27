@@ -1,0 +1,167 @@
+{new
+   HamPanel
+   practice_endgame_panel
+   (file
+      "practice_endgame.milo")
+   (focus
+      {if_else $cheat_focus_restart restart.btn continue.btn})
+   (show_hand_help FALSE)
+   (enter
+      {meta_performer calculate_practice_results}
+      {unless
+         {ui went_back}
+         {meta_performer
+            trigger_song_completion
+            {meta_performer get_practice_overall_score}
+            0}
+         {meta_performer advance_song 0}}
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set_results}
+      ENDGAME_PANEL_COMMON_ENTER
+      {meta_performer add_sink $this}
+      {if
+         {meta_performer last_played_mode}
+         {gamemode
+            set_mode
+            {meta_performer last_played_mode}}})
+   (exit
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+      {meta_performer remove_sink $this})
+   (TRANSITION_COMPLETE_MSG
+      {$this begin_results})
+   (set_results
+      {song.lbl
+         set_song_name
+         {meta_performer get_completed_song}}
+      {difficulty.lbl
+         set
+         text_token
+         {meta_performer get_difficulty_sym}}
+      {learn_moves_passed.lbl
+         set_token_fmt
+         practiceresults_learn_moves_passed
+         {'+'
+            {meta_performer get_learn_moves_passed_count}
+            {meta_performer get_learn_moves_fastlaned_count}}
+         {meta_performer get_learn_moves_total}}
+      {passed_count.lbl
+         set_int
+         {meta_performer get_learn_moves_passed_count}
+         FALSE}
+      {fastlaned_count.lbl
+         set_int
+         {meta_performer get_learn_moves_fastlaned_count}
+         FALSE}
+      {learn_score.lbl
+         set_token_fmt
+         practiceresults_learn_score
+         {meta_performer get_practice_learn_score}}
+      {review_moves_passed.lbl
+         set_token_fmt
+         practiceresults_review_moves_passed
+         {meta_performer get_review_moves_passed_count}
+         {meta_performer get_review_moves_total}}
+      {review_score.lbl
+         set_token_fmt
+         practiceresults_review_score
+         {meta_performer get_practice_review_score}}
+      {overall_score.lbl
+         set_token_fmt
+         practiceresults_overall_score
+         {meta_performer get_practice_overall_score}}
+      {reset.trig trigger})
+   (begin_results
+      {learn.trg set callback_object $this}
+      {moves_passed.trg set callback_object $this}
+      {emerald.trg set callback_object $this}
+      {diamond.trg set callback_object $this}
+      {learn_score.trg set callback_object $this}
+      {recap.trg set callback_object $this}
+      {moves_passed_recap.trg set callback_object $this}
+      {recap_score.trg set callback_object $this}
+      {overall_score.trg set callback_object $this}
+      {new_best.trg set callback_object $this}
+      {unlock_medium.trg set callback_object $this}
+      {unlock_expert.trg set callback_object $this}
+      {learn.trg trigger})
+   (ui_trigger_complete
+      ($trigger)
+      {switch
+         $trigger
+         (learn.trg
+            {moves_passed.trg trigger})
+         (moves_passed.trg
+            {emerald.trg trigger})
+         (emerald.trg
+            {diamond.trg trigger})
+         (diamond.trg
+            {learn_score.trg trigger})
+         (learn_score.trg
+            {recap.trg trigger})
+         (recap.trg
+            {moves_passed_recap.trg trigger})
+         (moves_passed_recap.trg
+            {recap_score.trg trigger})
+         (recap_score.trg
+            {overall_score.trg trigger})
+         (overall_score.trg
+            {saveload_mgr autosave}
+            {$this show_new_best})
+         (new_best.trg
+            {$this show_unlocked_medium})
+         (unlock_medium.trg
+            {$this show_unlocked_expert})
+         (unlock_expert.trg)})
+   (show_new_best
+      {if_else
+         {meta_performer got_moves_passed_best}
+         {new_best.trg trigger}
+         {$this show_unlocked_medium}})
+   (show_unlocked_medium
+      {if_else
+         {meta_performer unlocked_medium_difficulty}
+         {unlock_medium.trg trigger}
+         {$this show_unlocked_expert}})
+   (show_unlocked_expert
+      {if
+         {meta_performer unlocked_expert_difficulty}
+         {unlock_expert.trg trigger}})
+   (SELECT_MSG
+      {switch
+         $component
+         (restart.btn
+            {meta_performer restart}
+            {game_restart})
+         (perform.btn
+            {gamemode set_mode perform}
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               practice_endgame_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (multiplayer.btn
+            {gamemode set_mode multiplayer}
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               practice_endgame_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (change_difficulty.btn
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               practice_endgame_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (continue.btn
+            {ui pop_screen meta_loading_continue_screen})})}
+{new
+   HamScreen
+   practice_endgame_screen
+   (panels meta background_panel practice_endgame_panel)
+   (focus practice_endgame_panel)}

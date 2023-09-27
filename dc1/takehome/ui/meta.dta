@@ -1,0 +1,535 @@
+{new
+   MetaPanel
+   meta
+   (playing_post_set FALSE)
+   (is_crowd_playing FALSE)
+   (unload)
+   (finish_load)
+   (enter
+      {set
+         [playing_post_set]
+         FALSE})
+   (exit
+      {set
+         [is_crowd_playing]
+         FALSE}
+      {$this music_stop})
+   (music_start
+      {if
+         {&&
+            {$this is_up}
+            {! $mute_shell_music}}
+         {{$this meta_music}
+            start}
+         {unless
+            [is_crowd_playing]
+            {set
+               [is_crowd_playing]
+               TRUE}}
+         {platform_mgr enable_xmp}})
+   (music_stop
+      {{$this meta_music}
+         stop}
+      {set
+         [is_crowd_playing]
+         FALSE}
+      {platform_mgr disable_xmp})
+   (play_postset_loop
+      ($play)
+      {if_else
+         $play
+         {unless
+            [playing_post_set]}}
+      {set
+         [playing_post_set]
+         $play})}
+#define COMMON_DIALOG_PANEL_HANDLERS
+((focus opt1.btn)
+   (set_custom
+      ($msg $opt1 $opt2)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {$this enable opt1.btn}
+      {$this enable opt2.btn}
+      {$this disable opt3.btn}
+      {opt1.btn set_token_fmt $opt1}
+      {opt2.btn set_token_fmt $opt2}
+      {right_hand.hbs set max_display_buttons 2})
+   (set_custom_3btn
+      ($msg $opt1 $opt2 $opt3)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {$this enable opt1.btn}
+      {$this enable opt2.btn}
+      {$this enable opt3.btn}
+      {opt1.btn set_token_fmt $opt1}
+      {opt2.btn set_token_fmt $opt2}
+      {opt3.btn set_token_fmt $opt3}
+      {right_hand.hbs set max_display_buttons 3})
+   (set_yesno
+      ($msg)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {$this enable opt1.btn}
+      {$this enable opt2.btn}
+      {$this disable opt3.btn}
+      {opt1.btn set_token_fmt yes}
+      {opt2.btn set_token_fmt no}
+      {right_hand.hbs set max_display_buttons 2}
+      {shell_input set_focus_if_controller_mode opt2.btn})
+   (set_ok
+      ($msg)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {$this enable opt1.btn}
+      {$this disable opt2.btn}
+      {$this disable opt3.btn}
+      {opt1.btn set_token_fmt ok}
+      {right_hand.hbs set max_display_buttons 1})
+   (set_msg
+      ($msg)
+      {msg.lbl
+         set_token_fmt
+         $msg
+         ()}
+      {$this disable opt1.btn}
+      {$this disable opt2.btn}
+      {$this disable opt3.btn}
+      {right_hand.hbs set max_display_buttons 0}))
+{new
+   UIPanel
+   dialog_panel
+   COMMON_DIALOG_PANEL_HANDLERS
+   (file
+      "dialog.milo")
+   (show_hand_help FALSE)}
+{new
+   EventDialogPanel
+   event_dialog_panel
+   (file
+      "dialog.milo")
+   (show_hand_help FALSE)}
+{new
+   ContentLoadingPanel
+   content_loading_panel
+   (file content_loading.milo)}
+{new
+   UIPanel
+   cursor_panel
+   (file
+      "cursor.milo")}
+{new
+   HelpBarPanel
+   helpbar
+   (file
+      "helpbar.milo")}
+{new
+   HamPanel
+   song_info_panel
+   (file
+      "song_info.milo")
+   (enter
+      {song.lbl
+         set_song_name
+         {meta_performer song}}
+      {artist.lbl
+         set_artist_name
+         {meta_performer song}}
+      {intensity.sdd
+         set_level
+         {song_mgr
+            rank_tier_for_song
+            {meta_performer song}}}
+      {do
+         ($pic
+            {album_art find album_art.pic})
+         {$pic
+            set
+            tex_file
+            {song_mgr
+               album_art_path
+               {meta_performer song}}}})
+   (set_mode_label
+      ($token)
+      {mode.lbl set text_token $token})}
+#define MOVIE_PANEL_STUFF
+((file
+      "movie_pause.milo")
+   (preload FALSE)
+   (audio TRUE)
+   (loop FALSE)
+   (enter
+      {if_else
+         {$this
+            has
+            (skip_text)}
+         {skip.btn
+            set
+            text_token
+            [skip_text]}
+         {skip.btn set text_token story_movie_pause_skip}}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (show_menu
+      {$this set_paused TRUE}
+      {$this set_menu_shown TRUE}
+      {fade.anim animate})
+   (hide_menu
+      {$this set_paused FALSE}
+      {fade.anim stop_animation}
+      {fade.anim set_frame 0}
+      {$this set_menu_shown FALSE})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Start}
+         {do
+            {if_else
+               {$this is_menu_shown}
+               {$this hide_menu}
+               {$this show_menu}}
+            {play_sfx button_back}
+            kDataUnhandled}
+         {if_else
+            {$this is_menu_shown}
+            {do
+               {if
+                  {== $action kAction_Cancel}
+                  {play_sfx button_back}
+                  {$this hide_menu}}
+               kDataUnhandled}
+            {do
+               {$this show_hint}
+               0}}})
+   (SELECT_DONE_MSG
+      {if
+         {$this is_menu_shown}
+         {switch
+            $component
+            (resume.btn
+               {$this hide_menu})
+            (skip.btn
+               {$this movie_done})}})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {platform_mgr guide_showing}
+            {!
+               {$this is_menu_shown}}}
+         {$this show_menu}}))
+#ifndef _SHIP
+{new
+   UIPanel
+   helpbar_test_panel
+   (confirm_state 3)
+   (cancel_state 3)
+   (option_state 3)
+   (start_state 3)
+   (view_state 3)
+   (up_state 3)
+   (right_state 3)
+   (left_state 3)
+   (down_state 3)
+   (update
+      {do
+         ($config
+            {array 0})
+         {if_else
+            {==
+               [confirm_state]
+               1}
+            {push_back
+               $config
+               (confirm helpbar_select)}
+            {if
+               {==
+                  [confirm_state]
+                  2}
+               {push_back
+                  $config
+                  (confirm helpbar_chosediff)}}}
+         {if_else
+            {==
+               [cancel_state]
+               1}
+            {push_back
+               $config
+               (cancel helpbar_select)}
+            {if
+               {==
+                  [cancel_state]
+                  2}
+               {push_back
+                  $config
+                  (cancel helpbar_chosediff)}}}
+         {if_else
+            {==
+               [option_state]
+               1}
+            {push_back
+               $config
+               (option helpbar_select)}
+            {if
+               {==
+                  [option_state]
+                  2}
+               {push_back
+                  $config
+                  (option helpbar_chosediff)}}}
+         {if_else
+            {==
+               [start_state]
+               1}
+            {push_back
+               $config
+               (state_confirm helpbar_select)}
+            {if
+               {==
+                  [start_state]
+                  2}
+               {push_back
+                  $config
+                  (state_confirm helpbar_chosediff)}}}
+         {if_else
+            {==
+               [view_state]
+               1}
+            {push_back
+               $config
+               (view_modify helpbar_select)}
+            {if
+               {==
+                  [view_state]
+                  2}
+               {push_back
+                  $config
+                  (view_modify helpbar_chosediff)}}}
+         {if_else
+            {==
+               [up_state]
+               1}
+            {push_back
+               $config
+               (option2 helpbar_select)}
+            {if
+               {==
+                  [up_state]
+                  2}
+               {push_back
+                  $config
+                  (option2 helpbar_chosediff)}}}
+         {if_else
+            {==
+               [down_state]
+               1}
+            {push_back
+               $config
+               (option1 helpbar_select)}
+            {if
+               {==
+                  [down_state]
+                  2}
+               {push_back
+                  $config
+                  (option1 helpbar_chosediff)}}}
+         {if_else
+            {==
+               [left_state]
+               1}
+            {push_back
+               $config
+               (waiting helpbar_select)}
+            {if
+               {==
+                  [left_state]
+                  2}
+               {push_back
+                  $config
+                  (waiting helpbar_chosediff)}}}
+         {helpbar set_config $config}})
+   (BUTTON_DOWN_MSG
+      {do
+         {switch
+            $action
+            ((kAction_Confirm)
+               {if_else
+                  {==
+                     [confirm_state]
+                     1}
+                  {set
+                     [confirm_state]
+                     2}
+                  {if_else
+                     {==
+                        [confirm_state]
+                        2}
+                     {set
+                        [confirm_state]
+                        3}
+                     {set
+                        [confirm_state]
+                        1}}})
+            ((kAction_Cancel)
+               {if_else
+                  {==
+                     [cancel_state]
+                     1}
+                  {set
+                     [cancel_state]
+                     2}
+                  {if_else
+                     {==
+                        [cancel_state]
+                        2}
+                     {set
+                        [cancel_state]
+                        3}
+                     {set
+                        [cancel_state]
+                        1}}})
+            ((kAction_Option)
+               {if_else
+                  {==
+                     [option_state]
+                     1}
+                  {set
+                     [option_state]
+                     2}
+                  {if_else
+                     {==
+                        [option_state]
+                        2}
+                     {set
+                        [option_state]
+                        3}
+                     {set
+                        [option_state]
+                        1}}})
+            ((kAction_Start)
+               {if_else
+                  {==
+                     [start_state]
+                     1}
+                  {set
+                     [start_state]
+                     2}
+                  {if_else
+                     {==
+                        [start_state]
+                        2}
+                     {set
+                        [start_state]
+                        3}
+                     {set
+                        [start_state]
+                        1}}})
+            ((kAction_ViewModify)
+               {if_else
+                  {==
+                     [view_state]
+                     1}
+                  {set
+                     [view_state]
+                     2}
+                  {if_else
+                     {==
+                        [view_state]
+                        2}
+                     {set
+                        [view_state]
+                        3}
+                     {set
+                        [view_state]
+                        1}}})
+            ((kAction_Up)
+               {if_else
+                  {==
+                     [up_state]
+                     1}
+                  {set
+                     [up_state]
+                     2}
+                  {if_else
+                     {==
+                        [up_state]
+                        2}
+                     {set
+                        [up_state]
+                        3}
+                     {set
+                        [up_state]
+                        1}}})
+            ((kAction_Right)
+               {if_else
+                  {==
+                     [right_state]
+                     1}
+                  {set
+                     [right_state]
+                     2}
+                  {if_else
+                     {==
+                        [right_state]
+                        2}
+                     {set
+                        [right_state]
+                        3}
+                     {set
+                        [right_state]
+                        1}}})
+            ((kAction_Down)
+               {if_else
+                  {==
+                     [down_state]
+                     1}
+                  {set
+                     [down_state]
+                     2}
+                  {if_else
+                     {==
+                        [down_state]
+                        2}
+                     {set
+                        [down_state]
+                        3}
+                     {set
+                        [down_state]
+                        1}}})
+            ((kAction_Left)
+               {if_else
+                  {==
+                     [left_state]
+                     1}
+                  {set
+                     [left_state]
+                     2}
+                  {if_else
+                     {==
+                        [left_state]
+                        2}
+                     {set
+                        [left_state]
+                        3}
+                     {set
+                        [left_state]
+                        1}}})
+            TRUE}
+         {$this update}})}
+{new
+   HamScreen
+   helpbar_test_screen
+   (panels meta helpbar_test_panel)
+   (focus helpbar_test_panel)
+   (back story_hub_screen)}
+#endif
