@@ -1,0 +1,202 @@
+{new
+   UIPanel
+   buy_entourage_panel
+   (file
+      "buy_entourage.milo")
+   (focus entitems.lst)
+   (enter
+      {entitems.lst
+         set_provider
+         {tour entourage_provider}}
+      {$this
+         buy_entourage_update
+         {entitems.lst selected_sym}})
+   (SCROLL_MSG
+      {$this
+         buy_entourage_update
+         {entitems.lst selected_sym}}
+      {synth play button_focus})
+   (SELECT_MSG
+      {if_else
+         {!
+            {{tour band}
+               is_entourage_hired
+               {entitems.lst selected_sym}}}
+         {do
+            {if_else
+               {<=
+                  {{tour
+                        get_entourage_member
+                        {entitems.lst selected_sym}}
+                     get_cost}
+                  {{tour band}
+                     studs}}
+               {ui push_screen entourage_confirm_screen}
+               {ui push_screen entourage_not_enough_studs}}}
+         {ui push_screen entourage_already_hired}}
+      {synth play button_select})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {==
+            {ui check_shot_ended}
+            1}
+         kDataUnhandled
+         FALSE})
+   (buy_entourage_update
+      ($sym)
+      {do
+         ($cost
+            {{tour get_entourage_member $sym}
+               get_cost})
+         {if_else
+            {<=
+               $cost
+               {{tour band}
+                  studs}}
+            {Cost_Ok.trig trigger}
+            {Cost_Red.trig trigger}}
+         {ent_cost.lbl
+            set_localized
+            {fmt_money $cost}}
+         {entourage_info.lbl
+            set
+            text_token
+            {localize
+               {{tour get_entourage_member $sym}
+                  get_info}}}
+         {Fans_Percent.lbl
+            set_localized
+            {sprintf
+               {localize entourage_percent_format}
+               {int
+                  {'*'
+                     {{tour get_entourage_member $sym}
+                        get_fans_modifier}
+                     100.0}}}}
+         {Studs_Percent.lbl
+            set_localized
+            {sprintf
+               {localize entourage_percent_format}
+               {int
+                  {'*'
+                     {{tour get_entourage_member $sym}
+                        get_studs_modifier}
+                     100.0}}}}
+         {if_else
+            {==
+               {{tour band}
+                  is_entourage_hired
+                  $sym}
+               1}
+            {do
+               {ent_cost.lbl set_showing FALSE}
+               {ent_bought.lbl set_showing TRUE}}
+            {do
+               {ent_cost.lbl set_showing TRUE}
+               {ent_bought.lbl set_showing FALSE}}}
+         {if_else
+            {>
+               {{tour get_entourage_member $sym}
+                  get_fans_modifier}
+               0}
+            {do
+               {Percent_Fans.grp set_showing TRUE}
+               {Percent_Studs.grp set_showing FALSE}}
+            {do
+               {Percent_Studs.grp set_showing TRUE}
+               {Percent_Fans.grp set_showing FALSE}}}
+         {mixeroffice_panel show_entourage_member $sym}})}
+{new
+   UIPanel
+   entourage_confirm_panel
+   (file
+      "../shop/shop_confirm.milo")
+   (focus yes.btn)
+   (reset_focus TRUE)
+   (enter
+      {do
+         ($selected
+            {{buy_entourage_panel get_focus}
+               selected_sym})
+         {outfit.lbl set text_token $selected}
+         {outfit_cost.lbl
+            set_localized
+            {fmt_money
+               {{tour get_entourage_member $selected}
+                  get_cost}}}})
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {{tour band}
+               purchase_entourage
+               {tour
+                  get_entourage_member
+                  {{buy_entourage_panel get_focus}
+                     selected_sym}}}
+            {buy_entourage_panel
+               buy_entourage_update
+               {{buy_entourage_panel get_focus}
+                  selected_sym}}
+            {update_tour_display}
+            {synth play button_select}
+            {ui pop_screen})
+         (no.btn
+            {$this cancel})})
+   (cancel
+      {synth play button_back}
+      {ui pop_screen})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {$this cancel}
+         kDataUnhandled})}
+{new
+   BandScreen
+   entourage_confirm_screen
+   (panels entourage_confirm_panel)
+   (focus entourage_confirm_panel)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))}
+{new
+   BandScreen
+   entourage_already_hired
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize ent_already_hired}})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   entourage_not_enough_studs
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize ent_not_enough_studs}})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   MainScreen
+   buy_entourage_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixeroffice_panel
+      hubentourage_panel
+      #endif
+      buy_entourage_panel
+      tour_profile_panel)
+   (focus buy_entourage_panel)
+   (back
+      {do
+         {synth play button_back}
+         office_screen})
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_hire)))}

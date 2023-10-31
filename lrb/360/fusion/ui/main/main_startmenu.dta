@@ -1,0 +1,446 @@
+#define DEFAULT_SPLASH_ALPHA_THRESHOLD
+(175.0)
+{new
+   UIPanel
+   main_startpanel
+   (file
+      "../splash/splash.milo")
+   (focus start.btn)
+   (alpha_threshold DEFAULT_SPLASH_ALPHA_THRESHOLD)
+   (alpha_threshold_fading FALSE)
+   (start_button_loaded FALSE)
+   (attract_mode_timeout
+      {elem
+         {find $syscfg attract time_to_enter}
+         1})
+   (enter_time 0.0)
+   (attract_timeout_done FALSE)
+   (SCREEN_CHANGE_MSG
+      {set
+         [alpha_threshold]
+         DEFAULT_SPLASH_ALPHA_THRESHOLD}
+      {set
+         [alpha_threshold_fading]
+         TRUE})
+   (set_alpha_threshold
+      {if
+         [alpha_threshold_fading]
+         {do
+            {set
+               [alpha_threshold]
+               {-
+                  [alpha_threshold]
+                  {/ DEFAULT_SPLASH_ALPHA_THRESHOLD 30.0}}}
+            {if
+               {<
+                  [alpha_threshold]
+                  5.0}
+               {do
+                  {set
+                     [alpha_threshold]
+                     0.0}
+                  {set
+                     [alpha_threshold_fading]
+                     FALSE}}}}}
+      {Main_LegoLogo.mat
+         set
+         alpha_threshold
+         {int
+            [alpha_threshold]}}
+      {main_rblogo.mat
+         set
+         alpha_threshold
+         {int
+            [alpha_threshold]}})
+   (enter
+      {do
+         {meta fade_meta_music -10}
+         {set
+            [alpha_threshold_fading]
+            FALSE}
+         {set
+            [alpha_threshold]
+            DEFAULT_SPLASH_ALPHA_THRESHOLD}
+         {set
+            [attract_timeout_done]
+            FALSE}
+         {set
+            [start_button_loaded]
+            FALSE}
+         {$this set_alpha_threshold}
+         #ifdef HX_PS3
+         {start.btn
+            set
+            text_token
+            {if_else
+               {platform_mgr trophy_registered}
+               shell_press_start_to_rock
+               trophy_initialization_please_wait}}
+         #endif})
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [enter_time]
+         {taskmgr ui_seconds}})
+   (poll
+      {$this set_alpha_threshold}
+      #ifdef HX_WII
+      {if
+         {!
+            [start_button_loaded]}
+         {if
+            {exists Wii_Start.pic}
+            {switch
+               {profile_mgr get_language}
+               (eng
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_eng_nomip_keep.png"})
+               (usa
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_eng_nomip_keep.png"})
+               (fre
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_fre_nomip_keep.png"})
+               (usf
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_fre_nomip_keep.png"})
+               (esp
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_spa_nomip_keep.png"})
+               (use
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_spa_nomip_keep.png"})
+               (deu
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_ger_nomip_keep.png"})
+               (ita
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_ita_nomip_keep.png"})
+               (dan
+                  {Wii_Start.pic
+                     set
+                     tex_file
+                     "fusion/ui/textures/Wii_Langs/Nin_StartText_dan_nomip_keep.png"})}
+            {set
+               [start_button_loaded]
+               TRUE}}}
+      #endif
+      #ifdef HX_PS3
+      {if
+         {&&
+            {!=
+               {start.btn get text_token}
+               shell_press_start_to_rock}
+            {platform_mgr trophy_registered}}
+         {start.btn set text_token shell_press_start_to_rock}}
+      {unless
+         {platform_mgr trophy_registered}
+         {set
+            [enter_time]
+            {taskmgr ui_seconds}}}
+      #endif
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               main_startscreen}
+            #ifdef HX_PS3
+            {platform_mgr trophy_registered}
+            #endif}
+         {cond
+            #ifdef HX_PS3
+            ({&&
+                  {!
+                     {trophy_disk_space_error_screen get displayed}}
+                  {platform_mgr trophy_disk_space_error}}
+               {ui goto_screen trophy_disk_space_error_screen})
+            #endif
+            ({&&
+                  {!
+                     [attract_timeout_done]}
+                  {>
+                     {-
+                        {taskmgr ui_seconds}
+                        [enter_time]}
+                     [attract_mode_timeout]}}
+               {set
+                  [attract_timeout_done]
+                  TRUE}
+               {ui goto_screen attract_screen}
+               {meta music_stop})}})
+   (BUTTON_DOWN_MSG
+      {cond
+         #ifdef HX_PS3
+         ({!
+               {platform_mgr trophy_registered}}
+            TRUE)
+         #endif
+         ({== $action kAction_Start}
+            {$this button_down $player_num $player $raw_button kAction_Confirm $pad_num})
+         (TRUE kDataUnhandled)})
+   (SELECT_MSG
+      {synth play button_select}
+      {profile_mgr enable_signin_activation}
+      {set
+         [attract_timeout_done]
+         TRUE}
+      {input_mgr
+         set_splash_user
+         {user_mgr get_band_user $player_num}}
+      {ui goto_screen first_time_autoload_screen})}
+{new
+   UIScreen
+   main_startscreen
+   (panels meta main_startpanel)
+   (focus main_startpanel)
+   (helpbar
+      ((min_height 0)))
+   (enter
+      {meta set_meta_music_occlude TRUE}
+      {meta music_start})}
+{new
+   UIPanel
+   attract_panel
+   #ifdef HX_WII
+   (file
+      "../mov/mov_attract_wii.milo")
+   #else
+   (file
+      "../mov/mov_attract.milo")
+   #endif
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {synth play button_select}
+         {$this move_on}})
+   (enter)
+   (poll
+      {if
+         {TexMovie.tmov get played}
+         {$this move_on}})
+   (move_on
+      {ui goto_screen main_startscreen})}
+{new
+   UIScreen
+   attract_screen
+   (panels attract_panel meta)
+   (helpbar
+      ((min_height 0)))
+   (enter
+      {meta music_stop}
+      {platform_mgr disable_xmp})
+   (exit
+      {platform_mgr enable_xmp})}
+{new
+   UIPanel
+   legals_panel
+   (file
+      "../legal.milo")
+   (enter
+      {taskmgr clear_tasks}
+      {script_task
+         kTaskUISeconds
+         (script
+            {$this move_on})
+         (once TRUE)
+         (delay 5)})
+   (move_on
+      {taskmgr clear_tasks}
+      #ifdef HX_WII
+      {ui goto_screen need_instrument_screen}
+      #else
+      {ui goto_screen attract_screen}
+      #endif)
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {taskmgr clear_tasks}
+         {ui goto_screen main_startscreen}})
+   #endif}
+{new
+   UIScreen
+   legals_screen
+   (panels legals_panel)
+   (helpbar
+      ((min_height 0)))}
+{new
+   UIPanel
+   splash_esrb_panel
+   (file
+      "../splash/startup_esrb_panel.milo")
+   (enter
+      {taskmgr clear_tasks}
+      {script_task
+         kTaskUISeconds
+         (script
+            {$this move_on})
+         (once TRUE)
+         (delay 2)})
+   (move_on
+      {taskmgr clear_tasks}
+      {ui goto_screen legals_screen})
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {taskmgr clear_tasks}
+         {ui goto_screen main_startscreen}})
+   #endif}
+{new
+   UIScreen
+   splash_esrb_screen
+   (panels splash_esrb_panel)
+   (helpbar
+      ((min_height 0)))}
+{new
+   UIPanel
+   splash_tt_panel
+   (file
+      "../splash/startup_TT_panel.milo")
+   (enter
+      {taskmgr clear_tasks}
+      {script_task
+         kTaskUISeconds
+         (script
+            {$this move_on})
+         (once TRUE)
+         (delay 2)})
+   (move_on
+      {taskmgr clear_tasks}
+      #ifdef _LRB_REGION_US
+      {ui goto_screen splash_esrb_screen}
+      #else
+      {ui goto_screen legals_screen}
+      #endif)
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {taskmgr clear_tasks}
+         {ui goto_screen main_startscreen}})
+   #endif}
+{new
+   UIScreen
+   splash_tt_screen
+   (panels splash_tt_panel)
+   (helpbar
+      ((min_height 0)))}
+{new
+   UIPanel
+   splash_harmonix_panel
+   (file
+      "../splash/startup_harmonix_panel.milo")
+   (enter
+      {taskmgr clear_tasks}
+      {script_task
+         kTaskUISeconds
+         (script
+            {$this move_on})
+         (once TRUE)
+         (delay 2)})
+   (move_on
+      {taskmgr clear_tasks}
+      {ui goto_screen splash_tt_screen})
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {taskmgr clear_tasks}
+         {ui goto_screen main_startscreen}})
+   #endif}
+{new
+   UIScreen
+   splash_harmonix_screen
+   (panels splash_harmonix_panel)
+   (helpbar
+      ((min_height 0)))}
+{new
+   UIPanel
+   splash_mtv_panel
+   (file
+      "../splash/startup_mtv_panel.milo")
+   (enter
+      {taskmgr clear_tasks}
+      {script_task
+         kTaskUISeconds
+         (script
+            {$this move_on})
+         (once TRUE)
+         (delay 2)})
+   (move_on
+      {taskmgr clear_tasks}
+      {ui goto_screen splash_harmonix_screen})
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {taskmgr clear_tasks}
+         {ui goto_screen main_startscreen}})
+   #endif}
+{new
+   UIScreen
+   splash_mtv_screen
+   (panels splash_mtv_panel)
+   (helpbar
+      ((min_height 0)))}
+{new
+   UIPanel
+   splash_WBIE_panel
+   (file
+      "../splash/startup_WBIE_panel.milo")
+   (enter
+      {taskmgr clear_tasks}
+      {script_task
+         kTaskUISeconds
+         (script
+            {$this move_on})
+         (once TRUE)
+         (delay 2)})
+   (move_on
+      {taskmgr clear_tasks}
+      {ui goto_screen splash_mtv_screen})
+   #ifndef _SHIP
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action kAction_Start}
+            {== $action kAction_Confirm}}
+         {taskmgr clear_tasks}
+         {ui goto_screen main_startscreen}})
+   #endif}
+{new
+   UIScreen
+   splash_WBIE_screen
+   (panels splash_WBIE_panel)
+   (helpbar
+      ((min_height 0)))}

@@ -1,0 +1,94 @@
+{new
+   CutScenePanel
+   cutscene
+   (file
+      {sprint
+         "../../cutscenes/"
+         {cutscene get_venue}})
+   (replay 0)
+   (finished 0)
+   (exit_screen)
+   (finish_load
+      {{$this loaded_dir}
+         set
+         cutscene
+         TRUE})
+   (load)
+   (enter
+      {$this set finished 0}
+      {$this set_showing TRUE}
+      {if
+         {$this get replay}
+         {post_game_loading_panel load TRUE}})
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Start}
+         {$this cutscene_finished}}
+      kDataUnhandled)
+   (cutscene_finished
+      {if
+         {!
+            {$this get finished}}
+         {if
+            {$this get replay}
+            {post_game_loading_panel set next_screen tv_screen}
+            {ui goto_screen post_cutscene_loading_screen}
+            {$this set finished 1}}
+         {if
+            {!
+               {$this get finished}}
+            {$this set finished 1}
+            {$this leave}}})
+   (leave
+      {if_else
+         {==
+            {$this get_current_cutscene}
+            auditions}
+         {do
+            {autosave_push
+               [exit_screen]}}
+         {do
+            {if_else
+               {==
+                  {$this get_current_cutscene}
+                  story_outro}
+               {do
+                  {ui goto_screen credits_screen}
+                  {credits_panel set exit_screen loading_hub_screen_nometa}}
+               {do
+                  {ui
+                     goto_screen
+                     [exit_screen]}}}}}
+      {$this set_showing FALSE})
+   (exit_complete
+      {$this clear_current_cutscene}
+      {cutscene set replay 0})
+   (unload
+      {char_cache reclaim_characters})}
+{new
+   UIPanel
+   cutscene_fader
+   (file
+      "../../cutscenes/fadetoblack.milo")}
+{new
+   BandScreen
+   cutscene_screen
+   (panels cutscene cutscene_fader)
+   (focus cutscene)
+   (enter
+      {{{cutscene_fader loaded_dir}
+            find
+            "up.trig"}
+         trigger})
+   (trigger_fadeout
+      {{{cutscene_fader loaded_dir}
+            find
+            "down.trig"}
+         trigger})
+   (helpbar
+      ((state_confirm helpbar_skip)))
+   (exit
+      {{cutscene loaded_dir}
+         set
+         cutscene
+         FALSE})}
