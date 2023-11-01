@@ -1,0 +1,487 @@
+{new
+   UIPanel
+   mixer_panel
+   (file
+      "mixer_parent.milo")}
+{new
+   UIPanel
+   options_audio_panel
+   #ifdef HX_PS3
+   (file
+      "options_audio_ps3.milo")
+   #else
+   (file
+      "options_audio.milo")
+   #endif
+   (focus vocal_options.btn)
+   (signin_change_waiting FALSE)
+   (set_fg_instr
+      {song_preview_fg_instr guitar}
+      {do
+         ($pad
+            {joypad_get_players_padnum
+               {options_audio_screen get player_num}})
+         ($controller_type
+            {gamecfg get_controller_type_from_pad $pad})
+         {print
+            "pad "
+            $pad
+            " controller_type "
+            $controller_type}
+         {song_preview_fg_instr
+            {switch
+               $controller_type
+               (kControllerDrum drum)
+               ((kControllerGuitar kControllerVocals kControllerNone)
+                  guitar)}}})
+   (load
+      {content_mgr start_refresh})
+   (is_loaded
+      {content_mgr refresh_done})
+   (enter
+      {meta music_stop}
+      {platform_mgr disable_xmp}
+      {song_preview audio_sliders}
+      {$this set_fg_instr}
+      {$this update_all_from_profile}
+      {song_preview_fg
+         {profile_mgr get_foreground_volume_db}}
+      {song_preview_bg
+         {profile_mgr get_background_volume_db}}
+      {song_preview_crowd
+         {profile_mgr get_crowd_volume_db}}
+      {session add_sink $this signin_changed}
+      {memcardmgr add_sink $this save_load_all_complete_msg}
+      {set_up_instrument_and_gamertag
+         {options_audio_screen get player_num}}
+      {helpbar
+         set_limit_to_player_num
+         {options_audio_screen get player_num}})
+   (exit
+      {song_preview ''}
+      {meta music_start}
+      {session remove_sink $this signin_changed}
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+      {helpbar set_limit_to_player_num -1})
+   (save_load_all_complete_msg
+      {$this update_all_from_profile})
+   (FOCUS_MSG
+      {switch
+         $new_focus
+         (vocal_options.btn
+            {helpbar
+               set_config
+               (helpbar_back helpbar_select)})
+         ((background.btn crowd.btn instruments.btn sfx.btn)
+            {helpbar
+               set_config
+               (helpbar_back helpbar_changesetting)})
+         ((background.lsd crowd.sld instruments.sld sfx.sld)
+            {helpbar
+               set_config
+               (helpbar_cancel helpbar_confirmsetting)})
+         ((bass_boost.btn doubly.btn)
+            {$this update_check_help $new_focus})})
+   (SCROLL_SELECT_MSG
+      {if_else
+         $selected
+         {helpbar
+            set_config
+            (Cancel OK)}
+         {helpbar
+            set_config
+            (helpbar_back Select)}}
+      {$this on_slider_change $component})
+   (SCROLL_MSG
+      {$this on_slider_change $component})
+   (SELECT_MSG
+      {switch
+         $component
+         (bass_boost.btn
+            {do
+               ($new_state
+                  {!
+                     {profile_mgr get_bass_boost}})
+               {profile_mgr set_bass_boost $new_state}
+               {$this
+                  update_from_profile
+                  {$this find bass_check.mesh}}
+               {$this update_check_help $component}})
+         (doubly.btn
+            {do
+               ($new_state
+                  {!
+                     {profile_mgr get_dolby}})
+               {profile_mgr set_dolby $new_state}
+               {$this
+                  update_from_profile
+                  {$this find doubly_check.mesh}}
+               {$this update_check_help $component}})
+         (vocal_options.btn
+            {vocal_options_panel
+               set
+               player_num
+               {options_audio_screen get player_num}}
+            {ui goto_screen vocal_options_screen})
+         (instruments.btn
+            {instruments.sld store}
+            {$this set_focus instruments.sld})
+         (background_music.btn
+            {background.sld store}
+            {$this set_focus background.sld})
+         (crowd.btn
+            {crowd.sld store}
+            {$this set_focus crowd.sld})
+         (sfx.btn
+            {sfx.sld store}
+            {$this set_focus sfx.sld})
+         #ifdef HX_PS3
+         (mono.btn
+            {do
+               ($new_state
+                  {!
+                     {profile_mgr get_mono}})
+               {profile_mgr set_mono $new_state}
+               {$this
+                  update_from_profile
+                  {$this find mono_check.mesh}}
+               {$this update_check_help $component}})
+         #endif})
+   (BUTTON_DOWN_MSG
+      {switch
+         {$this focus_name}
+         (instruments.sld
+            {switch
+               $button
+               (kPad_X
+                  {instruments.sld confirm}
+                  {$this set_focus instruments.btn})
+               (kPad_Tri
+                  {instruments.sld undo $player_num}
+                  {$this set_focus instruments.btn})
+               kDataUnhandled})
+         (background.sld
+            {switch
+               $button
+               (kPad_X
+                  {background.sld confirm}
+                  {$this set_focus background_music.btn})
+               (kPad_Tri
+                  {background.sld undo $player_num}
+                  {$this set_focus background_music.btn})
+               kDataUnhandled})
+         (crowd.sld
+            {switch
+               $button
+               (kPad_X
+                  {crowd.sld confirm}
+                  {$this set_focus crowd.btn})
+               (kPad_Tri
+                  {crowd.sld undo $player_num}
+                  {$this set_focus crowd.btn})
+               kDataUnhandled})
+         (sfx.sld
+            {switch
+               $button
+               (kPad_X
+                  {sfx.sld confirm}
+                  {$this set_focus sfx.btn})
+               (kPad_Tri
+                  {sfx.sld undo $player_num}
+                  {$this set_focus sfx.btn})
+               kDataUnhandled})
+         kDataUnhandled})
+   (on_slider_change
+      ($component)
+      {switch
+         $component
+         (instruments.sld
+            {profile_mgr
+               set_foreground_volume
+               {$component current}}
+            {song_preview_fg
+               {profile_mgr get_foreground_volume_db}})
+         (background.sld
+            {profile_mgr
+               set_background_volume
+               {$component current}}
+            {song_preview_bg
+               {profile_mgr get_background_volume_db}})
+         (crowd.sld
+            {profile_mgr
+               set_crowd_volume
+               {$component current}}
+            {song_preview_crowd
+               {profile_mgr get_crowd_volume_db}})
+         (sfx.sld
+            {profile_mgr
+               set_fx_volume
+               {$component current}}
+            {play_game_seq slider_sfx.cue})})
+   (update_all_from_profile
+      {$this
+         iterate
+         UISlider
+         $s
+         {$s set_num_steps 12}
+         {$this update_from_profile $s}}
+      {$this
+         update_from_profile
+         {$this find bass_check.mesh}}
+      {$this
+         update_from_profile
+         {$this find doubly_check.mesh}}
+      #ifdef HX_PS3
+      {$this
+         update_from_profile
+         {$this find mono_check.mesh}}
+      #endif)
+   (update_from_profile
+      ($component)
+      {switch
+         $component
+         (instruments.sld
+            {$component
+               set_current
+               {profile_mgr get_foreground_volume}})
+         (background.sld
+            {$component
+               set_current
+               {profile_mgr get_background_volume}})
+         (crowd.sld
+            {$component
+               set_current
+               {profile_mgr get_crowd_volume}})
+         (sfx.sld
+            {$component
+               set_current
+               {profile_mgr get_fx_volume}})
+         (bass_check.mesh
+            {{$this find bass_check.mesh}
+               set_showing
+               {profile_mgr get_bass_boost}})
+         (doubly_check.mesh
+            {{$this find doubly_check.mesh}
+               set_showing
+               {profile_mgr get_dolby}})
+         #ifdef HX_PS3
+         (mono_check.mesh
+            {{$this find mono_check.mesh}
+               set_showing
+               {profile_mgr get_mono}})
+         #endif})
+   (update_check_help
+      ($component)
+      {switch
+         $component
+         (bass_boost.btn
+            {helpbar
+               set_config
+               (helpbar_back helpbar_toggleoption)})
+         (doubly.btn
+            {helpbar
+               set_config
+               (helpbar_back helpbar_toggleoption)})
+         #ifdef HX_PS3
+         (mono.btn
+            {helpbar
+               set_config
+               (helpbar_back helpbar_toggleoption)})
+         #endif})
+   (SIGNIN_CHANGED_MSG
+      {if_else
+         {==
+            {ui current_screen}
+            options_audio_screen}
+         {$this process_signin_change}
+         {if
+            {!
+               {option_profile_change_warning_screen is_up}}
+            {$this set signin_change_waiting TRUE}}})
+   (TRANSITION_COMPLETE_MSG COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT)
+   (process_signin_change
+      {if
+         {==
+            {ui current_screen}
+            options_audio_screen}
+         {ui push_screen option_profile_change_warning_screen}})}
+{new
+   UIScreen
+   options_audio_screen
+   (panels meta movie_panel options_audio_panel options_lower3rd_panel helpbar)
+   (focus options_audio_panel)
+   (back options_screen)
+   (helpbar
+      (helpbar_back helpbar_select))
+   (player_num -1)
+   (BUTTON_DOWN_MSG
+      {if_else
+         {!=
+            [player_num]
+            $player_num}
+         TRUE
+         kDataUnhandled})
+   (TRANSITION_COMPLETE_MSG
+      {autoload})}
+{new
+   UIPanel
+   vocal_options_panel
+   (file
+      "options_vocal.milo")
+   (focus mic_gain.sld)
+   (player_num -1)
+   (signin_change_waiting FALSE)
+   (enter
+      {$this update_all_from_profile}
+      {session add_sink $this signin_changed}
+      {memcardmgr add_sink $this save_load_all_complete_msg}
+      {set_up_instrument_and_gamertag
+         [player_num]}
+      {helpbar
+         set_limit_to_player_num
+         [player_num]})
+   (exit
+      {session remove_sink $this signin_changed}
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+      {helpbar set_limit_to_player_num -1})
+   (save_load_all_complete_msg
+      {$this update_all_from_profile})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {!=
+            [player_num]
+            $player_num}
+         TRUE
+         kDataUnhandled})
+   (FOCUS_MSG
+      {switch
+         $new_focus
+         ((mic_gain vocal_level vocal_track)
+            {helpbar
+               set_config
+               (back Select)})})
+   (SCROLL_SELECT_MSG
+      {if_else
+         $selected
+         {helpbar
+            set_config
+            (Cancel OK)}
+         {do
+            {helpbar
+               set_config
+               (helpbar_back Select)}
+            {$this on_slider_change $component}}})
+   (SCROLL_MSG
+      {$this on_slider_change $component})
+   (on_slider_change
+      ($component)
+      {switch
+         $component
+         (mic_gain.sld
+            {{profile_mgr
+                  get_char_options_from_player
+                  [player_num]}
+               set_mic_gain
+               {$component current}}
+            {profile_mgr
+               update_mic_gain
+               [player_num]})
+         (vocal_level.sld
+            {{profile_mgr
+                  get_char_options_from_player
+                  [player_num]}
+               set_vocal_volume
+               {$component current}}
+            {profile_mgr
+               update_vocal_volume
+               [player_num]})
+         (vocal_track.sld
+            {profile_mgr
+               set_vocal_cue_volume
+               {$component current}})})
+   (update_all_from_profile
+      {$this
+         iterate
+         UISlider
+         $s
+         {$s set_num_steps 12}
+         {$this update_from_profile $s}})
+   (update_from_profile
+      ($component)
+      {switch
+         $component
+         (mic_gain.sld
+            {$component
+               set_current
+               {{profile_mgr
+                     get_char_options_from_player
+                     [player_num]}
+                  get_mic_gain}})
+         (vocal_level.sld
+            {$component
+               set_current
+               {{profile_mgr
+                     get_char_options_from_player
+                     [player_num]}
+                  get_vocal_volume}})
+         (vocal_track.sld
+            {$component
+               set_current
+               {profile_mgr get_vocal_cue_volume}})})
+   (SIGNIN_CHANGED_MSG
+      {if_else
+         {'||'
+            {==
+               {ui current_screen}
+               vocal_options_screen}
+            {==
+               {ui current_screen}
+               pause_vocal_options_screen}}
+         {$this process_signin_change}
+         {if
+            {!
+               {option_profile_change_warning_screen is_up}}
+            {$this set signin_change_waiting TRUE}}})
+   (TRANSITION_COMPLETE_MSG COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT)
+   (process_signin_change
+      {if
+         {'||'
+            {==
+               {ui current_screen}
+               vocal_options_screen}
+            {==
+               {ui current_screen}
+               pause_vocal_options_screen}}
+         {ui push_screen option_profile_change_warning_screen}})}
+{new
+   UIScreen
+   vocal_options_screen
+   (panels meta movie_panel vocal_options_panel options_lower3rd_panel helpbar)
+   (focus vocal_options_panel)
+   (back options_audio_screen)
+   (helpbar
+      (helpbar_back helpbar_select))}
+{new
+   UIScreen
+   pause_vocal_options_screen
+   (panels vocal_options_panel options_lower3rd_panel helpbar)
+   (focus vocal_options_panel)
+   (back pause_screen)
+   (helpbar
+      (helpbar_back helpbar_select))
+   (enter
+      {beatmatch
+         foreach_active_player
+         $p
+         {handle
+            ({$p track}
+               set_enable_vocals_options
+               FALSE)}})
+   (exit
+      {beatmatch
+         foreach_active_player
+         $p
+         {handle
+            ({$p track}
+               set_enable_vocals_options
+               TRUE)}})}
