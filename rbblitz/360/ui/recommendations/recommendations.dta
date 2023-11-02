@@ -1,0 +1,477 @@
+#define kRecID_Invalid
+(-1)
+{new
+   RecommendationsPanel
+   recommendation_panel
+   (file
+      "recommendations.milo")
+   (focus recommendations.lst)
+   (mini_lb_refresh_delay 1000)
+   (mini_lb_mode kLeaderboardMode_Friend)
+   (last_selected_entry kRecID_Invalid)
+   (need_sort_entries TRUE)
+   (rec_list_dirty FALSE)
+   (enter
+      {$this set mini_lb_mode kLeaderboardMode_Friend}
+      {$this check_sort_entries}
+      {shell_sfx set_interceptor $this}
+      {store_preview_mgr add_sink $this}
+      {mini_leaders.lst
+         set_provider
+         {$this get_mini_leaderboard_provider}}
+      {recommendations.lst
+         set_provider
+         {$this get_recommendations_provider}}
+      {saveload_mgr autosave}
+      {if
+         {!=
+            [last_selected_entry]
+            kRecID_Invalid}
+         {do
+            ($idx_of_last_selected
+               {{ui get_recommendation_mgr}
+                  get_index_of_rec_by_id
+                  [last_selected_entry]})
+            {if
+               {< $idx_of_last_selected 0}
+               {set $idx_of_last_selected 0}}
+            {recommendations.lst set_selected $idx_of_last_selected}}}
+      {$this update_recommendation_info}
+      {$this update_lb_ui_for_focus_rec})
+   (exit
+      {store_preview_mgr remove_sink $this}
+      {shell_sfx clear_interceptor})
+   (create_challenge_complete
+      ($dingo_result)
+      {challenge_request_panel on_create_challenge_complete $dingo_result})
+   (rec_provider_content_available
+      {$this refresh_content}
+      {if
+         {==
+            {recommendation_screen focus_panel}
+            song_leaderboard_panel}
+         {song_leaderboard_panel
+            update_album_tex
+            {$this get_album_tex_for_focus_rec}}})
+   (rec_mgr_new_recs_pending_msg
+      {set
+         [need_sort_entries]
+         TRUE})
+   (rec_mgr_update_complete_msg
+      {set
+         [need_sort_entries]
+         TRUE}
+      {if
+         {$this is_up}
+         {$this check_sort_entries}
+         {$this refresh_content}})
+   (rec_mgr_visual_refresh_required_msg
+      {do
+         ($idx_of_last_selected
+            {{ui get_recommendation_mgr}
+               get_index_of_rec_by_id
+               [last_selected_entry]})
+         {if_else
+            {< $idx_of_last_selected 0}
+            {do
+               {if_else
+                  {$this is_up}
+                  {do
+                     {recommendations.lst set_selected 0}
+                     {$this refresh_content}}
+                  {$this reset_last_selected_entry}}}
+            {if
+               {$this is_up}
+               {do
+                  {recommendations.lst set_selected $idx_of_last_selected}
+                  {$this refresh_content}}}}})
+   (refresh_mini_leaderboards
+      {if
+         {>
+            {recommendations.lst num_data}
+            0}
+         {do
+            ($rec_entry
+               {{ui get_recommendation_mgr}
+                  get_rec_by_index
+                  {recommendations.lst selected_pos}})
+            {{$this get_mini_leaderboard}
+               set_mini_leaderboard_song_by_id
+               {$rec_entry get song_id}}}})
+   (on_mini_leaderboards_updated
+      ($lb_mode)
+      {$this set mini_lb_mode $lb_mode}
+      {mini_leaders.lst refresh}
+      {if_else
+         {>
+            {mini_leaders.lst num_data}
+            0}
+         {do
+            {leaderboard_mode.ep set display_state visible}
+            {{$this get_mini_leaderboard}
+               set_highlight_by_online_id
+               mini_leaders.lst
+               recommendation_panel}
+            {if_else
+               {== $lb_mode kLeaderboardMode_Friend}
+               {lb_title.lbl set text_token friend_rank}
+               {lb_title.lbl set text_token global_rank}}}
+         {leaderboard_mode.ep set display_state empty}})
+   (on_leaderboard_failed
+      {if
+         {&&
+            {!
+               {rock_central is_login_blocked}}
+            {user_mgr is_participating_user_online}}
+         {leaderboard_mode.ep set display_state unavailable}})
+   (on_return_from_song_leaderboard
+      {$this update_recommendation_info})
+   (preview_download_complete_msg
+      ($bSuccess)
+      {$this update_preview_play_button_state}
+      {if_else
+         $bSuccess
+         {shell_music_panel set_mute_state TRUE}
+         {$this show_error store_song_preview_unavailable}})
+   (show_error
+      ($error_token)
+      {error_popup_panel show_popup $error_token $this})
+   (check_sort_entries
+      {if
+         [need_sort_entries]
+         {set
+            [need_sort_entries]
+            FALSE}
+         {{ui get_recommendation_mgr}
+            sort_entries}})
+   (content_mgr_start_refresh
+      {set
+         [need_sort_entries]
+         TRUE})
+   (content_mgr_mounting_failed
+      ($content_name)
+      {if
+         {$this is_up}
+         {do
+            ($cur_rec
+               {$this get_focus_rec})
+            ($selected_content_name
+               {song_mgr
+                  content_name
+                  {$cur_rec get song_id}})
+            {if
+               {== $content_name $selected_content_name}
+               {$this stop_preview_audio}}}})
+   (update_preview_play_button_state
+      {do
+         ($cur_rec
+            {$this get_focus_rec})
+         ($prev_audio_path
+            {$this get_store_audio_path $cur_rec})
+         {if_else
+            {'||'
+               {$cur_rec is_song_list_rec}
+               {$cur_rec is_playable}
+               {store_preview_mgr is_playing_file $prev_audio_path}}
+            {do
+               {InlineHelp.ihp clear_action_token kAction_Option}
+               {loading_audio.grp set_showing FALSE}}
+            {if_else
+               {store_preview_mgr is_downloading_file $prev_audio_path}
+               {do
+                  {InlineHelp.ihp clear_action_token kAction_Option}
+                  {loading_audio.grp set_showing TRUE}}
+               {do
+                  {InlineHelp.ihp set_action_token kAction_Option rec_option_prev_audio}
+                  {loading_audio.grp set_showing FALSE}}}}})
+   (update_recommendation_info
+      {if
+         {>
+            {{ui get_recommendation_mgr}
+               get_num_recs}
+            0}
+         {do
+            ($rec_entry
+               {$this get_focus_rec})
+            {description.lbl set_recommendation_message $rec_entry}
+            {song_title.lbl set_recommendation_song_name $rec_entry}
+            {song_artist.lbl set_recommendation_artist_name $rec_entry}
+            {song_info.lbl set_recommendation_genre_year $rec_entry}
+            {rec_icon
+               set
+               rec_type
+               {$rec_entry rec_type}}
+            {InlineHelp.ihp set_action_token kAction_Confirm inline_help_continue}
+            {if_else
+               {'||'
+                  {$rec_entry is_song_list_rec}
+                  {$rec_entry is_tutorial_rec}}
+               {do
+                  {$this stop_preview_audio}
+                  {InlineHelp.ihp clear_action_token kAction_ShellOption}}
+               {do
+                  {InlineHelp.ihp set_action_token kAction_ShellOption inline_help_leaderboards}
+                  {if_else
+                     {$rec_entry is_playable}
+                     {$this play_preview_audio $rec_entry}
+                     {do
+                        {store_preview_mgr
+                           play_preview_file_if_cached
+                           {$this get_store_audio_path $rec_entry}}
+                        {InlineHelp.ihp set_action_token kAction_Confirm store_offer}}}}}
+            {$this update_preview_play_button_state}}})
+   (update_lb_ui_for_focus_rec
+      {do
+         ($focus_entry
+            {$this get_focus_rec})
+         {if_else
+            {'||'
+               {$focus_entry is_song_list_rec}
+               {$focus_entry is_tutorial_rec}}
+            {leaderboard_mode.ep set display_state hidden}
+            {do
+               {leaderboard_mode.ep set display_state loading}
+               {$this start_mini_leaderboard_request_timer}}}})
+   (get_focus_rec
+      {{ui get_recommendation_mgr}
+         get_rec_by_index
+         {recommendations.lst selected_pos}})
+   (get_album_tex_for_focus_rec
+      {{$this get_recommendations_provider}
+         get_current_tex_for_entry
+         {$this get_focus_rec}})
+   (get_store_audio_path
+      ($rec_entry)
+      {sprintf
+         "%s%s"
+         {store_panel get_request_prefix}
+         {$rec_entry get preview_audio_path}})
+   (reset_last_selected_entry
+      {$this set last_selected_entry kRecID_Invalid})
+   (content_read_failure
+      {$this stop_preview_audio})
+   (play_preview_audio
+      ($rec_entry)
+      {if_else
+         {$rec_entry is_playable}
+         {do
+            {store_preview_mgr clear_current_preview}
+            {song_preview
+               start
+               {{$rec_entry get_metadata}
+                  short_name}}
+            {shell_music_panel set_mute_state TRUE}}
+         {do
+            {song_preview stop}
+            {store_preview_mgr
+               download_preview_file
+               {$this get_store_audio_path $rec_entry}}
+            {shell_music_panel set_mute_state FALSE}
+            {$this update_preview_play_button_state}}})
+   (stop_preview_audio
+      {song_preview stop}
+      {store_preview_mgr clear_current_preview}
+      {shell_music_panel set_mute_state FALSE}
+      {loading_audio.grp set_showing FALSE})
+   (refresh_content
+      {if_else
+         {recommendations.lst is_scrolling}
+         {$this set rec_list_dirty TRUE}
+         {recommendations.lst refresh}}
+      {$this update_recommendation_info}
+      {$this
+         set
+         last_selected_entry
+         {{$this get_focus_rec}
+            rec_id}})
+   (on_select_msg
+      {shell_sfx play_splash})
+   (SCROLL_MSG
+      {if
+         [rec_list_dirty]
+         {do
+            {recommendations.lst refresh}
+            {$this set rec_list_dirty FALSE}}}
+      {if
+         {==
+            {$this focus_name}
+            recommendations.lst}
+         {$this stop_preview_audio}
+         {$this update_recommendation_info}
+         {$this update_lb_ui_for_focus_rec}
+         {$this
+            set
+            last_selected_entry
+            {{$this get_focus_rec}
+               rec_id}}
+         {$this set mini_lb_mode kLeaderboardMode_Friend}})
+   (SELECT_MSG
+      {if
+         {{ui get_recommendation_mgr}
+            get_num_recs}
+         {do
+            ($rec_entry
+               {$this get_focus_rec})
+            ($rec_metadata
+               {$rec_entry get_metadata})
+            {data_mine_mgr
+               add_event
+               viewed_recommendation
+               (("rec_category"
+                     {$rec_entry rec_type})
+                  ("place_in_list"
+                     {{ui get_recommendation_mgr}
+                        get_index_of_rec_by_id
+                        {$rec_entry rec_id}})
+                  ("song_id"
+                     {$rec_entry get song_id})
+                  ("store_offer_id"
+                     {$rec_entry get offer_id}))}
+            {if_else
+               {&&
+                  {trial_mgr get_trial_mode}
+                  {!
+                     {$rec_entry is_available_in_trial}}}
+               {do
+                  {{ui current_screen}
+                     show_upsell}}
+               {if_else
+                  {$rec_entry is_playable}
+                  {if_else
+                     {$rec_entry is_challenge}
+                     {do
+                        {$this
+                           create_challenge
+                           {recommendations.lst selected_pos}}
+                        {challenge_request_panel
+                           prepare_popup
+                           {$rec_entry get_opponent_name}
+                           {$rec_entry get song_name}
+                           {recommendations.lst selected_pos}
+                           {$rec_entry get_metadata}}
+                        {recommendation_screen
+                           set_focus_panel
+                           ""}}
+                     {do
+                        {$this stop_preview_audio}
+                        {if_else
+                           {$rec_metadata is_fake_song}
+                           {do
+                              {pause_to_new_game_screen
+                                 quick_start_song
+                                 {$rec_metadata short_name}}
+                              {powerup_select_screen
+                                 set
+                                 prev_screen
+                                 {ui current_screen}}}
+                           {do
+                              {loading_screen set_song $rec_metadata}
+                              {ui goto_screen powerup_select_screen}}}}}
+                  {if_else
+                     {$rec_entry is_song_list_rec}
+                     {$this go_to_song_select}
+                     {$this go_to_store $rec_entry}}}}}})
+   (go_to_store
+      ($rec_entry)
+      {store_offer_fetch_panel set_return_target recommendation_screen}
+      {store_offer_fetch_panel
+         set_target_store_offer_id
+         {$rec_entry get offer_id}}
+      {data_mine_mgr
+         add_event
+         enter_store_from_recommendation
+         (("rec_category"
+               {$rec_entry rec_type})
+            ("song_offer_id"
+               {$rec_entry get offer_id}))}
+      {ui goto_screen prep_offer_for_store_screen})
+   (go_to_song_select
+      {$this stop_preview_audio}
+      {{background_panel find arrow_rt.flow}
+         activate}
+      {transition_to song_select_screen})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_ShellOption
+            {if
+               {{ui get_recommendation_mgr}
+                  get_num_recs}
+               {do
+                  ($rec_entry
+                     {$this get_focus_rec})
+                  {if
+                     {!
+                        {'||'
+                           {$rec_entry is_tutorial_rec}
+                           {$rec_entry is_song_list_rec}}}
+                     {$this stop_preview_audio}
+                     {song_leaderboard_panel
+                        init_leaderboard_metadata
+                        {$this get_album_tex_for_focus_rec}
+                        {$rec_entry get song_name}
+                        {$rec_entry get artist_name}
+                        {$rec_entry get genre_token}
+                        {$rec_entry get year}
+                        {$rec_entry get is_cover}}
+                     {song_leaderboard_panel
+                        set_leaderboard_song
+                        {$rec_entry get song_id}}
+                     {song_leaderboard_panel
+                        commit_leaderboard_transition
+                        [mini_lb_mode]}
+                     {song_leaderboard_panel go_to_leaderboard $this recs}}}})
+         (kAction_PageDown
+            {$this go_to_song_select})
+         (kAction_PageUp
+            {$this stop_preview_audio}
+            {{background_panel find arrow_lt.flow}
+               activate}
+            {transition_to inbox_screen})
+         (kAction_Cancel
+            {$this stop_preview_audio}
+            {ui goto_screen splash_screen})
+         (kAction_Start
+            {$this stop_preview_audio}
+            {options_screen set back_screen recommendation_screen}
+            {ui goto_screen options_screen})
+         (kAction_Option
+            {do
+               ($cur_rec
+                  {$this get_focus_rec})
+               {if
+                  {!
+                     {'||'
+                        {$cur_rec is_playable}
+                        {$cur_rec is_song_list_rec}}}
+                  {do
+                     {$this play_preview_audio $cur_rec}}}})
+         kDataUnhandled})}
+{new
+   UIScreen
+   recommendation_screen
+   (panels background_panel shell_music_panel menu_cache_panel recommendation_panel song_leaderboard_panel challenge_request_panel upsell_panel error_popup_panel)
+   SCREEN_CONTENT_REFRESH
+   (header_index 0)
+   (focus recommendation_panel)
+   (enter
+      {background_panel
+         jump_to_header
+         [header_index]}
+      {background_panel set_offline_mode_headers FALSE}
+      {recommendation_panel set_showing TRUE}
+      {{background_panel find MainMenu.grp}
+         set_showing
+         TRUE}
+      {song_leaderboard_panel set_showing FALSE}
+      {$this set_focus_panel recommendation_panel}
+      {update_participating_user_presence CONTEXT_PRESENCE_RP_EXPLORING_MENU})
+   (show_upsell
+      {upsell_panel set_options upsell_title_recommendations upsell_text_recommendations offer_trial_upgrade}
+      {upsell_panel set_showing TRUE}
+      {{upsell_panel find enter.flow}
+         activate}
+      {$this set_focus_panel upsell_panel})
+   (hide_upsell
+      {upsell_panel set_showing FALSE}
+      {$this set_focus_panel recommendation_panel})}

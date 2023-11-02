@@ -1,0 +1,90 @@
+{new
+   GamePanel
+   game_panel
+   (is_in_demo_mode
+      {is_in_demo_game_state})
+   (get_demo_config
+      {get_demo_config})}
+{new
+   GameScreen
+   game_screen
+   (panels game_panel pause_panel game_fade_out_panel error_popup_panel)
+   (end_song_hold_time 0)
+   (get_game
+      {game_panel get_game})
+   (game_won
+      {ui goto_screen submit_results_screen})
+   (game_lost
+      {ui goto_screen submit_results_screen})
+   (check_pause
+      {do
+         ($should_pause
+            {&&
+               {{$this get_game}
+                  can_pause}
+               {!
+                  {{$this get_game}
+                     is_paused}}
+               [pause_enabled]})
+         {if
+            $should_pause
+            {$this pause}}
+         $should_pause})
+   (BUTTON_DOWN_MSG
+      {do
+         ($pause_action
+            {if_else
+               {==
+                  {$user get_controller_type}
+                  keyboard}
+               kAction_Confirm
+               kAction_Start})
+         {if_else
+            {&&
+               {== $pause_action $action}
+               {$this check_pause}}
+            TRUE
+            kDataUnhandled}})
+   (ui_changed
+      ($about_to_show)
+      {if
+         $about_to_show
+         {$this check_pause}})
+   (blitz_hidden FALSE)
+   (enter
+      {if
+         {!
+            {{$this get_game}
+               is_running}}
+         {{{$this get_game}
+               get_hud_dir}
+            set
+            blitz_hidden
+            [blitz_hidden]}
+         {$this hide_pause}
+         {apology_results_panel
+            set
+            interrupted_connection
+            {user_mgr is_participating_user_online}}}
+      {platform_mgr add_sink $this}
+      {update_participating_user_presence CONTEXT_PRESENCE_RP_PLAYING_SONG})
+   (exit
+      {platform_mgr remove_sink $this})
+   (pause
+      {$this set_paused TRUE pause_reason_player}
+      {$this show_pause})
+   (resume
+      {if
+         {{user_mgr get_participating_user}
+            is_joypad_connected}
+         {$this set_paused FALSE pause_reason_player}
+         {$this hide_pause}})
+   (show_pause
+      {pause_panel
+         update_focus
+         {pause_panel find pause.lst}}
+      {pause_panel set_showing TRUE}
+      {$this set_focus_panel pause_panel})
+   (hide_pause
+      {pause_panel set_showing FALSE}
+      {$this set_focus_panel game_panel})}

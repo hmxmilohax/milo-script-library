@@ -1,0 +1,69 @@
+{new
+   GameResultsPanel
+   submit_results_panel
+   (file
+      "submit_results.milo")
+   (dingo_job_complete
+      ($job $success)
+      {do
+         ($game_results
+            {{game_panel get_game}
+               get_results})
+         ($song_metadata
+            {$game_results get_song_metadata})
+         ($is_tutorial
+            {$song_metadata is_fake_song})
+         {if_else
+            $is_tutorial
+            {if_else
+               {trial_mgr get_trial_mode}
+               {transition_to upsell_splash_screen}
+               {transition_to
+                  {results_shared_panel get_return_screen $game_results}}}
+            {do
+               {if
+                  $success
+                  {leaderboard_results_panel check_ranking_changes $game_results}
+                  {results_breakdown_panel
+                     set
+                     has_server_results
+                     {$game_results get_rbw_success}}
+                  {if
+                     {>
+                        {$game_results get_challenge_id}
+                        0}
+                     {inbox_msg_mgr refresh_challenge_messages}}}
+               {transition_to results_breakdown_screen}}}})}
+{new
+   UIScreen
+   submit_results_screen
+   (panels background_night_panel results_cache_panel game_panel game_fade_out_panel submit_results_panel)
+   (focus submit_results_panel)
+   (enter
+      {results_breakdown_panel set has_server_results FALSE}
+      {results_breakdown_panel set started_animation FALSE}
+      {do
+         ($game_results
+            {{game_panel get_game}
+               get_results})
+         {submit_results_panel set_results $game_results}
+         {if_else
+            {user_mgr is_participating_user_online}
+            {do
+               {submit_results_panel upload_score}
+               {submit_results_panel upload_save_data save_data}
+               {career_results_panel set started_animation FALSE}
+               {song_results_panel set started_animation FALSE}
+               {leaderboard_results_panel set started_animation FALSE}}
+            {do
+               {submit_results_panel check_for_accomplishments}
+               {if_else
+                  {{$game_results get_song_metadata}
+                     is_fake_song}
+                  {if_else
+                     {trial_mgr get_trial_mode}
+                     {transition_to upsell_splash_screen}
+                     {transition_to
+                        {results_shared_panel get_return_screen $game_results}}}
+                  {transition_to results_breakdown_screen}}}}}
+      {update_participating_user_presence CONTEXT_PRESENCE_RP_EXPLORING_MENU})}

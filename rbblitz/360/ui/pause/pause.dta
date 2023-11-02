@@ -1,0 +1,172 @@
+{new
+   UIPanel
+   pause_panel
+   (file
+      "pause.milo")
+   (focus pause.lst)
+   (enter
+      {do
+         {$this populate_menu}
+         {options.lst
+            set_data
+            (pause_tutorial pause_controls calibration audio_video_options credits)}}
+      {$this
+         update_focus
+         [get_focus]})
+   (populate_menu
+      {do
+         ($pause_array
+            {array
+               (pause_resume
+                  splash_upgrade
+                  pause_options
+                  #ifdef HX_XBOX
+                  pause_achievements
+                  #endif
+                  pause_restart
+                  pause_quit
+                  pause_main_menu
+                  #ifdef HX_XBOX
+                  pause_exit_game
+                  #endif)})
+         {if
+            {!
+               {trial_mgr get_trial_mode}}
+            {remove_elem $pause_array splash_upgrade}}
+         {pause.lst set_data $pause_array}})
+   (trial_upgraded_to_full
+      {$this populate_menu})
+   (get_focus
+      {{$this loaded_dir}
+         get
+         focus_component})
+   (restart_song
+      {do
+         ($game_results
+            {{game_panel get_game}
+               get_results})
+         ($song_metadata
+            {$game_results get_song_metadata})
+         ($is_tutorial
+            {$song_metadata is_fake_song})
+         ($can_select_powerup
+            {'||'
+               {rock_central is_login_blocked}
+               {user_mgr is_participating_user_online}})
+         {if_else
+            {'||'
+               $is_tutorial
+               {! $can_select_powerup}}
+            {pause_to_new_game_screen
+               quick_start_song
+               {{loading_screen get_song}
+                  short_name}}
+            {ui goto_screen powerup_select_screen}}})
+   (update_focus
+      ($new_focus)
+      {$this set_focus $new_focus}
+      {$this update_shown_lists pause.lst}
+      {$this update_shown_lists options.lst})
+   (update_shown_lists
+      ($list)
+      {$list
+         set
+         showing
+         {==
+            $list
+            [get_focus]}})
+   (handle_cancel_press
+      {if_else
+         {==
+            options.lst
+            [get_focus]}
+         {$this update_focus pause.lst}
+         {{ui current_screen}
+            resume}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Cancel
+            {$this handle_cancel_press})
+         (kAction_ViewModify
+            {$this handle_cancel_press})
+         (kAction_Start
+            {$this
+               component_select
+               [get_focus]
+               {user_mgr get_participating_user}}
+            {if
+               {==
+                  {[get_focus]
+                     selected_sym}
+                  pause_resume}
+               {{ui current_screen}
+                  resume}})
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         {[get_focus]
+            selected_sym}
+         (pause_options
+            {$this update_focus options.lst})
+         (pause_options_back
+            {$this update_focus pause.lst})
+         (pause_quit
+            {do
+               ($game_results
+                  {{game_panel get_game}
+                     get_results})
+               ($return_screen
+                  {results_shared_panel get_return_screen $game_results})
+               {pause_confirm_quit_song_screen set next_screen $return_screen}
+               {ui goto_screen pause_confirm_quit_song_screen}})
+         (pause_restart
+            {ui goto_screen pause_confirm_restart_song_screen})
+         (calibration
+            {pause_confirm_quit_song_screen set next_screen cal_welcome_screen}
+            {options_screen set back_screen splash_screen}
+            {ui goto_screen pause_confirm_quit_song_screen})
+         (audio_video_options
+            {transition_to av_options_pause_screen})
+         (pause_controls
+            {ui goto_screen controller_config_pause_screen})
+         (pause_achievements
+            {data_mine_mgr
+               add_event
+               view_achievements
+               (("from_screen"
+                     "pause_menu"))}
+            {do
+               ($successfully_displayed
+                  {display_achievements
+                     {user_mgr get_participating_user}})
+               {if
+                  {! $successfully_displayed}
+                  {error_popup_panel show_popup achievements_unavailable pause_panel}}})
+         (pause_tutorial
+            {ui goto_screen tutorials_pause_screen})
+         (pause_main_menu
+            {pause_confirm_quit_song_screen set next_screen splash_screen}
+            {ui goto_screen pause_confirm_quit_song_screen})
+         (pause_exit_game
+            {if_else
+               {trial_mgr get_trial_mode}
+               {pause_confirm_quit_song_screen set next_screen upsell_and_exit_screen}
+               {pause_confirm_quit_song_screen set next_screen game_exit_screen}}
+            {ui goto_screen pause_confirm_quit_song_screen})
+         (splash_upgrade
+            {if_else
+               {platform_mgr is_connected}
+               {trial_mgr offer_trial_upgrade $user}
+               {error_popup_panel show_popup error_unlock_full_game pause_panel}})
+         (demo_pause_win
+            {demo_win_cheat})
+         (credits
+            {ui goto_screen pause_credits_screen})})
+   (SELECT_DONE_MSG
+      {switch
+         {[get_focus]
+            selected_sym}
+         (pause_resume
+            {{ui current_screen}
+               resume})})}
