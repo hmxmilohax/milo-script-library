@@ -1,0 +1,1708 @@
+(Character
+   (description
+      "Base class for Character objects. Contains Geometry, and bounding Sphere.")
+   (category Character)
+   (file_ext
+      ".char")
+   (superclasses Entity)
+   (editor
+      (flip_anims
+         bool
+         (help
+            "Set true if you want the bone servo to flip y/-y of animations.")
+         (disk_prop))
+      (freeze_anims_offscreen
+         bool
+         (help
+            "Freeze animations when this is offscreen?")
+         (disk_prop))
+      (play_all_clip_events
+         bool
+         (help
+            "Force play clip events regardless of layer visibility?")
+         (disk_prop))
+      (sphere_base
+         object
+         (class Trans)
+         (no_null)
+         (help
+            "Base for bounding sphere, such as bone_pelvis.mesh")
+         (disk_prop))
+      (bounding
+         SPHERE
+         (help
+            "bounding sphere for the character, fixed")
+         (no_test)
+         (disk_prop))
+      (calc_bounding_sphere
+         script
+         (script
+            {$this calc_bounding_sphere})
+         (help
+            "Calculates a new bounding sphere")
+         (disk_prop))
+      (allow_char_root_rotation_blending
+         bool
+         (help
+            "if this is true, blend the char root rotation. Otherwise, take it at full weight always")
+         (disk_prop))
+      (drivers
+         (array
+            (struct
+               (name
+                  symbol
+                  (help
+                     "The driver name"))
+               (bones
+                  symbol
+                  (list
+                     {get_clip_types})
+                  (help
+                     "Bones associated with this driver")))
+            (header
+               {sprint
+                  {$this
+                     get
+                     {editor_prop_path_child name}}}))
+         (help
+            "Driver layers for this character.  Order is important- drivers later in the list will play after earlier ones, and override their animations!")
+         (disk_prop))
+      (reload_clip_types
+         script
+         (script
+            {reload_clip_types})
+         (help
+            "Reload clip types from file system"))
+      (resync_anim_objects
+         script
+         (script
+            {$this sync_anim_objects})
+         (help
+            "resync the state of all drivers/animation nodes based on current clips"))
+      (play_sync_anim
+         script
+         (script
+            {$this
+               play_action
+               {symbol
+                  "sync_anim.action"}})
+         (help
+            "JSS test for action system"))
+      (Interest_Objects
+         (indent
+            (toggle_debug_interests
+               script
+               (script
+                  {$this
+                     set
+                     debug_draw_interest_objects
+                     {!
+                        {$this get debug_draw_interest_objects}}})
+               (help
+                  "toggle on/off the drawing of debug info for interest objects"))
+            (find_new_interests
+               script
+               (script
+                  {if_else
+                     $bandwardrobe
+                     {$bandwardrobe sync_interests}
+                     {$this
+                        find_interest_objects
+                        {$this dir}}})
+               (help
+                  "If you add an interest, hit this to let the character know about it"))
+            (interest_to_force
+               symbol
+               (list
+                  {$this list_interest_objects})
+               (propanim_selected
+                  ($selected)
+                  {$this set debug_draw_interest_objects $selected})
+               (help
+                  "select an interest object here and select 'force_interest' below to force the character to look at it.")))
+         (hide propanim flow)
+         (tab debug)))
+   (events_out
+      (teleported
+         (help
+            "means that the character has been teleported, by the editor, or to a waypoint."))))
+(CharAction
+   (description
+      "A package of animation/other effects to play")
+   (category Character)
+   (allowed_dirs Character)
+   (ext action)
+   (editor
+      (flow
+         object
+         (class Flow)
+         (help
+            "Flow defining this action's details"))
+      (preview
+         script
+         (script
+            {$this preview}))))
+(CharActionManager
+   (description
+      "Schedules and runs CharActions")
+   (category Character)
+   (allowed_dirs Character)
+   (editor))
+(CharBlendBone
+   (description
+      "Set up a constraint between a series of target bones")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll)
+   (ext blendbone)
+   (editor
+      (targets
+         (array
+            (struct
+               (target
+                  object
+                  (class Trans)
+                  (help
+                     "object to constrain"))
+               (weight
+                  float
+                  (help
+                     "influence value, from 0 to 1")))))
+      (src_one
+         object
+         (class Trans)
+         (help
+            "Source object to drive constraint"))
+      (src_two
+         object
+         (class Trans)
+         (help
+            "Source object to drive constraint"))
+      (trans_x
+         bool
+         (help
+            "Apply x translation?"))
+      (trans_y
+         bool
+         (help
+            "Apply x translation?"))
+      (trans_z
+         bool
+         (help
+            "Apply x translation?"))
+      (rotation
+         bool
+         (help
+            "Apply rotation constraint?"))
+      (set_local
+         bool
+         (help
+            "Sets the local xfm, not world xfm, needed for crowd"))))
+(CharClipGroup
+   (description
+      "A related group of animations.  Gives you the lru one.  Usually no extension.")
+   (category Character)
+   (editor
+      (clips
+         (array
+            object
+            (class CharClip)
+            (no_null)
+            (help
+               "LRU list of clips belonging to this group")))
+      (total_size
+         int
+         (help
+            "Total size in bytes of clips")
+         (read_only TRUE))
+      (total_seconds
+         float
+         (help
+            "Total length in seconds of clips")
+         (read_only TRUE))))
+#define CHARBONES
+((array
+      (struct
+         (name
+            symbol
+            (help
+               "Bone to blend into")
+            (read_only TRUE))
+         (weight
+            float
+            (help
+               "Weight to blend with"))
+         (preview_val
+            string
+            (alias
+               "preview value")
+            (help
+               "Preview Value")
+            (read_only TRUE)))
+      (header
+         {$this
+            get
+            {editor_prop_path_child name}})
+      (no_test)))
+#define SAMPLESET
+((struct
+      (bones
+         CHARBONES
+         (help
+            "Bones that are animated")
+         (read_only TRUE))
+      (num_samples
+         int
+         (help
+            "how many keyframes")
+         (alias
+            "sample count")
+         (read_only TRUE))
+      (preview_sample
+         int
+         (help
+            "which sample to preview")
+         (no_test))
+      (frames
+         (array float)
+         (help
+            "which sample to play")
+         (read_only TRUE))))
+(CharClip
+   (user_creatable FALSE)
+   (description
+      "This is the simple form that stores\n        samples and linearly interpolates between them. \n        Data is grouped by keyframe, for better RAM coherency\n        better storage, interpolation, etc.")
+   (category Character)
+   (functest cached)
+   (editor
+      (start_beat
+         float
+         (help
+            "Start beat, beat this clip starts at")
+         (read_only TRUE))
+      (end_beat
+         float
+         (help
+            "End beat, beat this clip ends at")
+         (read_only TRUE))
+      (length_beats
+         float
+         (help
+            "Total length in beats")
+         (read_only TRUE))
+      (length_seconds
+         float
+         (help
+            "Total length in seconds")
+         (read_only TRUE))
+      (frames_per_sec
+         float
+         (alias
+            "fames per second")
+         (help
+            "How many frames are in a second of animation?")
+         (read_only TRUE))
+      (average_beats_per_sec
+         float
+         (alias
+            "average beats per second")
+         (help
+            "average beats per second")
+         (read_only TRUE))
+      (moves_char_root
+         bool
+         (help
+            "Does this clip move the character root?")
+         (read_only TRUE))
+      (force_char_root_world_xfm
+         bool
+         (help
+            "Apply the first-frame world pos/rot from the 3d program"))
+      (flags
+         bitfield
+         (list
+            {if_else
+               {$this
+                  has
+                  (clip_flags)}
+               {$this clip_flags}
+               ()})
+         (exclusive
+            {if_else
+               {$this
+                  has
+                  (exclusive_flags)}
+               {$this exclusive_flags}
+               ()})
+         (help
+            "Search flags, app specific"))
+      (relative
+         bool
+         (help
+            "Make the clip all relative to its own first frame")
+         (no_test))
+      (size
+         int
+         (read_only TRUE)
+         (help
+            "Size of the clip in bytes"))
+      (do_not_compress
+         bool
+         (help
+            "Check this to prevent any compression from happening on this clip"))
+      (events
+         (array
+            (struct
+               (event
+                  symbol
+                  (help
+                     "The event argument for the {clip_event <event> <clip>} message exported to the controlling Character")
+                  (list
+                     {$this get_clip_event_list}))
+               (frame
+                  float
+                  (help
+                     "Clip frame on which the event should trigger")))
+            (header
+               {sprint
+                  {$this
+                     get
+                     {editor_prop_path_child frame}}
+                  ": "
+                  {$this
+                     get
+                     {editor_prop_path_child event}}}))
+         (help
+            "Events that get triggered during clip playback, exports {clip_event <event> <clip>} to the character owner, you get enter and exit events for free"))
+      (full
+         SAMPLESET
+         (tab debug))
+      (one
+         SAMPLESET
+         (tab debug))
+      (preview_sample
+         int
+         (help
+            "Sample for char_root transform info")
+         (no_test)
+         (tab debug))
+      (char_root_transform
+         TRANSFORM
+         (help
+            "The char_root world transform at preview_sample.")
+         (read_only TRUE)
+         (tab debug))
+      (num_frames
+         int
+         (alias
+            "frame count")
+         (help
+            "Number of original samples taken, pre-keyframe compression")
+         (read_only TRUE)
+         (no_test)))
+   (types))
+(CharAnimNode
+   (description
+      "Animatable node for character clips")
+   (category Character)
+   (allowed_dirs Character)
+   (ext an)
+   (superclasses CharWeightable Anim)
+   (editor
+      (char_clip
+         object
+         (class CharClip)
+         (help
+            "Clip that this animates")
+         (no_test))
+      (driver_name
+         symbol
+         #ifdef HX_TOOL
+         (list
+            {if_else
+               {exists forge}
+               {{$this dir}
+                  get_driver_names}
+               ()})
+         #endif
+         (help
+            "Driver to play this on"))
+      (played_weight
+         float
+         (help
+            "current playing weight")
+         (read_only TRUE)
+         (no_test))
+      #ifdef HX_TOOL
+      (debug_frame_one
+         float
+         (help
+            "first debug frame for calculating char root xfm")
+         (tab debug)
+         (no_test))
+      (debug_frame_two
+         float
+         (help
+            "second debug frame for calculating char root xfm")
+         (tab debug)
+         (no_test))
+      #endif))
+(CharAnimNodeGroup
+   (description
+      "Grouping class for CharAnimNodes")
+   (category Character)
+   (allowed_dirs Character)
+   (ext grp)
+   (superclasses CharWeightable)
+   (editor
+      (child_nodes
+         (array
+            object
+            (class CharAnimNode)
+            (no_null))
+         (help
+            "List of child nodes whose weights will be multiplied by this group's weight"))))
+(CharAnimDriver
+   (description
+      "Holds and blends CharAnimNodes, poses character bones")
+   (category Character)
+   (allowed_dirs)
+   (ext drv)
+   (superclasses Poll)
+   (editor
+      (anim_nodes
+         (array
+            object
+            (class CharAnimNode)
+            (no_null)
+            (help
+               "AnimNodes to play")))
+      (is_active
+         bool
+         (help
+            "Is this driver active?"))
+      (visibility_weight
+         float
+         (read_only TRUE)
+         (no_test)
+         (help
+            "How visible is this driver? (0 = not visible at all)"))))
+(CharBone
+   (description
+      "A Character system bone, conveys degrees of freedom to animate in a CharClip, lives in CharBoneDir")
+   (category Character)
+   (allowed_dirs CharBoneDir)
+   (ext cb)
+   (superclasses)
+   (editor
+      (position
+         bool
+         (help
+            "animate position?"))
+      (rotation
+         int
+         (list
+            (("kRotNone"
+                  (alias
+                     "No Rotation")
+                  (help
+                     "No rotation"))
+               ("kRotFull"
+                  (alias
+                     "Rotation XYZ")
+                  (help
+                     "Full rotation"))
+               ("kRotX"
+                  (alias
+                     "X axis only")
+                  (help
+                     "Rotation on x axis"))
+               ("kRotY"
+                  (alias
+                     "Y axis only")
+                  (help
+                     "Rotation on y axis"))
+               ("kRotZ"
+                  (alias
+                     "Z axis only")
+                  (help
+                     "Rotation on z axis"))))
+         (help
+            "what axis or axes to animate"))
+      (scale
+         bool
+         (help
+            "animate scale?"))
+      (parent_scale
+         bool
+         (help
+            "Compensate for (cancel out) parent scale?"))
+      (target
+         object
+         (class CharBone)
+         (help
+            "If set will exactly track this target during keyframe acquisition, used for IK bones"))
+      (weight
+         float
+         (help
+            "bone weight"))))
+(CharBoneDir
+   (description
+      "A CharBone container, acts as a resource file, storing skeleton and DOF for particular contexts")
+   (category Character)
+   (file_ext
+      ".cliptype")
+   (user_creatable FALSE)
+   (superclasses ObjectDir)
+   (editor
+      (skeleton_layer
+         file
+         (help
+            "Layer file containing the skeleton")
+         (ext
+            "Layer files"
+            layer)
+         (no_test))))
+(CharBonesObject
+   (description
+      "Holds state for a set of bones")
+   (category Character)
+   (allowed_dirs)
+   (editor
+      (bones
+         CHARBONES
+         (help
+            "Bones that are animated")
+         (read_only TRUE))))
+(CharBonesAlloc
+   (allowed_dirs)
+   (description
+      "Holds state for a set of bones, and allocates own space")
+   (superclasses CharBonesObject))
+(CharBonesBlender
+   (description
+      "Blends itself into another CharBones, clearing self each frame")
+   (category Character)
+   (superclasses Poll CharBonesAlloc)
+   (allowed_dirs)
+   (ext blender)
+   (editor
+      (dest
+         object
+         (class CharBonesObject)
+         (alias
+            "destination")
+         (help
+            "CharBones to blend into")
+         (no_test))
+      (clip_type
+         symbol
+         (help
+            "What type of clip we can accommodate")
+         (list
+            {get_clip_types}))))
+(CharBonesMeshes
+   (description
+      "Holds state for a set of bones, allocates own space, and sets meshes accordingly")
+   (category Character)
+   (superclasses CharBonesAlloc)
+   (editor
+      (meshes
+         (array
+            object
+            (class Trans))
+         (help
+            "Transes we will change")
+         (read_only TRUE))))
+(CharCollide
+   (description
+      "Feeds the bones when executed.")
+   (category Character)
+   (allowed_dirs ObjectDir)
+   (superclasses Trans)
+   (ext coll)
+   (editor
+      (shape
+         int
+         (list
+            (("kCollidePlane"
+                  (alias
+                     "Plane")
+                  (help
+                     "A plane, positive z axis up"))
+               ("kCollideSphere"
+                  (alias
+                     "Sphere")
+                  (help
+                     "A sphere, facing outwards"))
+               ("kCollideInsideSphere"
+                  (alias
+                     "Inside Sphere")
+                  (help
+                     "A sphere, facing inside"))
+               ("kCollideCigar"
+                  (alias
+                     "Cigar")
+                  (help
+                     "Cigar shape, 2 radii that are different, facing outward"))
+               ("kCollideInsideCigar"
+                  (alias
+                     "Inside Cigar")
+                  (help
+                     "Cigar shape, 2 radii that are different, facing inward"))))
+         (help
+            "Type of collision"))
+      (mesh
+         object
+         (class Mesh)
+         (help
+            "Optional mesh that will deform, used to resize ourselves.  If this is set, make sure you are not parented to any bone with scale, such as an exo bone")
+         (no_test))
+      (radius0
+         float
+         (help
+            "Radius of the sphere, or of length0 hemisphere if cigar")
+         (read_only
+            {==
+               [shape]
+               kCollidePlane}))
+      (length0
+         float
+         (help
+            "cigar: placement of radius0 hemisphere along X axis, must be < than length0, not used for sphere shapes")
+         (read_only
+            {!
+               {find_elem
+                  (kCollideCigar kCollideInsideCigar)
+                  [shape]}}))
+      (radius1
+         float
+         (help
+            "cigar: Radius of length1 hemisphere")
+         (read_only
+            {!
+               {find_elem
+                  (kCollideCigar kCollideInsideCigar)
+                  [shape]}}))
+      (length1
+         float
+         (help
+            "cigar: placement of radius1 hemisphere along X axis, must be >= length0")
+         (read_only
+            {!
+               {find_elem
+                  (kCollideCigar kCollideInsideCigar)
+                  [shape]}}))
+      (mesh_y_bias
+         bool
+         (help
+            "For spheres + cigars, finds mesh points along positive y axis (the green one), makes a better fit for spheres where only one side should be the fit, like for chest and back collision volumes")
+         (read_only
+            {'||'
+               {!
+                  [mesh]}
+               {==
+                  kCollidePlane
+                  [shape]}}))))
+(CharEyes
+   (description
+      "Moves a bunch of lookats around")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll CharWeightable)
+   (ext eyes)
+   (editor
+      (eyes
+         (array
+            (struct
+               (eye
+                  object
+                  (class CharLookAt)
+                  (help
+                     "Eye to retarget"))
+               (upper_lid
+                  object
+                  (class Trans)
+                  (help
+                     "corresponding upper lid bone, must rotate about Z"))
+               (upper_lid_blink
+                  object
+                  (class Trans)
+                  (help
+                     "optional - child of upper_lid, placed at edge of upper lid geometry.  It will be used to detect and resolve interpenetration of the lids"))
+               (lower_lid
+                  object
+                  (class Trans)
+                  (help
+                     "corresponding lower lid bone, must rotate about Z"))
+               (lower_lid_blink
+                  object
+                  (class Trans)
+                  (help
+                     "optional - child of lower_lid, placed at edge of lower lid geometry.  It will be used to detect and resolve interpenetration of the lids")))))
+      (view_direction
+         object
+         (class Trans)
+         (help
+            "optional bone that serves as the reference for which direction the character is looking.  If not set, one of the eyes will be used"))
+      (interests
+         (array
+            object
+            (class CharInterest)))
+      (face_servo
+         object
+         (class CharFaceServo)
+         (help
+            "the CharFaceServo if any, used to allow blinks through the eyelid following"))
+      (head_lookat
+         object
+         (class CharLookAt)
+         (help
+            "optionally supply a head lookat to inform eyes what the head is doing.  used primarily to coordinate eye lookats with head ones..."))
+      (max_extrapolation
+         float
+         (help
+            "in degrees, the maximum angle we can offset the current view direction when extrapolating for generated interests")
+         (range 0 90))
+      (Debugging
+         (indent
+            (disable_eye_dart
+               bool
+               (help
+                  "globally disables eye darts for all characters")
+               (no_test))
+            (disable_eye_jitter
+               bool
+               (help
+                  "globally disables eye jitter for all characters")
+               (no_test))
+            (disable_interest_objects
+               bool
+               (help
+                  "globally disables use of interest objects for all characters")
+               (no_test))
+            (disable_procedural_blink
+               bool
+               (help
+                  "globally disables use of procedural blinks for all characters")
+               (no_test))
+            (disable_eye_clamping
+               bool
+               (help
+                  "globally disables eye lid clamping on all characters")
+               (no_test))
+            (blink!
+               script
+               (script
+                  {$this force_blink})
+               (help
+                  "force a procedural blink for testing"))
+            (toggle_focus_testing
+               script
+               (script
+                  {$this toggle_force_focus})
+               (help
+                  "for testing, this forces the current interest to a focus target"))
+            (toggle_interest_overlay
+               script
+               (script
+                  {$this toggle_interest_overlay})
+               (help
+                  "for testing, this shows the debug overlay for interest objects"))
+            (toggle_clamping_debug
+               script
+               (script
+                  {set
+                     $eyes.debug_clamping
+                     {! $eyes.debug_clamping}})
+               (help
+                  "Shows/hides debug visualization of lid clamping tech"))
+            (min_target_dist
+               float
+               (help
+                  "the minimum distance, in inches, that this interest can be from the eyes.  If the interest is less than this distance, the eyes look in the same direction, but projected out to this distance.  May be overridden per interest object."))
+            (test_eye_limits
+               script
+               (script
+                  {if
+                     {size
+                        (eyes)}
+                     {do
+                        ($eye
+                           [eyes 0 eye])
+                        ($enableTest
+                           {if_else
+                              $eye
+                              {!
+                                 {$eye get show_range}}
+                              FALSE})
+                        ($lookat '')
+                        {foreach_int
+                           $i
+                           0
+                           {size
+                              (eyes)}
+                           {set
+                              $lookat
+                              [eyes $i eye]}
+                           {if
+                              $lookat
+                              {$lookat set show_range $enableTest}}}}})
+               (help
+                  "toggles a testing mode that shows you the range of motion of each eye")))
+         (tab debug))
+      (ulid_track_up
+         float
+         (help
+            "affects rotation applied to upper lid when eyes rotate up")
+         (range 0 10))
+      (ulid_track_down
+         float
+         (help
+            "affects rotation applied to upper lid when eyes rotate down")
+         (range 0 10))
+      (llid_track_up
+         float
+         (help
+            "translates lower lids up/down when eyes rotate up")
+         (range 0 10))
+      (llid_track_down
+         float
+         (help
+            "translates lower lids up/down when eyes rotate down")
+         (range 0 10))
+      (llid_track_rotate
+         bool
+         (help
+            "if checked, lower lid tracking is done by rotation instead of translation"))))
+(CharInterest
+   (description
+      "An interest object for a character to look at")
+   (category Character)
+   (allowed_dirs ObjectDir)
+   (superclasses Trans)
+   (ext intr)
+   (editor
+      (priority
+         float
+         (help
+            "An extra weight applied during scoring of this interest - use this to make it more or less important overall")
+         (range 0 5))
+      (max_view_angle
+         float
+         (help
+            "In degrees, the maximum view cone angle for this object to be 'seen'")
+         (range 0 90))
+      (min_look_time
+         float
+         (help
+            "The minimum time you have to look at this object when its selected")
+         (range 0 100))
+      (max_look_time
+         float
+         (help
+            "The maximum allowable time to look at this object")
+         (range 0 100))
+      (refractory_period
+         float
+         (help
+            "In secs, how long until this object can be looked at again")
+         (range 0 100))
+      (dart_ruleset_override
+         object
+         (class CharEyeDartRuleset)
+         (help
+            "if set, this dart ruleset will override the default one when looking at this interest object"))
+      (overrides_min_target_dist
+         bool
+         (help
+            "if true, we will override the minimum distance this target can be from the eyes using the value below"))
+      (min_target_dist_override
+         float
+         (help
+            "the minimum distance, in inches, that this interest can be from the eyes.  only applied if overrides_min_target_dist is true..."))))
+(CharEyeDartRuleset
+   (description
+      "Defines a procedural ruleset that can be used to generate a variety of realistic eye darting behavior")
+   (category Character)
+   (allowed_dirs ObjectDir)
+   (ext dart)
+   (editor
+      (min_radius
+         float
+         (help
+            "Dart locations will be at least this distance from target")
+         (range 0.0 1000.0))
+      (max_radius
+         float
+         (help
+            "Dart locations will be at most this distance from target")
+         (range 0.0 1000.0))
+      (min_darts_per_sequence
+         int
+         (help
+            "Each sequence of darts will have at least this many locations before returning to target")
+         (range 0 50))
+      (max_darts_per_sequence
+         int
+         (help
+            "Each sequence of darts will have at most this many locations before returning to target")
+         (range 0 50))
+      (min_secs_between_darts
+         float
+         (help
+            "In seconds, the minimum time between each dart in a sequence.  should be very small")
+         (range 0 2.0))
+      (max_secs_between_darts
+         float
+         (help
+            "In seconds, the maximum time between each dart in a sequence.  should be very small")
+         (range 0 2.0))
+      (min_secs_between_sequences
+         float
+         (help
+            "In seconds, the minimum time to wait to start another dart sequence after the previous one finishes")
+         (range 0 100.0))
+      (max_secs_between_sequences
+         float
+         (help
+            "In seconds, the maximum time to wait to start another dart sequence after the previous one finishes")
+         (range 0 100.0))
+      (scale_with_distance
+         bool
+         (help
+            "Sets whether the dart radius scales with the distance to the character - meaning this dart sequence looks the same regardless of distance"))
+      (reference_distance
+         float
+         (help
+            "When scale_with_distance is true, this distance is used as a reference to scale up the radius."))))
+(CharForeTwist
+   (description
+      "Does all interpolation for the forearm. Assumes: <ul>\n        <li>foretwist1 and forearm are under upperarm.</li>\n        <li>foretwist2 is under foretwist1 and that hand is under forearm.</li>\n        <li>on the left hand offset rotation is usually 90 on the left, and -90 on the right.</li>\n        </ul>\n        Feeds the bones when executed.")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll)
+   (ext ftwist)
+   (editor
+      (hand
+         object
+         (class Trans)
+         (help
+            "The hand bone"))
+      (twist2
+         object
+         (class Trans)
+         (help
+            "The twist2 bone"))
+      (offset
+         float
+         (help
+            "Usually 180 for right hand, 0 for left hand"))
+      (bias
+         float
+         (help
+            "Biases the angle before dividing by 3, typically 45 on the left hand, -45 on the right."))))
+(CharHair
+   (description
+      "Hair physics, deals with strands of hair")
+   (category Character)
+   (allowed_dirs Entity)
+   (superclasses Poll)
+   (ext hair)
+   (editor
+      (convert_to_new
+         script
+         (script
+            {$this convert_to_new_format})
+         (help
+            "moves hair bones and meshes to the new standard"))
+      (stiffness
+         float
+         (range 0 1)
+         (help
+            "stiffness of each strand, 1 means absolutely stiff, can't be bent"))
+      (torsion
+         float
+         (range 1.0e-2 1)
+         (help
+            "rotational stiffness of each strand, 1 means cannot be twisted"))
+      (inertia
+         float
+         (range 0 1)
+         (help
+            "Inertia of the hair, one is normal, less simulates drag or other resistance"))
+      (gravity
+         float
+         (range 0 10)
+         (help
+            "Gravity of the hair, one is normal"))
+      (endpoint_gravity
+         float
+         (range -1 1000)
+         ("Gravity affecting the last bone of the hair.  -1 will use regular gravity"))
+      (weight
+         float
+         (range 0 1)
+         (help
+            "Gravity of the hair, one is normal"))
+      (friction
+         float
+         (range 0 1)
+         (help
+            "Hair friction against each other, is proportional to bending speed, 0 means hair is a perfect spring, .1 or so is normal"))
+      (wind
+         float
+         (range 0 1)
+         (help
+            "Wind resistance on hair, 1 is normal, used even if no wind_obj, proportional to surface area per point divided by mass per point."))
+      (wind_obj
+         object
+         (class Wind)
+         (help
+            "wind object to use"))
+      (flat
+         float
+         (help
+            "How flat the surface is, for purposes of wind resistance, 1 means zero wind resistance perpendicular to z axis (the blue highlight segments)"))
+      (min_slack
+         float
+         (help
+            "If using sides, determines how far in it could go"))
+      (max_slack
+         float
+         (help
+            "If using sides, determines how far out it could go"))
+      (strands
+         (array
+            (struct
+               (root
+                  object
+                  (class Trans)
+                  (help
+                     "The root Trans for the hair strand"))
+               (angle
+                  float
+                  (help
+                     "Angle in degrees of starting flip, this is to counter gravity, because mostly models are authored under gravitational load"))
+               (points
+                  (array
+                     (struct
+                        (bone
+                           object
+                           (class Trans)
+                           (read_only TRUE)
+                           (help
+                              "hair bone we set the transform of"))
+                        (length
+                           float
+                           (help
+                              "the length of this strand bone"))
+                        (radius
+                           float
+                           (help
+                              "collision radius"))
+                        (outer_radius
+                           float
+                           (help
+                              "if > radius, is the distance the hair bone should start aligning itself with the collision primitive, so that once touching it, it will be totally flattened against it."))
+                        (collides
+                           (array
+                              object
+                              (class CharCollide)
+                              (no_null))
+                           (help
+                              "things to collide against")
+                           (read_only TRUE))
+                        (side_length
+                           float
+                           (help
+                              "if >= 0 the base length to the side modified by min_slack and max_slack")))
+                     (fixed_size TRUE)))
+               (show_spheres
+                  bool
+                  (help
+                     "show the points as spheres")
+                  (no_test))
+               (show_collide
+                  bool
+                  (help
+                     "show the collision shapes")
+                  (no_test))
+               (show_pose
+                  bool
+                  (help
+                     "Show the starting pose when hilit, good for adjusting angle to match the pose")
+                  (no_test)))))
+      (set_cloth
+         script
+         (script
+            {$this set_cloth TRUE})
+         (help
+            "Sets this as cloth, setting distance constraints between matching points in neighboring strands based on the starting pose.  Once this is set you can't add/remove points or strands.  Unset it first"))
+      (unset_cloth
+         script
+         (script
+            {$this set_cloth FALSE})
+         (help
+            "Unsets this as cloth breaking all constraints between points in neighboring strands."))
+      (hookup
+         script
+         (script
+            {$this hookup})
+         (help
+            "Re-hookup the hair to the collision volumes"))
+      (freeze_pose
+         script
+         (script
+            {$this freeze_pose})
+         (help
+            "Sets the starting pose from its current visible pose"))
+      (reset_pose
+         script
+         (script
+            {$this reset_pose})
+         (help
+            "Sets the starting pose to the original bind pose of the bones"))))
+(CharIKAll
+   (description
+      "IK entire character to a spot.")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll CharWeightable)
+   (ext ikall)
+   (editor
+      (snap_to
+         object
+         (class Trans)
+         (help
+            "The bone to use as a target"))
+      (end_object
+         object
+         (class Trans)
+         (help
+            "What to snap to snap_to"))
+      (object_to_move
+         object
+         (class Trans)
+         (help
+            "The bone to start moving at, usually pelvis"))))
+(CharIKHand
+   (description
+      "Pins a hand bone to another RndTransformable, bending the elbow to make it reach.  Optionally aligns orientations and stretches")
+   (category Character)
+   (allowed_dirs Character Entity)
+   (superclasses CharWeightable Poll)
+   (ext ikhand)
+   (editor
+      (hand
+         object
+         (class Trans)
+         (help
+            "The hand to be moved, must be child of elbow"))
+      (finger
+         object
+         (class Trans)
+         (help
+            "If non null, will be the thing that actually hits the target, the hand will be moved into such a location as to make it hit.  You probably always want to turn on orientation in this case, as otherwise, the hand will be in a somewhat random orientation, which will probably mean that the finger will miss the mark."))
+      (targets
+         (array
+            (struct
+               (target
+                  object
+                  (class Trans)
+                  (help
+                     "Where to move the hand to"))
+               (extent
+                  float
+                  (help
+                     "Distance along the negative z axis of the transform to snap to"))))
+         (help
+            "Targets for the hand"))
+      (orientation
+         bool
+         (help
+            "Orient the hand to the dest"))
+      (stretch
+         bool
+         (help
+            "Stretch the hand to the dest"))
+      (scalable
+         bool
+         (help
+            "Recalculate bone length every frame, needed for bones which scale"))
+      (move_elbow
+         bool
+         (help
+            "Moves the elbow and shoulder to position the hand, if false, just teleports the hand"))
+      (elbow_swing
+         float
+         (help
+            "Range to swing the elbow in radians to hit target, better looking suggest .7"))
+      (always_ik_elbow
+         bool
+         (help
+            "Turn this on to do IK calcs even if weight is 0"))
+      (constrain_wrist
+         bool
+         (help
+            "Constrain the wrist rotation to be believable"))
+      (wrist_radians
+         float
+         (help
+            "Constrain wrist rotation to this angle (in radians)"))
+      (elbow_collide
+         object
+         (class CharCollide)
+         (help
+            "Collision sphere that elbow won't enter."))
+      (clockwise
+         bool
+         (help
+            "Choose the clockwise solution for the collision detection"))
+      (pull_shoulder
+         bool
+         (help
+            "Are we allowed to pull the shoulder to reach goal, or do we lock the elbow when goal is too far?"))))
+(CharIKPosInterpFixer
+   (description
+      "Fixes between-frame interpolation problems for chains with translation bones and fixed endpoints.")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll)
+   (ext ikfix)
+   (editor
+      (target_bone
+         object
+         (class Trans)
+         (help
+            "The bone that the end of the chain should follow"))
+      (bone_to_change
+         object
+         (class Trans)
+         (help
+            "Which bone to change translation on, should have position exported"))
+      (end_bone
+         object
+         (class Trans)
+         (help
+            "The bone at the end of this joint chain"))
+      (disable
+         bool
+         (help
+            "Disable this IK object"))))
+(CharBoneTwist
+   (description
+      "Rotate a bone to point towards targets")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses CharWeightable Poll)
+   (ext bonetwist)
+   (editor
+      (bone
+         object
+         (class Trans)
+         (help
+            "Bone to move"))
+      (targets
+         (array
+            object
+            (class Trans)
+            (no_null))
+         (help
+            "Targets to average to point bone at"))))
+(CharSignalApplier
+   (description
+      "Apply a signal to char bones")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses CharWeightable Poll)
+   (ext sigapp)
+   (editor
+      (signal
+         float
+         (help
+            "Signal value"))
+      (signal_min
+         float
+         (help
+            "Signal minimum value"))
+      (signal_max
+         float
+         (help
+            "Signal maximum value"))
+      (bone_ops
+         (array
+            (struct
+               (bone
+                  object
+                  (class Trans)
+                  (help
+                     "Bone to affect"))
+               (op
+                  int
+                  (list
+                     (("kApplyRotationX"
+                           (alias
+                              "X Axis")
+                           (help
+                              "Apply on x axis"))
+                        ("kApplyRotationY"
+                           (alias
+                              "Y Axis")
+                           (help
+                              "Apply on y axis"))
+                        ("kApplyRotationZ"
+                           (alias
+                              "Z Axis")
+                           (help
+                              "Apply on z axis"))))
+                  (help
+                     "Operation to perform"))
+               (apply_percent
+                  float
+                  (help
+                     "Percentage of effect"))
+               (min_angle
+                  float
+                  (help
+                     "minimum signal->rotation of this angle"))
+               (max_angle
+                  float
+                  (help
+                     "maximum signal->rotation of this angle"))))
+         (help
+            "Operation to perform based on the input signal"))
+      (do_smoothing
+         bool
+         (help
+            "Smooth signal on a per-poll basis"))
+      (smooth_increment
+         float
+         (help
+            "How much can the signal change per poll?"))))
+(CharLipSync
+   (description
+      "A full lipsync animation, basically a changing set of weights for a set of named visemes.  Sampled at 30hz")
+   (category Character)
+   (allowed_dirs ObjectDir)
+   (superclasses)
+   (ext lipsync)
+   (editor
+      (frames
+         int
+         (help
+            "how many keyframes")
+         (read_only TRUE))
+      (duration
+         float
+         (help
+            "duration in seconds")
+         (read_only TRUE))
+      (visemes
+         (array
+            string
+            (read_only TRUE))
+         (help
+            "viseme names")
+         (read_only TRUE))
+      (prop_anim
+         object
+         (class PropAnim)
+         (help
+            "PropAnim to control this lipsync"))))
+(CharLipSyncDriver
+   (description
+      "Drives lip sync animation")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses CharWeightable Poll)
+   (ext lipdrv)
+   (editor
+      (bones
+         object
+         (class CharBonesObject)
+         (help
+            "The CharBones object to add or blend into."))
+      (lipsync
+         object
+         (class CharLipSync)
+         (help
+            "The lipsync file to use"))
+      (clips
+         object
+         (class ObjectDir)
+         (help
+            "pointer to the visemes"))
+      (song_owner
+         object
+         (class CharLipSyncDriver)
+         (help
+            "Will use this song if set, except for blinks")
+         (no_test))
+      (loop
+         bool
+         (help
+            "should we loop this song, resets on song change")
+         (no_test))
+      (song_offset
+         float
+         (help
+            "offset within song in seconds, resets on song change")
+         (no_test))
+      (override_options
+         object
+         (class ObjectDir)
+         (help
+            "an optional clipset that provides list of clips to override face with - viseme clipset is used otherwise"))
+      (apply_override_additively
+         bool
+         (help
+            "is the override clip applied addtively on top of face mocap?  If false, it will blend."))
+      (override_clip
+         object
+         (class CharClip)
+         (dir
+            [clips])
+         (help
+            "default clip to be used as the override - maybe be overriden programatically"))
+      (override_weight
+         float
+         (help
+            "weight to blend override clip. this is mostly here for testing, because its likely to be set programatically."))
+      (test_clip
+         object
+         (class CharClip)
+         (dir
+            [clips])
+         (help
+            "Test charclip to apply, does nothing else"))
+      (test_weight
+         float
+         (help
+            "weight to apply this clip with"))))
+(CharFaceServo
+   (description
+      "BonesMeshes for facial blending")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll CharBonesMeshes)
+   (ext faceservo)
+   (editor
+      (clips
+         object
+         (class ObjectDir)
+         (help
+            "pointer to visemes, must contain Blink and Base")
+         (no_test))
+      (clip_type
+         symbol
+         (help
+            "Which clip type it can support")
+         (list
+            {get_clip_types}))
+      (blink_clip_left
+         symbol
+         (list
+            {object_list
+               [clips]
+               CharClip})
+         (help
+            "Blink clip, used to close the left eye"))
+      (blink_clip_left2
+         symbol
+         (list
+            {object_list
+               [clips]
+               CharClip})
+         (help
+            "A second clip that contributes to closing the left eye"))
+      (blink_clip_right
+         symbol
+         (list
+            {object_list
+               [clips]
+               CharClip})
+         (help
+            "Blink clip, used to close the right eye"))
+      (blink_clip_right2
+         symbol
+         (list
+            {object_list
+               [clips]
+               CharClip})
+         (help
+            "A second clip that contributes to closing the right eye"))))
+(CharLookAt
+   (description
+      "Makes a source point at dest by rotating a pivot, points along Y axis of source")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses CharWeightable Poll)
+   (ext lookat)
+   (editor
+      (pivot
+         object
+         (class Trans)
+         (help
+            "The thing that pivots"))
+      (source
+         object
+         (class Trans)
+         (help
+            "If non null, the bone which looks at along its Y axis, otherwise equal to the pivot"))
+      (target
+         object
+         (class Trans)
+         (help
+            "The thing to look at"))
+      (half_time
+         float
+         (help
+            "Seconds of lag when moving the source"))
+      (min_yaw
+         float
+         (help
+            "Degrees of min allowable yaw, looking left")
+         (range -80 80))
+      (max_yaw
+         float
+         (help
+            "Degrees of max allowable yaw, looking right")
+         (range -80 80))
+      (min_pitch
+         float
+         (help
+            "Degrees of min allowable pitch, looking down")
+         (range -80 80))
+      (max_pitch
+         float
+         (help
+            "Degrees of max allowable pitch, looking up")
+         (range -80 80))
+      (min_weight_yaw
+         float
+         (help
+            "Degrees of yaw to start auto-weight, -1 means no auto-weight"))
+      (max_weight_yaw
+         float
+         (help
+            "Degrees of yaw to stop auto-weight, must be greater than mMinWeightYaw"))
+      (weight_yaw_speed
+         float
+         (help
+            "Max speed in weight/sec that the auto-weight can change"))
+      (allow_roll
+         bool
+         (help
+            "If true allows rolling, if false, keeps the local pivot z axis down to prevent rolling.  Eyeballs can't roll, for instance, but heads can."))
+      (source_radius
+         float
+         (help
+            "radius in degrees of filtered source motion that's allowed through"))
+      (show_range
+         bool
+         (help
+            "Graphically show the extreme ranges of motion")
+         (no_test))
+      (test_range
+         bool
+         (help
+            "Graphically show range of motion with user specified values")
+         (no_test))
+      (test_range_pitch
+         float
+         (help
+            "if test_range is on, adjusts current pitch")
+         (range 0 1)
+         (no_test))
+      (test_range_yaw
+         float
+         (help
+            "if test_range is on, adjusts current yaw")
+         (range 0 1)
+         (no_test))
+      (enable_jitter
+         bool
+         (help
+            "If enabled, high frequency noise is added to pitch and/or yaw each frame")
+         (no_test))
+      (yaw_jitter_limit
+         float
+         (help
+            "if enable_jitter is on, random noise from [-yaw_jitter_limit, yaw_jitter_limit] (in degrees) is applied to the yaw of the lookat")
+         (range 0 10))
+      (pitch_jitter_limit
+         float
+         (help
+            "if enable_jitter is on, random noise from [-pitch_jitter_limit, pitch_jitter_limit] (in degrees) is applied to the pitch of the lookat")
+         (range 0 10))))
+(CharNeckTwist
+   (description
+      "Does all interpolation for the neck.")
+   (category Character)
+   (allowed_dirs Character)
+   (superclasses Poll)
+   (ext ntwist)
+   (editor
+      (head
+         object
+         (class Trans)
+         (help
+            "The head bone, must be descendent of neck"))
+      (twist
+         object
+         (class Trans)
+         (help
+            "The twist bone, neck must be parent of"))))
+(CharServoBone
+   (category Character)
+   (description
+      "Sets bone transforms and regulates Character center to a spot.")
+   (allowed_dirs)
+   (superclasses Poll CharBonesMeshes)
+   (ext servo)
+   (editor
+      (apply_char_root
+         bool
+         (help
+            "Should this apply char_root motion?")
+         (no_test serialize))))
+(CharUpperTwist
+   (category Character)
+   (description
+      "<p>Does all interpolation for the upperarm, assuming\n        upperArm, upperTwist1 and 2 are under clavicle. Rotation about x is\n        evenly distributed from clavicle->twist1->twist2->upperarm</p>\n        Feeds the bones when executed.")
+   (allowed_dirs Character)
+   (superclasses Poll)
+   (ext utwist)
+   (editor
+      (upper_arm
+         object
+         (class Trans)
+         (help
+            "The upper arm bone"))
+      (twist1
+         object
+         (class Trans)
+         (help
+            "The upper arm twist1 bone"))
+      (twist2
+         object
+         (class Trans)
+         (help
+            "The upper arm twist2 bone"))))
+(CharWeightable
+   (description
+      "Base class for any object that can have weight set on it,\n        or have a Weightable parent from which it gets that state.")
+   (category Character)
+   (allowed_dirs)
+   (editor
+      (weight
+         float
+         (help
+            "Weight to blend in by"))
+      (weight_owner
+         object
+         (class CharWeightable)
+         (help
+            "object to get weight from")
+         (no_test))))

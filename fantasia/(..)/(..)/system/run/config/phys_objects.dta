@@ -1,0 +1,865 @@
+(PhysCollisionBody
+   (category Physics)
+   (user_creatable FALSE))
+(RigidBody
+   (description
+      "RigidBodies are made up of one or more geometry shapes and define a collidable object in the physics world. \nTheir motion type defines whether they will be \nnon-moving(Fixed), driven by animations(Animatable) or affected by gravity and other forces(Physics Driven).")
+   (category Physics)
+   (superclasses Trans PhysCollisionBody)
+   (allowed_dirs Scene Entity)
+   (ext rb)
+   (editor
+      (sync_collision_shapes
+         script
+         (alias
+            "Regenerate Collision Geometry")
+         (script
+            {$this sync_collision})
+         (help
+            "Click to rebuild platform specific (bullet) data.")
+         (tab debug))
+      (active
+         bool
+         (help
+            "Is this body active?")
+         (no_test))
+      (collision_filter_name
+         symbol
+         (alias
+            "Collision Filter Preset")
+         (list
+            {$physics collision_filter_symbols kFilterTypeRB})
+         (help
+            "The applied collision filter preset used to define what other RigidBodies this object collides with."))
+      (collision_is_a
+         bitfield
+         (alias
+            "is-a flags")
+         (list
+            {$physics rb_collision_is_a})
+         (help
+            "Flags that represent the collision type that I am"))
+      (collision_collides_with
+         bitfield
+         (alias
+            "collides-with flags")
+         (list
+            {$physics rb_collision_with})
+         (help
+            "Flags that represent the collision types that I collide with"))
+      (friction
+         float
+         (alias
+            "surface friction")
+         (slider)
+         (range 0.0 1.0)
+         (help
+            "The friction of the Rigidbody's surface"))
+      (bounciness
+         float
+         (range 0.0 1.0)
+         (slider)
+         (help
+            "The bounciness/restitution of the Rigidbody when objects collide with it."))
+      (material
+         symbol
+         (alias
+            "surface material")
+         (list PHYSICS_MATERIAL)
+         (help
+            "The material type that lets other systems (like audio) know what material this collidable is made of."))
+      (fixed_collision
+         bool
+         (alias
+            "fixed motion?")
+         (help
+            "When true, the Rigidbody becomes non-movable")
+         (hide flow propanim)
+         (no_test))
+      (motion_type
+         int
+         (list PHYS_MOTION_TYPES)
+         (help
+            "The motion behaviour of the Rigidbody.")
+         (read_only
+            {==
+               [fixed_collision]
+               1})
+         (no_test))
+      (dynamic_properties
+         (indent
+            (mass
+               float
+               (help
+                  "The mass in kilograms of the Rigidbody")
+               (no_test))
+            (overide_inertia_tensor
+               bool
+               (help
+                  "Set to true to override the auto-calculated inertia tensors")
+               (no_test))
+            (inertia_tensor
+               VECTOR3
+               (alias
+                  "overide inertia")
+               (hide
+                  {==
+                     [overide_inertia_tensor]
+                     0})
+               (help
+                  "Mass distribution on local (x,y,z) axis of the Rigidbody")
+               (no_test))
+            (linear_velocity_damping
+               float
+               (range 0.0 1.0)
+               (slider)
+               (help
+                  "Speed damping")
+               (no_test))
+            (angular_velocity_damping
+               float
+               (range 0.0 1.0)
+               (slider)
+               (help
+                  "Spin speed damping")
+               (no_test))
+            (gravity_multiplier
+               float
+               (help
+                  "gravity multiplier to world gravity"))
+            (start_settled
+               bool
+               (help
+                  "when activating this physics body, start it off as if it is settled/frozen until it gets touched by another physics body")))
+         (read_only
+            {!=
+               [motion_type]
+               kPhysMotionPhysicsDriven}))
+      (collision_shape_type
+         int
+         (list PHYS_SHAPE_TYPES)
+         (help
+            "Sets the type of collision shape to generate out of the provided geometry of the shape.")
+         (hide
+            flow
+            propanim
+            {==
+               [is_cached]
+               TRUE})
+         (no_test))
+      (make_fixed_collision_for
+         object
+         (class Mesh)
+         (alias
+            "Make as Fixed collision of...")
+         (help
+            "Copies geometry from mesh into RigidBody, sets motion type to Fixed and then makes it a trans child of the mesh.")
+         (group
+            "Physics Utilities")
+         (inline_script
+            "Go"
+            (script
+               {$this
+                  make_fixed_collision_for_mesh
+                  [make_fixed_collision_for]}
+               {$this
+                  set
+                  make_fixed_collision_for
+                  ""}))
+         (no_test))
+      (simplygon_max_deviance
+         float
+         (alias
+            "Simplygon Max Deviance")
+         (group
+            "Physics Utilities")
+         (range 0.0 1000.0)
+         (help
+            "If Simplygon is installed and enabled, this sets the LOD level for Simplygon conversion from RndMesh to collision geometry. The higher the number, the lower the LOD.")
+         (no_test)))
+   (events_in
+      (set_linear_velocity
+         (editor
+            (x
+               float
+               (help
+                  "The world x speed"))
+            (y
+               float
+               (help
+                  "The world y speed"))
+            (z
+               float
+               (help
+                  "The world z speed"))
+            (axis_filter
+               bitfield
+               (list
+                  (("kPhysAxisX"
+                        (alias
+                           "X axis"))
+                     ("kPhysAxisY"
+                        (alias
+                           "Y axis"))
+                     ("kPhysAxisZ"
+                        (alias
+                           "Z axis"))))
+               (help
+                  "axis to apply to"))
+            (world_space
+               bool
+               (help
+                  "apply velocity in world space when true, local space when false")))
+         (help
+            "Set the linear velocity of the rigid body"))
+      (apply_force
+         (editor
+            (x
+               float
+               (help
+                  "The world X force"))
+            (y
+               float
+               (help
+                  "The world Y force"))
+            (z
+               float
+               (help
+                  "The world Z force")))
+         (help
+            "apply a force to the rigid body"))
+      (apply_local_force
+         (editor
+            (x
+               float
+               (help
+                  "The local X force"))
+            (y
+               float
+               (help
+                  "The local Y force"))
+            (z
+               float
+               (help
+                  "The local Z force")))
+         (help
+            "apply a local space force to the rigid body"))
+      (apply_impulse
+         (editor
+            (x
+               float
+               (help
+                  "The world Z impulse"))
+            (y
+               float
+               (help
+                  "The world Y impulse"))
+            (z
+               float
+               (help
+                  "The world Z impulse")))
+         (help
+            "apply a temporary impulse to the rigid body"))
+      (apply_local_impulse
+         (editor
+            (x
+               float
+               (help
+                  "The local X impulse"))
+            (y
+               float
+               (help
+                  "The local Y impulse"))
+            (z
+               float
+               (help
+                  "The local Z impulse")))
+         (help
+            "apply a temporary local space impulse to the rigid body"))
+      (apply_angular_force
+         (editor
+            (force
+               float
+               (help
+                  "The spin force to apply"))
+            (spin_axis_x
+               float
+               (help
+                  "The world X axis angular/spin force"))
+            (spin_axis_y
+               float
+               (help
+                  "The world Y axis angular/spin force"))
+            (spin_axis_z
+               float
+               (help
+                  "The world Z axis angular/spin force")))
+         (help
+            "apply a temporary angular(spin) force around an axis to the rigid body"))
+      (apply_local_angular_force
+         (editor
+            (force
+               float
+               (help
+                  "The spin force to apply"))
+            (spin_axis_x
+               float
+               (help
+                  "The local space X axis angular/spin force"))
+            (spin_axis_y
+               float
+               (help
+                  "The local space Y axis angular/spin force"))
+            (spin_axis_z
+               float
+               (help
+                  "The local space Z axis angular/spin force")))
+         (help
+            "apply a temporary angular(spin) force around a local space axis to the rigid body"))
+      (apply_angular_impulse
+         (editor
+            (force
+               float
+               (help
+                  "The spin impulse to apply"))
+            (spin_axis_x
+               float
+               (help
+                  "The world X axis angular/spin impulse"))
+            (spin_axis_y
+               float
+               (help
+                  "The world Y axis angular/spin impulse"))
+            (spin_axis_z
+               float
+               (help
+                  "The world Z axis angular/spin impulse")))
+         (help
+            "apply a temporary angular(spin) impulse around an axis to the rigid body"))
+      (apply_local_angular_impulse
+         (editor
+            (force
+               float
+               (help
+                  "The spin impulse to apply"))
+            (spin_axis_x
+               float
+               (help
+                  "The local space X axis angular/spin impulse"))
+            (spin_axis_y
+               float
+               (help
+                  "The local space Y axis angular/spin impulse"))
+            (spin_axis_z
+               float
+               (help
+                  "The local space Z axis angular/spin impulse")))
+         (help
+            "apply a temporary angular(spin) impulse around a local space axis to the rigid body"))
+      (apply_point_force
+         (editor
+            (force
+               float
+               (help
+                  "The force to apply"))
+            (dir_x
+               float
+               (help
+                  "The world space force X direction"))
+            (dir_y
+               float
+               (help
+                  "The world space force Y direction"))
+            (dir_z
+               float
+               (help
+                  "The world space force Z direction"))
+            (impact_pos_x
+               float
+               (help
+                  "The world X impact position"))
+            (impact_pos_y
+               float
+               (help
+                  "The world Y impact position"))
+            (impact_pos_z
+               float
+               (help
+                  "The world Z impact position")))
+         (help
+            "apply a directional force at a specific world space point on the RigidBody."))
+      (apply_point_impulse
+         (editor
+            (force
+               float
+               (help
+                  "The impulse to apply"))
+            (dir_x
+               float
+               (help
+                  "The world space impulse X direction"))
+            (dir_y
+               float
+               (help
+                  "The world space impulse Y direction"))
+            (dir_z
+               float
+               (help
+                  "The world space impulse Z direction"))
+            (impact_pos_x
+               float
+               (help
+                  "The world X impact position"))
+            (impact_pos_y
+               float
+               (help
+                  "The world Y impact position"))
+            (impact_pos_z
+               float
+               (help
+                  "The world Z impact position")))
+         (help
+            "apply a temporary directional impulse at a specific world space point on the RigidBody."))
+      (wake_up
+         (help
+            "Wake up a rigid body that has gone to sleep"))
+      (teleport_to_trans
+         (editor
+            (trans
+               object
+               (class Trans)
+               (help
+                  "Trans to teleport to")))
+         (help
+            "Teleport the same pos/rotation as another trans"))
+      (teleport_to_pos
+         (editor
+            (x_pos
+               float
+               (help
+                  "X pos to teleport to"))
+            (y_pos
+               float
+               (help
+                  "X pos to teleport to"))
+            (z_pos
+               float
+               (help
+                  "X pos to teleport to")))
+         (help
+            "Teleport the given pos"))))
+(PhysicsSensor
+   (description
+      "Just like RigiBodies, PhysicsSensors are made up of collision shapes and define a collidable object in the physics world. \nUnlike RigidBodies, when they get touched, they do not get pushed or pushed back, but they do report that collision happened. They also do not get affected by gravity. \nPhysicsSensrs are commonly used for setting up volume triggers. ")
+   (category Physics)
+   (superclasses Trans PhysCollisionBody)
+   (allowed_dirs Scene ObjectDir)
+   (ext phsensor)
+   (editor
+      (sync_collision_shapes
+         script
+         (alias
+            "Regenerate Collision Geometry")
+         (script
+            {$this sync_collision})
+         (help
+            "Click to rebuild platform specific (bullet) data.")
+         (tab debug))
+      (active
+         bool
+         (help
+            "Is this sensor active?")
+         (no_test))
+      (collision_filter_name
+         symbol
+         (alias
+            "filter preset")
+         (list
+            {$physics collision_filter_symbols kFilterTypeSensor})
+         (help
+            "The applied collision filter preset used to define what other RigidBodies this object collides with."))
+      (collision_is_a
+         bitfield
+         (alias
+            "is-a flags")
+         (list
+            {$physics sensor_collision_is_a})
+         (help
+            "Flags that represent the collision type that I am"))
+      (collision_collides_with
+         bitfield
+         (alias
+            "collides-with flags")
+         (list
+            {$physics sensor_collision_with})
+         (help
+            "Flags that represent the collision types that I collide with"))
+      (num_inside
+         int
+         (alias
+            "number of objects inside")
+         (read_only TRUE)
+         (help
+            "How many objects are currently being detected?"))
+      (aabb_check_only
+         bool
+         (alias
+            "AABB overlap check only?")
+         (help
+            "If set to true, the PhysicsSensor will do ONLY super fast Axis Alligned Bounding Box (AABB) overlap checking of objects that enter it at the expense of precision. The AABB volume will be generated from the collision_parts.")
+         (hide flow propanim))
+      (collision_shape_type
+         int
+         (list PHYS_SHAPE_TYPES)
+         (help
+            "Sets the type of collision shape to generate out of the provided geometry of the shape.")
+         (hide flow propanim)
+         (no_test))
+      (copy_geom_from
+         object
+         (class Mesh)
+         (alias
+            "Make Sensor for Mesh...")
+         (group
+            "Physics Utilities")
+         (help
+            "Copies geometry from Mesh into PhysicsSensor, then makes the Sensor a trans child of the mesh.")
+         (inline_script
+            "Go"
+            (script
+               {$this
+                  make_sensor_for_mesh
+                  [copy_geom_from]}
+               {$this
+                  set
+                  copy_geom_from
+                  ""}))
+         (no_test))
+      (simplygon_max_deviance
+         float
+         (alias
+            "Simplygon Max Deviance")
+         (group
+            "Physics Utilities")
+         (range 0.0 1000.0)
+         (help
+            "Set the LOD level for Simplygon conversion from RndMesh to collision geometry. The higher the number, the lower the LOD.")
+         (no_test)))
+   (events_out
+      (object_enter
+         (editor
+            (rbobj
+               object
+               (class RigidBody)
+               (help
+                  "The rigidbody entering the ghost object")))
+         (help
+            "called when an object enters the sensor which passes the filter requirements. Passes you the rigid body that entered"))
+      (object_exit
+         (editor
+            (rbobj
+               object
+               (class RigidBody)
+               (help
+                  "The rigidbody entering the ghost object")))
+         (help
+            "called when an object leaves the sensor. Passes you the rigid body that left"))))
+(Constraint
+   (description
+      "Used to link one to two RigidBodies together and restrict their movement.")
+   (allowed_dirs Scene Entity)
+   (category Physics)
+   (ext limit)
+   (editor
+      (sync_physics
+         script
+         (script
+            {$this sync_physics})
+         (help
+            "Click to rebuild platform specific (bullet) data."))
+      (active_phys
+         bool
+         (help
+            "Add to physics world.")
+         (no_test))
+      (constraint_type
+         int
+         (list PHYS_CONSTRAINT_TYPES)
+         (help
+            "type or behaviour of constraint"))
+      (rigidbody_dir
+         object
+         (class Entity)
+         (alias
+            "Constrained RB Entity Dir")
+         (help
+            "Optional Entity that owns the RigidBody that this constraint will attach to.")
+         (record_all))
+      (rigidbody
+         object
+         (class RigidBody)
+         (alias
+            "Constrained RigidBody")
+         (list
+            {$this
+               get_rigidbody_list
+               [rigidbody_dir]
+               [anchor_rigidbody]})
+         (help
+            "The source RigidBody that this Constraint will attach to. This Constraint's transform will be used as a pivot point."))
+      (anchor_dir
+         object
+         (class Entity)
+         (alias
+            "Anchor RB Entity Dir")
+         (no_test)
+         (help
+            "Optional Entity that owns the Anchor RigidBody that this constraint will attach to.")
+         (record_all))
+      (anchor_rigidbody
+         object
+         (class RigidBody)
+         (alias
+            "RigidBody Anchor")
+         (no_test)
+         (list
+            {$this
+               get_rigidbody_list
+               [anchor_dir]
+               [rigidbody]})
+         (help
+            "If provided, this RigidBody will be used as an anchor to this Constraint or else the Constraint will be anchored to its world transform upon activated."))
+      (limits
+         (indent
+            (z_axis_min_swing_limit
+               float
+               (range
+                  -180.0
+                  [z_axis_max_swing_limit])
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraintHinge}
+                  flow
+                  propanim)
+               (help
+                  "The minimum angle of movement allowed around the Z axis of the constraint"))
+            (z_axis_max_swing_limit
+               float
+               (range
+                  [z_axis_min_swing_limit]
+                  180.0)
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraintHinge}
+                  flow
+                  propanim)
+               (help
+                  "The maximum angle of movement allowed around the Z axis of the constraint"))
+            (x_axis_twist_limit
+               float
+               (no_test)
+               (range 0.0 180.0)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraintConeTwist}
+                  flow
+                  propanim)
+               (help
+                  "The maximum twist angle around the X axis of the constraint"))
+            (y_axis_swing_limit
+               float
+               (no_test)
+               (range 0.0 180.0)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraintConeTwist}
+                  flow
+                  propanim)
+               (help
+                  "The maximum swing angle of movement allowed around the Y axis of the constraint"))
+            (z_axis_swing_limit
+               float
+               (no_test)
+               (range 0.0 180.0)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraintConeTwist}
+                  flow
+                  propanim)
+               (help
+                  "The maximum swing angle of movement allowed around the Z axis of the constraint"))
+            (x_min_angle
+               float
+               (range
+                  -180.0
+                  [x_max_angle])
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The minimum angle of movement allowed around the X axis of the constraint"))
+            (x_max_angle
+               float
+               (range
+                  [x_min_angle]
+                  180.0)
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The angular (twist) range of movement allowed around the X axis of the constraint"))
+            (y_min_angle
+               float
+               (range
+                  -90.0
+                  [y_max_angle])
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The minimum angle of movement allowed around the Y axis of the constraint"))
+            (y_max_angle
+               float
+               (range
+                  [y_min_angle]
+                  90.0)
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The angular (twist) range of movement allowed around the Y axis of the constraint"))
+            (z_min_angle
+               float
+               (range
+                  -90.0
+                  [z_max_angle])
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The minimum angle of movement allowed around the Z axis of the constraint"))
+            (z_max_angle
+               float
+               (range
+                  [z_min_angle]
+                  90.0)
+               (no_test)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The angular (twist) range of movement allowed around the Z axis of the constraint"))
+            (x_linear_min
+               float
+               (no_test)
+               (range
+                  -10000.0
+                  [x_linear_max])
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The minimum translation allowed on the X axis of the constraint"))
+            (x_linear_max
+               float
+               (no_test)
+               (range
+                  [x_linear_min]
+                  10000.0)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The maximum translation allowed on the X axis of the constraint"))
+            (y_linear_min
+               float
+               (no_test)
+               (range
+                  -10000.0
+                  [y_linear_max])
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The minimum translation allowed on the Y axis of the constraint"))
+            (y_linear_max
+               float
+               (no_test)
+               (range
+                  [y_linear_min]
+                  10000.0)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The maximum translation allowed on the Y axis of the constraint"))
+            (z_linear_min
+               float
+               (no_test)
+               (range
+                  -10000.0
+                  [z_linear_max])
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The minimum translation allowed on the Z axis of the constraint"))
+            (z_linear_max
+               float
+               (no_test)
+               (range
+                  [z_linear_min]
+                  10000.0)
+               (hide
+                  {!=
+                     [constraint_type]
+                     kConstraint6DOF}
+                  flow
+                  propanim)
+               (help
+                  "The maximum translation allowed on the Z axis of the constraint"))))))

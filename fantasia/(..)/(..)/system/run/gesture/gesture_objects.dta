@@ -1,0 +1,902 @@
+#define COORD_SYSTEMS
+("kCoordCamera"
+   "kCoordLeftArm"
+   "kCoordRightArm"
+   "kCoordLeftLeg"
+   "kCoordRightLeg")
+(SkeletonClip
+   (description
+      "An animated clip of a skeleton playable in forge")
+   (superclasses Anim)
+   (editor
+      (file
+         string
+         (help
+            "associated data file")
+         (no_test)
+         (read_only TRUE))
+      (load_clip
+         script
+         (script
+            {$this load_clip})
+         (help
+            "loads the clip off disk")
+         (no_test))
+      (loaded
+         bool
+         (read_only TRUE)
+         (help
+            "is the clip loaded"))
+      (start_recording
+         script
+         (script
+            {$this start_recording})
+         (help
+            "start a recording")
+         (read_only
+            {'||'
+               {!=
+                  [file]
+                  ''}
+               {$this is_recording}})
+         (no_test))
+      (stop_recording
+         script
+         (script
+            {$this stop_recording})
+         (help
+            "stop the current recording")
+         (read_only
+            {!
+               {$this is_recording}})
+         (no_test))
+      (time_recorded
+         string
+         (read_only TRUE)
+         (help
+            "Time/Date this clip was recorded"))
+      (build
+         string
+         (read_only TRUE)
+         (help
+            "Build recording was made in"))
+      (start_seconds
+         float
+         (read_only TRUE)
+         (help
+            "Time in song when recording started"))
+      (end_seconds
+         float
+         (read_only TRUE)
+         (help
+            "Time in song when recording ended")))
+   (ext clp))
+(SkeletonViz
+   (description
+      "Visualization of one natural input skeleton")
+   (superclasses Draw Trans)
+   (allowed_dirs Scene)
+   (ext viz)
+   (editor
+      (use_physical_cam
+         bool
+         (help
+            "Draw skeleton from Natal camera perspective?"))
+      (axes_coord_sys
+         int
+         (list
+            (COORD_SYSTEMS))
+         (help
+            "Which coordinate system axes to draw"))))
+(StreamRecorder
+   (description
+      "Stores a series of depth buffer textures")
+   (allowed_dirs ObjectDir)
+   (superclasses Draw)
+   (ext srec)
+   (editor
+      (stream_renderer
+         object
+         (class StreamRenderer)
+         (help
+            "Renders the depth buffer to a texture for storage in this StreamRecorder")
+         (no_test))
+      (use_alpha
+         bool
+         (help
+            "Should the next recording have transparent texels?"))
+      (output_mat
+         object
+         (class Mat)
+         (help
+            "Material for playback")
+         (no_test))
+      (max_frames
+         int
+         (range 0 4000)
+         (help
+            "Max number of depth buffer textures stored"))
+      (frames_recorded
+         int
+         (read_only TRUE)
+         (help
+            "Number of textures recorded for playback"))
+      (playback_speed
+         int
+         (list SPEED_FLAGS)
+         (help
+            "Speed at which to play back depth buffer textures"))
+      (reset_recording
+         script
+         (script
+            {$this reset})
+         (help
+            "Reset the buffer allocation"))
+      (start_recording
+         script
+         (script
+            {$this start_recording})
+         (help
+            "Begin storing depth buffer textures"))
+      (stop_recording
+         script
+         (script
+            {$this stop_recording})
+         (help
+            "Stop storing depth buffer textures"))
+      (play_recording
+         script
+         (script
+            {$this play_recording})
+         (help
+            "Play recorded depth buffer textures"))
+      (stop_playback
+         script
+         (script
+            {$this stop_playback})
+         (help
+            "End display of recorded images"))
+      (save_recording
+         script
+         (script
+            {$this save_recording})
+         (help
+            "Save recorded images to disk")
+         (no_test))
+      (debug_frame
+         int
+         (read_only TRUE)
+         (help
+            "Overrides the normal playback to display one recorded frame.\nSet to -1 to turn off."))
+      (next_debug_frame
+         script
+         (script
+            {set
+               [debug_frame]
+               {'+'
+                  [debug_frame]
+                  1}})
+         (help
+            "Show next frame.  Used for debubing"))
+      (prev_debug_frame
+         script
+         (script
+            {set
+               [debug_frame]
+               {-
+                  [debug_frame]
+                  1}})
+         (help
+            "Show previous frame.  Used for debubing"))
+      (reset_debug_frame
+         script
+         (script
+            {set
+               [debug_frame]
+               -1})
+         (help
+            "Reset debug frame to turn off debug display")))
+   (events_in
+      (start_recording
+         (editor))
+      (stop_recording
+         (editor))
+      (play_recording
+         (editor))
+      (reset
+         (editor))))
+(StreamRenderer
+   (description
+      "Renders Natal stream textures into a texture.")
+   (allowed_dirs ObjectDir)
+   (superclasses Draw)
+   (ext sr)
+   (editor
+      (output_texture
+         object
+         (class Tex)
+         (help
+            "Texture to render to")
+         (list
+            {$this get_render_textures})
+         (add_history
+            [output_texture]))
+      (display
+         int
+         (list STREAM_DISPLAY_LIST)
+         (help
+            "Kinect buffer to display"))
+      (num_blurs
+         int
+         (range 0 64)
+         (help
+            "Number of times to blur the player silhouette texture"))
+      (player_depth_nobody
+         color
+         (help
+            "Color for non-player pixels (i.e. the background)"))
+      (player_depth_nobody_alpha
+         float
+         (help
+            "Alpha for non-player pixels"))
+      (player1_depth_color
+         color
+         (help
+            "Player 1 color"))
+      (player1_depth_color_alpha
+         float
+         (help
+            "Player 1 alpha"))
+      (player2_depth_color
+         color
+         (help
+            "Player 2 color"))
+      (player2_depth_color_alpha
+         float
+         (help
+            "Player 2 alpha"))
+      (player_depth_others
+         color
+         (help
+            "Color for players other than 1 and 2"))
+      (player_depth_others_alpha
+         float
+         (help
+            "Alpha for players other than 1 and 2"))
+      (player1_depth_palette_offset
+         float
+         (range -1 1)
+         (help
+            "Starting point for palette"))
+      (player1_depth_palette
+         object
+         (class Tex)
+         (help
+            "1D palette for player 1 depth"))
+      (player2_depth_palette_offset
+         float
+         (range -1 1)
+         (help
+            "Starting point for palette"))
+      (player2_depth_palette
+         object
+         (class Tex)
+         (help
+            "1D palette for player 2 depth"))
+      (player_other_depth_palette_offset
+         float
+         (range -1 1)
+         (help
+            "Starting point for palette"))
+      (player_other_depth_palette
+         object
+         (class Tex)
+         (help
+            "1D palette for other player depth"))
+      (background_depth_palette_offset
+         float
+         (range -1 1)
+         (help
+            "Starting point for palette"))
+      (background_depth_palette
+         object
+         (class Tex)
+         (help
+            "1D palette for background depth "))
+      (force_draw
+         bool
+         (help
+            "Always render the image, even there is no new depth/color buffer this frame."))
+      (force_mips
+         bool
+         (help
+            "Generate mip maps (levels of detail) for the texture."))
+      (is_leftright_mode
+         bool
+         (help
+            "When true, active means left player, second means right"))))
+(GestureSkeleton
+   (help
+      "Exposes the data for a Kinect Skeleton.")
+   (allowed_dirs Entity Scene ObjectDir Character)
+   (superclasses Poll)
+   (ext skeleton)
+   (editor
+      (skeleton_index
+         int
+         #ifdef HX_DURANGO
+         (range -1 7)
+         #else
+         (range -1 5)
+         #endif
+         (help
+            "Skeleton index of skeleton to monitor"))
+      (tracking_state
+         int
+         (list SKELETON_TRACKING_STATE)
+         (help
+            "Tracking state for this skelton so you know how much data you can rely on")
+         (read_only TRUE))
+      (tracking_id
+         int
+         (read_only TRUE)
+         (hide
+            {==
+               [tracking_state]
+               kSkeletonNotTracked}))
+      (center
+         VECTOR3
+         (help
+            "Position of the skeleton center")
+         (read_only TRUE)
+         (hide
+            {==
+               [tracking_state]
+               kSkeletonNotTracked}))
+      (hip_center
+         VECTOR3
+         (help
+            "Position of hip center")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hip_center_conf
+         int
+         (help
+            "Confidence of position of hip center")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (spine
+         VECTOR3
+         (help
+            "Position of spine")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (spine_conf
+         int
+         (help
+            "Confidence of position of spine")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (shoulder_center
+         VECTOR3
+         (help
+            "Position of shoulder center")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (shoulder_center_conf
+         int
+         (help
+            "Confidence of position of shoulder center")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (head
+         VECTOR3
+         (help
+            "Position of head")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (head_conf
+         int
+         (help
+            "Confidence of position of head")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (shoulder_left
+         VECTOR3
+         (help
+            "Position of left shoulder")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (shoulder_left_conf
+         int
+         (help
+            "Confidence of position of left shoulder")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (elbow_left
+         VECTOR3
+         (help
+            "Position of left elbow")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (elbow_left_conf
+         int
+         (help
+            "Confidence of position of left elbow")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (wrist_left
+         VECTOR3
+         (help
+            "Position of left wrist")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (wrist_left_conf
+         int
+         (help
+            "Confidence of position of left wrist")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_left
+         VECTOR3
+         (help
+            "Position of left hand")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_left_conf
+         int
+         (help
+            "Confidence of position of left hand")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (shoulder_right
+         VECTOR3
+         (help
+            "Position of right shoulder")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (shoulder_right_conf
+         int
+         (help
+            "Confidence of position of right shoulder")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (elbow_right
+         VECTOR3
+         (help
+            "Position of right elbow")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (elbow_right_conf
+         int
+         (help
+            "Confidence of position of right elbow")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (wrist_right
+         VECTOR3
+         (help
+            "Position of right wrist")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (wrist_right_conf
+         int
+         (help
+            "Confidence of position of right wrist")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_right
+         VECTOR3
+         (help
+            "Position of right hand")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_right_conf
+         int
+         (help
+            "Confidence of position of right hand")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hip_left
+         VECTOR3
+         (help
+            "Position of left hip")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hip_left_conf
+         int
+         (help
+            "Confidence of position of left hip")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (knee_left
+         VECTOR3
+         (help
+            "Position of left knee")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (knee_left_conf
+         int
+         (help
+            "Confidence of position of left knee")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (ankle_left
+         VECTOR3
+         (help
+            "Position of left ankle")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (ankle_left_conf
+         int
+         (help
+            "Confidence of position of left ankle")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hip_right
+         VECTOR3
+         (help
+            "Position of right hip")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hip_right_conf
+         int
+         (help
+            "Confidence of position of right hip")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (knee_right
+         VECTOR3
+         (help
+            "Position of right knee")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (knee_right_conf
+         int
+         (help
+            "Confidence of position of right knee")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (ankle_right
+         VECTOR3
+         (help
+            "Position of right ankle")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (ankle_right_conf
+         int
+         (help
+            "Confidence of position of right ankle")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (foot_left
+         VECTOR3
+         (help
+            "Position of left foot")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (foot_left_conf
+         int
+         (help
+            "Confidence of position of left foot")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (foot_right
+         VECTOR3
+         (help
+            "Position of right foot")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (foot_right_conf
+         int
+         (help
+            "Confidence of position of right foot")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (neck
+         VECTOR3
+         (help
+            "Position of neck")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (neck_conf
+         int
+         (help
+            "Confidence of position of neck")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_tip_left
+         VECTOR3
+         (help
+            "Position of left hand tip")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_tip_left_conf
+         int
+         (help
+            "Confidence of position of left hand tip")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (thumb_left
+         VECTOR3
+         (help
+            "Position of left thumb")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (thumb_left_conf
+         int
+         (help
+            "Confidence of position of thumb")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_tip_right
+         VECTOR3
+         (help
+            "Position of right hand tip")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (hand_tip_right_conf
+         int
+         (help
+            "Confidence of position of right hand tip")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (thumb_right
+         VECTOR3
+         (help
+            "Position of right thumb")
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))
+      (thumb_right_conf
+         int
+         (help
+            "Confidence of position of right thumb")
+         (list SKELETON_JOINT_CONFIDENCE)
+         (read_only TRUE)
+         (hide
+            {!=
+               [tracking_state]
+               kSkeletonTracked}))))
+(GestureMgr
+   (description
+      "Houses and provides access to gesture mgr data")
+   (user_creatable FALSE)
+   (functest no_test singleton)
+   (is_flow_provider TRUE)
+   (editor
+      (is_active_sitting
+         bool
+         (read_only TRUE)
+         (help
+            "Whether or not the active skeleton is sitting."))
+      (in_controller_mode
+         bool
+         (help
+            "Is the player using a controller to navigate the menus?"))))
+(ListNavController
+   (description
+      "An object that feeds swipe gesture data to UIFocusCom and provides UI List State for DC Games.")
+   (allowed_dirs UIScreen Entity)
+   (ext nav)
+   (superclasses UINavController)
+   (editor
+      (enabled
+         bool
+         (help
+            "Won't poll if it's disabled"))
+      (nav_input_hand
+         int
+         (help
+            "Which hand do we watch to give input to this controller?")
+         (list NAV_INPUT_HANDS))
+      (high_button_mode
+         bool
+         (help
+            "Is this controller in high button mode to ensure the hand is over the shoulder?"))
+      (ribbon_mode
+         int
+         (help
+            "The state of the UI List based on the current skeleton.")
+         (list RIBBON_MODES)
+         (history FALSE)
+         (group
+            "Temporary State")
+         (functest no_test))
+      (engagement_amount
+         float
+         (help
+            "The amount we're engaged with the UI.")
+         (range 0 1)
+         (history FALSE)
+         (slider)
+         (group
+            "Temporary State")
+         (functest no_test))
+      (skeleton_tracking_id
+         int
+         (help
+            "The skeleton attached to this controller.")
+         (history FALSE)
+         (group
+            "Temporary State")
+         (functest no_test)
+         (read_only TRUE))
+      (always_use_active_skeleton
+         bool
+         (help
+            "DCMultiUserScreenCom turns this off when it is controlling which skeleton the controller should look at.")
+         (group
+            "Temporary State")
+         (read_only TRUE)
+         (functest no_test))))

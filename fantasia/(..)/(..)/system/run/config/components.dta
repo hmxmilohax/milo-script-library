@@ -1,0 +1,1988 @@
+#ifdef INIT_FLUX
+#include ../fluxobj/flux_components.dta
+#endif
+(MsgSink
+   (alias
+      "Message Sink")
+   (tab debug)
+   (description
+      "Gives you callbacks when you need things")
+   (editor
+      (event_sinks
+         (array
+            (struct
+               (event
+                  symbol
+                  (help
+                     "the event to send down"))
+               (sinks
+                  (array
+                     (struct
+                        (obj
+                           string
+                           (help
+                              "Object to sink to"))
+                        (handler
+                           symbol
+                           (help
+                              "Name of the handler to use"))))
+                  (help
+                     "the objects, with modes and handlers to send this event to")))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child event}}))
+         (hide propedit flow propanim)
+         (read_only TRUE)
+         (no_test)
+         (help
+            "Event specific sinks, each particular event is sent to these guys"))))
+(LinkManager
+   (description
+      "Manages links into and out of an object.")
+   (tab debug)
+   (alias
+      "Link Manager")
+   (editor
+      (links_in
+         (array
+            (struct
+               (name
+                  symbol
+                  (help
+                     "The name of this link into this object.")
+                  (hide TRUE))
+               (links
+                  (array
+                     (struct
+                        (origin
+                           object
+                           (class Object)
+                           (help
+                              "The object linking into this link in."))
+                        (link_out
+                           symbol
+                           (help
+                              "The link out of the origin that activates this link in.")))
+                     (header
+                        {do
+                           ($origin
+                              {$this
+                                 get
+                                 {editor_prop_path_child origin}})
+                           ($link_out
+                              {$this
+                                 get
+                                 {editor_prop_path_child link_out}})
+                           {sprintf
+                              "%s:%s"
+                              {safe_name $origin}
+                              $link_out}}))
+                  (help
+                     "The list of links into this (link) in point.")))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child name}}))
+         (help
+            "The list of active links into this object.")
+         (read_only TRUE)
+         (hide propanim flow)
+         (tab debug)
+         (no_test))
+      (links_out
+         (array
+            (struct
+               (name
+                  symbol
+                  (help
+                     "The name of this link out of this object.")
+                  (hide TRUE))
+               (links
+                  (array
+                     (struct
+                        (target
+                           object
+                           (class Object)
+                           (help
+                              "The object this link out links into."))
+                        (link_in
+                           symbol
+                           (help
+                              "The link in that this link out activates on the target.")))
+                     (header
+                        {do
+                           ($target
+                              {$this
+                                 get
+                                 {editor_prop_path_child target}})
+                           ($link_in
+                              {$this
+                                 get
+                                 {editor_prop_path_child link_in}})
+                           {sprintf
+                              "%s:%s"
+                              {safe_name $target}
+                              $link_in}}))
+                  (help
+                     "The list of links out of this link out point.")))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child name}}))
+         (help
+            "The list of active links out of this object.")
+         (read_only TRUE)
+         (hide propanim flow)
+         (tab debug)
+         (no_test))))
+(WwiseComponent
+   (alias
+      "Wwise")
+   (description
+      "Lets Wwise know about this game object, and emit sounds from it. This component lets you specify sound banks, parameters, and switches that are important to this object.")
+   (tab properties)
+   (user_can_add TRUE)
+   (group
+      "Wwise")
+   (editor
+      (wwise_banks
+         (array
+            symbol
+            (list
+               {audio_mgr get_soundbank_names})
+            (help
+               "Wwise soundbanks required by this object."))
+         (alias
+            "Soundbanks")
+         (help
+            "Soundbanks that this object requires.")
+         (hide propanim flow)
+         (disk_prop))
+      (wwise_params
+         (struct)
+         (help
+            "Wwise game parameters on this object")
+         (alias
+            "Parameters"))
+      (wwise_switches
+         (struct)
+         (help
+            "Wwise switches on this object")
+         (alias
+            "Switches"))
+      (wwise_events
+         (array
+            (struct
+               (name symbol)
+               (transport_state symbol))
+            (editor_type vector))
+         (alias
+            "Active Events")
+         (fixed_size TRUE)
+         (read_only TRUE))
+      (wwise_id
+         string
+         (alias
+            "Wwise ID")
+         (help
+            "The Wwise 'Game Object' ID for this object")
+         (read_only TRUE)
+         (hide propanim flow)
+         (tab debug))
+      (stop_all
+         script
+         (alias
+            "Silence Object")
+         (script
+            {$this stop_all_sounds})
+         (help
+            "Stops all Wwise events associated with this object")
+         (tab debug))
+      (stop_on_exit
+         bool
+         (alias
+            "Silence on Exit")
+         (help
+            "When this object is exited, should we stop all of its sounds?")
+         (disk_prop))
+      (param_to_add
+         symbol
+         (list
+            {$this get_params_available_for_add})
+         (hide propanim flow)
+         (alias
+            "Add Param")
+         (inline_script
+            "+"
+            (script
+               {do
+                  {$this
+                     add_wwise_param
+                     [param_to_add]}
+                  {set
+                     [param_to_add]
+                     ''}}))
+         (help
+            "Select a game parameter to add to this object. Then press the plus button.")
+         (no_test)
+         (disk_prop))
+      (param_to_remove
+         symbol
+         (list
+            {$this get_params_available_for_remove})
+         (hide propanim flow)
+         (alias
+            "Remove Param")
+         (inline_script
+            "-"
+            (script
+               {do
+                  {$this
+                     remove_wwise_param
+                     [param_to_remove]}
+                  {set
+                     [param_to_remove]
+                     ''}}))
+         (help
+            "Select a game parameter to remove from this object. Then press the minus button.")
+         (no_test)
+         (disk_prop))
+      (switch_to_add
+         symbol
+         (list
+            {$this get_switches_available_for_add})
+         (hide propanim flow)
+         (alias
+            "Add Switch")
+         (inline_script
+            "+"
+            (script
+               {do
+                  {$this
+                     add_wwise_switch
+                     [switch_to_add]}
+                  {set
+                     [switch_to_add]
+                     ''}}))
+         (help
+            "Select a switch to add to this object. Then press the plus button.")
+         (no_test)
+         (disk_prop))
+      (switch_to_remove
+         symbol
+         (list
+            {$this get_switches_available_for_remove})
+         (hide propanim flow)
+         (alias
+            "Remove Switch")
+         (inline_script
+            "-"
+            (script
+               {do
+                  {$this
+                     remove_wwise_switch
+                     [switch_to_remove]}
+                  {set
+                     [switch_to_remove]
+                     ''}}))
+         (help
+            "Select a switch to remove from this object. Then press the minus button.")
+         (no_test)
+         (disk_prop)))
+   (events_in
+      (post_event
+         (editor
+            (event
+               symbol
+               (list
+                  {[target]
+                     get_event_names})
+               (help
+                  "name of the event to post"))
+            (timeline
+               int
+               (list TASK_UNITS)
+               (help
+                  "timeline to play and pause with")))
+         (help
+            "post an event"))
+      (post_trigger
+         (editor
+            (trigger
+               symbol
+               (list
+                  {[target]
+                     get_trigger_names})
+               (help
+                  "name of the trigger to post")))
+         (help
+            "post an trigger"))
+      (play_dialogue_playlist
+         (menu_description
+            "Add Dialogue Playlist")
+         (editor
+            (playlist_name
+               symbol
+               (list
+                  {[target]
+                     get_dialogue_playlists})
+               (help
+                  "name of dialogue playlist"))))
+      (play_dialogue_event
+         (menu_description
+            "Add Dialogue Events")
+         (editor
+            (dialogue_event
+               symbol
+               (list
+                  {[target]
+                     get_dialogue_event_names})
+               (help
+                  "name of the dialogue event to play")))
+         (help
+            "post a dialogue event"))
+      (stop_dialogue)
+      (stop_all_sounds)
+      (set_param
+         (editor
+            (param symbol)
+            (value float)))
+      (set_switch
+         (editor
+            (switch symbol)
+            (value symbol))))
+   (events_out
+      (dialogue_event_completed
+         (editor
+            (dialogue_event
+               symbol
+               (list
+                  {$this get_dialogue_event_names})))
+         (help
+            "a dialogue event finished playing"))))
+(AcousticEnvironmentComponent
+   (alias
+      "Acoustic Environment")
+   (description
+      "Adds effects like echo to an area")
+   (user_can_add TRUE)
+   (required_classes PhysicsSensor)
+   (editor
+      (acoust_env_bus_name
+         symbol
+         (list
+            {$this get_aux_busses})
+         (alias
+            "Wwise Aux Bus")
+         (help
+            "Name of the Wwise aux bus to use for processing"))))
+(RigidBodyInfoCom
+   (alias
+      "Motion Info")
+   (description
+      "Computes extra information per frame for rigid bodies, such as the speed of the object")
+   (user_can_add TRUE)
+   (required_classes RigidBody)
+   (tab properties)
+   (group
+      "Dynamics Reporting")
+   (editor
+      (at_rest
+         bool
+         (alias
+            "resting?")
+         (read_only TRUE)
+         (no_test)
+         (help
+            "is the object just sitting there, unmoving?"))
+      (speed
+         float
+         (no_test)
+         (read_only TRUE)
+         (help
+            "How fast am I moving? units per second"))
+      (velocity
+         VECTOR3
+         (no_test)
+         (read_only TRUE)
+         (help
+            "How fast am I moving?  Given in world coordinates.  Units per second"))
+      (turn_speed
+         float
+         (no_test)
+         (read_only TRUE)
+         (help
+            "how fast am I turning? degrees per second"))
+      (angular_velocity
+         VECTOR3
+         (no_test)
+         (read_only TRUE)
+         (help
+            "How fast am I turning?  World coordinates, radians per second"))))
+(RigidBodyContactFilterCom
+   (alias
+      "Contacts Filter Info")
+   (description
+      "Reports contacts between the owner RigidBody and other RigidBodies")
+   (user_can_add TRUE)
+   (required_classes RigidBody)
+   (tab properties)
+   (group
+      "Contact Reporting")
+   (editor
+      (report_contacts
+         bool
+         (help
+            "enable/disable the contact filter"))
+      (report_each_contact
+         bool
+         (help
+            "report each new contact that gets detected each frame (carefull! this can be slow!)"))
+      (active_contact_filters
+         bitfield
+         (list CONTACT_FILTER_TYPES)
+         (help
+            "Enable/Disable Contact Filters (below), the more you have enabled, the slower the game gets"))
+      (sleep_time_filter
+         (struct
+            (sleep_time
+               float
+               (help
+                  "after a collision contact, make RigidBodyContactFilterCom wait this long before it reports new contacts.")))
+         (read_only
+            {!
+               {&
+                  [active_contact_filters]
+                  kContactFilter_SleepTime}}))
+      (max_contacts_filter
+         (struct
+            (max_contacts
+               int
+               (help
+                  "only report this many contacts per frame.")))
+         (read_only
+            {!
+               {&
+                  [active_contact_filters]
+                  kContactFilter_MaxContacts}}))
+      (mass_range_filter
+         (struct
+            (min_mass
+               float
+               (help
+                  "report contacts with objects with mass within this range"))
+            (max_mass
+               float
+               (help
+                  "report contacts with objects with mass within this range")))
+         (read_only
+            {!
+               {&
+                  [active_contact_filters]
+                  kContactFilter_Mass}}))
+      (material_filter
+         (struct
+            (surface_material
+               symbol
+               (list PHYSICS_MATERIAL)
+               (help
+                  "report contacts with RigidBodies that have this material.")))
+         (read_only
+            {!
+               {&
+                  [active_contact_filters]
+                  kContactFilter_Material}}))
+      (angle_of_impact_filter
+         (struct
+            (min_angle
+               float
+               (range
+                  0.0
+                  [angle_of_impact_filter max_angle])
+               (help
+                  "minimum angle between the direction of the body and the normal of the surface it hit"))
+            (max_angle
+               float
+               (range
+                  [angle_of_impact_filter min_angle]
+                  90.0)
+               (help
+                  "maximum angle between the direction of the body and the normal of the surface it hit"))
+            (test_other_body
+               bool
+               (help
+                  "false to check my own velocity on impact, true to check the velocity of the body that bumped into me. ")))
+         (help
+            "report contacts when our angle of impact (the direction of movement against the surface normal) is within this range")
+         (read_only
+            {!
+               {&
+                  [active_contact_filters]
+                  kContactFilter_ImpactAngle}})))
+   (events_out
+      (on_has_contacts
+         (help
+            "Called once per frame whenever new contacts are detected (that passes all the filters in RigidBodyContactFilterCom) between this RigidBody and one or more other bodies."))
+      (on_collision_contact
+         (editor
+            (rbobj
+               object
+               (class RigidBody)
+               (help
+                  "The rigidbody we collided with"))
+            (contact_pos_x
+               float
+               (help
+                  "The x position of the contact"))
+            (contact_pos_y
+               float
+               (help
+                  "The y position of the contact"))
+            (contact_pos_z
+               float
+               (help
+                  "The z position of the contact"))
+            (contact_norm_x
+               float
+               (help
+                  "The x normal value of the contact normal"))
+            (contact_norm_y
+               float
+               (help
+                  "The y normal value of the contact normal"))
+            (contact_norm_z
+               float
+               (help
+                  "The z normal value of the contact normal")))
+         (help
+            "Called for every new collision contact (that passes all the filters in RigidBodyContactFilterCom) between this and another Rigigbody."))))
+#define kChannelColor
+(0)
+#define kChannelHeight
+(1)
+#define kChannelPosition
+(2)
+#define kModeRGB
+(0)
+#define kModeR
+(1)
+#define kModeG
+(2)
+#define kModeB
+(3)
+#define kModeA
+(4)
+#define kHeightAdjust
+(0)
+#define kHeightSmooth
+(1)
+#define kPositionAdjust
+(0)
+#define kPositionSmooth
+(1)
+#define kPositionInflate
+(2)
+#define kPositionMagnet
+(3)
+#define kPositionRestore
+(4)
+#define kColorPaint
+(0)
+#define kColorBlur
+(1)
+(MeshVertexPaintCom
+   (alias
+      "Vertex Painter")
+   (description
+      "Allows you to paint vertex colors and positions onto a mesh")
+   (user_can_add TRUE)
+   (required_classes Mesh)
+   (hx_tool_only TRUE)
+   (editor
+      (mvp_channel
+         int
+         (list
+            (("kChannelColor"
+                  (alias
+                     "Color")
+                  (help
+                     "Paint into color data of the verticies"))
+               ("kChannelHeight"
+                  (alias
+                     "Height")
+                  (help
+                     "Paint into the z position of the verticies"))
+               ("kChannelPosition"
+                  (alias
+                     "Position")
+                  (help
+                     "Paint into the x,y,z positions of the verticies"))))
+         (alias
+            "Brush Channel")
+         (help
+            "what type of vertex info to paint"))
+      (mvp_color_mode
+         int
+         (list
+            (("kModeRGB"
+                  (alias
+                     "RGB")
+                  (help
+                     "Paint full color"))
+               ("kModeR"
+                  (alias
+                     "Red Channel")
+                  (help
+                     "Paint a value into the red channel"))
+               ("kModeG"
+                  (alias
+                     "Green Channel")
+                  (help
+                     "Paint a value into the green channel"))
+               ("kModeB"
+                  (alias
+                     "Blue Channel")
+                  (help
+                     "Paint a value into the blue channel"))
+               ("kModeA"
+                  (alias
+                     "Alpha Channel")
+                  (help
+                     "Paint a value into the alpha channel"))))
+         (alias
+            "Color Mode")
+         (help
+            "which part of the color channel to paint into")
+         (hide
+            {!=
+               [mvp_channel]
+               kChannelColor}))
+      (mvp_color_brush
+         int
+         (list
+            (("kColorPaint"
+                  (alias
+                     "Paint")
+                  (help
+                     "Paint color channel(s)"))
+               ("kColorBlur"
+                  (alias
+                     "Blur")
+                  (help
+                     "Blur color information"))))
+         (alias
+            "Color Brush")
+         (help
+            "How to affect the color channels")
+         (hide
+            {!=
+               [mvp_channel]
+               kChannelColor}))
+      (mvp_height_mode
+         int
+         (list
+            (("kHeightAdjust"
+                  (alias
+                     "Adjust")
+                  (help
+                     "Push/Pull verticies on the z axis"))
+               ("kHeightSmooth"
+                  (alias
+                     "Smooth")
+                  (help
+                     "Smooth the verticies"))))
+         (alias
+            "Brush Type")
+         (help
+            "How to affect the verticies")
+         (hide
+            {!=
+               [mvp_channel]
+               kChannelHeight}))
+      (mvp_position_mode
+         int
+         (list
+            (("kPositionAdjust"
+                  (alias
+                     "Adjust")
+                  (help
+                     "Push/Pull verticies based on screen space"))
+               ("kPositionSmooth"
+                  (alias
+                     "Smooth")
+                  (help
+                     "Smooth the verticies"))
+               ("kPositionInflate"
+                  (alias
+                     "Inflate")
+                  (help
+                     "Move along vertex normal"))
+               ("kPositionMagnet"
+                  (alias
+                     "Magnet")
+                  (help
+                     "Pull with mouse cursor motion"))
+               ("kPositionRestore"
+                  (alias
+                     "Restore")
+                  (help
+                     "Restore verts back to original shape"))))
+         (alias
+            "Brush Type")
+         (help
+            "How to affect the verticies")
+         (hide
+            {!=
+               [mvp_channel]
+               kChannelPosition}))
+      (mvp_pull
+         bool
+         (alias
+            "pull")
+         (help
+            "Do we push or pull on the verts?")
+         (hide
+            {'||'
+               {==
+                  [mvp_channel]
+                  kChannelColor}
+               {==
+                  [mvp_position_mode]
+                  kPositionSmooth}
+               {==
+                  [mvp_position_mode]
+                  kPositionMagnet}
+               {==
+                  [mvp_height_mode]
+                  kHeightSmooth}}))
+      (mvp_radius
+         float
+         (alias
+            "brush radius")
+         (slider)
+         (range 1.0e-3 100)
+         (help
+            "how big is the brush?"))
+      (mvp_flow
+         float
+         (alias
+            "brush strength")
+         (slider)
+         (range 1.0e-2 100.0)
+         (help
+            "flow strength of the brush")
+         (hide
+            {&&
+               {==
+                  [mvp_channel]
+                  kChannelColor}
+               {!=
+                  [mvp_color_mode]
+                  kModeRGB}}))
+      (mvp_max_displace
+         float
+         (alias
+            "max displace")
+         (help
+            "Maximum amount of displacement to apply to the mesh")
+         (hide
+            {'||'
+               {!=
+                  [mvp_channel]
+                  kChannelPosition}
+               {!=
+                  [mvp_position_mode]
+                  kPositionAdjust}}))
+      (mvp_color
+         color
+         (alias
+            "brush color")
+         (help
+            "color to paint with stroke")
+         (hide
+            {'||'
+               {!=
+                  [mvp_channel]
+                  kChannelColor}
+               {!=
+                  [mvp_color_mode]
+                  kModeRGB}
+               {!=
+                  [mvp_color_brush]
+                  kColorPaint}}))
+      (mvp_value
+         int
+         (range 0 255)
+         (slider)
+         (alias
+            "value")
+         (help
+            "the value to paint into the seleced channel")
+         (hide
+            {'||'
+               {!=
+                  [mvp_channel]
+                  kChannelColor}
+               {==
+                  [mvp_color_mode]
+                  kModeRGB}}))
+      (mvp_colorfill
+         script
+         (script
+            {$this mvp_color_fill})
+         (no_test)
+         (alias
+            "Fill with color")
+         (hide
+            {!=
+               [mvp_channel]
+               kChannelColor}))
+      (mvp_activate
+         script
+         (script
+            {forge
+               set_viewport_delegate
+               [mvp_object]
+               MeshVertexPaintCom})
+         (no_test)
+         (custom_history)
+         (alias
+            "Activate Brush"))
+      (mvp_deactivate
+         script
+         (script
+            {$this mvp_deactivate NULL})
+         (no_test)
+         (custom_history)
+         (alias
+            "Deactivate Brush"))))
+(EntityPoolInstanceCom
+   (description
+      "Added to instances spawned by entity pools")
+   (required_classes Entity)
+   (alias
+      "Entity Pool Instance")
+   (editor)
+   (events_in
+      (recall)))
+(PropertyModifierCom
+   (alias
+      "Property Modifier")
+   (description
+      "Allows you to target a properties and create extra properties used to modify that property")
+   (user_can_add TRUE)
+   (required_classes Object)
+   (editor
+      (propmod_non_disk_entries
+         (array
+            (struct
+               (target_prop
+                  prop_ref
+                  (alias
+                     "property target")
+                  (hide flow propanim)
+                  (prop_context flow)
+                  (allow_read_only_props FALSE)
+                  (allowed_prop_types
+                     (int float color))
+                  (fixed_obj $this)
+                  (help
+                     "target property"))
+               (name
+                  symbol
+                  (alias
+                     "property name")
+                  (hide flow propanim)
+                  (no_test)
+                  (help
+                     "name for this property, the property will show up in the same area\n as the target property. Make sure this name is unique!"))
+               (op
+                  int
+                  (list
+                     {$this
+                        get_propmod_op_list
+                        {elem $editor_prop_path 1}
+                        FALSE})
+                  (hide flow propanim)
+                  (help
+                     "how to affect the target property")
+                  (alias
+                     "math operation")
+                  (hide flow propanim)))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child name}}))
+         (alias
+            "entries")
+         (no_test)
+         (instance_prop)
+         (hide
+            {$this is_disk_save}
+            flow
+            propanim))
+      (propmod_disk_entries
+         (array
+            (struct
+               (target_prop
+                  prop_ref
+                  (alias
+                     "property target")
+                  (hide flow propanim)
+                  (allow_read_only_props FALSE)
+                  (allowed_prop_types
+                     (int float color))
+                  (fixed_obj $this)
+                  (help
+                     "target property"))
+               (name
+                  symbol
+                  (alias
+                     "property name")
+                  (hide flow propanim)
+                  (no_test)
+                  (help
+                     "name for this property, the property will show up in the same area\n as the target property. Make sure this name is unique!"))
+               (op
+                  int
+                  (list
+                     {$this
+                        get_propmod_op_list
+                        {elem $editor_prop_path 1}
+                        TRUE})
+                  (hide flow propanim)
+                  (help
+                     "how to affect the target property")
+                  (alias
+                     "math operation")
+                  (hide flow propanim)))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child name}}))
+         (alias
+            "entries")
+         (no_test)
+         (disk_prop)
+         (hide
+            {!
+               {$this is_disk_save}}
+            flow
+            propanim))))
+#define PLATFORM_PROPERTY_COM_EDITOR_BLOCK
+((array
+      (struct
+         (target_prop
+            prop_ref
+            (fixed_obj $this)
+            (prop_filter
+               ($obj $prop)
+               {$this allow_property $prop})
+            (allow_read_only_props FALSE)
+            (record_all))
+         (platforms
+            (indent
+               (platform_pc
+                  bool
+                  (alias
+                     "Alter PC Property Value?")
+                  (help
+                     "Alter this property for the platform PC.")
+                  (hide
+                     {!
+                        {$this is_supported_platform kPlatformPC}}))
+               (platform_xbox
+                  bool
+                  (alias
+                     "Alter XBox Property Value?")
+                  (help
+                     "Alter this property for the platform XBox.")
+                  (hide
+                     {!
+                        {$this is_supported_platform kPlatformXbox}}))
+               (platform_durango
+                  bool
+                  (alias
+                     "Alter Durango Property Value?")
+                  (help
+                     "Alter this property for the platform Durango.")
+                  (hide
+                     {!
+                        {$this is_supported_platform kPlatformDurango}})))
+            (alias
+               "Platforms")
+            (help
+               "Select platforms you want to use alternate values for."))))
+   (alias
+      "Entries")
+   (no_test))
+(PlatformPropertyCom
+   (alias
+      "Platform Specific Properties")
+   (description
+      "Allows properties to differ per-platform.")
+   (user_can_add TRUE)
+   (disallow_classes ShaderNode)
+   (editor
+      (platform_properties_non_disk_entries
+         PLATFORM_PROPERTY_COM_EDITOR_BLOCK
+         (instance_prop)
+         (hide
+            {$this is_disk_save}
+            flow
+            propanim))
+      (platform_properties_disk_entries
+         PLATFORM_PROPERTY_COM_EDITOR_BLOCK
+         (disk_prop)
+         (hide
+            {!
+               {$this is_disk_save}}
+            flow
+            propanim))))
+(ExposedPropertyCom
+   (alias
+      "Exposed Property")
+   (tab debug)
+   (description
+      "Exposes properties from objects inside a Dir and makes them saved/loaded instance properties on that Dir")
+   (editor
+      (exposed_props
+         (array
+            (struct
+               (exposed_prop_name
+                  string
+                  (help
+                     "name for our exposed property")
+                  (read_only TRUE))
+               (source
+                  object
+                  (class Object)
+                  (help
+                     "The object whose property we expose")
+                  (no_null)
+                  (read_only TRUE))
+               (source_prop_path
+                  string
+                  (help
+                     "name of the property on [source] to expose")
+                  (read_only TRUE)))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child exposed_prop_name}}))
+         (help
+            "The Properties we are exposing from objects inside us")
+         (disk_prop)
+         (hide propanim flow)
+         (read_only TRUE))))
+(TypeCom
+   (alias
+      "Type")
+   (user_can_add disk)
+   (description
+      "Allows script to provide property definitions and handlers")
+   (editor
+      (type
+         symbol
+         (disk_prop)
+         (help
+            "script type of the object")
+         (list
+            {$this get_types_list})
+         (no_test)
+         (hide propanim flow))))
+(ScriptCom
+   (alias
+      "Script")
+   (user_can_add disk)
+   (description
+      "Allows script to provide property definitions and handlers")
+   (editor
+      (script_path
+         file
+         (help
+            "the .dta file for the script")
+         (ext
+            "DTA Script"
+            dta)
+         (no_test)
+         (hide propanim flow)
+         (read_only
+            {&&
+               {$this is_instanceable}
+               {!
+                  {$this is_disk_save}}})
+         (inline_script
+            "edit"
+            (script
+               {$this scriptcom_edit_script})
+            (help
+               "edits the script, checking it out of p4")))
+      (create_script
+         script
+         (script
+            {$this scriptcom_create_script})
+         (no_test)
+         (help
+            {sprint
+               "Creates a new script at "
+               {$this scriptcom_get_default_script_path}
+               ", copies the template into it, and launches it into your editor"}))
+      (autodoc
+         script
+         (script
+            {$this scriptcom_launch_autodoc})
+         (no_test)
+         (help
+            "Shows you the autodoc in a browser"))
+      (template
+         script
+         (script
+            {$this scriptcom_launch_template})
+         (no_test)
+         (help
+            "Shows you the template in an editor"))
+      (reload_on_change
+         bool
+         (help
+            "Enable feature to automatically reload when the script file changes")
+         (alias
+            "Auto-Reload"))
+      (force_reload
+         script
+         (hide
+            [reload_on_change])
+         (script
+            {if
+               [resource]
+               {[resource]
+                  force_reload}})
+         (help
+            "Reload the script file"))))
+(DopplerCom
+   (alias
+      "Doppler Shift")
+   (description
+      "Calculates doppler shift based on the change in position of this Trans and the listener")
+   (user_can_add TRUE)
+   (required_classes Trans)
+   (editor
+      (DopplerCom
+         (struct
+            (wwise_param
+               symbol
+               (list
+                  {$this get_params_available_for_remove})
+               (help
+                  "Wwise parameter to stuff with doppler shift value (in cents)"))
+            (override_defaults
+               bool
+               (help
+                  "Override the default settings for how much doppler to apply"))
+            (object_doppler_scale
+               float
+               (read_only
+                  {!
+                     [DopplerCom override_defaults]})
+               (help
+                  "How much doppler to apply due to this object's movement"))
+            (object_teleport_speed
+               float
+               (read_only
+                  {!
+                     [DopplerCom override_defaults]})
+               (range 1.0e-3 340.0)
+               (help
+                  "If the object moves faster than this, assume it teleported and ignore doppler"))
+            (listener_doppler_scale
+               float
+               (read_only
+                  {!
+                     [DopplerCom override_defaults]})
+               (help
+                  "How much doppler to apply due to the listener's movement"))
+            (listener_teleport_speed
+               float
+               (read_only
+                  {!
+                     [DopplerCom override_defaults]})
+               (range 1.0e-3 340.0)
+               (help
+                  "If the listener moves faster than this, assume it teleported and ignore doppler"))
+            (max_doppler_shift_up
+               float
+               (read_only
+                  {!
+                     [DopplerCom override_defaults]})
+               (range 0.0 1200.0)
+               (help
+                  "Maximum doppler shift to apply"))
+            (max_doppler_shift_down
+               float
+               (read_only
+                  {!
+                     [DopplerCom override_defaults]})
+               (range 0.0 1200.0)
+               (help
+                  "Maximum doppler shift to apply"))))))
+(DrawHelperCom
+   (description
+      "Draw helper component to harvest 2D and 3D drawables.")
+   (user_can_add FALSE)
+   (group Render)
+   (editor
+      (layer_draw_infos
+         (array
+            (struct
+               (layer_name string)
+               (draws_2d
+                  (array
+                     object
+                     (class Draw))
+                  (alias
+                     "2D Draws"))
+               (draws_3d
+                  (array
+                     object
+                     (class Draw))
+                  (alias
+                     "3D Draws")))
+            (header
+               {$this
+                  get
+                  {editor_prop_path_child layer_name}})
+            (summary
+               {sprintf
+                  "%d 2D draws, %d 3D draws"
+                  {$this
+                     get
+                     {editor_prop_path_child num_draws_2d}}
+                  {$this
+                     get
+                     {editor_prop_path_child num_draws_3d}}}))
+         (help
+            "Harvested draws for each layer, separated into 2D and 3D")
+         (read_only TRUE)
+         (tab debug))))
+#define kLookAtModeTurnTime
+(0)
+#define kLookAtModeTurnRate
+(1)
+#define kLookAtTargetModeTrans
+(0)
+#define kLookAtTargetModePoint
+(1)
+(LookAtCom
+   (alias
+      "Look At")
+   (description
+      "Forces a trans to turn to look at another trans")
+   (user_can_add TRUE)
+   (required_classes Trans)
+   (editor
+      (LookAtCom
+         (struct
+            (target
+               object
+               (class Trans)
+               (help
+                  "The trans to look at if in trans target mode"))
+            (target_point
+               VECTOR3
+               (help
+                  "The point to look at if in point target mode"))
+            (up
+               object
+               (class Trans)
+               (alias
+                  "reference trans")
+               (help
+                  "If set, this component will use this object's +z axis as up.  If blank, it will use the world's +z axis.\n                     If using constraints, they will be relative to this objects +y (or -1 if flip_y is true)"))
+            (enabled
+               bool
+               (help
+                  "Enable this behavior"))
+            (flip_y
+               bool
+               (help
+                  "If true, aligns -y to look at the target instead of +y"))
+            (lock_scale
+               bool
+               (help
+                  "If true, prevents scale from drifting"))
+            (use_constraints
+               bool
+               (help
+                  "If true, we can limit the range we allow for the lookat"))
+            (constraints
+               (indent
+                  (pitch_range_min
+                     float
+                     (range -90.0 90.0)
+                     (help
+                        "In degrees, what is the lowest pitch we allow in the plane normal to our up vector"))
+                  (pitch_range_max
+                     float
+                     (range -90.0 90.0)
+                     (help
+                        "In degrees, what is the highest pitch we allow in the plane normal to our up vector"))
+                  (yaw_range_min
+                     float
+                     (range -180.0 180.0)
+                     (help
+                        "In degrees, what is the lowest yaw we allow in the plane normal to our up vector, with centered about its y axis"))
+                  (yaw_range_max
+                     float
+                     (range -180.0 180.0)
+                     (help
+                        "In degrees, what is the highest yaw we allow in the plane normal to our up vector, with centered about its y axis")))
+               (hide
+                  {==
+                     [LookAtCom use_constraints]
+                     FALSE}))
+            (mode
+               int
+               (list
+                  (("kLookAtModeTurnTime"
+                        (alias
+                           "Turn Time")
+                        (help
+                           "Trans will turn over a number of seconds."))
+                     ("kLookAtModeTurnRate"
+                        (alias
+                           "Turn Rate")
+                        (help
+                           "Trans will turn at a maximum rate of deg/sec."))))
+               (alias
+                  "Look At mode")
+               (help
+                  "By what is the trans turn rate limited?"))
+            (target_mode
+               int
+               (list
+                  (("kLookAtTargetModeTrans"
+                        (alias
+                           "Trans")
+                        (help
+                           "Trans target will be another trans."))
+                     ("kLookAtTargetModePoint"
+                        (alias
+                           "Point")
+                        (help
+                           "Trans target will be a fixed point."))))
+               (alias
+                  "Look At target mode")
+               (help
+                  "At what does the trans look at?"))
+            (turn_time
+               float
+               (hide
+                  {!=
+                     [LookAtCom mode]
+                     kLookAtModeTurnTime})
+               (help
+                  "Amount of time to take to turn to face the target"))
+            (turn_rate
+               float
+               (hide
+                  {!=
+                     [LookAtCom mode]
+                     kLookAtModeTurnRate})
+               (help
+                  "Max turn to the target, in degrees per second"))
+            (angle_to_goal
+               float
+               (read_only TRUE)
+               (no_test)
+               (help
+                  "Currently, how far (in degrees) are we from the desired lookat target?"))))))
+(ParticleMeshAttractorCom
+   (alias
+      "Particle Mesh Attractor")
+   (description
+      "Marks a mesh as a potential target for attracting particles. Use with a ParticleMeshAttractor object.")
+   (user_can_add TRUE)
+   (required_classes Mesh)
+   (editor
+      (inner_radius
+         float
+         (help
+            "Particles within this radius are fully attracted to this mesh."))
+      (outer_radius
+         float
+         (help
+            "Particles within this radius become attracted to this mesh."))))
+(CharClothCom
+   (alias
+      "Character Cloth")
+   (description
+      "Add cloth simulation to a character mesh.")
+   (user_can_add TRUE)
+   (required_classes Character)
+   (editor
+      (cloth_mesh
+         object
+         (class Mesh)
+         (help
+            "Mesh to apply cloth simulation to."))
+      (density
+         float
+         (range 1.0e-3 100.0)
+         (help
+            "Cloth density in kg per square meter."))
+      (stretch_stiffness
+         float
+         (range 1.0e-3 1.0)
+         (help
+            "Cloth stretch stiffness constant."))
+      (bend_stiffness
+         float
+         (range 1.0e-3 1.0)
+         (help
+            "Cloth bend stiffness constant."))
+      (collision_normal_damping
+         float
+         (range 1.0e-3 1.0)
+         (help
+            "Cloth collision velocity damping constant in collision normal direction."))
+      (collision_tangential_damping
+         float
+         (range 1.0e-3 1.0)
+         (help
+            "Cloth collision velocity damping constant in direction perpendicular to collision normal."))
+      (damping
+         float
+         (range 1.0e-4 1.0)
+         (help
+            "Cloth damping constant."))
+      (gravity
+         float
+         (range 1.0e-2 40.0)
+         (help
+            "Cloth gravity constant."))
+      (num_iterations
+         int
+         (range 1 256)
+         (help
+            "Number of constraint solver iterations per frame."))
+      (restart
+         script
+         (alias
+            "Restart simulation")
+         (script
+            {$this restart})
+         (custom_history)
+         (help
+            "Restart cloth simulation.")
+         (no_test))))
+#define kSplineMovement_Update_Pos
+(0)
+#define kSplineMovement_Update_PosRot
+(1)
+#define kSplineMovement_Update_PosRotScale
+(2)
+#define SPLINE_MOVEMENT_UPDATE_LIST_NORMAL
+((("kSplineMovement_Update_Pos"
+         (alias
+            "Position")
+         (help
+            "Only update the position of the object as it traverses the spline."))
+      ("kSplineMovement_Update_PosRot"
+         (alias
+            "Position and Rotation")
+         (help
+            "Only update the position and rotation, leaving the scale alone"))
+      ("kSplineMovement_Update_PosRotScale"
+         (alias
+            "Position, Rotation, and Scale")
+         (help
+            "Update the full transform to match the spline."))))
+#define SPLINE_MOVEMENT_UPDATE_LIST_NO_SCALE
+((("kSplineMovement_Update_Pos"
+         (alias
+            "Position")
+         (help
+            "Only update the position of the object as it traverses the spline."))
+      ("kSplineMovement_Update_PosRot"
+         (alias
+            "Position and Rotation")
+         (help
+            "Only update the position and rotation, leaving the scale alone"))))
+(SplineMovementCom
+   (alias
+      "Spline Movement")
+   (description
+      "Moves a trans along a spline")
+   (user_can_add TRUE)
+   (required_classes Trans)
+   (editor
+      (SplineMovementCom
+         (struct
+            (enabled
+               bool
+               (help
+                  "Movement stops when this is disabled"))
+            (spline
+               object
+               (class Spline)
+               (instance_prop)
+               (help
+                  "Spline to move along"))
+            (speed
+               float
+               (range 0.0 10000.0)
+               (help
+                  "Speed to move at"))
+            (position_on_spline
+               float
+               (slider)
+               (range 0.0 1.0)
+               (no_test)
+               (help
+                  "Distance along the spline, relative to the control points.  0 is the first control point, 1 is the last, and intermediate control points have equally spaced values of t.  Least expensive way to use a spline, but will not give you movement at a constant rate unless your control points are equally spaced."))
+            (distance_along_spline
+               float
+               (slider)
+               (range 0.0 1.0)
+               (no_test)
+               (help
+                  "Distance along the spline (ignoring control points complete).  This value is much more expensive to compute, so use sparingly (favor position_on_spline when you can get away with it)."))
+            (on_spline
+               bool
+               (read_only TRUE)
+               (help
+                  "True while this object is actually on the spline, and not in the process of moving towards it"))
+            (trans_update_type
+               int
+               (list
+                  {if_else
+                     {&
+                        {$this get trans_flags}
+                        kTransFlagsFixed}
+                     SPLINE_MOVEMENT_UPDATE_LIST_NO_SCALE
+                     SPLINE_MOVEMENT_UPDATE_LIST_NORMAL})
+               (alias
+                  "Transform Update Type")
+               (help
+                  "This property sets how much of the object's transform should be altered to match the spline."))
+            (num_sub_divisions
+               float
+               (range 1.0 100.0)
+               (tab debug)
+               (help
+                  "Increasing this increases precision and decreases performance.  This sets the number of sub-divisions used when finding distance along the spline.  It is only used when the movement com is active, or when distance_along_sline is set or animated."))
+            (flip_y
+               bool
+               (help
+                  "If true, -y is forward instead of +y"))
+            (force_loop
+               bool
+               (help
+                  "If true, we loop the object on the spline, even if the spline is not looped"))
+            (use_relative_perpendicular
+               bool
+               (help
+                  "If true, Perpendicular vector is relative to spline position"))
+            (perpendicular
+               VECTOR3
+               (help
+                  "This is typically the up vector, but can be other values to prevent weird twisting when moving along a spline due to inversion of the cross product direction midway through the spline"))
+            (broadcast_props
+               bool
+               (disk_prop))
+            (parametric_movement
+               bool
+               (disk_prop)
+               (help
+                  "Animate along spline position instead of spline distance"))
+            (use_initial_position
+               bool
+               (instance_prop)
+               (help
+                  "Do we initialize ourselves on a spline?  If using parametric movement, we set position_on_spline, otherwise, distance_on_spline"))
+            (initial_position
+               float
+               (instance_prop)
+               (help
+                  "What is our initial position on the spline?"))
+            (drive_local_xfm
+               bool
+               (instance_prop))))))
+(FreezeOffscreenCom
+   (alias
+      "FreezeOffscreenCom")
+   (description
+      "Don't poll the entity this component is attached to if it's off-screen or hidden.")
+   (user_can_add TRUE)
+   (required_classes Entity)
+   (editor
+      (freeze_only_when_hidden
+         bool
+         (help
+            "Do we only freeze when hidden, and leave unfrozen if offscreen but set as showing?"))))
+(VisibilityStatusCom
+   (description
+      "This gives any entity the ability to communicate its visibility to anybody that is interested.")
+   (user_can_add TRUE)
+   (required_classes Entity)
+   (editor
+      (VisibilityStatusCom
+         (struct
+            (poll_during_editmode
+               bool
+               (help
+                  "Useful for testing your shiz outside of playmode"))
+            (is_tracking_visibility
+               bool
+               (help
+                  "Keeping this off will save CPU cycles and leave the result stuck at kVisibilityStatus_Inactive"))
+            (poll_frequency
+               float
+               (help
+                  "Number of seconds between checks. Save CPU cycles by checking for visibility less often"))
+            (visibility_status
+               int
+               (list VISIBILITY_STATUS)
+               (read_only TRUE)
+               (help
+                  "This is what VisibilityStatusCom was made for"))))))
+#define kParticleSplineEmitterTType_Parametric
+(0)
+#define kParticleSplineEmitterTType_Uniform
+(1)
+#define kParticleSplineEmitterTType_WorldDistance
+(2)
+#define PARTICLE_SPLINE_EMITTER_T_TYPE
+((("kParticleSplineEmitterTType_Parametric"
+         (alias
+            "Parametric: [0, 1]")
+         (help
+            "T is interpreted as the parametric position [0, 1] on the spline. If the control points aren't evenly spaced, T will not appear uniform."))
+      ("kParticleSplineEmitterTType_Uniform"
+         (alias
+            "Uniform: [0, 1]")
+         (help
+            "T is interpreted as a uniform position [0, 1] on the spline."))
+      ("kParticleSplineEmitterTType_WorldDistance"
+         (alias
+            "World Distance: t >= 0.")
+         (help
+            "T is interpreted as a world-space distance along the spline. 0 is the initial control point of the spline."))))
+(ParticleMeshEmitterCom
+   (alias
+      "Emit from Mesh")
+   (description
+      "Lets a particle system emit from a mesh.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Emitter")
+   (editor
+      (mesh
+         object
+         (class Mesh)
+         (help
+            "The mesh object we emit from. Must be set to have any effect!"))))
+(ParticleRadiusEmitterCom
+   (alias
+      "Emit from Radius")
+   (description
+      "Lets a particle system emit from a radius.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Emitter")
+   (editor
+      (radius
+         float
+         (help
+            "The distance around the emitter that we emit from."))
+      (distribution
+         float
+         (range 0.0 4.0)
+         (help
+            "Distribution of particles. Higher numbers will focus particles on the center more."))))
+(ParticleSplineEmitterCom
+   (alias
+      "Emit from Spline")
+   (description
+      "Lets a particle system emit from a spline.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Emitter")
+   (editor
+      (spline
+         object
+         (class Spline)
+         (help
+            "The spline object we emit from. Must be set to have any effect!"))
+      (t_evaluation_type
+         int
+         (list PARTICLE_SPLINE_EMITTER_T_TYPE)
+         (help
+            "How we interpret the t-position property."))
+      (t_pos
+         waveform_float
+         (help
+            "The position of the emitter along the spline. How this is interpreted depends on the 't_evaluation_type' property above. The curve time is tied to the duration of the particle system."))
+      (rotation_is_world
+         bool
+         (alias
+            "rotation is world relative")
+         (help
+            "If true, the pitch and yaw for emitting particles is world relative instead of spline relative."))))
+#define kParticleLookMeshSpinAxis_LocalX
+(0)
+#define kParticleLookMeshSpinAxis_LocalY
+(1)
+#define kParticleLookMeshSpinAxis_LocalZ
+(2)
+#define kParticleLookMeshSpinAxis_WorldX
+(3)
+#define kParticleLookMeshSpinAxis_WorldY
+(4)
+#define kParticleLookMeshSpinAxis_WorldZ
+(5)
+#define PARTICLE_MESH_LOOK_SPIN_AXIS
+((("kParticleLookMeshSpinAxis_LocalX"
+         (alias
+            "Local X")
+         (help
+            "Spin around the local X axis."))
+      ("kParticleLookMeshSpinAxis_LocalY"
+         (alias
+            "Local Y")
+         (help
+            "Spin around the local Y axis."))
+      ("kParticleLookMeshSpinAxis_LocalZ"
+         (alias
+            "Local Z")
+         (help
+            "Spin around the local Z axis."))
+      ("kParticleLookMeshSpinAxis_WorldX"
+         (alias
+            "World X")
+         (help
+            "Spin around the world X axis."))
+      ("kParticleLookMeshSpinAxis_WorldY"
+         (alias
+            "World Y")
+         (help
+            "Spin around the world Y axis."))
+      ("kParticleLookMeshSpinAxis_WorldZ"
+         (alias
+            "World Z")
+         (help
+            "Spin around the world Z axis."))))
+#define kParticleLookMeshAlignAxis_X
+(0)
+#define kParticleLookMeshAlignAxis_Y
+(1)
+#define kParticleLookMeshAlignAxis_Z
+(2)
+#define PARTICLE_MESH_LOOK_ALIGN_AXIS
+((("kParticleLookMeshAlignAxis_X"
+         (alias
+            "X")
+         (help
+            "Align using the X axis to decide spin angle."))
+      ("kParticleLookMeshAlignAxis_Y"
+         (alias
+            "Y")
+         (help
+            "Align using the Y axis to decide spin angle."))
+      ("kParticleLookMeshAlignAxis_Z"
+         (alias
+            "Z")
+         (help
+            "Align using the Z axis to decide spin angle."))))
+(ParticleLookMeshCom
+   (alias
+      "Particle Mesh Emitter")
+   (description
+      "Makes a particle system emit meshes instead of sprites.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Look")
+   (editor
+      (mesh_look
+         object
+         (class Mesh))
+      (mesh_look_yaw
+         waveform_float
+         (help
+            "Yaw of the emitted mesh over life of particle.")
+         (read_only
+            {$this is_property_read_only mesh_look_yaw}))
+      (mesh_look_pitch
+         waveform_float
+         (help
+            "Pitch of the emitted mesh over life of particle.")
+         (read_only
+            {$this is_property_read_only mesh_look_pitch}))
+      (mesh_look_roll
+         waveform_float
+         (help
+            "Roll of the emitted mesh over life of particle.")
+         (read_only
+            {$this is_property_read_only mesh_look_roll}))
+      (mesh_look_spin_axis
+         int
+         (list PARTICLE_MESH_LOOK_SPIN_AXIS)
+         (help
+            "Which axis the particle spins around.")
+         (read_only
+            {$this is_property_read_only mesh_look_spin_axis}))
+      (mesh_look_align_axis
+         int
+         (list PARTICLE_MESH_LOOK_ALIGN_AXIS)
+         (help
+            "Which axis is used to determine the spin angle when aligning to velocity.")
+         (read_only
+            {$this is_property_read_only mesh_look_align_axis}))))
+(SpawnOnDeathInfluenceCom
+   (alias
+      "Particle Spawn on Death")
+   (description
+      "Allows a particle system to emit on the death of a particle.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Spawn on Death")
+   (editor
+      (system_to_spawn
+         object
+         (class ParticleSys)
+         (help
+            "The particle system which will spawn the new particles."))
+      (spawn_probability
+         float
+         (range 0 1)
+         (slider)
+         (help
+            "Odds that particles will be spawned on a death event. 1 means always spawn."))
+      (spawn_count
+         waveform_float
+         (help
+            "How many new particles to spawn per particle death."))
+      (use_velocity_to_orient
+         bool
+         (help
+            "Do we orient the newly spawn particles with respect to the dead particle's velocity?"))))
+(PresetCom
+   (alias
+      "Presets")
+   (description
+      "Allows presets to be created and applied through DTA")
+   (required_classes Object)
+   (user_can_add TRUE)
+   (editor
+      (property_preset
+         symbol
+         (alias
+            "Preset")
+         (list
+            {$this get_preset_list})
+         (record_all)
+         (help
+            "Which preset to apply"))
+      (reapply_preset
+         script
+         (script
+            {$this reapply_preset})
+         (record_all)
+         (help
+            "Reapply all properties marked as adjustable")))
+   (events_in
+      (reapply_preset
+         (help
+            "Reapply the chosen preset")))
+   (preset_file
+      "config/presets_keep.dta")
+   (preset_dir
+      "config/presets/*.dta"))
+(SplineInfluenceCom
+   (alias
+      "Particle Spline Influence")
+   (description
+      "Causes particles to travel down a spline.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Spline Influence")
+   (editor
+      (influence_spline
+         object
+         (class Spline)
+         (help
+            "The spline which controls the particles."))
+      (spline_influence_radius
+         waveform_float
+         (help
+            "Radius of the region of influence around the spline."))))
+(TurbulenceInfluenceCom
+   (alias
+      "Particle Turbulence Influence")
+   (description
+      "Gives particles random position or velocity turbulence.")
+   (required_classes ParticleSys)
+   (user_can_add TRUE)
+   (tab properties)
+   (group
+      "Turbulence Influence")
+   (editor
+      (velocity_noise
+         float
+         (help
+            "Scale of the random noise added to particle velocities."))
+      (position_noise
+         float
+         (help
+            "Scale of the random noise added to particle positions."))))
+(RndAccentCom
+   (required_classes Draw)
+   (description
+      "This marks an entity to draw into the accent buffer where postproc can accent its pixels.")
+   (user_can_add TRUE)
+   (editor
+      (accent_contribution
+         color
+         (help
+            "How much this drawable contributes to the accent buffer"))))
+(HandHeightCom
+   (description
+      "Holds the players hand height to hook up to PropAnim/Flow.")
+   (user_can_add disk)
+   (required_classes Entity)
+   (editor
+      (hand_height
+         float
+         (help
+            "1 = hand below waist, 0 = hand at waist, -1 = hand at shoulder")
+         (custom_history)
+         (range -1 1)
+         (slider)
+         (disk_prop))
+      (above_shoulder_cap
+         float
+         (help
+            "How far above the shoulder to cap the gesture.")
+         (disk_prop))
+      (below_waist_cap
+         float
+         (help
+            "How far below the waist to cap the gesture.")
+         (disk_prop))))
+(EditorData
+   (hx_tool_only TRUE))
+#include ../ui/ui_com.dta
+#include ../world/world_com.dta

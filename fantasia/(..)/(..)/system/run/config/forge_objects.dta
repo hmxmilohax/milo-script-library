@@ -1,0 +1,1427 @@
+#define kDefaultLayout_SinglePerspective
+(0)
+#define kDefaultLayout_2x2
+(1)
+#define DEFAULT_VIEWPORT_LAYOUT_ENUM_LIST
+((("kDefaultLayout_SinglePerspective"
+         (alias
+            "Single Perspective")
+         (help
+            "Default to a single maximized viewport using the perspective camera."))
+      ("kDefaultLayout_2x2"
+         (alias
+            "2x2, with Perspective in lower right")
+         (help
+            "Default to one perspective and three orthographic viewports in a 2x2 grid."))))
+#define kDefaultDirType_Scene
+(0)
+#define kDefaultDirType_Entity
+(1)
+#define DEFAULT_DIR_TYPE_ENUM_LIST
+((("kDefaultDirType_Scene"
+         (alias
+            "Scene")
+         (help
+            "Default tab loads a Scene."))
+      ("kDefaultDirType_Entity"
+         (alias
+            "Entity")
+         (help
+            "Default tab loads an Entity."))))
+(SimplygonUI
+   (description
+      "Mesh reduction and combining via Simplygon SDK")
+   (allowed_dirs)
+   (editor
+      (mode
+         symbol
+         (list
+            (Reduce Remesh Physics))
+         (help
+            "reduction mode"))
+      (target_percent
+         float
+         (range 0 1)
+         (slider)
+         (hide
+            {==
+               [mode]
+               Physics})
+         (help
+            "Target size for geometries, in percent"))
+      (meters_per_pixel
+         float
+         (range 0 10)
+         (slider)
+         (hide
+            {!=
+               [mode]
+               Remesh})
+         (help
+            "Target size for geometries, in percent"))
+      (weld
+         float
+         (range 0.0 1)
+         (slider)
+         (hide
+            {!=
+               [mode]
+               Reduce})
+         (help
+            "Distance at which verticies will be considered overlapping"))
+      (tjunc
+         float
+         (range 0.0 1)
+         (slider)
+         (hide
+            {!=
+               [mode]
+               Reduce})
+         (help
+            "T-Junction repair distance"))
+      (max_deviation
+         float
+         (range 0 100)
+         (slider)
+         (hide
+            {==
+               [mode]
+               Remesh})
+         (help
+            "Max deviation in world space before stopping reduction"))
+      (reduce
+         script
+         (script
+            {$this reduce_selection}))
+      (debug
+         script
+         (script
+            {$this debug_selection}))))
+(ForgeUserPreferences
+   (description
+      "Forge Preferences")
+   (editor
+      (audio
+         (indent
+            (use_silent_notify_box
+               bool
+               (alias
+                  "Disable Notify Sound")
+               (help
+                  "Normally, a Notify message box triggers a Windows System sound.  Set this to send Notify messages to a silent dialog instead.")))
+         (alias
+            "Audio Settings"))
+      (autobackup_settings
+         (indent
+            (autobackup_enabled
+               bool
+               (alias
+                  "Enabled?")
+               (help
+                  "Forge will auto backup files every [autobackup_minutes] minutes."))
+            (autobackup_minutes
+               float
+               (range 0.5 30.0)
+               (slider)
+               (alias
+                  "Minutes")
+               (help
+                  "How often (in minutes) Forge will auto backup.")))
+         (alias
+            "AutoBackup Settings"))
+      (camera_settings
+         (indent
+            (use_default_camera_planes
+               bool
+               (default TRUE)
+               (alias
+                  "Use Default Camera Settings?")
+               (help
+                  "If this is set, then the \qPerspective\q camera settings below will all revert to their default values."))
+            (camera_fov
+               float
+               (range 5.0 179.0)
+               (alias
+                  "Field of View (FOV)")
+               (help
+                  "Sets the Field of View for the Viewports' \qPerspective\q cameras.")
+               (read_only
+                  [use_default_camera_planes]))
+            (camera_near_plane
+               float
+               (alias
+                  "Near Clip Plane")
+               (help
+                  {sprint
+                     "The distance in world coordinates to the near clipping "
+                     "plane.  The near/far ratio is limited to 1:"
+                     {cam_get_max_far_near_ratio}
+                     " to preserve Z-buffer resolution."})
+               (range
+                  {/
+                     [camera_far_plane]
+                     {cam_get_max_far_near_ratio}}
+                  {-
+                     [camera_far_plane]
+                     kSmallFloat})
+               (read_only
+                  [use_default_camera_planes]))
+            (camera_far_plane
+               float
+               (alias
+                  "Far Clip Plane")
+               (help
+                  {sprint
+                     "The distance in world coordinates to the far clipping "
+                     "plane. The near/far ratio is limited to 1:"
+                     {cam_get_max_far_near_ratio}
+                     " to preserve Z-buffer resolution."})
+               (range
+                  {'+'
+                     [camera_near_plane]
+                     kSmallFloat}
+                  {'*'
+                     [camera_near_plane]
+                     {cam_get_max_far_near_ratio}})
+               (read_only
+                  [use_default_camera_planes]))
+            (reset_overrides_to_default
+               script
+               (alias
+                  "Reset to Default")
+               (help
+                  "Return the camera planes and FOV back to their default values.")
+               (script
+                  {set
+                     [camera_fov]
+                     {cam_get_default_fov}}
+                  {set
+                     [camera_near_plane]
+                     {cam_get_default_near_plane}}
+                  {set
+                     [camera_far_plane]
+                     {'*'
+                        {cam_get_default_near_plane}
+                        {cam_get_max_far_near_ratio}}})))
+         (alias
+            "Camera Settings"))
+      (content_browser_settings
+         (indent
+            (browser_list_scroll_px
+               int
+               (alias
+                  "List Scroll Step Size")
+               (help
+                  "Sets how far the content browser list view will scroll per step.")
+               (range 1 100)
+               (default 15))
+            (browser_grid_scroll_px
+               int
+               (alias
+                  "Grid Scroll Step Size")
+               (help
+                  "Sets how far the content browser grid view will scroll per step.")
+               (range 1 100)
+               (default 30)))
+         (alias
+            "Content Browser Settings"))
+      (copy_and_paste_settings
+         (indent
+            (paste_offset
+               VECTOR3
+               (alias
+                  "Lister Paste Offset")
+               (help
+                  "Configure how much pasted instances should be offset along each axis"
+                  0.0)
+               (default
+                  (x 4.0 y 4.0 z 4.0))))
+         (alias
+            "Copy & Paste Settings"))
+      (flow_settings
+         (indent
+            (dismiss_on_double_click
+               bool
+               (default TRUE)
+               (alias
+                  "Dismiss Expression Editor on Double Click?")
+               (help
+                  "If checked, the Expression Editor will be dismissed when double clicking its property selector to choose a property for a simple, initial-value-only operation.")))
+         (alias
+            "Flow Settings"))
+      (locale_settings
+         (indent
+            (language
+               symbol
+               (alias
+                  "Language")
+               (list
+                  {$this available_languages})
+               (help
+                  "The system language; affects UI text, voiceovers, and subtitles where applicable."))))
+      (mouse_and_keyboard_controls
+         (indent
+            (mouse_dead_zone
+               int
+               (alias
+                  "Mouse Dead Zone")
+               (help
+                  "Set the number of pixels to ignore during mouse drag")
+               (range 0 20))
+            (mouse_wheel_multiplier
+               float
+               (alias
+                  "Mouse Wheel Multiplier")
+               (help
+                  "Scale the mouse wheel input")
+               (range 2.0e-2 50.0)
+               (default 1.0))
+            (camera_rotation_speed
+               float
+               (alias
+                  "Camera Rotation Speed")
+               (help
+                  "Rotation speed multiplier for free-look camera manipulation")
+               (range 1.0e-2 10.0)
+               (default 1.0))
+            (use_dvorak_camera_controls
+               bool
+               (alias
+                  "Dvorak-friendly camera controls")
+               (help
+                  "Use ,AEOJ instead of WASDEC for the FPS-style camera controls")
+               (default FALSE)))
+         (alias
+            "Mouse & Keyboard Controls"))
+      (physics
+         (indent
+            (phys_simplygon_max_deviance
+               float
+               (alias
+                  "Simplygon Physics LOD Generation")
+               (help
+                  "Controls the level of detail when generating collision geometry from meshes. The higher the number, the lower the LOD of the collision geometry.")
+               (default 2.0)))
+         (alias
+            "Physics Tools Settings"))
+      (screenshot_settings
+         (indent
+            (screenshot_incl_debug_draws
+               bool
+               (default TRUE)
+               (alias
+                  "Include Debug Drawables?")
+               (help
+                  "If checked, taking a screenshot in Forge will include the rendered debug drawables (axis, gizmo, grid, etc.).")))
+         (alias
+            "Screenshot Settings"))
+      (tab_settings
+         (indent
+            (default_dir_type
+               int
+               (default kDefaultDirType_Scene)
+               (alias
+                  "Default Dir Type")
+               (help
+                  "Forge will create this type of dir in a tab whenever this is no file loaded.")
+               (list DEFAULT_DIR_TYPE_ENUM_LIST)))
+         (alias
+            "Tab Settings"))
+      (time_settings
+         (indent
+            (bpm
+               float
+               (alias
+                  "Beats Per Minute")
+               (help
+                  "Set the beats-per-minute used by the engine.")
+               (range 0.0 1000.0)))
+         (alias
+            "Time Settings"))
+      (tool_sync_settings
+         (indent
+            (toolsync_connection_timeout
+               int
+               (alias
+                  "ToolSync Connection Timeout")
+               (help
+                  "The time in seconds you'd like to wait before aborting attempt to connect to the Tool when ToolSyncing.")
+               (default 45)))
+         (alias
+            "Tool Sync Settings"))
+      (guides
+         (indent
+            (show_guides
+               bool
+               (alias
+                  "Show Guides")
+               (help
+                  "Show/hide the guide lines"))
+            (snap_to_guides
+               bool
+               (alias
+                  "Snap to Guides")
+               (help
+                  "Snap to the guide lines")
+               (read_only
+                  {!
+                     [show_guides]}))
+            (snap_radius
+               int
+               (alias
+                  "Snap Radius")
+               (help
+                  "Distance from guide that causes snapping")
+               (read_only
+                  {!
+                     {&&
+                        [show_guides]
+                        [snap_to_guides]}}))
+            (guide_color
+               color
+               (alias
+                  "Guide Color")
+               (help
+                  "Set the color of the guide lines")
+               (default
+                  (0.0 0.65 0.89))
+               (read_only
+                  {!
+                     [show_guides]})))
+         (alias
+            "Viewport Guides"))
+      (viewport_layout
+         (indent
+            (default_viewport_layout
+               int
+               (list DEFAULT_VIEWPORT_LAYOUT_ENUM_LIST)
+               (alias
+                  "Default Viewport Layout")
+               (help
+                  "Choose the viewport layout to be used when there is no previously saved layout for this file.")))
+         (alias
+            "Viewport Layout"))
+      (viewport_placement
+         (indent
+            (max_placement_distance
+               float
+               (alias
+                  "Max Placement Distance")
+               (help
+                  "When placing objects into your world, this distance is the farthest an object may be placed in front of the current camera's near plane.")
+               (range 1.0e-2 100000.0)
+               (default 2000.0)))
+         (alias
+            "Viewport Object Placement"))
+      (viewport_overlays
+         (indent
+            (frame_color_aspect_ratio
+               color
+               (alias
+                  "Aspect Ratio Overlay Color")
+               (help
+                  "Set the color of the per-viewport overlay that shows the bounds of a specific aspect ratio.  This overlay is turned on/off via each viewport's own shading/post-proc menu.")
+               (default
+                  (1.0 1.0 0.25)))
+            (ratio_action_safe
+               float
+               (alias
+                  "Action Safe Area Overlay Size")
+               (help
+                  "Set the size (0 to 1) of the overlay for the action safe area.  A good value for this is 0.95.")
+               (default 0.95)
+               (range 0.1 1.0))
+            (frame_color_action_safe
+               color
+               (alias
+                  "Action Safe Area Overlay Color")
+               (help
+                  "Set the color of the per-viewport overlay that shows the bounds of the action safe area.  This overlay is turned on/off via each viewport's own shading/post-proc menu, and can only be turned on when the Aspect Ratio Overlay is on.")
+               (default
+                  (1.0 0.0 0.0)))
+            (ratio_title_safe
+               float
+               (alias
+                  "Title Safe Area Overlay Size")
+               (help
+                  "Set the size (0 to 1) of the overlay for the title safe area.  A good value for this is 0.85.")
+               (default 0.85)
+               (range 0.1 1.0))
+            (frame_color_title_safe
+               color
+               (alias
+                  "Title Safe Area Overlay Color")
+               (help
+                  "Set the color of the per-viewport overlay that shows the bounds of the title safe area.  This overlay is turned on/off via each viewport's own shading/post-proc menu, and can only be turned on when the Aspect Ratio Overlay is on.")
+               (default
+                  (0.33 1.0 0.49)))
+            (viewport_buttons_color
+               color
+               (alias
+                  "Menu Button Text Color")
+               (help
+                  "Set the text color of the per-viewport drop-down menus")
+               (default
+                  (0.46 0.46 0.46)))
+            (viewport_buttons_color_shadow
+               color
+               (alias
+                  "Menu Button Text Shadow Color")
+               (help
+                  "Set the text shadow color of the per-viewport drop-down menus")
+               (default
+                  (0.0 0.0 0.0)))
+            (viewport_buttons_color_moused
+               color
+               (alias
+                  "Menu Button Mouse-Over Color")
+               (help
+                  "Set the moused text color of the per-viewport drop-down menus")
+               (default
+                  (8.0e-2 0.71 0.94)))
+            (viewport_buttons_color_moused_shadow
+               color
+               (alias
+                  "Menu Button Mouse-Over Shadow Color")
+               (help
+                  "Set the moused text shadow color of the per-viewport drop-down menus")
+               (default
+                  (0.0 0.0 0.0))))
+         (alias
+            "Viewport Overlays & Text"))
+      (viewport_rendering
+         (indent
+            (background_color
+               color
+               (alias
+                  "Background Color")
+               (help
+                  "Background color of the rendering window")
+               (default
+                  (0.1 0.1 0.1)))
+            (show_axes
+               bool
+               (alias
+                  "Show Axes")
+               (help
+                  "Show/hide the viewport axes"))
+            (grids
+               (indent
+                  (show_grid
+                     bool
+                     (alias
+                        "Default Grid Visibility")
+                     (help
+                        "Default grid visbility when working with a file for the first time; thereafter, grid showing state is saved per user, file, and viewport. Grid visibility can be toggled in the focused viewport using the 'G' key or via the viewport's 'draw mode' menu.")
+                     (default TRUE))
+                  (grid_world_spacing
+                     float
+                     (alias
+                        "Grid Spacing")
+                     (help
+                        "Set the spacing size of the viewport grids")
+                     (default 10.0))
+                  (grid_color_major
+                     color
+                     (alias
+                        "Major Grid Line Color")
+                     (help
+                        "Set the color of the major gridlines")
+                     (default
+                        (0.14 0.14 0.14)))
+                  (grid_color_minor
+                     color
+                     (alias
+                        "Minor Grid Line Color")
+                     (help
+                        "Set the color of the minor gridlines")
+                     (default
+                        (0.11 0.11 0.11)))
+                  (grid_color_axes
+                     color
+                     (alias
+                        "Center Grid Axis Color")
+                     (help
+                        "Set the color of the grid axes")
+                     (default
+                        (0.17 0.17 0.17)))
+                  (ground_plane_color
+                     color
+                     (alias
+                        "Ground Plane Color")
+                     (help
+                        "Color of the ground plane")
+                     (default
+                        (0.5 0.5 0.5))))
+               (alias
+                  "Grids"))
+            (icon_fade_start_dist
+               float
+               (alias
+                  "Icon Fade Start Distance")
+               (help
+                  "Distance at which icons begin to fade out"))
+            (icon_fade_end_dist
+               float
+               (alias
+                  "Icon Fade End Distance")
+               (help
+                  "Distance at which icons finish fading out"))
+            (link_fade_length
+               float
+               (alias
+                  "Link Fade Length")
+               (help
+                  "The length of a link, as a fraction of screen size, at which links begin fading out -\nlower values cause links to render at greater distances, and vice versa")
+               (range 0.0 1.0)
+               (default 0.25))
+            (link_fade_severity
+               float
+               (alias
+                  "Link Fade Severity")
+               (help
+                  "The rate at which links fade as their apparent length diminishes -\nthe higher the value, the faster they fade, with 1 causing them \nto disappear instantly and 0 disabling fading altogether")
+               (range 0.0 1.0)
+               (default 0.5))
+            (wireframe_color
+               color
+               (alias
+                  "Wireframe Color")
+               (help
+                  "Color used to draw the scene in wireframe")
+               (default
+                  (0.0 0.0 0.0)))
+            (wireframe_highlit_color
+               color
+               (alias
+                  "Wireframe Selection Color")
+               (help
+                  "Color used to draw the selection wireframe")
+               (default
+                  (1.0 1.0 1.0)))
+            (wireframe_deemphasis_color
+               color
+               (alias
+                  "Wireframe Background Color")
+               (help
+                  "Color used to draw the background scene in wireframe while in Edit-in-Place mode")
+               (default
+                  (0.125 0.125 0.125))))
+         (alias
+            "Viewport Rendering Settings"))
+      (rulers
+         (indent
+            (ruler_color_background
+               color
+               (alias
+                  "Ruler Background Color")
+               (help
+                  "Set the background color of the ruler")
+               (default
+                  (5.0e-2 5.0e-2 5.0e-2)))
+            (ruler_color_text
+               color
+               (alias
+                  "Ruler Label Color")
+               (help
+                  "Set the color of the ruler's labels")
+               (default
+                  (0.8 0.8 0.8)))
+            (ruler_color_major
+               color
+               (alias
+                  "Ruler Color (Major)")
+               (help
+                  "Set the color of the ruler's major ticks")
+               (default
+                  (0.8 0.8 0.8)))
+            (ruler_color_minor
+               color
+               (alias
+                  "Ruler Color (Minor)")
+               (help
+                  "Set the color of the ruler's minor ticks")
+               (default
+                  (0.44 0.44 0.44)))
+            (ruler_color_axes
+               color
+               (alias
+                  "Ruler Color (Axes)")
+               (help
+                  "Set the color of the ruler's axes ticks")
+               (default
+                  (1.0 1.0 1.0))))
+         (alias
+            "Viewport Rulers")))
+   (disable_history 1))
+(EditDrawableFilters
+   (description
+      "Rendering Filters")
+   (editor
+      (rnd_overlay_filters
+         (indent
+            (overlay_rate
+               bool
+               (alias
+                  "Framerate")
+               (help
+                  "Toggle the framerate overlay"))
+            (overlay_timers
+               bool
+               (alias
+                  "Timers")
+               (help
+                  "Toggle the timers overlay"))
+            (overlay_timers_verbose
+               bool
+               (read_only
+                  {!
+                     [overlay_timers]})
+               (alias
+                  "Verbose Timers")
+               (help
+                  "Toggle verbose timer stats"))
+            (overlay_timer_groups
+               bitfield
+               (list
+                  {get_timer_groups_bit_list})
+               (read_only
+                  {!
+                     [overlay_timers]})
+               (alias
+                  "Timer Groups")
+               (help
+                  "Specify the timer groups to display"))
+            (overlay_stats
+               bool
+               (alias
+                  "Rendering Stats")
+               (help
+                  "Toggle the rendering stats overlay"))
+            (overlay_physics_timers
+               bool
+               (alias
+                  "Physics Internal Timers")
+               (help
+                  "Toggle the physics internal timers overlay")))
+         (alias
+            "Overlays")
+         (help
+            "Set the rendering of overlays"))
+      (highlight_filters
+         (indent
+            (highlight_mesh_wireframe
+               bool
+               (alias
+                  "Wireframe")
+               (help
+                  "Toggle the wireframe display on selected meshes"))
+            (highlight_spheres
+               bool
+               (alias
+                  "Bounding Spheres")
+               (help
+                  "Toggle the display of bounding spheres for selected assets"))
+            (highlight_mesh_normals
+               bool
+               (alias
+                  "Normals")
+               (help
+                  "Toggle the display of surface normals on selected meshes"))
+            (highlight_mesh_bones
+               bool
+               (alias
+                  "Bones")
+               (help
+                  "Toggle the display of bones on selected skinned meshes"))
+            (highlight_dimensions
+               bool
+               (alias
+                  "Dimensions")
+               (help
+                  "Display the dimensions of selected objects"))
+            (show_refs
+               bool
+               (alias
+                  "Show Used By")
+               (help
+                  "Draw a line between selected objects and the objects that use them.")))
+         (alias
+            "Selection Options")
+         (help
+            "Set the rendering for selections"))
+      (boid_filters
+         (indent
+            (boid_controllers
+               bool
+               (alias
+                  "Boid controller icons")
+               (help
+                  "Toggle the visibility of boid controllers appearing as icons"))
+            (boid_forces
+               bool
+               (alias
+                  "Boid forces")
+               (help
+                  "Toggle the visibility of forces appearing on boids when highlit"))
+            (boid_velocities
+               bool
+               (alias
+                  "Boid velocities")
+               (help
+                  "Toggle the visibility of velocity arrows appearing on boids all the time"))
+            (boid_wander_points
+               bool
+               (alias
+                  "Boid wander points")
+               (help
+                  "Toggle the visibility of wander points appearing on boids when highlit"))
+            (boid_attractors
+               bool
+               (alias
+                  "Boid attractor/repulsors")
+               (help
+                  "Toggle the visibility of boid attractor/repulsors all the time"))))
+      (camera_filters
+         (indent
+            (cameras
+               bool
+               (alias
+                  "Cameras")
+               (help
+                  "Toggle the visibility of all cameras in the scene"))
+            (draw_solid_camera
+               bool
+               (alias
+                  "Draw solid?")
+               (help
+                  "draw camera shots as solid or wireframe?"))
+            (camera_frustums
+               bool
+               (alias
+                  "Frustums for All Cameras")
+               (help
+                  "Toggle the visibility of the frustums on all cameras")
+               (read_only
+                  {!
+                     [cameras]}))
+            (camera_frustums_highlit
+               bool
+               (alias
+                  "Frustums for Selected Cameras")
+               (help
+                  "Toggle the visibility of the frustums on selected cameras")
+               (read_only
+                  {!
+                     [cameras]}))
+            (camera_dof_planes
+               bool
+               (alias
+                  "Blur Planes")
+               (help
+                  "Toggle the visibility of the depth-of-field blur planes on camera frustums")
+               (read_only
+                  {'||'
+                     {!
+                        [cameras]}
+                     {&&
+                        {!
+                           [camera_frustums]}
+                        {!
+                           [camera_frustums_highlit]}}}))
+            (camera_ui2d_planes
+               bool
+               (alias
+                  "UI 2D Planes")
+               (help
+                  "Toggle the visibility of the 2D planes on UI camera frustums")
+               (read_only
+                  {'||'
+                     {!
+                        [cameras]}
+                     {&&
+                        {!
+                           [camera_frustums]}
+                        {!
+                           [camera_frustums_highlit]}}})))
+         (alias
+            "Camera Filters")
+         (help
+            "Set the rendering filters for cameras"))
+      (character_filters
+         (indent
+            (char_collides
+               bool
+               (alias
+                  "CharCollides")
+               (help
+                  "Toggle the visibility of all CharCollides in the scene"))
+            (char_hair
+               bool
+               (alias
+                  "CharHair")
+               (help
+                  "Toggle the visibility of all CharHair in the scene"))
+            (char_dc_ik_effector
+               bool
+               (alias
+                  "DCIKEffector")
+               (help
+                  "Toggle the visibility of all DCIKEffectors in the scene"))
+            (char_dc_char_driver
+               bool
+               (alias
+                  "DCCharDriver")
+               (help
+                  "Toggle the visibility of all DCCharDrivers which play the songs back in the scene")))
+         (help
+            "Set the rendering filters for characters")
+         (alias
+            "Character Filters"))
+      (decal_filters
+         (indent
+            (hide_decals
+               bool
+               (alias
+                  "Hide Decals"))
+            (decal_icons
+               bool
+               (alias
+                  "Decal Icons")
+               (read_only
+                  [hide_decals]))
+            (decal_extents
+               bool
+               (alias
+                  "Decal Extents")
+               (read_only
+                  [hide_decals]))
+            (decal_errors
+               bool
+               (alias
+                  "Decal Errors")
+               (read_only
+                  [hide_decals])))
+         (help
+            "Set the rendering filters for decals")
+         (alias
+            "Decal Filters"))
+      (entity_filters
+         (indent
+            (entity_icons
+               bool
+               (alias
+                  "Entity Icons")
+               (help
+                  "Toggle the visibility of entity icons in the scene"))
+            (entity_pool
+               bool
+               (alias
+                  "Entity Pools")
+               (help
+                  "Toggle the visibility of Entity Pools")))
+         (alias
+            "Entity Filters")
+         (help
+            "Set the rendering filters for entities"))
+      (flare_icons
+         bool
+         (alias
+            "Flare Icons")
+         (help
+            "Toggle the visibility of all flare icons in the scene"))
+      (flow_filters
+         (indent
+            (flows
+               bool
+               (alias
+                  "Flows")
+               (help
+                  "Toggle the visibility of all flows in the scene"))
+            (flow_labels
+               bool
+               (alias
+                  "Flow Labels")
+               (help
+                  "Toggle the visibility of all flow labels in the scene")
+               (read_only
+                  {!
+                     [flows]})))
+         (help
+            "Set the rendering filters for flows")
+         (alias
+            "Flow Filters"))
+      (group_icons
+         bool
+         (alias
+            "Group Icons")
+         (help
+            "Toggle the visibility of all group icons in the scene"))
+      (light_filters
+         (indent
+            (lights
+               bool
+               (alias
+                  "Lights")
+               (help
+                  "Toggle the visibility of all lights in the scene"))
+            (light_probes
+               bool
+               (alias
+                  "Light Probes")
+               (help
+                  "Toggle the visibility of all light probes in the scene"))
+            (lights_in_entities
+               bool
+               (alias
+                  "Lights in Entities")
+               (help
+                  "Toggle the visibility of lights within entities in the scene")
+               (read_only
+                  {&&
+                     {!
+                        [lights]}
+                     {!
+                        [light_probes]}}))
+            (lights_falloff_highlit
+               bool
+               (alias
+                  "Range/Falloff for Selected Lights")
+               (help
+                  "Toggle the display of light range/falloff volumes for selected lights")
+               (read_only
+                  {&&
+                     {!
+                        [lights]}
+                     {!
+                        [light_probes]}}))
+            (lights_falloff
+               bool
+               (alias
+                  "Range/Falloff for All Lights")
+               (help
+                  "Toggle the display of light range/falloff volumes for all lights")
+               (read_only
+                  {&&
+                     {!
+                        [lights]}
+                     {!
+                        [light_probes]}}))
+            (lights_falloff_outline_only
+               bool
+               (alias
+                  "Range/Falloff Outline Only")
+               (help
+                  "Only draw the outlines of light range/falloff volumes")
+               (read_only
+                  {&&
+                     {!
+                        [lights]}
+                     {!
+                        [light_probes]}}))
+            (light_range_handles
+               bool
+               (alias
+                  "Range Handles")
+               (help
+                  "Show handles on selected lights for adjusting light ranges")
+               (read_only
+                  {'||'
+                     {&&
+                        {!
+                           [lights]}
+                        {!
+                           [light_probes]}}
+                     {&&
+                        {!
+                           [lights_falloff]}
+                        {!
+                           [lights_falloff_highlit]}}}))
+            (lights_mesh_wireframe
+               bool
+               (alias
+                  "Range/Falloff Mesh Wireframe")
+               (help
+                  "Draw the wireframe of the actual mesh used to draw deferred/volumetric light")
+               (read_only
+                  {&&
+                     {!
+                        [lights]}
+                     {!
+                        [light_probes]}}))
+            (light_probes_cube_tex
+               bool
+               (alias
+                  "Light Probes Cube Tex")
+               (help
+                  "Toggle the visibility of light probes cube textures")
+               (read_only
+                  {!
+                     [light_probes]})))
+         (help
+            "Set the rendering filters for lights")
+         (alias
+            "Light Filters"))
+      (link_filters
+         (indent
+            (all_links
+               bool
+               (alias
+                  "Links")
+               (help
+                  "Toggle the visibility of all links in the scene"))
+            (selection_links
+               bool
+               (alias
+                  "Current Selection Links")
+               (help
+                  "Toggle the visibility of links from your current selection")))
+         (help
+            "Set the rendering filters for links")
+         (alias
+            "Link Filters"))
+      (markers
+         bool
+         (alias
+            "Markers")
+         (help
+            "Toggle the visibility of all markers in the scene"))
+      (occlusion_options
+         (indent
+            (occlusion_enable
+               bool
+               (alias
+                  "Enable Occlusion")
+               (help
+                  "Enables the occlusion system.  If you set this true, you should enable remeshing as well or Drawables might be falsely occluded and vanish.  In playmode or in-game you can use the toggle_occlusion command on the console to toggle the system on and off"))
+            (occlusion_reverse
+               bool
+               (alias
+                  "Reverse occlusion")
+               (help
+                  "Reverses occlusion for debugging, hides everything shown and vice versa"))
+            (occlusion_hide_all
+               bool
+               (alias
+                  "Hide all")
+               (help
+                  "Hides everything that could be occluded"))))
+      (particle_filters
+         (indent
+            (hide_particles
+               bool
+               (alias
+                  "Hide Particles")
+               (help
+                  "Toggle the visibility of all (non-cheap) particle systems"))
+            (hide_cheap_particles
+               bool
+               (alias
+                  "Hide Cheap Particles")
+               (help
+                  "Toggle the visibility of all cheap particle systems"))
+            (particle_icons
+               bool
+               (alias
+                  "Particle Icons")
+               (help
+                  "Toggle the visibility of all particle icons"))
+            (particle_labels
+               bool
+               (alias
+                  "Particle Labels")
+               (help
+                  "Toggle the visibility of all particle labels in the scene")
+               (read_only
+                  {!
+                     [particle_icons]}))
+            (particle_attractors
+               bool
+               (alias
+                  "Particle Attractors")
+               (help
+                  "Toggle the visibility of all particle attractors"))
+            (particle_highlit_bounce_planes
+               bool
+               (alias
+                  "Selected Particle Bounce Planes")
+               (help
+                  "Toggle the visibility of bounce planes on selected particle systems"))
+            (particle_highlit_emitters
+               bool
+               (alias
+                  "Selected Particle Emitters")
+               (help
+                  "Toggle the visibility of emitters on selected particle systems"))
+            (particle_highlit_forces
+               bool
+               (alias
+                  "Selected Particle Forces")
+               (help
+                  "Toggle the visibility of forces on selected particle systems"))
+            (cheap_particle_highlit_paths
+               bool
+               (alias
+                  "Selected Cheap Particle Paths")
+               (help
+                  "Toggle the visibility of cheap particle paths")))
+         (help
+            "Set the rendering filters for particles")
+         (alias
+            "Particle Filters"))
+      (propanim_filters
+         (indent
+            (propanims
+               bool
+               (alias
+                  "PropAnims")
+               (help
+                  "Toggle the visibility of all PropAnim instances in the scene"))
+            (propanim_labels
+               bool
+               (alias
+                  "PropAnim Labels")
+               (help
+                  "Toggle the visibility of all PropAnim labels in the scene")))
+         (help
+            "Set the rendering filters for PropAnims")
+         (alias
+            "Prop Anim Filters"))
+      (physics_filters
+         (indent
+            (physics_in_entities
+               bool
+               (alias
+                  "Physics in Entities")
+               (help
+                  "Toggle the visibility of physics within entities in the scene"))
+            (physics_sensor
+               bool
+               (alias
+                  "Physics Sensors")
+               (help
+                  "Toggle the visibility of all physics sensors in the scene"))
+            (physics_sensor_show_filter
+               bitfield
+               (list EDITDRAW_PHYYS_SENSOR_TYPES)
+               (alias
+                  "PhysicsSensors Show Filters")
+               (help
+                  "Shows or hide different types of Physics Sensors")
+               (read_only
+                  {!
+                     [physics_sensor]}))
+            (ridigbody
+               bool
+               (alias
+                  "Rigid Body")
+               (help
+                  "Toggle the visibility of all rigid bodies in the scene"))
+            (ridigbody_show_filter
+               bitfield
+               (list EDITDRAW_PHYS_MOTION_TYPES)
+               (alias
+                  "RigidBodies Show Filters")
+               (help
+                  "Shows or hide different types of RigidBodies")
+               (read_only
+                  {!
+                     [ridigbody]}))
+            (constraint
+               bool
+               (alias
+                  "Constraints")
+               (help
+                  "Toggle the visibility of all physics constraints in the scene"))
+            (bullet_debug_draw
+               bitfield
+               (list PHYS_DEBUG_DRAW_FILTERS)
+               (alias
+                  "Bullet Debug Draw")
+               (help
+                  "Shows the Physics World")))
+         (help
+            "Set the rendering filters for physics")
+         (alias
+            "Physics Filters"))
+      (reflection_filters
+         (indent
+            (reflections
+               bool
+               (alias
+                  "Reflections")
+               (help
+                  "Toggle the visibility of all Reflection objects in the scene"))
+            (reflection_cams_highlit
+               bool
+               (alias
+                  "Reflect Cameras for Selected Reflections")
+               (help
+                  "Toggle the display of reflected cameras for any selected reflection objects")
+               (read_only
+                  {!
+                     [reflections]})))
+         (help
+            "Set the rendering filters for sounds")
+         (alias
+            "Reflection Filters")
+         (expand FALSE))
+      (remesher_options
+         (indent
+            (remesher_enable
+               bool
+               (alias
+                  "Enable Remeshing")
+               (help
+                  "Enables the remeshing system, buth this makes it harder to edit"))
+            (remesher_octtree
+               bool
+               (alias
+                  "Show Oct-tree")
+               (help
+                  "Toggles visibility of the Remesher oct tree"))
+            (remesher_show_only_level
+               int
+               (alias
+                  "Show only this level")
+               (help
+                  "Shows only the remeshed geometry from this level of the octtree, hiding all the noraml source meshes the remeshed came from.  Positive values are the level to show, -1 hides everything that is Remeshed, -2 restores normal remeshing behavior"))))
+      (sound_filters
+         (indent
+            (sounds_show_all
+               bool
+               (alias
+                  "Sounds")
+               (help
+                  "Toggle the visibility of all Sound objects in the scene"))
+            (sounds_show_all_labels
+               bool
+               (alias
+                  "Sound Labels")
+               (help
+                  "Toggle the visibility of labels on all Sound objects in the scene")
+               (read_only
+                  {!
+                     [sounds_show_all]}))
+            (wwise_components
+               bool
+               (alias
+                  "Wwise Components")
+               (help
+                  "Toggle the visibility of all WwiseComponents in the scene"))
+            (sound_attenuation
+               bool
+               (alias
+                  "Sound Attenuation")
+               (help
+                  "Toggle the visibility of all sound attenuation in the scene"))
+            (sounds_multi_point_show_lines
+               bool
+               (alias
+                  "Multi-Point Sound Lines")
+               (help
+                  "Toggle the visibility of lines connecting from the root of a MultiPointSound out to each of its points.  The lines are meant to help visually locate all points associated with each MultiPointSound.")))
+         (help
+            "Set the rendering filters for sounds")
+         (alias
+            "Sound Filters"))
+      (spline_filters
+         (indent
+            (spline_curves
+               bool
+               (alias
+                  "Spline Curves")
+               (help
+                  "Toggle the visibility of spline curves."))
+            (spline_icons
+               bool
+               (alias
+                  "Spline Icons")
+               (help
+                  "Toggle the visibility of icons for splines."))
+            (spline_icon_labels
+               bool
+               (alias
+                  "Spline Labels")
+               (help
+                  "Toggle the visibility of labels for splines.  Note that a label will not draw if the icon isn't drawn.")
+               (read_only
+                  {!
+                     [spline_icons]}))
+            (spline_draw_on_top
+               bool
+               (alias
+                  "Splines Always Draw On Top")
+               (help
+                  "Toggle the depth sorting/culling for drawn splines.")))
+         (alias
+            "Spline Filters"))
+      (trans_filters
+         (indent
+            (trans_icons
+               bool
+               (alias
+                  "Trans Icons")
+               (help
+                  "Toggle the visibility of all trans icons in the scene"))
+            (trans_icon_labels
+               bool
+               (alias
+                  "Trans Labels")
+               (help
+                  "Toggle the visibility of labels for trans icons")
+               (read_only
+                  {!
+                     [trans_icons]}))
+            (trans_bones
+               bool
+               (alias
+                  "Trans Bones")
+               (help
+                  "Toggle the visibility of bones for all trans objects in the scene"))
+            (trans_proxies
+               bool
+               (alias
+                  "TransProxy Icons")
+               (help
+                  "Toggle the visibility of all trans-proxy icons in the scene")))
+         (alias
+            "Trans Filters"))
+      (vegetation
+         bool
+         (alias
+            "Vegetation")
+         (help
+            "Toggle the visibility of all vegetation objects in the scene"))))
+#define EVENT_TEST_DIR
+(dir
+   {$this get_obj_dir})
+(FlowEventTester
+   (description
+      "Used to test flows")
+   (allowed_dirs)
+   (ext fet)
+   (disable_history TRUE)
+   (editor
+      (test_object
+         object
+         (class Object)
+         (EVENT_TEST_DIR)
+         (list
+            {$this get_event_providers TRUE})
+         (help
+            "The Object we wish to test the event with")
+         (no_test))
+      (test_event
+         symbol
+         (list
+            {$this get_events_list})
+         (help
+            "Test event")
+         (no_test))
+      (fire_event
+         script
+         (script
+            {$this fire_event}))
+      (parameters
+         (indent))))
