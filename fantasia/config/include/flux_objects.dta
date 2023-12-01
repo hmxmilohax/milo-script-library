@@ -1,0 +1,3558 @@
+#define PHYS_FILTER_STRINGS
+(('' food seahorse_notes seahorse_peakstate factory_incinerator factory_ballpit_fan_suckzone factory_ballpit_fan_deathzone factory_debug_robot_red factory_debug_robot_yellow factory_debug_robot_blue factory_debug_robot_shrink factory_robot_lightning factory_robot bullet bullet_stationary bullet_sky bullet_sheep bullet_build_storm bullet_pump_up city_antigrav_target city_antigrav_cursor city_antigrav_sticky city_arthose_item city_balloon_2d city_balloon_3d city_balloon_with_rat city_balloon_with_elephant city_balloon_transform_2d city_balloon_transform_2d_low city_balloon_transform_2d_left city_balloon_transform_2d_right city_balloon_out_of_bounds city_balloon_attach city_balloon_end city_fish_transform_2d city_fish_out_of_bounds city_fish_end city_arrow city_dragonfire city_no_firework_zone forest_spore forest_spore_obstacle forest_spore_chargable forest_fairie forest_octosnowball forest_octoinkball forest_octoinkobstacle forest_octosnowobstacle space_robot_arm space_receptacle_1 space_receptacle_2 space_receptacle_3 space_receptacle_4 space_zoetrope space_tape_attract))
+#define CUE_TYPES
+((intro start_song verse_1 verse_2 verse_3 verse_4 chorus_1 chorus_2 chorus_3 chorus_4 keys_reset bridge solo_1 solo_2 solo_3 outro song_end short_song_end target1_to_target2 target2_to_target3 target3_to_target4 target4_to_target5 target5_to_target6 meter outro_blend lines_in lines_out ripples_in ripples_out points_in points_out ribbons_in ribbons_out rapture manipulator_appear manipulator_1 manipulator_2 manipulator_3 manipulator_4 manipulator_5 manipulator_6 track_switch C D D7 Em F G Am Bm pre_manipulator wobble_bass filter))
+#define DYNAMIC_BOID
+((dynamic_boid
+      (help
+         "This is a boid that can be dynamically (added to)/(removed from) a flock")
+      (editor
+         (dynamic_controller
+            object
+            (class BoidController)
+            (alias
+               "controller")
+            (help
+               "The controller that we add/remove ourselves to/from"))
+         (add_on_enter
+            bool
+            (help
+               "do we add ourselves to the flock on enter?")))
+      (events_in
+         (add_to_flock)
+         (remove_from_flock))
+      (add_to_flock
+         {$this
+            set_dynamic_controller
+            [dynamic_controller]})
+      (remove_from_flock
+         {$this set_dynamic_controller ''})
+      (exit
+         {$this remove_from_flock})
+      (enter
+         {if
+            [add_on_enter]
+            {$this add_to_flock}})))
+(Song
+   (descripion
+      "Song for use in Flux")
+   (editor
+      (mix
+         (indent
+            (mix_drums
+               int
+               (list FLUX_TARGET_SLOTS)
+               (alias
+                  "Drums")
+               (no_test))
+            (mix_bass
+               int
+               (list FLUX_TARGET_SLOTS)
+               (alias
+                  "Bass")
+               (no_test))
+            (mix_guitar
+               int
+               (list FLUX_TARGET_SLOTS)
+               (alias
+                  "Guitar/Synth")
+               (no_test))
+            (mix_vocals
+               int
+               (list FLUX_TARGET_SLOTS)
+               (alias
+                  "Vocals")
+               (no_test))
+            (mix_misc
+               int
+               (list FLUX_TARGET_SLOTS)
+               (alias
+                  "Misc")
+               (no_test))))
+      (muting
+         (indent
+            (mute_drums
+               bool
+               (alias
+                  "Drums")
+               (no_test))
+            (mute_bass
+               bool
+               (alias
+                  "Bass")
+               (no_test))
+            (mute_guitar
+               bool
+               (alias
+                  "Guitar/Synth")
+               (no_test))
+            (mute_vocals
+               bool
+               (alias
+                  "Vocals")
+               (no_test))
+            (mute_misc
+               bool
+               (alias
+                  "Misc")
+               (no_test))))
+      (dump_targets
+         script
+         (script
+            {$this dump_targets})
+         (no_test)
+         (help
+            "Dumps a list of targets")))
+   (events_in
+      (dump_targets
+         (help
+            "Dumps a list of targets")))
+   (events_out
+      (cue
+         (editor
+            (cue_name
+               symbol
+               (list CUE_TYPES)
+               (default intro)
+               (help
+                  "What cue is being given"))))))
+(BoidController
+   (types
+      (go_to_spline
+         (editor
+            (spline_to_go_to
+               object
+               (class Spline)
+               (help
+                  "the spline boids can transition to move along")))
+         (send_boids_to_spline
+            ($movementSpeed)
+            {if
+               [spline_to_go_to]
+               {set
+                  $boids
+                  {$this get_boids}}
+               {foreach
+                  $boid
+                  $boids
+                  {$boid
+                     set
+                     (enable_control)
+                     FALSE}
+                  {$boid
+                     set
+                     (SplineMovementCom speed)
+                     $movementSpeed}
+                  {$boid
+                     set
+                     (SplineMovementCom spline)
+                     [spline_to_go_to]}
+                  {$boid
+                     set
+                     (SplineMovementCom enabled)
+                     TRUE}}})
+         (update_spline_speed
+            ($movementSpeed)
+            {if
+               [spline_to_go_to]
+               {set
+                  $boids
+                  {$this get_boids}}
+               {foreach
+                  $boid
+                  $boids
+                  {if
+                     {$boid has_component SplineMovementCom}
+                     {$boid
+                        set
+                        (SplineMovementCom speed)
+                        $movementSpeed}}}})
+         (resume_flocking
+            {set
+               $boids
+               {$this get_boids}}
+            {foreach
+               $boid
+               $boids
+               {$boid
+                  set
+                  (enable_control)
+                  TRUE}
+               {if
+                  {$boid has_component SplineMovementCom}
+                  {$boid
+                     set
+                     (SplineMovementCom enabled)
+                     FALSE}}})
+         (events_in
+            (send_boids_to_spline
+               (editor
+                  (movement_speed
+                     float
+                     (default 10)
+                     (help
+                        "speed to move towards and along spline")))
+               (help
+                  "send all boids to our 'spline_to_go_to' property"))
+            (update_spline_speed
+               (editor
+                  (movement_speed
+                     float
+                     (default 10)
+                     (help
+                        "speed to move along the spline")))
+               (help
+                  "updates speed of all boids moving along the spline (you must have called send_boids_to_spline before this)"))
+            (resume_flocking
+               (help
+                  "will re-enable flocking control for all boids.  effectively undos effect of 'send_boids_to_spline' command"))))))
+(RigidBody
+   (types
+      (sensor_filters
+         (editor
+            (allowed_sensor_filters
+               (array
+                  symbol
+                  (list PHYS_FILTER_STRINGS))
+               (help
+                  "ANY of these filters must match ANY of a sensor's filters (its type must be 'body_filters')")))
+         (events_out
+            (on_enter_filtered_sensor
+               (editor
+                  (entered_filter_match
+                     symbol
+                     (list PHYS_FILTER_STRINGS)
+                     (help
+                        "We just entered a sensor with the given matching filter"))
+                  (entered_sensor
+                     object
+                     (class PhysicsSensor)
+                     (help
+                        "The sensor that we just entered")))
+               (help
+                  "We just entered a sensor with the given matching filter"))
+            (on_exit_filtered_sensor
+               (editor
+                  (exitted_filter_match
+                     symbol
+                     (list PHYS_FILTER_STRINGS)
+                     (help
+                        "We just exitted a sensor with the given matching filter"))
+                  (exitted_sensor
+                     object
+                     (class PhysicsSensor)
+                     (help
+                        "The sensor that we just exitted")))
+               (help
+                  "We just exitted a sensor with the given matching filter"))))
+      (space_catch_catcher_piece
+         (editor)
+         (on_gem_caught
+            {export
+               ($this on_gem_caught)
+               FALSE})
+         (events_out
+            (on_gem_caught
+               (help
+                  "called when this body is inside a lane's sensor when it catches a gem"))))
+      (factory_fuse
+         (editor
+            (fuse_color
+               symbol
+               (list
+                  ('' a b c d e f)))
+            (fuses_nearby int)))))
+(PhysicsSensor
+   (types
+      (body_filters
+         (editor
+            (allowed_body_filters
+               (array
+                  symbol
+                  (list PHYS_FILTER_STRINGS))
+               (help
+                  "ANY of these filters must match ANY of a body's filters (its type must be 'sensor_filters')"))
+            (num_filtered_inside
+               int
+               (default 0)
+               (help
+                  "How many filtered objects are inside?")))
+         (enter
+            {set
+               [num_filtered_inside]
+               0})
+         (check_filters
+            ($body)
+            {set $foundMatch ''}
+            {foreach
+               $sensorFilter
+               [allowed_body_filters]
+               {if
+                  {== $foundMatch ''}
+                  {foreach
+                     $bodyFilter
+                     {$body
+                        get
+                        (allowed_sensor_filters)}
+                     {if
+                        {== $bodyFilter $sensorFilter}
+                        {set $foundMatch $bodyFilter}}}}}
+            $foundMatch)
+         (object_enter
+            ($body)
+            {if
+               {==
+                  {$body get_type}
+                  sensor_filters}
+               {set
+                  $match
+                  {$this check_filters $body}}
+               {if
+                  {!= $match ''}
+                  {export
+                     ($this on_enter_filtered_body $match $body)
+                     FALSE}
+                  {export
+                     ($body on_enter_filtered_sensor $match $this)
+                     FALSE}
+                  {set
+                     [num_filtered_inside]
+                     {'+'
+                        [num_filtered_inside]
+                        1}}}})
+         (object_exit
+            ($body)
+            {if
+               {==
+                  {$body get_type}
+                  sensor_filters}
+               {set
+                  $match
+                  {$this check_filters $body}}
+               {if
+                  {!= $match ''}
+                  {export
+                     ($this on_exit_filtered_body $match $body)
+                     FALSE}
+                  {export
+                     ($body on_exit_filtered_sensor $match $this)
+                     FALSE}
+                  {set
+                     [num_filtered_inside]
+                     {-
+                        [num_filtered_inside]
+                        1}}}})
+         (events_out
+            (on_enter_filtered_body
+               (editor
+                  (entered_filter_match
+                     symbol
+                     (list PHYS_FILTER_STRINGS)
+                     (help
+                        "A body just entered with the given matching filter"))
+                  (entered_body
+                     object
+                     (class RigidBody)
+                     (help
+                        "The body that just entered")))
+               (help
+                  "A body just entered with the given matching filter"))
+            (on_exit_filtered_body
+               (editor
+                  (exitted_filter_match
+                     symbol
+                     (list PHYS_FILTER_STRINGS)
+                     (help
+                        "A body just exitted with the given matching filter"))
+                  (exitted_body
+                     object
+                     (class RigidBody)
+                     (help
+                        "The body that just exitted")))
+               (help
+                  "A body just exitted with the given matching filter"))))
+      (space_catch_lane_sensor
+         (editor
+            (catcher_pieces_inside
+               (array
+                  object
+                  (class RigidBody))
+               (help
+                  "DO NOT SET - FILLED AUTOMATICALLY with Rigid bodies from various pieces of the catcher that might be in front of a lane")))
+         (enter
+            {$this
+               clear
+               (catcher_pieces_inside)})
+         (exit
+            {$this
+               clear
+               (catcher_pieces_inside)})
+         (find_piece
+            ($piece)
+            {set $foundIdx -1}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (catcher_pieces_inside)}
+               {if
+                  {== $foundIdx -1}
+                  {if
+                     {==
+                        {$this
+                           get
+                           (catcher_pieces_inside $i)}
+                        $piece}
+                     {set $foundIdx $i}}}}
+            $foundIdx)
+         (object_enter
+            ($catcherPiece)
+            {if
+               {==
+                  {$this find_piece $catcherPiece}
+                  -1}
+               {$this
+                  append
+                  (catcher_pieces_inside)
+                  $catcherPiece}})
+         (object_exit
+            ($catcherPiece)
+            {set
+               $pieceIdx
+               {$this find_piece $catcherPiece}}
+            {if
+               {!= $pieceIdx -1}
+               {$this
+                  remove
+                  (catcher_pieces_inside $pieceIdx)}})
+         (signal_gem_caught
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (catcher_pieces_inside)}
+               {{$this
+                     get
+                     (catcher_pieces_inside $i)}
+                  on_gem_caught}})
+         (events_in
+            (signal_gem_caught
+               (help
+                  "Signal to the different parts of the catcher that a note was caught"))))
+      (flock_food
+         (editor
+            (food_depleted
+               bool
+               (default FALSE)
+               (help
+                  "Is the food depleted?")))
+         (object_enter
+            ($boid)
+            {if
+               {&&
+                  {$boid dir}
+                  {{$boid dir}
+                     has
+                     (is_near_food)}}
+               {{$boid dir}
+                  set
+                  is_near_food
+                  TRUE}})
+         (object_exit
+            ($boid)
+            {if
+               {&&
+                  {$boid dir}
+                  {{$boid dir}
+                     has
+                     (is_near_food)}}
+               {{$boid dir}
+                  set
+                  is_food_depleted
+                  [food_depleted]}
+               {{$boid dir}
+                  set
+                  is_near_food
+                  FALSE}}))
+      (flock_eater
+         (editor
+            (boids_inside
+               (array
+                  object
+                  (class Entity))
+               (help
+                  "will be populated automatically as boids enter/exit")))
+         (enter
+            {$this
+               clear
+               (boids_inside)})
+         (exit
+            {$this
+               clear
+               (boids_inside)})
+         (find_boid
+            ($boid)
+            {set $foundIdx -1}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (boids_inside)}
+               {if
+                  {== $foundIdx -1}
+                  {if
+                     {==
+                        {$this
+                           get
+                           (boids_inside $i)}
+                        $boid}
+                     {set $foundIdx $i}}}}
+            $foundIdx)
+         (object_enter
+            ($boid)
+            {if
+               {&&
+                  {$boid dir}
+                  {{$boid dir}
+                     has_component
+                     BoidCom}}
+               {if
+                  {==
+                     {$this
+                        find_boid
+                        {$boid dir}}
+                     -1}
+                  {$this
+                     append
+                     (boids_inside)
+                     {$boid dir}}}})
+         (object_exit
+            ($boid)
+            {if
+               {&&
+                  {$boid dir}
+                  {{$boid dir}
+                     has_component
+                     BoidCom}}
+               {set
+                  $boidIdx
+                  {$this
+                     find_boid
+                     {$boid dir}}}
+               {if
+                  {!= $boidIdx -1}
+                  {$this
+                     remove
+                     (boids_inside $boidIdx)}}})
+         (eat_boids_inside
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (boids_inside)}
+               {set
+                  $boid
+                  {$this
+                     get
+                     (boids_inside $i)}}
+               {if
+                  {$boid has_component EntityPoolInstanceCom}
+                  {$boid recall_boid}}
+               {export
+                  ($boid on_slug_chomped)
+                  FALSE}}
+            {$this
+               clear
+               (boids_inside)})
+         (events_in
+            (eat_boids_inside
+               (help
+                  "eat any boids in the sensor by recalling them.  Only works on spawned boids..."))))
+      (flock_cursor
+         (object_enter
+            ($boid)
+            {if
+               {&&
+                  {$boid dir}
+                  {{$boid dir}
+                     has
+                     (is_near_cursor)}}
+               {{$boid dir}
+                  set
+                  is_near_cursor
+                  TRUE}})
+         (object_exit
+            ($boid)
+            {if
+               {&&
+                  {$boid dir}
+                  {{$boid dir}
+                     has
+                     (is_near_cursor)}}
+               {{$boid dir}
+                  set
+                  is_near_cursor
+                  FALSE}}))
+      (conveyor_belt_paper_sensor
+         (object_enter
+            ($rb)
+            {if
+               {&&
+                  {$rb dir}
+                  {{$rb dir}
+                     has
+                     (in_interaction_zone)}}
+               {{$rb dir}
+                  set
+                  in_interaction_zone
+                  TRUE}})
+         (object_exit
+            ($rb)
+            {if
+               {&&
+                  {$rb dir}
+                  {{$rb dir}
+                     has
+                     (in_interaction_zone)}}
+               {{$rb dir}
+                  set
+                  in_interaction_zone
+                  FALSE}}))
+      (magnet_robot_sensor
+         (object_enter
+            ($rb)
+            {if
+               {&&
+                  {$rb dir}
+                  {{$rb dir}
+                     has
+                     (in_magnet_zone)}
+                  {==
+                     {$rb get material}
+                     robot}}
+               {{$rb dir}
+                  set
+                  in_magnet_zone
+                  TRUE}})
+         (object_exit
+            ($rb)
+            {if
+               {&&
+                  {$rb dir}
+                  {{$rb dir}
+                     has
+                     (in_magnet_zone)}
+                  {==
+                     {$rb get material}
+                     robot}}
+               {{$rb dir}
+                  set
+                  in_magnet_zone
+                  FALSE}}))
+      (discovery_factory_vacuum
+         (editor
+            (vacuum_trans
+               object
+               (class Trans))
+            (flyers
+               (array
+                  object
+                  (class Entity))
+               (disk_prop))
+            (num_flyers int))
+         (events_out
+            (flyer_started)
+            (flyer_arrived))
+         (enter
+            {$this clear flyers}
+            {set
+               [num_flyers]
+               0})
+         (object_enter
+            ($rb)
+            {if
+               {&&
+                  {$rb dir}
+                  {==
+                     {{$rb dir}
+                        get_type}
+                     discovery_factory_flyer}}
+               {{$rb dir}
+                  suck_into_vacuum
+                  [vacuum_trans]
+                  $this}})
+         (on_flyer_start_vacuum
+            ($flyer)
+            {export
+               ($this flyer_started)
+               FALSE}
+            {$this
+               append
+               (flyers)
+               $flyer}
+            {set
+               [num_flyers]
+               {'+'
+                  1
+                  [num_flyers]}})
+         (on_flyer_finish_vacuum
+            ($flyer)
+            {export
+               ($this flyer_arrived)
+               FALSE}
+            {do
+               ($flyer_idx)
+               {set
+                  $flyer_idx
+                  {$this find_flyer $flyer}}
+               {if
+                  {!= $flyer_idx -1}
+                  {$this
+                     remove
+                     (flyers $flyer_idx)}
+                  {set
+                     [num_flyers]
+                     {-
+                        [num_flyers]
+                        1}}}})
+         (find_flyer
+            ($flyer)
+            {set $foundIdx -1}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (flyers)}
+               {if
+                  {== $foundIdx -1}
+                  {if
+                     {==
+                        {$this
+                           get
+                           (flyers $i)}
+                        $flyer}
+                     {set $foundIdx $i}}}}
+            $foundIdx))
+      (direction_reporter
+         (object_enter
+            ($rb)
+            {do
+               ($vel_x
+                  {discovery_state get cursor_velocity_x_world})
+               ($vel_y
+                  {discovery_state get cursor_velocity_y_world})
+               ($vel_z 0.0)
+               ($my_v_x
+                  {$this
+                     get
+                     (world_direction x)})
+               ($my_v_y
+                  {$this
+                     get
+                     (world_direction y)})
+               ($my_v_z
+                  {$this
+                     get
+                     (world_direction z)})
+               ($dot_prod 0.0)
+               ($cross_prod_z 0.0)
+               {normalize $vel_x $vel_y $vel_z}
+               {normalize $my_v_x $my_v_y $my_v_z}
+               {set
+                  $dot_prod
+                  {'+'
+                     {'*' $vel_x $my_v_x}
+                     {'*' $vel_y $my_v_y}
+                     {'*' $vel_z $my_v_z}}}
+               {set
+                  $cross_prod_z
+                  {-
+                     {'*' $vel_x $my_v_y}
+                     {'*' $vel_y $my_v_x}}}
+               {if_else
+                  {> $dot_prod 0.7071}
+                  {export
+                     ($this directional_object_enter forward)
+                     FALSE}
+                  {if_else
+                     {< $dot_prod -0.7071}
+                     {export
+                        ($this directional_object_enter backward)
+                        FALSE}
+                     {if_else
+                        {> $cross_prod_z 0}
+                        {export
+                           ($this directional_object_enter right)
+                           FALSE}
+                        {export
+                           ($this directional_object_enter left)
+                           FALSE}}}}}
+            kDataUnhandled)
+         (events_out
+            (directional_object_enter
+               (editor
+                  (hit_direction
+                     symbol
+                     (list
+                        ('' forward backward left right))
+                     (help
+                        "In which direction were we hit?"))))))
+      (fuse_neighborhood_sensor
+         (editor
+            (fuses_inside
+               (array
+                  object
+                  (class RigidBody)))
+            (my_fuse
+               object
+               (class RigidBody))
+            (fuse_group_formable bool))
+         (events_in
+            (compute_fuse_formable))
+         (enter
+            {$this
+               clear
+               (fuses_inside)}
+            {$this set fuse_group_formable FALSE}
+            {if
+               {!=
+                  [my_fuse]
+                  ''}
+               {[my_fuse]
+                  set
+                  fuses_nearby
+                  0}})
+         (object_enter
+            ($rb)
+            {if
+               {&&
+                  {!=
+                     [my_fuse]
+                     ''}
+                  {!=
+                     $rb
+                     [my_fuse]}
+                  {==
+                     {$rb get_type}
+                     factory_fuse}
+                  {==
+                     {$rb get fuse_color}
+                     {[my_fuse]
+                        get
+                        fuse_color}}}
+               {if
+                  {==
+                     {$this find_fuse $rb}
+                     -1}
+                  {$this
+                     append
+                     (fuses_inside)
+                     $rb}
+                  {[my_fuse]
+                     set
+                     fuses_nearby
+                     {$this
+                        size
+                        (fuses_inside)}}}})
+         (object_exit
+            ($rb)
+            {if
+               {&&
+                  {!=
+                     [my_fuse]
+                     ''}
+                  {!=
+                     $rb
+                     [my_fuse]}
+                  {==
+                     {$rb get_type}
+                     factory_fuse}
+                  {==
+                     {$rb get fuse_color}
+                     {[my_fuse]
+                        get
+                        fuse_color}}}
+               {set
+                  $fuseIdx
+                  {$this find_fuse $rb}}
+               {if
+                  {!= $robotIdx -1}
+                  {$this
+                     remove
+                     (fuses_inside $fuseIdx)}
+                  {[my_fuse]
+                     set
+                     fuses_nearby
+                     {$this
+                        size
+                        (fuses_inside)}}}})
+         (find_fuse
+            ($rb)
+            {do
+               ($foundIdx -1)
+               {foreach_int
+                  $i
+                  0
+                  {$this
+                     size
+                     (fuses_inside)}
+                  {if
+                     {== $foundIdx -1}
+                     {if
+                        {==
+                           {$this
+                              get
+                              (fuses_inside $i)}
+                           $rb}
+                        {set $foundIdx $i}}}}
+               $foundIdx})
+         (compute_fuse_formable
+            {if_else
+               {<
+                  {[my_fuse]
+                     get
+                     fuses_nearby}
+                  2}
+               {set
+                  [fuse_group_formable]
+                  FALSE}
+               {do
+                  ($num_others_ok 0)
+                  {foreach_int
+                     $i
+                     0
+                     {$this
+                        size
+                        (fuses_inside)}
+                     {if
+                        {>=
+                           {{$this
+                                 get
+                                 (fuses_inside $i)}
+                              get
+                              fuses_nearby}
+                           2}
+                        {set
+                           $num_others_ok
+                           {'+' $num_others_ok 1}}}}
+                  {set
+                     [fuse_group_formable]
+                     {>= $num_others_ok 2}}}}))))
+#define LOVE_BIRDS_NOTES
+((list
+      (note1 note1_long note2 note2_long note3 note3_long note4 note4_long note5 note5_long)))
+(Entity
+   (types
+      (fps_lock
+         (editor
+            (fps_lock
+               symbol
+               (list
+                  (30fps 60fps))
+               (default 60fps)
+               (help
+                  "is the layout currently active?")))
+         (enter
+            {set
+               $fps_lock_old
+               {rnd get_sync}}
+            {if_else
+               {==
+                  30fps
+                  [fps_lock]}
+               {rnd set_sync 2}
+               {rnd set_sync 1}})
+         (exit
+            {rnd set_sync $fps_lock_old}))
+      (travel_mote
+         (events_out
+            (init
+               (help
+                  "Mote was created"))
+            (joined_flock
+               (help
+                  "Mote joined flock"))
+            (hit_obstacle
+               (editor
+                  (beneficial
+                     bool
+                     (help
+                        "Was the obstacle beneficial?")))
+               (help
+                  "Mote hit an obstacle"))
+            (rapture
+               (help
+                  "Mote was raptured"))))
+      (entity_pool_instance
+         (events_in
+            (epit_recall
+               (alias
+                  "recall")))
+         (epit_recall
+            {do
+               {if
+                  {&&
+                     {$this has_component EntityPoolInstanceCom}
+                     {$this is_spawned}}
+                  {do
+                     {$this recall}}}}))
+      (angler_slug
+         (events_out
+            (on_slug_chomped
+               (help
+                  "Called when slug is chomped by the angler"))))
+      (angler_food_spot
+         (editor
+            (slugs
+               (array
+                  object
+                  (class Entity)
+                  (components
+                     (BoidCom)))
+               (disk_prop)
+               (help
+                  "Slugs that need to receiver their boid controller")))
+         (events_in
+            (add_slugs_to_flock
+               (editor
+                  (boid_controller
+                     object
+                     (class BoidController)
+                     (help
+                        "The boid controller to set on our slugs")))
+               (help
+                  "Pass a BoidController object to the slugs, to add them to the flock")))
+         (add_slugs_to_flock
+            ($boidController)
+            {foreach
+               $boid
+               [slugs]
+               {$boid set_dynamic_controller $boidController}}))
+      (city_balloon
+         (take_pickup
+            ($sensor)
+            {if_else
+               {&&
+                  $sensor
+                  {$sensor dir}
+                  {{$sensor dir}
+                     get_type
+                     city_balloon_pickup}}
+               {export
+                  ({$sensor dir}
+                     on_picked_up)}
+               {notify
+                  {$this name}
+                  " cannot take pickup because its not of type 'city_balloon_pickup'"}})
+         (events_in
+            (take_pickup
+               (editor
+                  (pickup_sensor
+                     object
+                     (class PhysSensor)
+                     (help
+                        "Should be a sensor inside an entity of type 'city_balloon_pickup'")))
+               (help
+                  "Tells a pickup its been taken"))))
+      (city_balloon_pickup
+         (events_out
+            (on_picked_up
+               (help
+                  "Sent out by 'city_balloon' type when it picks up this object"))))
+      (city_balloon_creature
+         (events_out
+            (on_story_end
+               (editor
+                  (story_end_x
+                     float
+                     (default 0)
+                     (help
+                        "The x we should go to on story end"))
+                  (story_end_y
+                     float
+                     (default 0)
+                     (help
+                        "The y we should go to on story end"))
+                  (story_end_z
+                     float
+                     (default 0)
+                     (help
+                        "The z we should go to on story end")))
+               (help
+                  "Called when we reach the end our story. the x, y, z passed is the place we should move before playing out win anim"))))
+      (city_balloon_end_of_story
+         (story_completed_for_creature
+            ($body $gotoX $gotoY $gotoZ)
+            {if
+               {&&
+                  {!= $body ''}
+                  {==
+                     {{$body dir}
+                        get_type}
+                     city_balloon_creature}}
+               {export
+                  ({$body dir}
+                     on_story_end
+                     $gotoX
+                     $gotoY
+                     $gotoZ)}})
+         (events_in
+            (story_completed_for_creature
+               (editor
+                  (creature_body
+                     object
+                     (class RigidBody)
+                     (help
+                        "The body of the thing that arrived, triggering completion of story"))
+                  (story_end_x
+                     float
+                     (help
+                        "The x position to goto on story end"))
+                  (story_end_y
+                     float
+                     (help
+                        "The y position to goto on story end"))
+                  (story_end_z
+                     float
+                     (help
+                        "The z position to goto on story end")))
+               (help
+                  "Call this when the body that is needed to complete the story arrives"))))
+      (city_jumper
+         (editor
+            (boid_controller
+               object
+               (class BoidController)
+               (alias
+                  "boid controller")
+               (help
+                  "The boid controller that we add/remove ourselves to/from"))
+            (city_jumper_tank
+               object
+               (class Entity)
+               (help
+                  "DO NOT SET DIRECTLY - The tank we are in"))
+            (in_tank
+               bool
+               (default FALSE)
+               (help
+                  "DO NOT SET DIRECTLY - are we in a tank?  for convenience..."))
+            (cur_tank_id
+               int
+               (default 0)
+               (help
+                  "DO NOT SET DIRECTLY - The ID of the tank we're in"))
+            (prev_tank_id
+               int
+               (default 0)
+               (help
+                  "DO NOT SET DIRECTLY  - The ID of the last tank we were in, set on exit from a tank")))
+         (events_in
+            (recall_spawned_jumper
+               (help
+                  "Recall this jumper if it was spawned"))
+            (remove_from_tank
+               (help
+                  "Remove me from my current tank"))
+            (add_to_flock)
+            (remove_from_flock))
+         (events_out
+            (on_added_to_tank
+               (editor
+                  (landed_goto_pt_x
+                     float
+                     (help
+                        "X position of the location to go to upon landing"))
+                  (landed_goto_pt_y
+                     float
+                     (help
+                        "Y position of the location to go to upon landing"))
+                  (landed_goto_pt_z
+                     float
+                     (help
+                        "Z position of the location to go to upon landing")))
+               (help
+                  "Called by tank when this jumper arrives in a 'city_jumper_tanks' sensor.  A pt to goto is passed by the tank"))
+            (on_launch_from_tank
+               (editor
+                  (launch_to_pt_x
+                     float
+                     (help
+                        "X position of the launch target"))
+                  (launch_to_pt_y
+                     float
+                     (help
+                        "Y position of the launch target"))
+                  (launch_to_pt_z
+                     float
+                     (help
+                        "Z position of the launch target")))
+               (help
+                  "Called by tank when this jumper has been selected to launch towards a target."))
+            (on_removed_from_tank
+               (help
+                  "Called by tank when this jumper leaves its sensor")))
+         (exit
+            {$this remove_from_tank})
+         (enter
+            {$this
+               set
+               (city_jumper_tank)
+               ''}
+            {$this
+               set
+               (in_tank)
+               FALSE}
+            {$this
+               set
+               (cur_tank_id)
+               0}
+            {$this
+               set
+               (prev_tank_id)
+               0}
+            {$this remove_from_flock})
+         (add_to_flock
+            {$this
+               set_dynamic_controller
+               [boid_controller]})
+         (remove_from_flock
+            {$this set_dynamic_controller ''})
+         (recall_spawned_jumper
+            {if
+               {$this has_component EntityPoolInstanceCom}
+               {$this recall}})
+         (remove_from_tank
+            {if
+               {!=
+                  [city_jumper_tank]
+                  ''}
+               {$this remove_from_flock}
+               {[city_jumper_tank]
+                  remove_jumper_from_tank
+                  $this}})
+         (on_added_to_tank
+            ($tank $gotoX $gotoY $gotoZ)
+            {$this remove_from_tank}
+            {$this
+               set
+               (city_jumper_tank)
+               $tank}
+            {$this
+               set
+               (cur_tank_id)
+               {$tank
+                  get
+                  (tank_id)}}
+            {$this
+               set
+               (in_tank)
+               TRUE}
+            {export
+               ($this on_added_to_tank $gotoX $gotoY $gotoZ)})
+         (on_removed_from_tank
+            ($tank)
+            {if
+               {==
+                  $tank
+                  [city_jumper_tank]}
+               {$this
+                  set
+                  (prev_tank_id)
+                  {$tank
+                     get
+                     (tank_id)}}
+               {$this
+                  set
+                  (city_jumper_tank)
+                  ''}
+               {$this
+                  set
+                  (in_tank)
+                  FALSE}
+               {export
+                  ($this on_removed_from_tank)}})
+         (on_launch_from_tank
+            ($tank $targetX $targetY $targetZ)
+            {if_else
+               {==
+                  $tank
+                  [city_jumper_tank]}
+               {export
+                  ($this on_launch_from_tank $targetX $targetY $targetZ)}
+               {notify
+                  "Something wrong - jumper "
+                  {$this name}
+                  " cannot launch from tank "
+                  {$tank name}
+                  " because its not in the tank!"}}))
+      (city_jumper_tank
+         (editor
+            (Inputs
+               (indent
+                  (tank_id
+                     int
+                     (default 0)
+                     (help
+                        "An identifier for this tank, might be used by jumpers to affect behavior"))
+                  (jumper_landings
+                     (array
+                        object
+                        (class Trans))
+                     (disk_prop)
+                     (help
+                        "The set of spots we send jumpers when they are added to our tank - used in conjunction with 'add_jumper_to_landing' command"))))
+            ('Runtime (do not set)'
+               (indent
+                  (jumpers
+                     (array
+                        object
+                        (class Entity))
+                     (help
+                        "All the jumpers in this tank (have type 'city_jumper') - will be added to automatically via Flow commands."))
+                  (num_jumpers
+                     int
+                     (help
+                        "How many jumpers are in this tank?")))))
+         (events_in
+            (add_jumper_to_tank
+               (editor
+                  (jumper_to_add
+                     object
+                     (help
+                        "Jumper to add - will be an entity with type 'city_jumper' or a rigid body inside"))
+                  (jumper_goto_x
+                     float
+                     (help
+                        "X position to goto in the tank"))
+                  (jumper_goto_y
+                     float
+                     (help
+                        "Y position to goto in the tank"))
+                  (jumper_goto_z
+                     float
+                     (help
+                        "Z position to goto in the tank")))
+               (help
+                  "Add a jumper to this tank - will be added to the 'jumpers' list and instructed to go to a given pt."))
+            (add_jumper_to_landing
+               (editor
+                  (jumper_to_add
+                     object
+                     (help
+                        "Jumper to add - will be an entity with type 'city_jumper' or a rigid body inside")))
+               (help
+                  "Add a jumper to this tank - will be added to the 'jumpers' list and assigned a landing location from the 'jumper_landings' list"))
+            (launch_random_jumper
+               (editor
+                  (goto_target_x
+                     float
+                     (help
+                        "X target of jump"))
+                  (goto_target_y
+                     float
+                     (help
+                        "Y target of jump"))
+                  (goto_target_z
+                     float
+                     (help
+                        "Z target of jump")))
+               (help
+                  "Launch a random jumper out of this tank towards given location"))
+            (remove_jumper_from_tank
+               (editor
+                  (jumper_to_remove
+                     object
+                     (help
+                        "Jumper to remove - will be an entity with type 'city_jumper' or a rigid body inside")))
+               (help
+                  "Remove a jumper to this tank - will be removed from the 'jumpers' list"))
+            (recall_jumper
+               (editor
+                  (jumper_to_recall
+                     object
+                     (help
+                        "Jumper to recall - will be an entity with type 'city_jumper' or a rigid body inside")))
+               (help
+                  "Recall the given jumper, making it disappear from the world so it can be recycled again")))
+         (enter
+            {$this
+               set
+               (num_jumpers)
+               0}
+            {$this
+               clear
+               (jumpers)})
+         (find_jumper
+            ($jumper)
+            {set $foundIdx -1}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (jumpers)}
+               {if
+                  {== $foundIdx -1}
+                  {if
+                     {==
+                        {$this
+                           get
+                           (jumpers $i)}
+                        $jumper}
+                     {set $foundIdx $i}}}}
+            $foundIdx)
+         (extract_jumper
+            ($possibleJumper)
+            {if_else
+               $possibleJumper
+               {if_else
+                  {==
+                     {$possibleJumper get_type}
+                     city_jumper}
+                  $possibleJumper
+                  {do
+                     {if_else
+                        {==
+                           {{$possibleJumper dir}
+                              get_type}
+                           city_jumper}
+                        {$possibleJumper dir}
+                        ''}}}
+               {do
+                  {notify_once
+                     {path_name $this}
+                     " could not extract_jumper because we were passed a null object.  The fish interaction is probably broken!"}
+                  ''}})
+         (add_jumper_to_tank
+            ($j $gotoX $gotoY $gotoZ)
+            {set
+               $jumper
+               {$this extract_jumper $j}}
+            {if
+               {&&
+                  {!= $jumper ''}
+                  {==
+                     {$this find_jumper $jumper}
+                     -1}}
+               {$this
+                  append
+                  (jumpers)
+                  $jumper}
+               {$this
+                  set
+                  (num_jumpers)
+                  {$this
+                     size
+                     (jumpers)}}
+               {$jumper on_added_to_tank $this $gotoX $gotoY $gotoZ}})
+         (add_jumper_to_landing
+            ($j)
+            {if_else
+               {>
+                  {$this
+                     size
+                     (jumper_landings)}
+                  0}
+               {do
+                  {set
+                     $landingTrans
+                     {$this
+                        get
+                        (jumper_landings
+                           {mod
+                              {$this
+                                 size
+                                 (jumpers)}
+                              {$this
+                                 size
+                                 (jumper_landings)}})}}
+                  {set
+                     $x
+                     {$landingTrans
+                        get
+                        (world_xfm x)}}
+                  {set
+                     $y
+                     {$landingTrans
+                        get
+                        (world_xfm y)}}
+                  {set
+                     $z
+                     {$landingTrans
+                        get
+                        (world_xfm z)}}
+                  {$this add_jumper_to_tank $j $x $y $z}}
+               {notify
+                  {path_name $this}
+                  " cannot add_jumper_to_landing because no jumper_landings specified"}})
+         (launch_random_jumper
+            ($gotoX $gotoY $gotoZ)
+            {if
+               {>
+                  {$this
+                     size
+                     (jumpers)}
+                  0}
+               {{random_elem
+                     {$this
+                        get
+                        (jumpers)}}
+                  on_launch_from_tank
+                  $this
+                  $gotoX
+                  $gotoY
+                  $gotoZ}})
+         (remove_jumper_from_tank
+            ($j)
+            {set
+               $jumper
+               {$this extract_jumper $j}}
+            {if
+               {!= $jumper ''}
+               {set
+                  $jumperIdx
+                  {$this find_jumper $jumper}}
+               {if
+                  {!= $jumperIdx -1}
+                  {$this
+                     remove
+                     (jumpers $jumperIdx)}
+                  {$this
+                     set
+                     (num_jumpers)
+                     {$this
+                        size
+                        (jumpers)}}
+                  {$jumper on_removed_from_tank $this}}})
+         (recall_jumper
+            ($j)
+            {set
+               $jumper
+               {$this extract_jumper $j}}
+            {if
+               {!= $jumper ''}
+               {$jumper remove_from_tank}
+               {$jumper recall_spawned_jumper}}))
+      (discovery_hover_paint_fan
+         (editor
+            (is_blowing bool)
+            (target_type
+               symbol
+               (list
+                  (red blue yellow)))
+            (boid_pool
+               object
+               (class EntityPool)
+               (help
+                  "The pool of boids we spawn from")
+               (instance_prop)))
+         (events_in
+            (spawn_flyer
+               (editor
+                  (source
+                     object
+                     (class Trans)))))
+         (spawn_flyer
+            ($source)
+            {if
+               {!=
+                  [boid_pool]
+                  ''}
+               {[boid_pool]
+                  copy_world_trans_from
+                  $source}
+               {[boid_pool]
+                  spawn}}))
+      (discovery_hover_paint_target
+         (editor
+            (fan
+               object
+               (class Entity)))
+         (events_in
+            (epit_recall
+               (alias
+                  "recall"))
+            (spawn_boid
+               (editor
+                  (target_trans
+                     object
+                     (class Trans)))))
+         (epit_recall
+            {do
+               {if
+                  {$this has_component EntityPoolInstanceCom}
+                  {do
+                     {$this recall}}}})
+         (spawn_boid
+            ($target_trans)
+            {[fan]
+               spawn_flyer
+               $target_trans}))
+      (discovery_factory_robot)
+      (journal_page
+         (editor
+            (checked_and_granted
+               bool
+               (default FALSE)
+               (read_only TRUE)
+               (help
+                  "Last time we checked, had the player collected this page?"))
+            (grant
+               script
+               (script
+                  {$this grant_journal_page})
+               (no_test)
+               (help
+                  "Grants the page now"))
+            (sync_assets
+               script
+               (script
+                  {$this sync_assets})
+               (no_test)
+               (help
+                  "Syncs the visuals up with JournalPageCom's page_name")))
+         (events_in
+            (grant_journal_page
+               (help
+                  "Add a page to the player's collection"))
+            (check_journal_page
+               (help
+                  "Check whether page has been collected before"))
+            (sync_assets
+               (help
+                  "Sync page id with JournalPageCom"))
+            (sync_mats
+               (help
+                  "Sync texture to expose to shader graph")))
+         (enter
+            {$this check_journal_page})
+         (sync_assets
+            {$this check_journal_page}
+            {$this sync_mats})
+         (sync_mats
+            {if
+               {&&
+                  {exists journal_page_foldup.mat}
+                  {exists journal_page_curl.mat}}
+               {journal_page_foldup.mat
+                  set
+                  diff_tex
+                  {$this
+                     get
+                     (JournalPageCom texture)}}
+               {journal_page_curl.mat
+                  set
+                  diff_tex
+                  {$this
+                     get
+                     (JournalPageCom texture)}}})
+         (check_journal_page
+            {$this
+               set
+               checked_and_granted
+               {{profile_mgr get active_profile}
+                  has_journal_page
+                  {$this
+                     get
+                     (JournalPageCom page_name)}}})
+         (grant_journal_page
+            {{profile_mgr get active_profile}
+               give_journal_page
+               {$this
+                  get
+                  (JournalPageCom page_name)}}
+            {$this check_journal_page}))
+      (level_info
+         (editor
+            (label_level_name
+               object
+               (class UILabel)
+               (disk_prop)
+               (alias
+                  "Level Name Label")
+               (help
+                  "The UILabel that will be updated with this level's name."))
+            (sym_level
+               symbol
+               (list
+                  {find $syscfg levels})
+               (alias
+                  "Level")
+               (help
+                  "The discovery level (as listed in levels.dta)."))
+            (sym_state
+               symbol
+               (list
+                  (locked available))
+               (default available)
+               (alias
+                  "Level State")
+               (help
+                  "Is the level locked, or is it available to play?")))
+         (events_in
+            (update_level_label
+               (alias
+                  "Update Level Name")
+               (help
+                  "Updates the level name, using the Level property as a lookup into the levels.dta file.")))
+         (update_level_label
+            {if
+               [label_level_name]
+               {[label_level_name]
+                  set
+                  edit_text
+                  {do
+                     ($level_array
+                        {find_exists
+                           {find $syscfg levels}
+                           [sym_level]})
+                     {if_else
+                        {!= $level_array kDataUnhandled}
+                        {elem
+                           {find $level_array name}
+                           1}
+                        [sym_level]}}}}))
+      (step_seq_recorder
+         (editor
+            (step_seq
+               object
+               (class StepSequencerRow)
+               (help
+                  "The step sequencer row to 'punch into'"))
+            (auto_punch_in_next
+               bool
+               (default FALSE)
+               (help
+                  "Do we auto punch this entity into the sequencer when its about to play the next sample?")))
+         (enter
+            {if
+               {!=
+                  [step_seq]
+                  ''}
+               {[step_seq]
+                  add_sink
+                  $this
+                  on_new_step_current}})
+         (exit
+            {if
+               {!=
+                  [step_seq]
+                  ''}
+               {[step_seq]
+                  remove_sink
+                  $this
+                  on_new_step_current}})
+         (on_new_step_current
+            ($newStepNum)
+            {if
+               [auto_punch_in_next]
+               {$this punch_into_step_seq}
+               {if
+                  {$this has_component SequencerStepCom}
+                  {$this
+                     set
+                     (step_toggled_on)
+                     TRUE}}})
+         (punch_into_step_seq
+            {if
+               {!=
+                  [step_seq]
+                  ''}
+               {if_else
+                  {$this has_component SequencerStepCom}
+                  {[step_seq]
+                     assign_step
+                     {mod
+                        {[step_seq]
+                           get
+                           (cur_step)}
+                        {[step_seq]
+                           get
+                           (num_steps)}}
+                     $this
+                     FALSE}
+                  {notify
+                     {this name}
+                     " doesn't have a SequencerStepCom component on it, so can't call 'punch_into_step_seq' handler on 'step_seq_recorder' script type"}}})
+         (events_in
+            (punch_into_step_seq
+               (help
+                  "Will force this entity to be the next step played in step_seq"))))
+      (discovery_touch_sequence_element
+         (editor
+            (available
+               bool
+               (help
+                  "Do we draw?"))
+            (paintable
+               bool
+               (help
+                  "Are we collidable?"))
+            (painted
+               bool
+               (help
+                  "Have we been painted?"))
+            (parent
+               object
+               (class Object))
+            (children
+               (array
+                  object
+                  (class Object))
+               (read_only TRUE))
+            (touch_seq_group
+               object
+               (class Object)
+               (read_only TRUE)))
+         (add_to_parent
+            {if
+               {!=
+                  [parent]
+                  ''}
+               {[parent]
+                  append
+                  (children)
+                  $this}})
+         (clear_children
+            {$this
+               clear
+               (children)})
+         (events_in
+            (on_painted)
+            (on_echoed))
+         (events_out
+            (enqueue_paintable))
+         (on_painted
+            {if
+               [touch_seq_group]
+               {[touch_seq_group]
+                  on_element_painted
+                  $this}})
+         (on_echoed
+            {set
+               [painted]
+               TRUE}
+            {if
+               [touch_seq_group]
+               {[touch_seq_group]
+                  on_element_echoed
+                  $this}})
+         (set_unavailable_recursive
+            {set
+               [available]
+               FALSE}
+            {set
+               [painted]
+               FALSE}
+            {set
+               [paintable]
+               FALSE}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (children)}
+               {do
+                  ($child
+                     {$this
+                        get
+                        (children $i)})
+                  {if
+                     {!= $child ''}
+                     {$child set_unavailable_recursive}}}})
+         (on_parent_echoed
+            {set
+               [available]
+               TRUE}
+            {set
+               [painted]
+               FALSE}
+            {export
+               ($this enqueue_paintable)
+               FALSE}))
+      (discovery_touch_sequence
+         (editor
+            (head
+               object
+               (class Object))
+            (elements
+               (array
+                  object
+                  (class Object))))
+         (enter
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (elements)}
+               {do
+                  ($element
+                     {$this
+                        get
+                        (elements $i)})
+                  {if
+                     {!= $element ''}
+                     {$element clear_children}}}}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (elements)}
+               {do
+                  ($element
+                     {$this
+                        get
+                        (elements $i)})
+                  {if
+                     {!= $element ''}
+                     {$element set touch_seq_group $this}
+                     {$element add_to_parent}}}})
+         (add_element_recursive
+            ($element)
+            {if
+               {!= $element ''}
+               {$this
+                  append
+                  (elements)
+                  $element}
+               {foreach_int
+                  $i
+                  0
+                  {$element
+                     size
+                     (children)}
+                  {do
+                     ($child
+                        {$element
+                           get
+                           (children $i)})
+                     {if
+                        {!= $child ''}
+                        {$this add_element_recursive $child}}}}})
+         (events_in
+            (reset_touch_seq))
+         (events_out
+            (element_painted
+               (editor
+                  (painted_element
+                     object
+                     (class Entity))))
+            (element_echoed
+               (editor
+                  (echoed_element
+                     object
+                     (class Entity))))
+            (element_queued
+               (editor
+                  (queued_element
+                     object
+                     (class Entity))
+                  (queued_index int)))
+            (sequence_end
+               (editor
+                  (end_element
+                     object
+                     (class Entity)))))
+         (reset_touch_seq
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (elements)}
+               {do
+                  ($element
+                     {$this
+                        get
+                        (elements $i)})
+                  {if
+                     {&&
+                        {!= $element ''}
+                        {!=
+                           $element
+                           [head]}}
+                     {$element set paintable FALSE}
+                     {$element set available FALSE}
+                     {$element set painted FALSE}}}}
+            {[head]
+               set
+               available
+               TRUE}
+            {[head]
+               set
+               painted
+               FALSE}
+            {[head]
+               set
+               paintable
+               TRUE})
+         (on_element_painted
+            ($painted_element)
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (elements)}
+               {do
+                  ($element
+                     {$this
+                        get
+                        (elements $i)})
+                  {if
+                     {!= $element ''}
+                     {$element set paintable FALSE}}}}
+            {export
+               ($this element_painted $painted_element)
+               FALSE})
+         (on_element_echoed
+            ($echoed_element)
+            {do
+               ($parent
+                  {$echoed_element get parent})
+               {if
+                  {!= $parent ''}
+                  {foreach_int
+                     $i
+                     0
+                     {$parent
+                        size
+                        (children)}
+                     {do
+                        ($element
+                           {$parent
+                              get
+                              (children $i)})
+                        {if
+                           {&&
+                              {!= $element ''}
+                              {!= $element $echoed_element}}
+                           {$element set_unavailable_recursive}}}}}}
+            {foreach_int
+               $i
+               0
+               {$echoed_element
+                  size
+                  (children)}
+               {do
+                  ($child
+                     {$echoed_element
+                        get
+                        (children $i)})
+                  {if
+                     {!= $child ''}
+                     {foreach_int
+                        $j
+                        0
+                        {$child
+                           size
+                           (children)}
+                        {do
+                           ($grandchild
+                              {$child
+                                 get
+                                 (children $j)})
+                           {if
+                              {!= $grandchild ''}
+                              {$grandchild set_unavailable_recursive}}}}}}}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (elements)}
+               {do
+                  ($element
+                     {$this
+                        get
+                        (elements $i)})
+                  {if
+                     {&&
+                        {!= $element ''}
+                        {==
+                           {$element get available}
+                           TRUE}
+                        {!= $element $echoed_element}}
+                     {$element set paintable TRUE}}}}
+            {if_else
+               {==
+                  {$echoed_element
+                     size
+                     (children)}
+                  0}
+               {export
+                  ($this sequence_end $echoed_element)}
+               {foreach_int
+                  $i
+                  0
+                  {$echoed_element
+                     size
+                     (children)}
+                  {do
+                     ($child
+                        {$echoed_element
+                           get
+                           (children $i)})
+                     {if
+                        {!= $child ''}
+                        {$child on_parent_echoed}
+                        {export
+                           ($this element_queued $child $i)
+                           FALSE}}}}}
+            {export
+               ($this element_echoed $echoed_element)
+               FALSE}))
+      (discovery_clump_source
+         (editor
+            (clump_pieces
+               (array
+                  object
+                  (class Entity))
+               (help
+                  "keeps track of all the clump pieces attached"))
+            (num_clump_pieces
+               int
+               (default 0)
+               (help
+                  "how many clump pieces are attached?"))
+            (last_clump_source_state
+               int
+               (default -1)
+               (help
+                  "last value passed to 'set_clump_piece_state', which will be set on any new pieces added to the clump")))
+         (enter
+            {$this remove_all_clump_pieces})
+         (exit
+            {$this remove_all_clump_pieces})
+         (find_piece
+            ($piece)
+            {set $foundIdx -1}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (clump_pieces)}
+               {if
+                  {== $foundIdx -1}
+                  {if
+                     {==
+                        {$this
+                           get
+                           (clump_pieces $i)}
+                        $piece}
+                     {set $foundIdx $i}}}}
+            $foundIdx)
+         (extract_piece
+            ($possiblePiece)
+            {if_else
+               {==
+                  {$possiblePiece get_type}
+                  discovery_clump_piece}
+               $possiblePiece
+               {do
+                  {if_else
+                     {==
+                        {{$possiblePiece dir}
+                           get_type}
+                        discovery_clump_piece}
+                     {$possiblePiece dir}
+                     ''}}})
+         (add_clump_piece
+            ($p)
+            {set
+               $piece
+               {$this extract_piece $p}}
+            {if
+               {&&
+                  {!= $piece ''}
+                  {==
+                     {$this find_piece $piece}
+                     -1}}
+               {$piece
+                  set
+                  (clump_source)
+                  $this}
+               {$piece
+                  set
+                  (clump_source_state)
+                  [last_clump_source_state]}
+               {$this
+                  append
+                  (clump_pieces)
+                  $piece}
+               {$this
+                  set
+                  (num_clump_pieces)
+                  {$this
+                     size
+                     (clump_pieces)}}})
+         (remove_clump_piece
+            ($p)
+            {set
+               $piece
+               {$this extract_piece $p}}
+            {if
+               {!= $piece ''}
+               {set
+                  $pieceIdx
+                  {$this find_piece $piece}}
+               {if
+                  {!= $pieceIdx -1}
+                  {$piece
+                     set
+                     (clump_source)
+                     ''}
+                  {$piece
+                     set
+                     (clump_source_state)
+                     -1}
+                  {$this
+                     remove
+                     (clump_pieces $pieceIdx)}
+                  {$this
+                     set
+                     (num_clump_pieces)
+                     {$this
+                        size
+                        (clump_pieces)}}}})
+         (remove_all_clump_pieces
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (clump_pieces)}
+               {set
+                  $piece
+                  {$this
+                     get
+                     (clump_pieces $i)}}
+               {$piece
+                  set
+                  (clump_source)
+                  ''}}
+            {$this
+               clear
+               (clump_pieces)}
+            {$this
+               set
+               (num_clump_pieces)
+               0})
+         (set_clump_piece_state
+            ($newState)
+            {set
+               [last_clump_source_state]
+               $newState}
+            {foreach_int
+               $i
+               0
+               {$this
+                  size
+                  (clump_pieces)}
+               {set
+                  $piece
+                  {$this
+                     get
+                     (clump_pieces $i)}}
+               {$piece
+                  set
+                  (clump_source_state)
+                  $newState}})
+         (events_in
+            (add_clump_piece
+               (editor
+                  (clump_piece_to_add
+                     object
+                     (help
+                        "an entity with type 'discovery_clump_piece' OR object within that entity like a rigid body"))))
+            (set_clump_piece_state
+               (editor
+                  (new_state
+                     int
+                     (help
+                        "some data to be set on all our clump_pieces, will fill in 'clump_source_state' property")))
+               (help
+                  "Transform some state (a number) to all the clump pieces.  Will set their 'clump_source_state' property"))
+            (remove_clump_piece
+               (editor
+                  (clump_piece_to_remove
+                     object
+                     (help
+                        "an entity with type 'discovery_clump_piece' OR object within that entity like a rigid body"))))
+            (remove_all_clump_pieces
+               (help
+                  "clear out all my clump pieces"))))
+      (discovery_clump_piece
+         (editor
+            (clump_source
+               object
+               (class Entity)
+               (help
+                  "An entity with the 'discovery_clump_source' type"))
+            (clump_source_state
+               int
+               (default -1)
+               (help
+                  "a piece of data fed from clump_source to this entity")))
+         (add_body_to_clump_source
+            ($p)
+            {if
+               {!=
+                  [clump_source]
+                  ''}
+               {[clump_source]
+                  add_clump_piece
+                  $p}})
+         (events_in
+            (add_to_my_clump_source
+               (editor
+                  (clump_body
+                     object
+                     (help
+                        "Probably a rigid body inside an entity of type 'discovery_clump_piece', but could be entity itself")))
+               (help
+                  "Add the given object (or its dir) to my clump source"))))
+      (discovery_city_zone_element
+         (editor
+            (zone_level
+               float
+               (default 0.0)
+               (help
+                  "What is our current cheer level?"))
+            (all_zones_up
+               bool
+               (default FALSE)
+               (help
+                  "Do all of our zones have a positive level?"))))
+      (discovery_city_zone
+         (editor
+            (group0
+               (array
+                  object
+                  (class Object)
+                  discovery_city_zone_element)
+               (instance_prop))
+            (group0_level
+               float
+               (property_sync
+                  {$this
+                     refresh_group_level
+                     [group0]
+                     [group0_level]}))
+            (group1
+               (array
+                  object
+                  (class Object)
+                  discovery_city_zone_element)
+               (instance_prop))
+            (group1_level
+               float
+               (property_sync
+                  {$this
+                     refresh_group_level
+                     [group1]
+                     [group1_level]}))
+            (group2
+               (array
+                  object
+                  (class Object)
+                  discovery_city_zone_element)
+               (instance_prop))
+            (group2_level
+               float
+               (property_sync
+                  {$this
+                     refresh_group_level
+                     [group2]
+                     [group2_level]}))
+            (group3
+               (array
+                  object
+                  (class Object)
+                  discovery_city_zone_element)
+               (instance_prop))
+            (group3_level
+               float
+               (property_sync
+                  {$this
+                     refresh_group_level
+                     [group3]
+                     [group3_level]}))
+            (all_zones_up
+               bool
+               (property_sync
+                  {$this refresh_zones_up})))
+         (refresh_group_level
+            ($group $val)
+            {if
+               $group
+               {foreach_int
+                  $i
+                  0
+                  {size $group}
+                  {do
+                     ($element
+                        {elem $group $i})
+                     {if
+                        {!= $element ''}
+                        {$element set zone_level $val}}}}})
+         (refresh_zones_up
+            {$this
+               refresh_zone_up
+               [group0]
+               [all_zones_up]}
+            {$this
+               refresh_zone_up
+               [group1]
+               [all_zones_up]}
+            {$this
+               refresh_zone_up
+               [group2]
+               [all_zones_up]}
+            {$this
+               refresh_zone_up
+               [group3]
+               [all_zones_up]})
+         (refresh_zone_up
+            ($group $val)
+            {if
+               $group
+               {foreach_int
+                  $i
+                  0
+                  {size $group}
+                  {do
+                     ($element
+                        {elem $group $i})
+                     {if
+                        {!= $element ''}
+                        {$element set all_zones_up $val}}}}}))
+      (discovery_radslice_detector
+         (editor
+            (slices
+               (array
+                  object
+                  (class Object))
+               (default
+                  {array 0})
+               (property_sync
+                  {$this sync_slices}))
+            (current_slice_id
+               int
+               (default -1))
+            (last_played_note int)
+            (only_use_recorded_notes bool)
+            (recorder
+               object
+               (class Object)
+               (instance_prop)))
+         (events_in
+            (internal_note_play
+               (editor
+                  (slot_id int)))
+            (reset))
+         (events_out
+            (play_note
+               (editor
+                  (note_num int))))
+         (recompute_hovered
+            {do
+               ($slice_id -1)
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [slices]}
+                  {if
+                     {==
+                        {{elem
+                              [slices]
+                              $i}
+                           get
+                           hover_detected}
+                        TRUE}
+                     {set $slice_id $i}}}
+               {set
+                  [current_slice_id]
+                  $slice_id}
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [slices]}
+                  {{elem
+                        [slices]
+                        $i}
+                     set
+                     is_selected
+                     {== $i $slice_id}}}})
+         (internal_note_play
+            ($slot_id)
+            {do
+               ($note_to_play -1)
+               {if_else
+                  {'||'
+                     {==
+                        [current_slice_id]
+                        -1}
+                     {==
+                        [only_use_recorded_notes]
+                        TRUE}}
+                  {do
+                     {if
+                        {!=
+                           [recorder]
+                           ''}
+                        {set
+                           $note_to_play
+                           {elem
+                              {[recorder]
+                                 get
+                                 recording}
+                              $slot_id}}
+                        {[recorder]
+                           play_recorded_note
+                           $slot_id}}}
+                  {do
+                     {set
+                        $note_to_play
+                        [current_slice_id]}
+                     {if
+                        {!=
+                           [recorder]
+                           ''}
+                        {[recorder]
+                           record_note
+                           $slot_id
+                           $note_to_play}}}}
+               {set
+                  [last_played_note]
+                  $note_to_play}
+               {if
+                  {!= $note_to_play -1}
+                  {export
+                     ($this play_note $note_to_play)
+                     FALSE}
+                  {{elem
+                        [slices]
+                        $note_to_play}
+                     do_pulse}}})
+         (sync_slices
+            {foreach
+               $slice
+               [slices]
+               {if
+                  {!= $slice ''}
+                  {$slice set detector $this}}})
+         (enter
+            {$this sync_slices}
+            {$this reset})
+         (reset
+            {if
+               {!=
+                  [recorder]
+                  ''}
+               {[recorder]
+                  reset_recording}}
+            {set
+               [current_slice_id]
+               -1}))
+      (discovery_radslice_slice
+         (editor
+            (hover_detected
+               bool
+               (disk_prop)
+               (property_sync
+                  {$this sync_detected})
+               (help
+                  "Set from flow when we're hit by cursor"))
+            (is_selected
+               bool
+               (help
+                  "Output to entity when we're actually selected"))
+            (detector
+               object
+               (instance_prop)
+               (read_only TRUE)))
+         (events_out
+            (on_pulse))
+         (do_pulse
+            {export
+               ($this on_pulse)
+               FALSE})
+         (sync_detected
+            {if
+               {!=
+                  [detector]
+                  ''}
+               {[detector]
+                  recompute_hovered}}))
+      (discovery_radslice_recorder
+         (editor
+            (recording_size
+               int
+               (property_sync
+                  {$this sync_recording_size}))
+            (recording
+               (array int)
+               (read_only TRUE))
+            (all_slots_recorded bool))
+         (events_out
+            (update_visuals)
+            (play_slot
+               (editor
+                  (slot_id int))))
+         (sync_recording_size
+            {set
+               [recording]
+               {array
+                  [recording_size]}})
+         (reset_recording
+            {$this sync_recording_size}
+            {foreach_int
+               $i
+               0
+               [recording_size]
+               {set_elem
+                  [recording]
+                  $i
+                  -1}}
+            {set
+               [all_slots_recorded]
+               FALSE}
+            {export
+               ($this update_visuals)
+               FALSE})
+         (enter
+            {$this reset_recording})
+         (record_note
+            ($slot $num)
+            {set_elem
+               [recording]
+               $slot
+               $num}
+            {export
+               ($this update_visuals)
+               FALSE}
+            {export
+               ($this play_slot $slot)
+               FALSE}
+            {$this update_all_slots_recorded})
+         (play_recorded_note
+            ($slot)
+            {export
+               ($this play_slot $slot)
+               FALSE})
+         (update_all_slots_recorded
+            {do
+               ($all_recorded TRUE)
+               {foreach_int
+                  $i
+                  0
+                  [recording_size]
+                  {if
+                     {==
+                        {elem
+                           [recording]
+                           $i}
+                        -1}
+                     {set $all_recorded FALSE}}}
+               {set
+                  [all_slots_recorded]
+                  $all_recorded}}))
+      (space_busy_astronaut_panel
+         (editor
+            (alert_mat
+               object
+               (class Mat)
+               (instance_prop)
+               (property_sync
+                  {$this sync_mat})
+               (help
+                  "What material is applied to panel mesh when alert?"))
+            (no_alert_mat
+               object
+               (class Mat)
+               (instance_prop)
+               (property_sync
+                  {$this sync_mat})
+               (help
+                  "What material is applied to panel mesh when no alert?"))
+            (panel_mesh
+               object
+               (class Mesh)
+               (instance_prop)
+               (help
+                  "What mesh is associated with our panel?"))
+            (alert
+               bool
+               (help
+                  "Are we alert?")
+               (property_sync
+                  {$this sync_alert}))
+            (panel_manager
+               object
+               (class Object)
+               (instance_prop)
+               (read_only TRUE)))
+         (enter
+            {$this sync_mat})
+         (sync_alert
+            {if
+               {!=
+                  [panel_manager]
+                  ''}
+               {[panel_manager]
+                  sync_alert}}
+            {$this sync_mat})
+         (sync_mat
+            {if
+               {!=
+                  [panel_mesh]
+                  ''}
+               {if_else
+                  {==
+                     [alert]
+                     TRUE}
+                  {[panel_mesh]
+                     set
+                     mat
+                     [alert_mat]}
+                  {[panel_mesh]
+                     set
+                     mat
+                     [no_alert_mat]}}}))
+      (space_busy_astronaut
+         (editor
+            (panels
+               (array
+                  object
+                  (class Object))
+               (default
+                  {array 0})
+               (property_sync
+                  {$this sync_panels})
+               (disk_prop))
+            (any_alert bool)
+            (num_alerts int)
+            (next_alert_panel int))
+         (events_in
+            (set_panel_alert
+               (editor
+                  (index int)
+                  (alert bool))))
+         (enter
+            {$this sync_panels})
+         (sync_panels
+            {foreach
+               $panel
+               [panels]
+               {$panel set panel_manager $this}})
+         (sync_alert
+            {do
+               ($alert_panel_idxs
+                  {array 0})
+               {foreach_int
+                  $i
+                  0
+                  {size
+                     [panels]}
+                  {do
+                     ($panel
+                        {elem
+                           [panels]
+                           $i})
+                     {if
+                        {&&
+                           {!= $panel ''}
+                           {==
+                              {$panel get alert}
+                              TRUE}}
+                        {push_back $alert_panel_idxs $i}}}}
+               {set
+                  [num_alerts]
+                  {size $alert_panel_idxs}}
+               {if_else
+                  {==
+                     [num_alerts]
+                     0}
+                  {set
+                     [any_alert]
+                     FALSE}
+                  {do
+                     {set
+                        [any_alert]
+                        TRUE}
+                     {set
+                        [next_alert_panel]
+                        {random_elem $alert_panel_idxs}}}}})
+         (set_panel_alert
+            ($index $alert)
+            {{elem
+                  [panels]
+                  $index}
+               set
+               alert
+               $alert}))
+      (pulse_choice_column
+         (editor
+            (mix_choice_0
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Mix choice 0"))
+            (mix_choice_1
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Mix choice 1"))
+            (mix_choice_2
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Mix choice 2"))
+            (mix_choice_3
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Mix choice 3"))
+            (mix_choice_4
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Mix choice 4"))
+            (delayed_mix_choice_0
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Delayed Mix choice 0"))
+            (delayed_mix_choice_1
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Delayed Mix choice 1"))
+            (delayed_mix_choice_2
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Delayed Mix choice 2"))
+            (delayed_mix_choice_3
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Delayed Mix choice 3"))
+            (delayed_mix_choice_4
+               int
+               (list FLUX_TARGET_SLOTS_OPTIONAL)
+               (help
+                  "Delayed Mix choice 4"))))
+      (songnodeworld_data
+         (editor
+            (song
+               symbol
+               (list
+                  {song_mgr get_song_list TRUE}))
+            (world
+               symbol
+               (list $flux_worlds_with_null))
+            (node
+               symbol
+               (list
+                  {the_discovery_node_info_mgr get_node_ids}))))
+      (theater_credits
+         (events_in
+            (return_from_theater_credits
+               (help
+                  "Returns to the correct scene from the theater credits sequence.")))
+         (return_from_theater_credits
+            {flux_loading_mgr clear_levels}
+            {flux_loading_mgr
+               push_and_load_level
+               workshop
+               "ui/game/workshop.uiscreen"
+               "worlds/workshop/workshop.scene"}))
+      DYNAMIC_BOID))
+(WorkshopDir
+   (types
+      (workshop_scene
+         (editor
+            (has_seen_journal_tutorial
+               bool
+               (default FALSE)
+               (help
+                  "True if the player has seen the journal tutorial, false otherwise.")))
+         (events_in
+            (clear_workshop_strata)
+            (goto_cliff
+               (help
+                  "Goes to the Cliff level."))
+            (goto_cliff_2
+               (help
+                  "Goes to the Cliff level 2."))
+            (mark_has_seen_journal_tutorial
+               (help
+                  "Stores that the player has seen the journal tutorial in the profile."))
+            (mark_muse_tutorial_complete
+               (help
+                  "Stores that the muse tutorial has been completed in the profile.")))
+         (enter
+            {$this
+               set
+               has_seen_journal_tutorial
+               {{profile_mgr get active_profile}
+                  get_artifact
+                  has_seen_journal_tutorial
+                  0}})
+         (mark_has_seen_journal_tutorial
+            {{profile_mgr get active_profile}
+               store_artifact
+               has_seen_journal_tutorial
+               1}
+            {$this set has_seen_journal_tutorial TRUE})
+         (mark_muse_tutorial_complete
+            {{profile_mgr get active_profile}
+               store_artifact
+               muse_tutorial_complete
+               1}
+            {saveload_mgr save})
+         (goto_cliff
+            {ui_controller set is_in_cliff TRUE}
+            {flux_loading_mgr push_and_load_level discovery_rift_scene01})
+         (goto_cliff_2
+            {ui_controller set is_in_cliff TRUE}
+            {flux_loading_mgr push_and_load_level discovery_rift_scene02})
+         (clear_workshop_strata
+            {unless
+               {ui
+                  in_transition
+                  "ui/workshop"}
+               {ui
+                  goto
+                  "ui/workshop/null"}}))))
+(Scene
+   (types
+      (cliff_scene
+         (events_in
+            (goto_cliff_song_9_1_1
+               (help
+                  "Plays the Pulse song that's plays after cutscene 9_1_1."))
+            (goto_scouts_song
+               (help
+                  "Plays Scout's Pulse song."))
+            (goto_finale_song
+               (help
+                  "Plays the finale Pulse song."))
+            (progress_to_scout_phase
+               (help
+                  "Progresses the game to the Scout phase."))
+            (return_to_workshop
+               (help
+                  "Returns to the workshop."))
+            (goto_credits
+               (help
+                  "Goes to the end game credits.")))
+         (goto_cliff_song_9_1_1
+            {$this set_default_pulse_parameters}
+            {pulse_mgr set slots_enabled kTargetSlotEnabled_Mix1}
+            {pulse_mgr set manipulators_enabled 0}
+            {pulse_mgr set current_goal 0}
+            {flux_loading_mgr push_and_load_level royals})
+         (goto_scouts_song
+            {$this set_default_pulse_parameters}
+            {pulse_mgr set slots_enabled kTargetSlotEnabled_Mix1}
+            {pulse_mgr set current_goal 0}
+            {flux_loading_mgr push_and_load_level scoutsong})
+         (goto_finale_song
+            {$this set_default_pulse_parameters}
+            {pulse_mgr set slots_enabled kTargetSlotEnabled_Mix1}
+            {pulse_mgr set current_goal -1}
+            {flux_loading_mgr push_and_load_level fantasiatheme})
+         (set_default_pulse_parameters
+            {ui_controller enable_multiplayer FALSE}
+            {pulse_mgr reset_mixes}
+            {pulse_mgr set no_choice FALSE}
+            {pulse_mgr set starting_slot kTargetSlot_Mix1}
+            {pulse_mgr set slots_enabled kTargetSlotEnabled_All}
+            {pulse_mgr set manipulators_enabled kManipulatorEnabled_All}
+            {pulse_mgr set num_players 1}
+            {pulse_mgr set in_playback FALSE}
+            {pulse_mgr set is_quickplay FALSE}
+            {pulse_mgr set current_goal -1})
+         (progress_to_scout_phase
+            {{profile_mgr get active_profile}
+               set
+               current_phase
+               kPhaseScout})
+         (return_to_workshop
+            {ui_controller set is_in_cliff FALSE}
+            {{profile_mgr get active_profile}
+               set
+               last_world_select_world
+               discovery_underwater_scene01}
+            {saveload_mgr save}
+            {flux_loading_mgr pop_and_load_level})
+         (goto_credits
+            {ui_controller set is_in_cliff FALSE}
+            {pulse_mgr set song ''}
+            {flux_loading_mgr
+               push_and_load_level
+               theater
+               "worlds/theater/theater.uiscreen"
+               "worlds/theater/theater.scene"}))))
+(Character
+   (types
+      DYNAMIC_BOID
+      (discovery_factory_flyer
+         (help
+            "This is one of the flocking, flying creatures in the factory")
+         (editor
+            (dynamic_controller
+               object
+               (class BoidController)
+               (alias
+                  "controller")
+               (help
+                  "The controller that we add/remove ourselves to/from"))
+            (add_on_enter
+               bool
+               (help
+                  "do we add ourselves to the flock on enter?"))
+            (vacuum
+               object
+               (class Object)))
+         (events_in
+            (add_to_flock)
+            (remove_from_flock)
+            (recall_from_pool)
+            (suck_into_vacuum
+               (editor
+                  (vacuum
+                     object
+                     (class Trans)))))
+         (events_out
+            (on_suck_into_vacuum
+               (editor
+                  (vacuum
+                     object
+                     (class Trans)))))
+         (add_to_flock
+            {$this
+               set_dynamic_controller
+               [dynamic_controller]})
+         (remove_from_flock
+            {$this set_dynamic_controller ''})
+         (recall_from_pool
+            {do
+               {if
+                  {$this has_component EntityPoolInstanceCom}
+                  {do
+                     {$this recall}}}})
+         (suck_into_vacuum
+            ($vacuum_trans $vacuum)
+            {set
+               [vacuum]
+               $vacuum}
+            {$vacuum on_flyer_start_vacuum $this}
+            {export
+               ($this on_suck_into_vacuum $vacuum_trans)
+               FALSE})
+         (exit
+            {$this remove_from_flock})
+         (enter
+            {if
+               [add_on_enter]
+               {$this add_to_flock}}))
+      (discovery_factory_robot
+         (events_in
+            (recall_from_pool
+               (alias
+                  "recall")))
+         (recall_from_pool
+            {do
+               {if
+                  {$this has_component EntityPoolInstanceCom}
+                  {do
+                     {$this recall}}}}))
+      (entity_pool_instance
+         (events_in
+            (epit_recall
+               (alias
+                  "recall")))
+         (epit_recall
+            {do
+               {if
+                  {&&
+                     {$this has_component EntityPoolInstanceCom}
+                     {$this is_spawned}}
+                  {do
+                     {$this recall}}}}))))
+(EntityPool
+   (types
+      (dynamic_boid_spawner
+         (editor
+            (dynamic_controller
+               object
+               (class BoidController)
+               (help
+                  "The spawner to assign to spawned instances"))
+            (add_on_spawn
+               bool
+               (help
+                  "Do we automatically add the object to the flock when spawned?"))
+            (target_paint_group
+               object
+               (class TargetPaintGroup)))
+         (spawned
+            ($spawned_entity)
+            {$spawned_entity
+               set
+               dynamic_controller
+               [dynamic_controller]}
+            {if
+               [add_on_spawn]
+               {$spawned_entity add_to_flock}}
+            {[target_paint_group]
+               add_entity_to_group
+               $spawned_entity}
+            kDataUnhandled))
+      (space_jumper_spawner
+         (editor
+            (start_trans
+               object
+               (class Trans))
+            (peak_trans
+               object
+               (class Trans))
+            (jumper_type int))
+         (spawned
+            ($spawned_entity)
+            {if
+               {$spawned_entity has_component BallisticPathCom}
+               {do
+                  {$spawned_entity
+                     set
+                     start_pos_ballistic
+                     [start_trans]}
+                  {$spawned_entity
+                     set
+                     target_peak_pos_ballistic
+                     [peak_trans]}
+                  {$spawned_entity
+                     set
+                     jumper_type
+                     [jumper_type]}
+                  {$spawned_entity start_launch_ballistic}}}
+            kDataUnhandled))
+      (target_paint_group_pool
+         (editor
+            (target_paint_group
+               object
+               (class TargetPaintGroup)))
+         (spawned
+            ($spawned_entity)
+            {[target_paint_group]
+               add_entity_to_group
+               $spawned_entity}
+            kDataUnhandled))
+      (parent_spawned_to_trans
+         (editor
+            (parent_of_spawned
+               object
+               (class Trans)))
+         (spawned
+            ($spawned_entity)
+            {$spawned_entity
+               set
+               trans_parent
+               [parent_of_spawned]}
+            kDataUnhandled))))
+(Object
+   (types
+      (discovery_state
+         (editor
+            (state
+               int
+               (list FLUX_DISC_SCENE_STATE)
+               (default kDiscSceneStateDisengagedCursorDropped))
+            (phase
+               int
+               (list DISCOVERY_SCENE_PHASES)
+               (default kPhaseYenSid))
+            (is_cursor_visible
+               bool
+               (default FALSE)
+               (help
+                  "True if the cursor is currently visible, false otherwise."))
+            (world_cursor_x float)
+            (world_cursor_y float)
+            (world_cursor_z float)
+            (cursor_scale
+               float
+               (default 1.0)
+               (help
+                  "The current scale of the cursor. Driven by flow in cursor.entity."))
+            (cursor_velocity_x_world
+               float
+               (help
+                  "What is the cursor's x velocity in world coordinates?"))
+            (cursor_velocity_y_world
+               float
+               (help
+                  "What is the cursor's y velocity in world coordinates?"))
+            (cursor_velocity_z_world
+               float
+               (help
+                  "What is the cursor's z velocity in world coordinates?"))
+            (cursor_speed_world
+               float
+               (help
+                  "What is the cursor's speed in world coordinates?"))
+            (cursor_velocity_x_cam
+               float
+               (help
+                  "What is the cursor's x velocity in camera coordinates?"))
+            (cursor_velocity_y_cam
+               float
+               (help
+                  "What is the cursor's y velocity in camera coordinates?"))
+            (cursor_velocity_z_cam
+               float
+               (help
+                  "What is the cursor's z velocity in camera coordinates?"))
+            (cursor_x_screen
+               float
+               (help
+                  "What is the cursor's x coordinate in screenspace? 0 left, 1 right"))
+            (cursor_y_screen
+               float
+               (help
+                  "What is the cursor's y coordinate in screenspace? 0 top, 1 bottom"))
+            (cursor_velocity_x_screen
+               float
+               (help
+                  "What is the cursor's x velocity in screen coordinates?"))
+            (cursor_velocity_y_screen
+               float
+               (help
+                  "What is the cursor's y velocity in screen coordinates?"))
+            (cursor_speed_screen
+               float
+               (help
+                  "What is the cursor's speed in screen coordinates?"))
+            (cursor_angle_screen
+               float
+               (help
+                  "What is the cursor's current angle?  CCW from +x"))
+            (is_engagable_primed
+               bool
+               (default FALSE)
+               (help
+                  "True if an engagable is currently primed, false otherwise."))
+            (use_dev_cheats
+               bool
+               (default TRUE)
+               (help
+                  "Enables gamepad cheats, only for devs."))
+            (on_backplane_cam
+               bool
+               (default TRUE)
+               (help
+                  "Is the camera's current node the backplane cam?"))))
+      (uw02_jellypod
+         (editor
+            (jelly_target
+               object
+               (class Trans)
+               (disk_prop)))
+         (events_in
+            (set_lightning_target))
+         (set_lightning_target
+            {shared_jellypod_state.flow
+               set
+               electric_target
+               [jelly_target]}))
+      (material_extractor
+         (editor
+            (mat_ext_rb
+               object
+               (class RigidBody)
+               (help
+                  "The rigidbody whose mat we will extract"))
+            (mat_ext_mat
+               symbol
+               (list PHYSICS_MATERIAL)
+               (help
+                  "What is the material of this rigidbody?  Need to run mat_ext_compute...")))
+         (events_in
+            (mat_ext_compute))
+         (mat_ext_compute
+            {set
+               [mat_ext_mat]
+               {[mat_ext_rb]
+                  get
+                  material}}))
+      (discovery_grabland_recorder
+         (editor
+            (recording_size
+               int
+               (property_sync
+                  {$this sync_recording_size})
+               (default 4))
+            (recording
+               (array
+                  symbol
+                  (list
+                     ('' a b c d e f)))
+               (read_only TRUE))
+            (backup_recording
+               (array
+                  symbol
+                  (list
+                     ('' a b c d e f)))
+               (read_only TRUE))
+            (a_recorded bool)
+            (b_recorded bool)
+            (c_recorded bool)
+            (d_recorded bool)
+            (e_recorded bool)
+            (f_recorded bool)
+            (num_recorded int))
+         (events_out
+            (update_visuals))
+         (events_in
+            (record_chord
+               (editor
+                  (slot int)
+                  (chord_id
+                     symbol
+                     (list
+                        ('' a b c d e f)))))
+            (reset_recording)
+            (backup_recording)
+            (restore_recording))
+         (backup_recording
+            {foreach_int
+               $i
+               0
+               [recording_size]
+               {set_elem
+                  [backup_recording]
+                  $i
+                  {elem
+                     [recording]
+                     $i}}})
+         (restore_recording
+            {foreach_int
+               $i
+               0
+               [recording_size]
+               {set_elem
+                  [recording]
+                  $i
+                  {elem
+                     [backup_recording]
+                     $i}}}
+            {export
+               ($this update_visuals)
+               FALSE})
+         (sync_primary_recording_size
+            {set
+               [recording]
+               {array
+                  [recording_size]}}
+            {foreach_int
+               $i
+               0
+               [recording_size]
+               {set_elem
+                  [recording]
+                  $i
+                  ''}}
+            {$this update_counts})
+         (sync_backup_recording_size
+            {set
+               [backup_recording]
+               {array
+                  [recording_size]}}
+            {foreach_int
+               $i
+               0
+               [recording_size]
+               {set_elem
+                  [backup_recording]
+                  $i
+                  ''}})
+         (sync_recording_size
+            {$this sync_primary_recording_size}
+            {$this sync_backup_recording_size}
+            {export
+               ($this update_visuals)
+               FALSE})
+         (reset_recording
+            {$this sync_primary_recording_size}
+            {export
+               ($this update_visuals)
+               FALSE})
+         (record_chord
+            ($slot $val)
+            {set_elem
+               [recording]
+               $slot
+               $val}
+            {$this update_counts}
+            {export
+               ($this update_visuals)
+               FALSE})
+         (update_counts
+            {do
+               ($count 0)
+               {set
+                  [a_recorded]
+                  FALSE}
+               {set
+                  [b_recorded]
+                  FALSE}
+               {set
+                  [c_recorded]
+                  FALSE}
+               {set
+                  [d_recorded]
+                  FALSE}
+               {set
+                  [e_recorded]
+                  FALSE}
+               {set
+                  [f_recorded]
+                  FALSE}
+               {foreach_int
+                  $i
+                  0
+                  [recording_size]
+                  {switch
+                     {elem
+                        [recording]
+                        $i}
+                     (a
+                        {set
+                           [a_recorded]
+                           TRUE})
+                     (b
+                        {set
+                           [b_recorded]
+                           TRUE})
+                     (c
+                        {set
+                           [c_recorded]
+                           TRUE})
+                     (d
+                        {set
+                           [d_recorded]
+                           TRUE})
+                     (e
+                        {set
+                           [e_recorded]
+                           TRUE})
+                     (f
+                        {set
+                           [f_recorded]
+                           TRUE})}
+                  {if
+                     {!=
+                        {elem
+                           [recording]
+                           $i}
+                        ''}
+                     {set
+                        $count
+                        {'+' 1 $count}}}}
+               {set
+                  [num_recorded]
+                  $count}}))
+      (playspace_config
+         (editor
+            (solo_forward_warning
+               float
+               (help
+                  "Meters - If you're this close, trigger 'move back' warning, solo play."))
+            (solo_forward_min
+               float
+               (help
+                  "Meters - If you're this close, use minimum playspace width, solo play."))
+            (solo_forward_max
+               float
+               (help
+                  "Meters - If you're this close, use maximum playspace width, solo play."))
+            (solo_min_right
+               float
+               (help
+                  "Meters - moves playspace camera to max extent, at min forward distance, solo play."))
+            (solo_max_right
+               float
+               (help
+                  "Meters - moves playspace camera to max extent, at max forward distance, solo play."))
+            (solo_min_right_warning
+               float
+               (help
+                  "Meters - triggers 'step left/right' warning, at min forward distance, solo play."))
+            (solo_max_right_warning
+               float
+               (help
+                  "Meters - triggers 'step left/right' warning, at max forward distance, solo play."))
+            (coop_forward_warning
+               float
+               (help
+                  "Meters - If you're this close, trigger 'move back' warning, coop play."))
+            (coop_forward_min
+               float
+               (help
+                  "Meters - If you're this close, use minimum playspace width, coop play."))
+            (coop_forward_max
+               float
+               (help
+                  "Meters - If you're this close, use maximum playspace width, coop play."))
+            (coop_min_right
+               float
+               (help
+                  "Meters - moves playspace camera to max extent, at min forward distance, coop play."))
+            (coop_max_right
+               float
+               (help
+                  "Meters - moves playspace camera to max extent, at max forward distance, coop play."))
+            (coop_min_right_warning
+               float
+               (help
+                  "Meters - triggers 'step left/right' warning, at min forward distance, coop play."))
+            (coop_max_right_warning
+               float
+               (help
+                  "Meters - triggers 'step left/right' warning, at max forward distance, coop play."))))))
+(FusionSampler
+   (types
+      (record_play_add_and_remove
+         (events_in
+            (add_to_rec_play_mgr)
+            (remove_from_rec_play_mgr))
+         (enter
+            {$this remove_from_rec_play_mgr})
+         (exit
+            {$this remove_from_rec_play_mgr})
+         (add_to_rec_play_mgr
+            {$this add_component RecordPlayMgrSamplerCom})
+         (remove_from_rec_play_mgr
+            {$this remove_component RecordPlayMgrSamplerCom}))))
+(ObjectDir
+   (globals
+      (the_cursor
+         "globals/global_cursor.layer")
+      (the_discovery_kinect_settings
+         "globals/global_discovery_kinect_settings.layer")))

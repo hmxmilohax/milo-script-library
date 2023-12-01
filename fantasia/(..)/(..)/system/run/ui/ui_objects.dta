@@ -1,0 +1,917 @@
+(UIFontImporter
+   (description
+      "Class supporting font importing.  To be included in font resource file classes.")
+   (category UI)
+   (superclasses)
+   (allowed_dirs)
+   (editor
+      (allowed_chars
+         (indent
+            (UPPER_CASE_A_Z
+               bool
+               (alias
+                  "Upper Case A to Z")
+               (help
+                  "include uppercase letters"))
+            (lower_case_a_z
+               bool
+               (alias
+                  "lower case a to z")
+               (help
+                  "include lowercase letters"))
+            (numbers_0_9
+               bool
+               (help
+                  "include the number 0-9"))
+            (punctuation
+               bool
+               (help
+                  "include punctuation characters"))
+            (UPPER_EURO
+               bool
+               (alias
+                  "Upper Euro Characters")
+               (help
+                  "include uppercase euro chars"))
+            (lower_euro
+               bool
+               (help
+                  "include lowercase euro chars"))
+            (russian
+               bool
+               (help
+                  "include Russian letters"))
+            (polish
+               bool
+               (help
+                  "include Polish letters"))
+            (standards
+               bool
+               (alias
+                  "include console std required chars?")
+               (help
+                  "include all characters necessary for console standard requirements"))
+            (include_locale
+               bool
+               (help
+                  "include all characters from the current language's locale file"))
+            (include_file
+               file
+               (help
+                  "include all characters from specified file"))
+            (plus
+               string
+               (help
+                  "type in extra characters to include here")
+               (encoding utf8))
+            (minus
+               string
+               (help
+                  "type in characters to exclude here")
+               (encoding utf8))))
+      (font_info
+         (indent
+            (font_name
+               string
+               (help
+                  "name of the font")
+               (read_only TRUE))
+            (font_pct_size
+               float
+               (range 1.0e-3 0.75)
+               (percent TRUE)
+               (help
+                  "default font size in percent screen height"))
+            (font_point_size
+               int
+               (help
+                  "the equivalent point size")
+               (read_only TRUE))
+            (font_pixel_size
+               int
+               (help
+                  "the equivalent pixel size")
+               (read_only TRUE))
+            (weight
+               int
+               (list FONTWEIGHT_ENUM)
+               (help
+                  "bold variation?"))
+            (italics
+               bool
+               (help
+                  "italic variation?"))
+            (drop_shadow
+               int
+               (help
+                  "drop shadow offset"))
+            (drop_shadow_opacity
+               int
+               (help
+                  "opacity of drop shadow (0-255)")
+               (hide
+                  {==
+                     [drop_shadow]
+                     0}))
+            (font_supersample
+               int
+               (list FONTSUPERSAMPLE_ENUM)
+               (help
+                  "our own supersampling that draws the font texture at 2 or 4x and scales down like in photoshop.  Might improve anti-aliasing at small font sizes."))
+            (font_picker
+               script
+               (script
+                  {$this show_font_picker})
+               (no_test))
+            (bitmap_save_path
+               string
+               (help
+                  "path to save bitmap to (i.e. ui/image/)"))
+            (bitmap_save_name
+               string
+               (help
+                  "name of the bitmap file (i.e. Arial(12).BMP)"))))
+      (padding
+         (indent
+            (left
+               int
+               (help
+                  "pixels of padding on the left side of each character"))
+            (right
+               int
+               (help
+                  "pixels of padding on the left side of each character"))
+            (top
+               int
+               (help
+                  "pixels of padding on the left side of each character"))
+            (bottom
+               int
+               (help
+                  "pixels of padding on the left side of each character"))))
+      (misc
+         (indent
+            (fill_with_safe_white
+               bool
+               (help
+                  "fill texture with safe white color (235)"))))
+      (mat_variations
+         (array
+            object
+            (class Mat)
+            (no_null))
+         (help
+            "A list of materials we will expose for this font"))
+      (handmade_font
+         object
+         (class Font)
+         (help
+            "If you want to handmake a font texture, assign it here and the importer will no longer try to generate textures")
+         (no_test))
+      (generate_ng
+         script
+         (script
+            {$this generate})
+         (help
+            "generates the font/textures/materials for NG platform using the current import settings")
+         (no_test))
+      (reference_kerning
+         object
+         (class Font)
+         (help
+            "A font which we'll transfer the kerning info from for any gen-ed fonts"))
+      (gened_fonts
+         (indent
+            (gened_fonts
+               (array
+                  object
+                  (class Font))
+               (read_only TRUE)
+               (help
+                  "the font(s) we've gen-ed for this resource file.  We will maintain a connection to these objects when you re-generate"))
+            (forget
+               script
+               (script
+                  {$this forget_gened_fonts})
+               (help
+                  "forget about our gen-ed fonts.  Next time you generate, you'll get new objects!"))))
+      (open_bitmap
+         script
+         (script
+            {set
+               $execCmd
+               {sprint
+                  "cmd /c start "
+                  {$this get_bitmap_path}}}
+            {system_exec $execCmd})
+         (help
+            "opens the generated font texture with windows explorer")
+         (no_test))
+      (p4_edit_bitmap
+         script
+         (script
+            {set
+               $execCmd
+               {sprint
+                  "p4 edit "
+                  {$this get_bitmap_path}}}
+            {system_exec $execCmd})
+         (help
+            "opens the generated font texture with windows explorer")
+         (no_test))
+      (sync_with_resource
+         (indent
+            (resource_name
+               string
+               (list
+                  {$this get_resources_file_list})
+               (help
+                  "You can pull in all the importer settings from another resource file by selecting it above and hitting the sync button below")
+               (no_test))
+            (sync
+               script
+               (script
+                  {$this sync_with_resource})
+               (help
+                  "will pull in all the importer settings from another resource file, specified by 'resource_name' above"))))))
+(UILabelDir
+   (description
+      "Top-level resource object for UILabels")
+   (category UI)
+   (superclasses UIFontImporter RndDir Trans)
+   (editor
+      (allow_edit_text
+         bool
+         (help
+            "allow non-localized text with this resource?"))
+      (dynamic_font_layer
+         string
+         (list
+            {do
+               ($layers
+                  {array 0})
+               {push_back
+                  $layers
+                  ""}
+               {foreach_int
+                  $i
+                  1
+                  {$this
+                     size
+                     (layers)}
+                  {push_back
+                     $layers
+                     {$this
+                        get
+                        {flatten layers $i name}}}}
+               $layers})
+         (help
+            "Name of dynamic layer to replace"))
+      (alternate_font_layers
+         (array
+            (struct
+               (lang
+                  symbol
+                  (list
+                     {supported_languages})
+                  (help
+                     "language to use alternate font for"))
+               (layer_path
+                  file
+                  (ext
+                     "Layers"
+                     "layer")
+                  (help
+                     "Path of alternate dynamic font layer file")))))))
+(UIList
+   (description
+      "Component for displaying 1- or 2-dimensional lists of data.\n      Can be oriented horizontally or vertically, can scroll normally or\n      circularly, and can have any number of visible elements (even just\n      one, a.k.a. a spin button).")
+   (category UI)
+   (superclasses Trans Draw)
+   (allowed_dirs Entity UIScreen)
+   (ext lst)
+   (editor
+      (element_path
+         file
+         (subclass Entity)
+         (help
+            "entity to represent a single element in the list")
+         (hide flow propanim)
+         (record_all))
+      (max_elements_displayed
+         int
+         (help
+            "the max number of elements visible at one time")
+         (hide flow propanim)
+         (range
+            {'+'
+               {'*'
+                  [num_extra_at_edges]
+                  2}
+               1}
+            100))
+      (spacing
+         VECTOR3
+         (help
+            "The offset between two adjacent elements in a list"))
+      (is_auto_scrolling
+         bool
+         (no_test serialize)
+         (help
+            "True if the list is currently auto-scrolling, false otherwise."))
+      (num_extra_at_edges
+         int
+         (range
+            0
+            {int
+               {-
+                  {/
+                     [max_elements_displayed]
+                     2}
+                  1}})
+         (help
+            "How many instances are there outside the selectable area?"))
+      (edge_property
+         prop_ref
+         (fixed_obj
+            {$this get_sample_entity})
+         (allowed_prop_types
+            (float))
+         (allow_read_only_props FALSE)
+         (require_complete_ref FALSE)
+         (help
+            "The float property on the element entity to be driven based on how far off the edge the element has scrolled.  This property will be set to 0 if it's scrolled all the way off the edge, and 1 if it's within the bounds of the list."))
+      (property_bindings
+         (array
+            (struct
+               (property
+                  prop_ref
+                  (fixed_obj
+                     {$this get_sample_entity})
+                  (help
+                     "The property to be driven by list data"))
+               (data_name
+                  symbol
+                  (help
+                     "The name of the data that will be bound to the chosen property"))))
+         (read_only
+            {==
+               {$this get_sample_entity}
+               ''})
+         (help
+            "The properties on the entity which are driven by list data"))
+      (focus_index
+         int
+         (range
+            -1
+            {if_else
+               [element_path]
+               {-
+                  [max_elements_displayed]
+                  1}
+               -1})
+         (help
+            "The index (starting at 0) that currently has focus,  -1 indicates no element has focus.  This is an index for all elements in the list, even those that are not visible.")
+         (no_test))
+      (has_data_above
+         bool
+         (help
+            "Is there data before the front of the list not currently visible? This can be used to show an arrow above the list.")
+         (read_only TRUE))
+      (has_data_below
+         bool
+         (help
+            "Is there data after the end of the list not currently visible? This can be used to show an arrow below the list.")
+         (read_only TRUE))
+      (edit_in_place_idx
+         int
+         (help
+            "Index of the entity you want to edit in place")
+         (inline_script
+            "Edit"
+            (script
+               {forge
+                  hack_edit_in_place
+                  {$this
+                     hack_get_entity_at_index
+                     [edit_in_place_idx]}}))
+         (no_test)
+         (custom_history))
+      (scroll_sec_per_item_slowest
+         float
+         (range
+            [scroll_sec_per_item_fastest]
+            2.0)
+         (help
+            "The number of seconds the list should take when scrolling at its slowest speed."))
+      (scroll_sec_per_item_fastest
+         float
+         (range
+            3.0e-3
+            [scroll_sec_per_item_slowest])
+         (help
+            "The number of seconds the list should take when scrolling at its fastest speed."))
+      (scroll_sec_ratio_per_sec
+         float
+         (range 0.2 1.0)
+         (help
+            "The ratio the scroll speed should be after a second of scrolling. e.g., 0.5 means twice as fast."))))
+(UIPicture
+   (description
+      "A picture object with asynchronously loading texture")
+   (category UI)
+   (superclasses Poll Trans)
+   (allowed_dirs UIScreen UIPanel)
+   (ext pic)
+   (types
+      (default
+         (tex_file
+            "image/ui_picture_keep.png")))
+   (editor
+      (tex_file
+         file
+         (ext
+            "Image files"
+            "png"
+            "bmp")
+         (help
+            "Path of texture to load"))
+      (mesh
+         object
+         (class Mesh)
+         (help
+            "Mesh to show loaded tex on (should have Mat)"))
+      (in_anim
+         object
+         (class Anim)
+         (help
+            "animation kicked off before texture change"))
+      (out_anim
+         object
+         (class Anim)
+         (help
+            "animation kicked off after texture change"))))
+(UIScreen
+   (description
+      "Top-level object for the UI system, contains other UI objects")
+   (superclasses ObjectDir Draw Poll Trans)
+   (category UI)
+   (ext
+      "uiscreen")
+   (file_ext
+      ".uiscreen")
+   (editor
+      (scene_path
+         file
+         (subclass Scene)
+         (help
+            "The .scene file to load with the screen"))
+      (modal
+         bool
+         (help
+            "When checked, this will force this screen to swallow all inputs (keyboard and mouse only) when it is set to be the current screen. This is the default. When unchecked, it will pass through the input to the next UIScreen draw in a lower stratum until it is handled."))
+      (paused
+         bool
+         (no_test)
+         (help
+            "Is this screen paused?")))
+   (events_out
+      (ui_enter
+         (help
+            "called when this UI scene is entered"))
+      (ui_start_exit
+         (help
+            "called when we begin to exit this UI scene"))
+      (ui_back
+         (help
+            "called when the user selects a back button"))
+      (ui_select
+         (editor
+            (select_widget
+               object
+               (class Object)
+               (help
+                  "Object that is selected")))
+         (help
+            "called when the user selects a widget; passes that widget"))
+      (ui_select_done
+         (editor
+            (selected_widget
+               object
+               (class Object)
+               (help
+                  "Object that was selected")))
+         (help
+            "called when the user finishes selecting a widget; passes that widget"))
+      (ui_transition_done
+         (editor
+            (stratum
+               object
+               (class Object)
+               (help
+                  "Stratum"))
+            (old_screen
+               object
+               (class Object)
+               (help
+                  "Old Screen"))
+            (new_screen
+               object
+               (class Object)
+               (help
+                  "New Screen")))
+         (help
+            "called when the screen finishes its transition"))))
+(UIPanel
+   (description
+      "A reusable UI Object that can contain other objects")
+   (superclasses ObjectDir)
+   (category UI)
+   (ext
+      "uipanel")
+   (file_ext
+      ".uipanel")
+   (user_creatable FALSE)
+   (editor))
+(UILabel
+   (description
+      "Simple label, provides localization of tokens")
+   (category UI)
+   (superclasses Trans Draw)
+   (allowed_dirs UIScreen Entity)
+   (ext
+      "lbl")
+   (editor
+      (text_token
+         symbol
+         (help
+            "Localization token if localize is true")
+         (no_test)
+         (list
+            {token_list}))
+      (sync_reload_tokens
+         script
+         (script
+            {sync_reload_locale})
+         (help
+            "Perforce sync and reload locale files")
+         (no_test))
+      (get_magnu_tokens
+         script
+         (script
+            {magnu_refresh_strings}
+            {set
+               [text_token]
+               [text_token]})
+         (help
+            "Query Magnu for the latest localization tokens")
+         (no_test))
+      (add_token
+         script
+         (script
+            {add_token})
+         (help
+            "Add new token in Magnu")
+         (no_test))
+      (icon
+         string
+         (help
+            "Single-character icon")
+         (no_test))
+      (edit_text
+         string
+         (help
+            "Editor-only preview text")
+         (encoding utf8)
+         (no_test))
+      (width
+         float
+         (range 0 2000)
+         (help
+            "Width of label"))
+      (height
+         float
+         (range 0 1000)
+         (help
+            "Height of label"))
+      (set_height_from_text
+         script
+         (help
+            "Sets [height] to the currently displaying text and styles height.  [fit_type] must be kFitWrap")
+         (read_only
+            {$this can_set_height_from_text})
+         (script
+            {$this set_height_from_text}))
+      (alignment
+         int
+         (list
+            (TEXT_ALIGNMENTS))
+         (help
+            "Text alignment"))
+      (fit_type
+         int
+         (list
+            (TEXT_FIT_TYPES))
+         (help
+            "How to fit text in the width/height specified"))
+      (caps_mode
+         int
+         (list
+            (TEXT_CAPS_MODES))
+         (help
+            "Text case setting"))
+      (uv_mapping
+         int
+         (list TEXT_UV_MAPPINGS)
+         (help
+            "Determines how the second UV set is mapped for this label (only useful when using an override material)"))
+      (markup
+         bool
+         (help
+            "Support markup or not.  In the text, use &lt;alt&gt;, &lt;alt2&gt;, &lt;alt3&gt;, etc to use the higher styles, &lt;sup&gt; to get a super script, &lt;nobreak&gt; for preventing linebreaks in a block, &lt;it&gt; for italics, &lt;gtr&gt; for Bryn's guitar chord formatting.  Example: Hit &lt;it&gt;Back&lt;/it&gt; &lt;alt&gt;B&lt;/alt&gt; to continue&lt;sup&gt;TM&lt;/sup&gt;"))
+      (leading
+         float
+         (help
+            "Space between lines"))
+      (fixed_length
+         int
+         (range 0 1000)
+         (help
+            "Max string length, set to make fast for dynamically changing text, otherwise super slow, order 1 ms per frame for updating"))
+      (styles
+         (array
+            (struct
+               (font_resource
+                  RESOURCE_DIR_PTR
+                  (help
+                     "path to font resource file for this style, click the open button to open the file"))
+               (mat_override
+                  object
+                  (class Mat)
+                  (list
+                     {list_allowed_mats $this})
+                  (help
+                     "Material to use when rendering this label; it should use a shadergraph with the FontMap node"))
+               (font_mat_variation
+                  symbol
+                  (list
+                     {$this
+                        get_font_mats
+                        {elem
+                           $editor_prop_path
+                           {-
+                              {size $editor_prop_path}
+                              2}}})
+                  (help
+                     "the material variation to use, populated from the resource file.  selecting <none> gives you the default material.")
+                  (read_only
+                     {!
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling mat_override}}}}))
+               (color
+                  color
+                  (help
+                     "Color for this style's text")
+                  (read_only
+                     {!
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling mat_override}}}}))
+               (font_alpha
+                  float
+                  (range 0 1)
+                  (slider)
+                  (help
+                     "transparency of font")
+                  (read_only
+                     {!
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling mat_override}}}}))
+               (text_size
+                  float
+                  (range 1.0e-3 1000)
+                  (help
+                     "Text size in pixels"))
+               (kerning
+                  float
+                  (help
+                     "Additional kerning applied to text")
+                  (no_test))
+               (italics
+                  float
+                  (range 0 100)
+                  (help
+                     "Italics for text"))
+               (z_offset
+                  float
+                  (help
+                     "Z-offset for text")))
+            (summary
+               {sprintf
+                  "font: %s"
+                  {$this
+                     get
+                     {editor_prop_path_child font_resource}}}))
+         (help
+            "Alternate styles, set [markup] true and use <alt> tag for styles[1], <alt2> for styles[2], <alt3> for style[3], etc")
+         (range 1 3))
+      (spline_defn
+         object
+         (class Spline)
+         (help
+            "An optional spline definition that the text can follow")
+         (alias
+            "Spline Definition")))
+   (events_in
+      (set_int
+         (editor
+            (integer int)
+            (separated
+               bool
+               (help
+                  "Separate this integer with commas")))
+         (help
+            "set this label to an integer value"))
+      (set_float
+         (editor
+            (format_token
+               string
+               (help
+                  "A formatting string token")
+               ("value: %g"))
+            (value
+               float
+               (help
+                  "The floating point value")
+               (default 666.6)))
+         (help
+            "set this label to a float value"))
+      (set_token_fmt
+         (editor
+            (token
+               symbol
+               (list
+                  {token_list}))
+            (arg float))
+         (help
+            "set this label to a value using a token list"))
+      (set_token_fmt_int
+         (editor
+            (token
+               symbol
+               (list
+                  {token_list}))
+            (arg int))
+         (help
+            "set this label to a value using a token list"))
+      (set_token_fmt_symbol
+         (editor
+            (token
+               symbol
+               (list
+                  {token_list}))
+            (arg symbol))
+         (help
+            "Sets this label's token to a format token that takes a symbol."))
+      (set_height_from_text
+         (help
+            "Forces the height of the label to the actual height")))
+   (init
+      {set
+         [styles 0 font_resource]
+         "default"})
+   (resources_path
+      "../../system/run/ui/resource/fonts"))
+(UICam
+   (description
+      "A specialized camera used for drawing the UI")
+   (category Camera)
+   (group Camera)
+   (superclasses Cam)
+   (ext cam)
+   (user_creatable FALSE)
+   (allowed_dirs UIScreen)
+   (editor
+      (depth_2d
+         float
+         (alias
+            "2D depth")
+         (help
+            "Depth of the 2D plane from the camera")
+         (range
+            [near_plane]
+            [far_plane]))
+      (height_2d
+         float
+         (alias
+            "2D height")
+         (help
+            "World-space height of the frustum at the 2D plane")
+         (read_only TRUE)
+         (tab debug))
+      (scale_2d_to_3d
+         float
+         (alias
+            "2D to 3D scale")
+         (help
+            "Scale for converting from 2D (pixel) space to 3D (world) space")
+         (read_only TRUE)
+         (tab debug))))
+(UIMgr
+   (description
+      "Global manager of UI objects")
+   (category UI)
+   (allowed_dirs)
+   (events_in
+      (goto
+         (editor
+            (screen_path
+               file
+               (subclass UIScreen)
+               (help '“The' .uiscreen file to go 'to”'))
+            (back
+               bool
+               (help
+                  "Whether the transition is a back transition or not")))
+         (help
+            "causes us to transition to another UI screen")))
+   (events_out
+      (ui_select
+         (editor
+            (select_widget
+               object
+               (class Object)
+               (help
+                  "Object that is selected")))
+         (help
+            "selecting a widget"))
+      (ui_select_done
+         (help
+            "selecting a widget finished"))
+      (ui_scroll_start
+         (help
+            "begining to scroll a UI widget"))
+      (ui_scroll
+         (help
+            "scrolling a UI widget"))
+      (ui_transition
+         (editor
+            (stratum
+               string
+               (help
+                  "stratum the transition is happening on"))
+            (old_screen
+               string
+               (help
+                  "old/previous screen"))
+            (new_screen
+               string
+               (help
+                  "new/next screen"))
+            (back
+               bool
+               (help
+                  "whether this is a backwards transition or not")))
+         (help
+            "transitioning between screens; passes you data about the transition"))
+      (ui_transition_done
+         (help
+            "transition between screens is finished"))
+      (ui_focus
+         (help
+            "called when we get focus"))))
+(UINavController
+   (description
+      "An object that feeds control events to the UINavCom")
+   (allowed_dirs))
+(JoypadNavController
+   (description
+      "An object that feeds joypad-based control events to the UINavCom")
+   (allowed_dirs)
+   (superclasses UINavController)
+   (editor
+      (direction
+         int
+         (list UINAVDIRECTION_ENUM)
+         (help
+            "Direction the player navigates through widgets when using the joypad"))
+      (wrap
+         bool
+         (help
+            "Can the player get to the right-most widget if they press left while on the left-most widget, etc.?"))))
+(CRBScreen
+   (description
+      "Screen for Driving the CRB")
+   (superclasses UIScreen)
+   (user_creatable FALSE)
+   (category UI)
+   (ext
+      "crbscreen")
+   (file_ext
+      ".crbscreen")
+   (editor))
