@@ -1,0 +1,167 @@
+#include endgame_helpers.dta
+{new
+   HamPanel
+   perform_endgame_panel
+   (file
+      "perform_endgame.milo")
+   (start_controller_focus continue.btn)
+   (original_leaderboards_mode 0)
+   ENDGAME_PANEL_HANDLERS
+   (enter
+      {unless
+         {ui went_back}
+         {meta_performer
+            trigger_song_completion
+            {$this get_score}
+            {$this get_num_stars}}
+         {meta_performer
+            advance_song
+            {$this get_num_stars}}}
+      {if
+         {exists leaderboards}
+         {set
+            [original_leaderboards_mode]
+            {leaderboards get_mode}}
+         {leaderboards set_mode 2}
+         {leaderboards
+            download_scores
+            {meta_performer song}}
+         {instarank.hbs set_provider leaderboards}}
+      {platform_mgr set_notify_ui_location 1}
+      {$this set_results}
+      {$this show_snapshots}
+      ENDGAME_PANEL_COMMON_ENTER
+      {$this
+         begin_results
+         {$this get_num_stars}}
+      {saveload_mgr autosave}
+      {meta_performer add_sink $this})
+   (exit
+      {platform_mgr set_notify_ui_location 0}
+      {meta_performer remove_sink $this})
+   (leaderboards_loaded
+      {instarank.hbs update_list}
+      {leaderboards
+         set_mode
+         [original_leaderboards_mode]})
+   (get_score
+      {int
+         {game_panel get score}})
+   (get_num_stars
+      {int
+         {game_panel get num_stars}})
+   (set_results
+      {song.lbl
+         set_song_name
+         {meta_performer get_completed_song}}
+      {difficulty.lbl
+         set
+         text_token
+         {meta_performer get_difficulty_sym}}
+      {score.lbl
+         set_int
+         {$this get_score}
+         1})
+   (show_snapshots
+      {if
+         gesture_mgr
+         {foreach_int
+            $i
+            1
+            5
+            {do
+               ($snap_shot
+                  {$this
+                     find
+                     {sprint
+                        "snapshot_0"
+                        $i
+                        ".mesh"}
+                     0})
+               ($taken
+                  {>=
+                     {gesture_mgr num_snapshots}
+                     $i})
+               {if
+                  $snap_shot
+                  {$snap_shot set_showing $taken}
+                  {if
+                     $taken
+                     {{$snap_shot get mat}
+                        set
+                        diffuse_tex
+                        {gesture_mgr
+                           snapshot_tex
+                           {- $i 1}}}}}}}})
+   (show_popup
+      {ui goto_screen perform_endgame_popup_screen})
+   (SELECT_MSG
+      {switch
+         $component
+         (photos.btn
+            {endgame_photos_screen set back_screen perform_endgame_screen}
+            {ui goto_screen endgame_photos_screen})
+         (continue.btn
+            {ui pop_screen meta_loading_continue_screen})})}
+{new
+   HamPanel
+   perform_complete_panel
+   (file
+      "perform_complete.milo")
+   (show_back_button 1)
+   (enter
+      {if
+         {acc_mgr
+            is_unlockable_asset
+            {meta_performer song}}
+         {$this disable practice.btn}
+         {shell_input update_button_zones}})
+   (SELECT_MSG
+      {switch
+         $component
+         (restart.btn
+            {meta_performer restart}
+            {game_restart})
+         (practice.btn
+            {gamemode set_mode practice}
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               perform_complete_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (change_difficulty.btn
+            {{gamemode get ingame_seldiff_screen}
+               set
+               back_screen
+               perform_complete_screen}
+            {ui
+               goto_screen
+               {gamemode get ingame_seldiff_screen}})
+         (continue.btn
+            {ui pop_screen meta_loading_continue_screen})
+         (back.btn
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})}
+{new
+   HamScreen
+   perform_endgame_screen
+   (panels background_panel perform_endgame_panel)
+   (focus perform_endgame_panel)
+   ENDGAME_SCREEN_HANDLERS}
+{new
+   HamScreen
+   perform_endgame_popup_screen
+   (panels background_panel perform_endgame_panel endgame_popup_panel)
+   (focus endgame_popup_panel)
+   ENDGAME_SCREEN_HANDLERS}
+{new
+   HamScreen
+   perform_complete_screen
+   (panels background_panel perform_complete_panel)
+   (focus perform_complete_panel)
+   (back perform_endgame_screen)}

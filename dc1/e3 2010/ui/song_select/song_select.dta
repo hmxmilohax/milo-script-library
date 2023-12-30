@@ -1,0 +1,216 @@
+{new
+   SongSelectPanel
+   song_select_panel
+   (file
+      "song_select.milo")
+   (start_controller_focus song_button_01.sbt)
+   (skip_controller_focus_on_enter 1)
+   (highlight_button
+      "")
+   (top_index 0)
+   (focus_song none)
+   (joypad
+      (hold_ms 100)
+      (repeat_ms 80))
+   (song_data_mounted
+      ($song)
+      {$this refresh_album_art $song})
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (storage_changed)}
+      {platform_mgr disable_xmp}
+      {song_offer_provider enter}
+      {right_hand.hbs set_provider song_offer_provider}
+      {right_hand.hbs
+         scroll_to_index
+         [top_index]})
+   (exit
+      {song_offer_provider exit}
+      {platform_mgr remove_sink $this storage_changed}
+      {platform_mgr enable_xmp}
+      {set
+         [top_index]
+         {right_hand.hbs get_top_index}})
+   (unload
+      {song_offer_provider unload})
+   (TRANSITION_COMPLETE_MSG
+      {do
+         ($focus_index
+            {song_offer_provider
+               first_data_index
+               [focus_song]})
+         ($diff
+            {-
+               $focus_index
+               [top_index]})
+         ($current_button
+            {switch
+               $diff
+               (0 song_button_01.sbt)
+               (1 song_button_02.sbt)
+               (2 song_button_03.sbt)
+               (3 song_button_04.sbt)
+               song_button_01.sbt})
+         {shell_input set_focus_if_controller_mode $current_button}
+         {$this song_highlighted $current_button}})
+   (update_meta_performer)
+   (SELECT_MSG
+      {switch
+         $component
+         (song_button_01.sbt
+            {$this play_song $component})
+         (song_button_02.sbt
+            {$this play_song $component})
+         (song_button_03.sbt
+            {$this play_song $component})
+         (song_button_04.sbt
+            {$this play_song $component})
+         (back.btn)})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {==
+               {{$this loaded_dir}
+                  get
+                  focus_component}
+               song_button_01.sbt}
+            {== $action 6}}
+         {right_hand.hbs scroll_up}
+         {$this highlight_changed song_button_01.sbt}}
+      {if
+         {&&
+            {==
+               {{$this loaded_dir}
+                  get
+                  focus_component}
+               song_button_04.sbt}
+            {== $action 8}}
+         {right_hand.hbs scroll_down}
+         {$this highlight_changed song_button_04.sbt}}
+      kDataUnhandled)
+   (FOCUS_MSG
+      {$this highlight_changed $new_focus})
+   (HIGHLIGHT_CHANGED_MSG
+      {switch
+         $component
+         (song_button_01.sbt
+            {$this song_highlighted $component})
+         (song_button_02.sbt
+            {$this song_highlighted $component})
+         (song_button_03.sbt
+            {$this song_highlighted $component})
+         (song_button_04.sbt
+            {$this song_highlighted $component})
+         (song_button_up.sbt
+            {$this song_highlighted $component})
+         (song_button_down.sbt
+            {$this song_highlighted $component})
+         (back.btn)
+         {$this song_highlighted none}})
+   (play_song
+      ($button)
+      {unless
+         {ui in_transition}
+         {do
+            ($index
+               {right_hand.hbs list_index_for_button $button})
+            {$this play_song_preview $button}
+            {do
+               ($next_screen
+                  {song_offer_provider on_select $index})
+               {if
+                  $next_screen
+                  {ui goto_screen $next_screen}}}}})
+   (song_highlighted
+      ($button)
+      {$this set highlight_button $button}
+      {if
+         {!= $button none}
+         {$this display_song_metadata $button}})
+   (display_song_metadata
+      ($button)
+      {unless
+         {ui in_transition}
+         {if
+            {&&
+               {==
+                  {ui current_screen}
+                  song_select_screen}
+               {==
+                  [highlight_button]
+                  $button}}
+            {if_else
+               {'||'
+                  {== $button song_button_down.sbt}
+                  {== $button song_button_up.sbt}}
+               {song_offer_provider stop_preview}
+               {do
+                  ($index
+                     {right_hand.hbs list_index_for_button $button})
+                  {$this play_song_preview $button}
+                  {$this
+                     refresh_details
+                     {song_offer_provider get_token $index}}
+                  {set
+                     [focus_song]
+                     {song_offer_provider get_token $index}}}}}})
+   (play_song_preview
+      ($button)
+      {do
+         ($index
+            {right_hand.hbs list_index_for_button $button})
+         {meta music_stop}
+         {song_offer_provider start_preview $index}})
+   (move_on_quickplay
+      {unless
+         {ui in_transition}
+         {ui
+            goto_screen
+            {gamemode get ready_screen}}})
+   (storage_changed
+      {ui_event_mgr trigger_event storage_changed})
+   (refresh_details
+      ($song)
+      {$this refresh_album_art $song}
+      {$this refresh_song $song})
+   (refresh_album_art
+      ($song)
+      {do
+         ($pic
+            {album_art find album_art.pic})
+         {$pic
+            set
+            tex_file
+            {song_mgr album_art_path $song}}})
+   (song_data_mounted
+      ($song)
+      {$this refresh_album_art $song})
+   (refresh_song
+      ($song)
+      {album.lbl set_album_name $song}
+      {artist.lbl set_artist_name $song}
+      {intensity.sdd
+         set_level
+         {song_mgr rank_tier_for_song $song}})
+   (update_song_list
+      {right_hand.hbs update_list})}
+{new
+   UIPanel
+   lb_song_select_content_loading_panel
+   (load
+      {content_mgr start_refresh}
+      {content_loading_panel allowed_to_show 1})
+   (finish_load
+      {content_loading_panel allowed_to_show 0})
+   (is_loaded
+      {content_mgr refresh_done})}
+#define COMMON_SONG_SELECT_SCREEN
+((focus song_select_panel)
+   (background_view song_select))
+{new
+   HamScreen
+   song_select_screen
+   (panels meta background_panel logo_panel song_select_panel)
+   COMMON_SONG_SELECT_SCREEN}

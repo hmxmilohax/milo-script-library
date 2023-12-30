@@ -1,0 +1,118 @@
+{new
+   UIPanel
+   title_panel
+   (file
+      "title.milo")
+   (enter
+      {meta music_start}
+      {user_mgr clear_slot 0}
+      {depth_buffer set_state 1})
+   (exit)
+   (SELECT_MSG
+      {switch
+         $component
+         (start.btn
+            {if
+               {&&
+                  {!
+                     {ui in_transition}}
+                  {==
+                     {ui current_screen}
+                     title_screen}}
+               {depth_buffer end_tutorial}
+               {ui goto_screen check_signin_screen}})})}
+{new
+   HamScreen
+   title_screen
+   (panels meta background_panel logo_panel title_panel)
+   (focus title_panel)
+   (enter)}
+{func
+   title_goto_first_screen
+   {ui goto_screen main_screen}}
+{new
+   SigninScreen
+   check_signin_screen
+   (panels meta)
+   (must_not_be_a_guest 1)
+   (must_be_online 0)
+   (must_be_multiplayer_capable 0)
+   (handle_sign_outs 0)
+   (limit_user_signin 0)
+   (enter
+      {set
+         [signing_in_user]
+         {user_mgr get_active_user}})
+   (TRANSITION_COMPLETE_MSG
+      {if_else
+         {profile_mgr
+            get_save_data
+            {user_mgr get_active_user}}
+         {$this goto_next_screen}
+         {$this
+            show_signin_ui
+            [signing_in_user]}})
+   (on_signed_in
+      {$this goto_next_screen})
+   (sign_in_dismissed
+      {ui goto_screen recommend_signin_screen})
+   (goto_next_screen
+      {user_mgr
+         set_slot
+         {user_mgr get_active_user}
+         0}
+      {ui goto_screen autoload_screen})}
+{new
+   SigninScreen
+   recommend_signin_screen
+   (panels meta dialog_panel)
+   (focus dialog_panel)
+   (must_not_be_a_guest 0)
+   (must_be_online 0)
+   (must_be_multiplayer_capable 0)
+   (handle_sign_outs 0)
+   (limit_user_signin 1)
+   (confirm_clear_screen '')
+   (enter
+      {set
+         [signing_in_user]
+         {user_mgr get_active_user}}
+      {dialog_panel set_custom recommend_sign_in sign_in continue_no_save})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {$this show_signin_ui $user})
+         (opt2.btn
+            {$this goto_next_screen})})
+   (on_signed_in
+      {$this goto_next_screen})
+   (goto_next_screen
+      {user_mgr
+         set_slot
+         {user_mgr get_active_user}
+         0}
+      {ui goto_screen autoload_screen})}
+{new
+   HamScreen
+   autoload_screen
+   (panels meta)
+   (enter
+      {memcardmgr
+         add_sink
+         $this
+         (save_load_all_complete_msg)}
+      {saveload_mgr autoload})
+   (exit
+      {memcardmgr remove_sink $this save_load_all_complete_msg})
+   (save_load_all_complete_msg
+      {title_goto_first_screen}
+      kDataUnhandled)}
+{new
+   HamScreen
+   unlock_all_screen
+   (panels dialog_panel)
+   (enter
+      {dialog_panel set_ok unlock_all_description})
+   (SELECT_MSG
+      {ui pop_screen})}
