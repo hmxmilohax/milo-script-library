@@ -1,0 +1,455 @@
+{new
+   HamPanel
+   main_panel
+   (file
+      [dyn_file])
+   (dyn_file
+      "main.milo")
+   (start_controller_focus button_01.btn)
+   (show_back_button 1)
+   (load
+      {content_mgr start_refresh})
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (connection_status_changed)}
+      {meta music_start}
+      {song_offer_provider stop_preview}
+      {achievements set_allow_achievements 1}
+      {song_offer_provider clear_saved_highlight}
+      {gamemode set_mode init}
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {user_mgr get_active_user}})
+         ($user
+            {user_mgr get_active_user})
+         {if_else
+            {platform_mgr is_user_signed_in $user}
+            {do
+               {rank.lbl set_showing 1}
+               {rank.lbl
+                  set_token_fmt
+                  metagame_rank_format
+                  {$user get_user_name}
+                  {{$profile get_rank}
+                     get_rank_title}}}
+            {rank.lbl set_showing 0}}})
+   (exit
+      {platform_mgr remove_sink $this connection_status_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (back.btn
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})
+         {do
+            ($name
+               {$component get text_token})
+            {if
+               {$this can_exit $user $name}
+               {unless
+                  {$this try_submenu $name $user}
+                  {$this on_select $name $user}}}}})
+   (last_main_screen main_screen)
+   (at_menu
+      ($name)
+      {==
+         {header.lbl get text_token}
+         $name})
+   (setup_buttons
+      ($menu)
+      {if_else
+         {==
+            {type
+               {elem $menu 0}}
+            16}
+         {header.lbl
+            set
+            text_token
+            {elem
+               {elem $menu 0}
+               0}}
+         {header.lbl
+            set
+            text_token
+            {elem $menu 0}}}
+      {foreach_int
+         $i
+         1
+         {size $menu}
+         {do
+            ($node
+               {elem $menu $i})
+            ($btn
+               {right_hand.hbs
+                  get
+                  (buttons
+                     {- $i 1})})
+            ($label
+               {if_else
+                  {==
+                     {type $node}
+                     16}
+                  {if_else
+                     {==
+                        {type
+                           {elem $node 0}}
+                        16}
+                     {elem
+                        {elem $node 0}
+                        0}
+                     {elem $node 0}}
+                  $node})
+            {if_else
+               {== $label empty}
+               {do
+                  {$this disable $btn}}
+               {do
+                  {$this enable $btn}
+                  {$btn set text_token $label}}}}}
+      {foreach_int
+         $i
+         {-
+            {size $menu}
+            1}
+         {right_hand.hbs
+            size
+            (buttons)}
+         {do
+            ($btn
+               {right_hand.hbs
+                  get
+                  (buttons $i)})
+            {$this disable $btn}}}
+      {right_hand.hbs
+         set
+         max_display_buttons
+         {-
+            {size $menu}
+            1}}
+      {shell_input update_button_zones})
+   (find_button
+      ($name)
+      {do
+         ($ret_btn NULL)
+         {foreach_int
+            $i
+            0
+            {right_hand.hbs
+               size
+               (buttons)}
+            {do
+               ($btn
+                  {right_hand.hbs
+                     get
+                     (buttons $i)})
+               {if
+                  {==
+                     {$btn get text_token}
+                     $name}
+                  {set $ret_btn $btn}}}}
+         $ret_btn})
+   (try_submenu
+      ($name $user)
+      {do
+         ($screen
+            {ui current_screen})
+         ($current
+            {$screen get current})
+         ($menu
+            {find_exists $current $name})
+         ($next
+            {$screen get next})
+         {if
+            $menu
+            {do
+               {$next set current $menu}
+               {$this goto_submenu $name $next}
+               1}}})
+   (on_select
+      ($name $user)
+      {switch
+         $name
+         (quickplay
+            {ui goto_screen song_select_screen})
+         (stats
+            {ui goto_screen stats_screen})
+         (options
+            {ui goto_screen options_screen})
+         (store
+            {if_else
+               {platform_mgr is_user_signed_in $user}
+               {platform_mgr show_offer_ui $user}
+               {do
+                  {show_offers_need_to_sign_in_screen set signing_in_user $user}
+                  {ui push_screen show_offers_need_to_sign_in_screen}}})})
+   (on_enter
+      ($name)
+      {switch
+         $name
+         (ham_menu)
+         (band_quickplay
+            {gamemode set_mode init})
+         (options
+            {input_mgr set_user ''}
+            {saveload_mgr autosave})})
+   (can_exit
+      ($user $exit_to)
+      {switch
+         {{ui current_screen}
+            get_header}
+         (quickplay 1)
+         1})
+   (goto_submenu
+      ($name $next_screen)
+      {switch
+         $name
+         (extras
+            {ui goto_screen $next_screen})
+         {ui goto_screen $next_screen}})}
+#define COMMON_MAIN_SCREEN
+((focus main_panel)
+   (current
+      ())
+   (enter
+      {if
+         {&&
+            {== $this main_screen}
+            {==
+               {size
+                  [current]}
+               0}}
+         {set
+            [current]
+            {elem
+               {find $syscfg main_menu}
+               1}}}
+      {main_panel
+         setup_buttons
+         [current]}
+      {main_panel set last_main_screen $this}
+      {main_panel
+         on_enter
+         {$this get_header}}
+      {{main_panel find enter.trg}
+         trigger})
+   (exit
+      {{main_panel find exit.trg}
+         trigger})
+   (get_header
+      {do
+         ($first
+            {elem
+               [current]
+               0})
+         {if_else
+            {==
+               {type $first}
+               16}
+            {elem $first 0}
+            $first}}))
+{new
+   HamScreen
+   main_screen
+   COMMON_MAIN_SCREEN
+   (panels meta background_panel logo_panel main_panel)
+   (background_view main_1)
+   (next main_screen_2)
+   (back title_screen)
+   (TRANSITION_COMPLETE_MSG
+      {profile_mgr purge_old_data}
+      {if
+         {&&
+            {!
+               {ui_event_mgr has_active_transition_event}}
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               $this}}
+         {saveload_mgr autosave}}
+      kDataUnhandled)}
+{new
+   HamScreen
+   main_screen_2
+   COMMON_MAIN_SCREEN
+   (panels meta background_panel main_panel)
+   (background_view main_2)
+   (next main_screen_3)
+   (back main_screen)}
+{new
+   HamScreen
+   main_screen_3
+   COMMON_MAIN_SCREEN
+   (panels meta background_panel main_panel)
+   (background_view main_3)
+   (next main_screen_4)
+   (back main_screen_2)}
+{new
+   HamScreen
+   main_screen_4
+   COMMON_MAIN_SCREEN
+   (panels meta background_panel main_panel)
+   (background_view main_3)
+   (next 0)
+   (back main_screen_3)}
+{new
+   UIPanel
+   credits_pause_panel
+   (file
+      "credits_pause.milo")
+   (hint_start_time 0)
+   (hint_timeout 3)
+   (hint_shown 0)
+   (show_hint
+      {$this set hint_shown 1}
+      {$this
+         set
+         hint_start_time
+         {taskmgr ui_seconds}}
+      {fade_pausehint.anim
+         animate
+         (range
+            {fade_pausehint.anim frame}
+            {fade_pausehint.anim end_frame})})
+   (hide_hint
+      {$this set hint_shown 0}
+      {fade_pausehint.anim
+         animate
+         (range
+            {fade_pausehint.anim frame}
+            {fade_pausehint.anim start_frame})})
+   (show_self
+      {$this hide_hint}
+      {fade.anim animate})
+   (hide_self
+      {fade.anim stop_animation}
+      {fade.anim set_frame 0})
+   (SELECT_DONE_MSG
+      {if
+         {$this showing}
+         {switch
+            $component
+            (resume.btn
+               {credits_screen handle_unpause})
+            (skip.btn
+               {credits_panel credits_done})}})
+   (poll
+      {if
+         [hint_shown]
+         {if
+            {>
+               {-
+                  {taskmgr ui_seconds}
+                  [hint_start_time]}
+               [hint_timeout]}
+            {$this hide_hint}}})}
+{new
+   CreditsPanel
+   credits_panel
+   (file
+      "credits.milo")
+   (focus
+      "credits.lst")
+   (target_screen '')
+   (credits_done
+      {ui goto_screen MAIN_MENU_RETURN_SCREEN})}
+{new
+   HamScreen
+   credits_screen
+   (panels meta credits_panel credits_pause_panel)
+   (focus credits_panel)
+   (scroll_sfx 0)
+   (is_menu_shown 0)
+   (enter
+      {$this handle_unpause}
+      {meta music_stop}
+      {platform_mgr disable_xmp}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)})
+   (exit
+      {platform_mgr remove_sink $this ui_changed})
+   (handle_pause
+      {$this set is_menu_shown 1}
+      {credits_panel pause_panel 1}
+      {credits_pause_panel show_self}
+      {$this set_focus_panel credits_pause_panel})
+   (handle_unpause
+      {$this set is_menu_shown 0}
+      {credits_panel pause_panel 0}
+      {credits_pause_panel hide_self}
+      {$this set_focus_panel credits_panel})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action 4}
+         {do
+            {if_else
+               [is_menu_shown]
+               {$this handle_unpause}
+               {$this handle_pause}}
+            {play_sfx button_back}
+            kDataUnhandled}
+         {if_else
+            [is_menu_shown]
+            {do
+               {if
+                  {== $action 2}
+                  {play_sfx button_back}
+                  {$this handle_unpause}}
+               kDataUnhandled}
+            {if_else
+               {$this is_cheat_on}
+               kDataUnhandled
+               {do
+                  {credits_pause_panel show_hint}
+                  0}}}})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {platform_mgr guide_showing}
+            {!
+               [is_menu_shown]}}
+         {$this handle_pause}})}
+{new
+   MoviePanel
+   attract_movie_panel
+   (preload 0)
+   (loop 0)
+   (audio 1)
+   (videos attract)
+   (movie_done
+      {if
+         {==
+            {ui current_screen}
+            attract_screen}
+         {ui goto_screen title_screen}})
+   (BUTTON_DOWN_MSG
+      {if
+         {==
+            {ui current_screen}
+            attract_screen}
+         {if
+            {'||'
+               {== $action 4}
+               {== $action 1}
+               {== $action 2}}
+            {ui goto_screen title_screen}}})}
+{new
+   UIPanel
+   attract_overlay_panel
+   (file
+      "attract_overlay.milo")}
+{new
+   HamScreen
+   attract_screen
+   (panels meta attract_movie_panel attract_overlay_panel)
+   (focus attract_movie_panel)
+   (enter)}

@@ -1,0 +1,189 @@
+{new
+   UIPanel
+   record_panel
+   (file
+      "record.milo")
+   (can_load 0)
+   (start_controller_focus
+      {if_else
+         {==
+            {recorded_input get_state}
+            1}
+         playback.btn
+         record.btn})
+   (enter
+      {build.lbl
+         set
+         edit_text
+         {sprintf
+            "%s (%s)"
+            {recorded_input current_build}
+            {recorded_input current_config}}}
+      {recorded_input init_logs}
+      {if
+         {==
+            {recorded_input get_state}
+            0}
+         {recorded_input set_state 1}}
+      {$this update})
+   (FOCUS_MSG
+      {switch
+         $new_focus
+         (record.btn
+            {recorded_input set_state 1})
+         (playback.btn
+            {recorded_input set_state 2})}
+      {$this update})
+   (SCREEN_CHANGE_MSG
+      {unless
+         {== $new_screen loading_screen}
+         {recorded_input set_state 0}}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            [can_load]
+            {== $action 1}}
+         {ui goto_screen loading_screen}}
+      {if_else
+         {==
+            2
+            {recorded_input get_state}}
+         {switch
+            $raw_button
+            (12
+               {recorded_input next_playback -1}
+               {$this update})
+            (14
+               {recorded_input next_playback 1}
+               {$this update})
+            (7
+               {recorded_input
+                  set_playback_validate_state
+                  {!
+                     {recorded_input playback_validate_state}}}
+               {$this update_validate})
+            kDataUnhandled}
+         kDataUnhandled})
+   (update
+      {do
+         ($state
+            {recorded_input get_state})
+         {if_else
+            {== $state 1}
+            {do
+               {current_song.lbl
+                  set
+                  edit_text
+                  {meta_performer song}}
+               {record_path.lbl
+                  set
+                  edit_text
+                  {recorded_input record_path}}
+               {load.lbl
+                  set
+                  edit_text
+                  "Press A to start recording"}
+               {set
+                  [can_load]
+                  1}}
+            {do
+               {recorded_input load_playback}
+               {do
+                  ($log_size
+                     {recorded_input playback_log_size})
+                  ($file_found
+                     {> $log_size 0})
+                  ($version_supported
+                     {&&
+                        $file_found
+                        {recorded_input playback_log_supported}})
+                  {playback_path.lbl
+                     set
+                     edit_text
+                     {sprintf
+                        "%s (%iKB)"
+                        {recorded_input playback_path}
+                        {int
+                           {/ $log_size 1024}}}}
+                  {playback_version.grp set_showing $file_found}
+                  {if
+                     $file_found
+                     {playback_version.lbl
+                        set_int
+                        {recorded_input playback_version}}
+                     {playback_version_warning.lbl
+                        set_showing
+                        {! $version_supported}}}
+                  {playback_data.grp set_showing $version_supported}
+                  {if
+                     $version_supported
+                     {playback_machine.lbl
+                        set
+                        edit_text
+                        {recorded_input playback_machine}}
+                     {recorded_input set_playback_date_time playback_date_time.lbl}
+                     {playback_build.lbl
+                        set
+                        edit_text
+                        {recorded_input playback_build}}
+                     {playback_build_warning.lbl
+                        set_showing
+                        {!
+                           {recorded_input playback_build_matches_current}}}
+                     {playback_config.lbl
+                        set
+                        edit_text
+                        {recorded_input playback_config}}
+                     {playback_config_warning.lbl
+                        set_showing
+                        {!=
+                           {recorded_input playback_config}
+                           {recorded_input current_config}}}
+                     {song.lbl
+                        set
+                        edit_text
+                        {recorded_input playback_song}}
+                     {num_frames.lbl
+                        set_int
+                        {recorded_input playback_num_frames}
+                        1}
+                     {last_frame.lbl
+                        set_float
+                        "%f"
+                        {recorded_input playback_last_frame_ms}}}
+                  {$this update_validate}
+                  {load.lbl
+                     set
+                     edit_text
+                     {cond
+                        ($version_supported
+                           "Press A to start playback")
+                        ($file_found
+                           "Playback log no longer supported")
+                        (1
+                           "Playback log not found")}}
+                  {set
+                     [can_load]
+                     $version_supported}}}}
+         {record.grp
+            set_showing
+            {== $state 1}}
+         {playback.grp
+            set_showing
+            {== $state 2}}})
+   (update_validate
+      {playback_validate.lbl
+         set
+         edit_text
+         {if_else
+            {recorded_input playback_validate_state}
+            "ON"
+            "OFF"}})}
+{new
+   HamScreen
+   record_screen
+   (panels record_panel)
+   (focus record_panel)
+   (back
+      {gamemode get ready_screen})}

@@ -1,0 +1,247 @@
+#define ENDGAME_PANEL_HANDLERS
+((current_popup none)
+   (instarank_done
+      {$this set_instarank})
+   (set_instarank
+      {if
+         {$this exists instarank.lbl}
+         {instarank.lbl
+            set_instarank
+            {meta_performer get_instarank}}
+         {instarank_warning.lbl set_showing 1}})
+   (begin_results
+      ($num_stars)
+      {$this disable continue.btn}
+      {shell_input update_button_zones}
+      {set
+         [current_popup]
+         none}
+      {stars_0.trg set callback_object $this}
+      {stars_1.trg set callback_object $this}
+      {stars_2.trg set callback_object $this}
+      {stars_3.trg set callback_object $this}
+      {stars_4.trg set callback_object $this}
+      {stars_5.trg set callback_object $this}
+      {stars_6.trg set callback_object $this}
+      {new_best_stars.trg set callback_object $this}
+      {show_score.trg set callback_object $this}
+      {new_high_score.trg set callback_object $this}
+      {moves_passed.trg set callback_object $this}
+      {moves_passed_best.trg set callback_object $this}
+      {show_progress_bar.trg set callback_object $this}
+      {progress.rpb set callback_object $this}
+      {shrink_score.trg set callback_object $this}
+      {show_buttons.trg set callback_object $this}
+      {reset.trg trigger}
+      {$this show_stars $num_stars})
+   (ui_trigger_complete
+      ($trigger)
+      {switch
+         $trigger
+         (stars_0.trg
+            {$this show_new_best_stars})
+         (stars_1.trg
+            {$this show_new_best_stars})
+         (stars_2.trg
+            {$this show_new_best_stars})
+         (stars_3.trg
+            {$this show_new_best_stars})
+         (stars_4.trg
+            {$this show_new_best_stars})
+         (stars_5.trg
+            {$this show_new_best_stars})
+         (stars_6.trg
+            {$this show_new_best_stars})
+         (new_best_stars.trg
+            {$this show_score})
+         (show_score.trg
+            {$this show_new_high_score})
+         (new_high_score.trg
+            {$this show_moves_passed})
+         (moves_passed.trg
+            {$this show_moves_passed_best})
+         (moves_passed_best.trg
+            {$this shrink_score})
+         (show_progress_bar.trg
+            {$this do_progress_bar})
+         (shrink_score.trg
+            {$this show_buttons})
+         (show_buttons.trg
+            {shell_input update_button_zones})})
+   (TRANSITION_COMPLETE_MSG
+      {switch
+         [current_popup]
+         (new_rank
+            {$this show_unlock_popup})
+         (new_unlock
+            {$this show_unlock_popup})})
+   (rank_animation_complete
+      ($progress_bar)
+      {$this show_rank_popup})
+   (show_stars
+      ($num_stars)
+      {switch
+         $num_stars
+         (0
+            {stars_0.trg trigger})
+         (1
+            {stars_1.trg trigger})
+         (2
+            {stars_2.trg trigger})
+         (3
+            {stars_3.trg trigger})
+         (4
+            {stars_4.trg trigger})
+         (5
+            {stars_5.trg trigger})
+         (6
+            {stars_6.trg trigger})})
+   (show_new_best_stars
+      {if_else
+         {meta_performer got_new_best_stars}
+         {new_best_stars.trg trigger}
+         {$this show_score}})
+   (show_score
+      {show_score.trg trigger})
+   (show_new_high_score
+      {if_else
+         {meta_performer got_new_high_score}
+         {new_high_score.trg trigger}
+         {$this show_moves_passed}})
+   (show_moves_passed
+      {moves_passed.trg trigger})
+   (show_moves_passed_best
+      {if_else
+         {meta_performer got_moves_passed_best}
+         {moves_passed_best.trg trigger}
+         {$this shrink_score}})
+   (show_progress_bar
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {user_mgr get_active_user}})
+         ($rank
+            {$profile get_rank})
+         {progress.rpb
+            set_percent
+            {$rank get_percent_to_next_rank_begin}}}
+      {show_progress_bar.trg trigger})
+   (do_progress_bar
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {user_mgr get_active_user}})
+         ($rank
+            {$profile get_rank})
+         ($start
+            {$rank get_percent_to_next_rank_begin})
+         ($end
+            {$rank get_percent_to_next_rank_end})
+         {progress.rpb animate $start $end}})
+   (show_rank_popup
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {user_mgr get_active_user}})
+         ($rank
+            {$profile get_rank})
+         {if_else
+            {$rank has_new_rank}
+            {do
+               {set
+                  [current_popup]
+                  new_rank}
+               {endgame_popup_panel
+                  set_popup_text
+                  endgame_new_rank
+                  {$rank get_rank_title}
+                  {$rank get_rank_description}}
+               {$this show_popup}
+               {switch
+                  {$rank get_rank_title}
+                  (rank_2
+                     {acc_mgr
+                        earn_accomplishment
+                        {user_mgr get_active_user}
+                        acc_passed_first_rank})
+                  (rank_20
+                     {acc_mgr
+                        earn_accomplishment
+                        {user_mgr get_active_user}
+                        acc_reached_last_rank})}}
+            {$this show_unlock_popup}}
+         {$rank reset_progress}})
+   (show_unlock_popup
+      {if_else
+         {acc_mgr has_new_awards}
+         {do
+            {set
+               [current_popup]
+               new_unlock}
+            {endgame_popup_panel
+               set_popup_text
+               endgame_unlocked_content
+               {acc_mgr
+                  get_name_for_first_new_award
+                  {user_mgr get_active_user}}
+               {acc_mgr
+                  get_description_for_first_new_award
+                  {user_mgr get_active_user}}}
+            {acc_mgr
+               clear_first_new_award
+               {user_mgr get_active_user}}
+            {$this show_popup}
+            {if
+               {acc_mgr
+                  is_group_complete
+                  {profile_mgr
+                     get_profile
+                     {user_mgr get_active_user}}
+                  acc_grp_unlocks}
+               {acc_mgr
+                  earn_accomplishment
+                  {user_mgr get_active_user}
+                  acc_unlocked_all_content}}
+            {if
+               {acc_mgr
+                  is_category_complete
+                  {profile_mgr
+                     get_profile
+                     {user_mgr get_active_user}}
+                  acc_cat_costumes}
+               {acc_mgr
+                  earn_accomplishment
+                  {user_mgr get_active_user}
+                  acc_unlocked_all_costumes}}}
+         {$this shrink_score}})
+   (shrink_score
+      {shrink_score.trg trigger})
+   (show_buttons
+      {$this enable continue.btn}
+      {show_buttons.trg trigger}))
+#define ENDGAME_SCREEN_HANDLERS
+((enter
+      {ui_event_mgr
+         add_sink
+         $this
+         (event_dialog_dismiss)})
+   (exit
+      {ui_event_mgr remove_sink $this event_dialog_dismiss}))
+#define ENDGAME_PANEL_COMMON_ENTER
+({do
+      ($profile
+         {profile_mgr
+            get_profile
+            {user_mgr get_active_user}})
+      ($stats
+         {$profile get_stats})
+      {$stats
+         tally_favorite
+         1
+         {meta_performer get_completed_song_id}
+         1}}
+   {game_screen set_showing 0}
+   {game_panel set_paused 1})

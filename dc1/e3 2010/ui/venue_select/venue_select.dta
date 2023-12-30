@@ -1,0 +1,83 @@
+{new
+   VenueSelectPanel
+   venue_select_panel
+   (file
+      "venue_select.milo")
+   (show_back_button 1)
+   (set_controller_focus 0)
+   (enter
+      {right_hand.hbs set_provider venue_provider}
+      {shell_input
+         set_focus_if_controller_mode
+         {right_hand.hbs
+            set_selected
+            {meta_performer get_venue_pref}}}
+      {$this
+         update
+         {meta_performer get_venue_pref}})
+   (SELECT_MSG
+      {if_else
+         {== $component back.btn}
+         {ui
+            go_back_screen
+            {{ui current_screen}
+               get
+               back}}
+         {do
+            ($venue
+               {right_hand.hbs selected_sym $component})
+            ($profile
+               {$this active_profile})
+            {unless
+               {== $venue ''}
+               {if_else
+                  {$profile is_content_unlocked $venue}
+                  {do
+                     {meta_performer set_venue_pref $venue}
+                     {$profile mark_content_not_new $venue}
+                     {ui
+                        goto_screen
+                        {{ui current_screen}
+                           get
+                           back}}}
+                  {do
+                     {locked_content_panel set_up $venue}
+                     {ui push_screen locked_content_screen}}}}}})
+   (FOCUS_MSG
+      {$this
+         update
+         {right_hand.hbs selected_sym $new_focus}})
+   (HIGHLIGHT_CHANGED_MSG
+      {$this
+         update
+         {right_hand.hbs selected_sym $component}})
+   (update
+      ($venue)
+      {unless
+         {== $venue ''}
+         {venue.mat
+            set
+            diffuse_tex
+            {sprintf
+               "%s%s.tex"
+               $venue
+               {if_else
+                  {{$this active_profile}
+                     is_content_unlocked
+                     $venue}
+                  ""
+                  "_locked"}}}})
+   (BUTTON_DOWN_MSG
+      {right_hand.hbs handle_button_down $action}
+      kDataUnhandled)
+   (active_profile
+      {profile_mgr
+         get_profile
+         {user_mgr get_active_user}})}
+{new
+   HamScreen
+   venue_select_screen
+   (panels meta background_panel venue_select_panel)
+   (focus venue_select_panel)
+   (back
+      {gamemode get startgame_screen})}

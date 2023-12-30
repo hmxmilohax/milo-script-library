@@ -1,0 +1,146 @@
+#define MAIN_BODY_COMPRESSION
+((tolerance 3.0)
+   (bones
+      (bone_R-ankle.mesh
+         (weight 0.85))
+      (bone_L-ankle.mesh
+         (weight 0.85))
+      (bone_R-hand.mesh)
+      (bone_L-hand.mesh)
+      (bone_L-index03.mesh)
+      (bone_L-middlefinger03.mesh)
+      (bone_L-ringfinger03.mesh)
+      (bone_L-pinky03.mesh)
+      (bone_L-thumb03.mesh)
+      (bone_R-index03.mesh)
+      (bone_R-middlefinger03.mesh)
+      (bone_R-ringfinger03.mesh)
+      (bone_R-pinky03.mesh)
+      (bone_R-thumb03.mesh)
+      (bone_head.mesh
+         (weight 1.5)
+         (offset 3 6 0))
+      (bone_head.mesh
+         (weight 1.5)
+         (offset -2 6 0))
+      (bone_footik.mesh
+         (weight 2))))
+#define EXTRAS_COMPRESSION
+((tolerance 3.0)
+   (bones
+      (bone_R-ankle.mesh
+         (weight 0.85))
+      (bone_L-ankle.mesh
+         (weight 0.85))
+      (bone_R-hand.mesh)
+      (bone_L-hand.mesh)
+      (bone_L-index03.mesh)
+      (bone_L-middlefinger03.mesh)
+      (bone_L-ringfinger03.mesh)
+      (bone_L-pinky03.mesh)
+      (bone_L-thumb03.mesh)
+      (bone_R-index03.mesh)
+      (bone_R-middlefinger03.mesh)
+      (bone_R-ringfinger03.mesh)
+      (bone_R-pinky03.mesh)
+      (bone_R-thumb03.mesh)
+      (bone_head.mesh
+         (weight 1.5)
+         (offset 3 6 0))
+      (bone_head.mesh
+         (weight 1.5)
+         (offset -2 6 0))
+      (bone_jaw.mesh)))
+#define CROWD_COMPRESSION
+((tolerance 3.0)
+   (bones
+      (bone_R-ankle.mesh
+         (weight 0.85))
+      (bone_L-ankle.mesh
+         (weight 0.85))
+      (bone_R-hand.mesh)
+      (bone_L-hand.mesh)
+      (bone_head.mesh
+         (weight 1.5)
+         (offset 3 6 0))
+      (bone_head.mesh
+         (weight 1.5)
+         (offset -2 6 0))))
+#autorun
+{func
+   process_clips
+   ($dir)
+   {if
+      {$dir is_a CharClipSet}
+      {do
+         ($path
+            {$dir get_path_name})
+         {print
+            "loading "
+            $path
+            "\n"}
+         {set
+            $loaded_dir
+            {load_objects $path}}
+         {search_replace
+            $path
+            "anim_src/"
+            ""
+            $path}
+         {$dir perforce_sync $path}
+         {if
+            {find_elem
+               (guitar_body_left guitar_body_right keyboard drum_body)
+               {$dir get_type}}
+            {do
+               ($beatle '')
+               {foreach
+                  $b
+                  (george john paul ringo)
+                  {if
+                     {has_substr $path $b}
+                     {set $beatle $b}}}
+               {set
+                  $beatle
+                  {load_objects
+                     {sprint
+                        "char/"
+                        $beatle
+                        "/"
+                        $beatle
+                        ".milo"}}}
+               {$beatle
+                  iterate_self
+                  CharIKFoot
+                  $ikfoot
+                  {$loaded_dir
+                     iterate_self
+                     CharClip
+                     $clip
+                     {$ikfoot analyze $clip}}}
+               {delete $beatle}}}
+         {$loaded_dir
+            iterate_self
+            CharClip
+            $c
+            {$c
+               set_note
+               ""}
+            {$c change_compression 2}}
+         {set
+            $comparray
+            {switch
+               {$dir get_type}
+               (crowd
+                  (CROWD_COMPRESSION))
+               (extras
+                  (EXTRAS_COMPRESSION))
+               0}}
+         {if
+            $comparray
+            {char_compress_clips $loaded_dir $comparray 4 1}}
+         {print
+            "saving out to "
+            $path
+            "\n"}
+         {$loaded_dir perforce_save $path}}}}

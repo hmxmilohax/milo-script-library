@@ -1,0 +1,97 @@
+#define LOSE_MUSIC_SLOW_SEC
+(2)
+{new GamePanel game_panel}
+{new
+   UIPanel
+   world_panel
+   (file
+      "../world/world.milo")
+   #ifdef HX_XBOX
+   #endif
+   (unload_async 1)
+   (enter)}
+{new
+   HamScreen
+   restart_screen
+   (enter
+      {{gamemode get game_screen}
+         reenter_screen}
+      {ui pop_screen})}
+{new
+   HamScreen
+   game_screen
+   (panels game_panel world_panel)
+   (disable_screen_saver 1)
+   (JOYPAD_CONNECT_MSG
+      {$this check_lost_controller})
+   (check_lost_controller
+      {if_else
+         {&&
+            {==
+               {ui current_screen}
+               {gamemode get game_screen}}
+            {!
+               {ui in_transition}}
+            {!
+               {game_panel is_game_over}}
+            {!
+               {input_mgr check_controllers}}}
+         {do
+            {ui push_screen pause_screen}
+            1}
+         0})
+   (enter
+      {$this set_showing 1}
+      {rnd set_in_game 1}
+      {platform_mgr
+         add_sink
+         $this
+         (ui_changed)}
+      {$this reset_game_mode})
+   (reset_game_mode
+      {cond
+         ({gamemode in_mode perform}
+            {game_panel set_type linear})
+         ({gamemode in_mode practice}
+            {game_panel set_type skillz})
+         ({gamemode in_mode multiplayer}
+            {game_panel set_type multiplayer})}
+      {handle
+         (game_panel init)})
+   (exit
+      {platform_mgr remove_sink $this ui_changed}
+      {if
+         {==
+            {ui_event_mgr current_event}
+            pad_lost}
+         {ui_event_mgr dismiss_event}}
+      {input_mgr check_controllers}
+      {$this set_showing 0}
+      {rnd reset_postproc})
+   (UI_CHANGED_MSG
+      {$this on_guide_change})
+   (TRANSITION_COMPLETE_MSG
+      {game_screen set_showing 1}
+      {if
+         {==
+            {ui_event_mgr current_event}
+            pad_lost}
+         {ui_event_mgr dismiss_event}}
+      {if
+         $game_unpause_on_enter
+         {game_panel set_paused 0}
+         {set $game_unpause_on_enter 0}}
+      {if
+         {!
+            {$this check_lost_controller}}
+         {$this on_guide_change}})
+   (on_guide_change
+      {if
+         {&&
+            {ui current_screen}
+            {==
+               {ui current_screen}
+               $this}}
+         {game_panel
+            set_paused
+            {platform_mgr guide_showing}}})}

@@ -1,0 +1,98 @@
+{new
+   HamPanel
+   endgame_photos_panel
+   (file
+      "endgame_photos.milo")
+   (start_controller_focus continue.btn)
+   (original_leaderboards_mode 0)
+   (show_back_button 1)
+   (batch_count 0)
+   (current_batch 0)
+   (enter
+      {set
+         [batch_count]
+         {gesture_mgr num_snapshot_batches}}
+      {set
+         [current_batch]
+         0}
+      {$this
+         show_batch
+         [current_batch]})
+   (SELECT_MSG
+      {switch
+         $component
+         (continue.btn
+            {$this show_next_batch})
+         (back.btn
+            {ui
+               go_back_screen
+               {{ui current_screen}
+                  get
+                  back}})})
+   (show_next_batch
+      {set
+         [current_batch]
+         {mod
+            {'+'
+               [current_batch]
+               1}
+            [batch_count]}}
+      {$this
+         show_batch
+         [current_batch]})
+   (show_batch
+      ($batch_index)
+      {do
+         ($photo_start_index
+            {gesture_mgr get_snapshot_batch_index $batch_index})
+         ($photo_end_index
+            {gesture_mgr
+               get_snapshot_batch_index
+               {'+' $batch_index 1}})
+         ($photo_count
+            {- $photo_end_index $photo_start_index})
+         {foreach_int
+            $photo_index
+            $photo_start_index
+            $photo_end_index
+            {do
+               ($mat_index
+                  {'+'
+                     {- $photo_index $photo_start_index}
+                     1})
+               ($mat_name
+                  {sprintf
+                     "photo_%02d.mat"
+                     $mat_index})
+               ($mat_obj
+                  {$this find $mat_name})
+               {if_else
+                  $mat_obj
+                  {$mat_obj
+                     set
+                     diffuse_tex
+                     {gesture_mgr snapshot_tex $photo_index}}
+                  {notify
+                     "Couldn't find mat object "
+                     $mat_name
+                     " for photos."}}}}
+         {play.anim
+            animate
+            (loop
+               0
+               {-
+                  {'*' $photo_count 3}
+                  1})}
+         {photo_caption.lbl
+            set_token_fmt
+            photo_number_caption
+            {'+' $batch_index 1}
+            [batch_count]}})}
+{new
+   HamScreen
+   endgame_photos_screen
+   (panels endgame_photos_panel)
+   (focus endgame_photos_panel)
+   (back
+      {endgame_photos_screen get back_screen})
+   (back_screen none)}
