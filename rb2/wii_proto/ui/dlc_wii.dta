@@ -1,0 +1,411 @@
+#define SDMODE
+(0)
+#define NANDMODE
+(1)
+#define SIZE_CHECK_OK
+(0)
+#define SIZE_CHECK_INODES
+(1)
+{new
+   UIPanel
+   content_backup_panel
+   (file
+      "dlc_dialog_wii.milo")
+   (content_name
+      "")
+   (last_result kDLCSuccess)
+   (num_contents 0)
+   (total_contents 0)
+   (destination '')
+   (fail_destination '')
+   (failed FALSE)
+   (enter
+      {set
+         [failed]
+         FALSE}
+      {meter_grow.msnm set_frame 0}
+      {dialog_title.lbl
+         set_localized
+         {localize dlc_backup_title}}
+      {set
+         [last_result]
+         kDLCSuccess}
+      {set
+         [total_contents]
+         [num_contents]})
+   (TRANSITION_COMPLETE_MSG
+      {if_else
+         {ok.btn showing}
+         {helpbar
+            set_config
+            ((confirm helpbar_select))}
+         {helpbar
+            set_config
+            ()}})
+   (poll
+      {if
+         {!
+            [failed]}
+         {if
+            {&&
+               {!
+                  {content_mgr is_busy}}
+               {>
+                  [num_contents]
+                  0}}
+            {set
+               [content_name]
+               {content_mgr backup_next_content}}
+            {$this
+               check_result
+               [last_result]}
+            {--
+               [num_contents]}}
+         {do
+            ($slice_size
+               {/
+                  100
+                  [total_contents]})
+            ($slice_progress
+               {'*'
+                  $slice_size
+                  {-
+                     [total_contents]
+                     {'+'
+                        [num_contents]
+                        1}}})
+            ($current_slice
+               {'*'
+                  $slice_size
+                  {/
+                     {content_mgr get_percent}
+                     100}})
+            {meter_grow.msnm
+               set_frame
+               {'+' $slice_progress $current_slice}}}
+         {if
+            {!=
+               [last_result]
+               {content_mgr get_last_result}}
+            {set
+               [last_result]
+               {content_mgr get_last_result}}
+            {$this
+               check_result
+               [last_result]}}
+         {if
+            {&&
+               {progress.grp showing}
+               {!
+                  {content_mgr is_busy}}
+               {==
+                  [num_contents]
+                  0}}
+            {if_else
+               {==
+                  [destination]
+                  ''}
+               {$this
+                  set_msg
+                  {localize dlc_backup_complete}}
+               {ui
+                  goto_screen
+                  [destination]}}}})
+   (check_result
+      ($result)
+      {set
+         [failed]
+         TRUE}
+      {switch
+         $result
+         (kDLCSuccess
+            {set
+               [failed]
+               FALSE}
+            {msg.lbl
+               set_localized
+               {sprintf
+                  {localize dlc_backup_inprogress}
+                  [content_name]}}
+            {ok.btn set_showing FALSE}
+            {progress.grp set_showing TRUE})
+         (kFailNoSDCard
+            {$this
+               set_msg
+               {localize dlc_backup_nosdcard}})
+         (kBackupNoSDSpace
+            {$this
+               set_msg
+               {sprintf
+                  {localize dlc_backup_nosdspace}
+                  {content_mgr get_last_result_value}}})
+         (kBackupSDWriteProtected
+            {$this
+               set_msg
+               {localize dlc_backup_sdwriteprotected}})
+         (kFailSDIncompatible
+            {$this
+               set_msg
+               {localize dlc_backup_sdincompatible}})
+         (kDLCFailed
+            {$this
+               set_msg
+               {sprintf
+                  {localize dlc_backup_failed}
+                  [content_name]}})
+         {$this
+            set_msg
+            {sprintf
+               {localize dlc_backup_failed}
+               [content_name]}}})
+   (set_msg
+      ($msg)
+      {progress.grp set_showing FALSE}
+      {ok.btn set_showing TRUE}
+      {msg.lbl set_localized $msg}
+      {$this set_focus ok.btn}
+      {helpbar
+         set_config
+         ((confirm helpbar_select))})
+   (SELECT_MSG
+      {if_else
+         {==
+            [last_result]
+            kDLCSuccess}
+         {do
+            {content_mgr clear_nand}
+            {if_else
+               {==
+                  {content_mgr sd_mode_size_check}
+                  SIZE_CHECK_OK}
+               {ui goto_screen sdmode_success_dialog}
+               {ui goto_screen sdmode_space_dialog}}}
+         {if_else
+            {&&
+               {==
+                  [last_result]
+                  kFailNoSDCard}
+               {platform_mgr is_sdcard_inserted}}
+            {do
+               {set
+                  [failed]
+                  FALSE}
+               {meter_grow.msnm set_frame 0}
+               {dialog_title.lbl
+                  set_localized
+                  {localize dlc_backup_title}}
+               {set
+                  [last_result]
+                  kDLCSuccess}
+               {set
+                  [num_contents]
+                  [total_contents]}
+               {helpbar
+                  set_config
+                  ()}}
+            {if_else
+               {==
+                  [fail_destination]
+                  ''}
+               {ui goto_screen sdmode_failed_dialog}
+               {ui
+                  goto_screen
+                  [fail_destination]}}}})}
+{new
+   BandScreen
+   content_backup_screen
+   (panels content_backup_panel)
+   (focus content_backup_panel)}
+{new
+   BandScreen
+   sdmode_begin_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (final_screen '')
+   (skip FALSE)
+   (done FALSE)
+   (enter
+      {if
+         {==
+            {content_mgr get_mode}
+            SDMODE}
+         {$this leave}}
+      {dialog_panel
+         set_msg
+         {localize dlc_sdmode_checking}}
+      {set
+         [skip]
+         FALSE}
+      {set
+         [done]
+         FALSE})
+   (poll
+      {if
+         {&&
+            {content_mgr refresh_done}
+            {!
+               [done]}}
+         {set
+            [done]
+            TRUE}
+         {if_else
+            {content_mgr missing_content_list}
+            {dialog_panel
+               set_ok
+               {localize dlc_missing_content}}
+            {if_else
+               {!
+                  {platform_mgr is_sdcard_inserted}}
+               {$this leave}
+               {if_else
+                  {content_mgr is_content_on_sd}
+                  {do
+                     {set
+                        [skip]
+                        TRUE}
+                     {$this continue}}
+                  {if_else
+                     {content_mgr sd_failed}
+                     {ui goto_screen sdmode_incomp_dialog}
+                     {dialog_panel
+                        set_yesno
+                        {localize dlc_start_sdmode}
+                        yes.btn}}}}}})
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {if_else
+               {platform_mgr is_sdcard_inserted}
+               {$this continue}
+               {ui goto_screen sdmode_insert_dialog}})
+         (no.btn
+            {$this leave})
+         (ok.btn
+            {$this leave})})
+   (continue
+      {if_else
+         {content_mgr is_sd_corrupted}
+         {ui goto_screen sdmode_corrupted_dialog}
+         {do
+            ($nand_check
+               {content_mgr sd_mode_nand_check})
+            {sdmode_backup_dialog set num_contents $nand_check}
+            {if_else
+               {== $nand_check 0}
+               {if_else
+                  {==
+                     {content_mgr sd_mode_size_check}
+                     SIZE_CHECK_OK}
+                  {if_else
+                     [skip]
+                     {do
+                        {content_mgr change_mode SDMODE}
+                        {ui pop_screen}}
+                     {ui goto_screen sdmode_success_dialog}}
+                  {ui goto_screen sdmode_space_dialog}}
+               {ui goto_screen sdmode_backup_dialog}}}})
+   (leave
+      {if_else
+         [final_screen]
+         {ui
+            pop_screen
+            [final_screen]}
+         {ui pop_screen}})}
+{new
+   BandScreen
+   sdmode_insert_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize dlc_missing_sdcard}})
+   (SELECT_MSG
+      {ui goto_screen sdmode_begin_dialog})}
+{new
+   BandScreen
+   sdmode_backup_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (num_contents 0)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize dlc_missing_nand}})
+   (SELECT_MSG
+      {content_backup_panel
+         set
+         num_contents
+         [num_contents]}
+      {content_backup_panel set destination ''}
+      {content_backup_panel set fail_destination ''}
+      {ui goto_screen content_backup_screen})}
+{new
+   BandScreen
+   sdmode_space_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {do
+         ($result
+            {content_mgr sd_mode_size_check})
+         {if_else
+            {== $result SIZE_CHECK_INODES}
+            {dialog_panel
+               set_ok
+               {localize dlc_missing_inodes}}
+            {dialog_panel
+               set_ok
+               {sprintf
+                  {localize dlc_missing_space}
+                  $result}}}})
+   (SELECT_MSG
+      {ui goto_screen sdmode_failed_dialog})}
+{new
+   BandScreen
+   sdmode_success_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {content_mgr change_mode SDMODE}
+      {dialog_panel
+         set_ok
+         {localize dlc_sdmode_success}})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   sdmode_incomp_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize dlc_restore_incompatible}})
+   (SELECT_MSG
+      {ui goto_screen sdmode_failed_dialog})}
+{new
+   BandScreen
+   sdmode_failed_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {localize dlc_sdmode_failed}})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   sdmode_corrupted_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         {sprintf
+            {localize dlc_restore_corrupt}
+            "Add-on content"}})
+   (SELECT_MSG
+      {ui pop_screen})}
