@@ -1,0 +1,241 @@
+#define WII_DLC_DIALOG_HANDLERS
+((file
+      "wii_dialog.milo")
+   (focus ok.btn)
+   (init_default
+      {progress.lbl set showing FALSE})
+   (set_progress
+      ($progress)
+      {progress.grp set_showing TRUE}
+      {progress.md
+         set
+         current_value
+         {int $progress}}
+      {ok.btn set_showing FALSE}
+      {$this
+         set_focus
+         ""})
+   (set_progress_text
+      ($current $total)
+      {progress.lbl set showing TRUE}
+      {progress.lbl set_token_fmt event_n_of_n $current $total})
+   (set_title
+      ($title)
+      {dialog_title.lbl set text_token $title})
+   (set_msg
+      ($msg)
+      {msg.lbl set text_token $msg}
+      {$this
+         set_focus
+         ""})
+   (set_msg_only
+      ($msg)
+      {progress.grp set_showing FALSE}
+      {ok.btn set_showing FALSE}
+      {$this set_msg $msg})
+   (set_msg_ok
+      ($msg)
+      {progress.grp set_showing FALSE}
+      {msg.lbl set text_token $msg}
+      {ok.btn set_showing TRUE}
+      {$this set_focus ok.btn})
+   (set_msg_fmt_ok
+      ($msg)
+      {progress.grp set_showing FALSE}
+      {msg.lbl set_token_fmt $msg}
+      {ok.btn set_showing TRUE}
+      {$this set_focus ok.btn}))
+{new BandStoreUIPanel wii_store_dialog_panel WII_DLC_DIALOG_HANDLERS}
+#include dlc_wii_startup.dta
+#define WII_DLC_BACKUP_CHECK
+(0)
+#define WII_DLC_BACKUP
+(1)
+#define WII_DLC_BACKUP_DONE
+(2)
+{new
+   BandScreen
+   content_backup_screen
+   (panels wii_store_dialog_panel)
+   (focus wii_store_dialog_panel)
+   (result_screen '')
+   (in_download_flow FALSE)
+   (result kOpSuccess)
+   (state WII_DLC_BACKUP_CHECK)
+   (start_percent 0)
+   (enter
+      {set
+         [result]
+         kOpSuccess}
+      {synth keyboard_pause_voices TRUE}
+      {platform_mgr set_home_menu_enabled FALSE}
+      {wii_store_dialog_panel init_default}
+      {if_else
+         [in_download_flow]
+         {do
+            {set
+               [start_percent]
+               50}
+            {wii_store_dialog_panel
+               set_progress
+               [start_percent]}
+            {wii_store_dialog_panel set_title store_download_title}
+            {wii_store_dialog_panel set_msg dlc_backup_inprogress}
+            {if
+               {>
+                  {wii_store_download_screen get num_downloads}
+                  1}
+               {wii_store_dialog_panel
+                  set_progress_text
+                  {wii_store_download_screen get cur_download}
+                  {wii_store_download_screen get num_downloads}}}}
+         {do
+            {set
+               [start_percent]
+               0}
+            {wii_store_dialog_panel set_msg_only matchmaker_please_wait}}}
+      {$this start_backup_check})
+   (exit
+      {platform_mgr set_home_menu_enabled TRUE}
+      {set
+         [in_download_flow]
+         FALSE}
+      {synth keyboard_pause_voices FALSE})
+   (start_backup_check
+      {set
+         [state]
+         WII_DLC_BACKUP_CHECK}
+      {content_mgr backup_check})
+   (backup_check_failed
+      {set
+         [state]
+         WII_DLC_BACKUP_DONE}
+      {switch
+         [result]
+         (kOpMissingCard
+            {$this set_msg dlc_backup_nosdcard})
+         (kOpSDWriteProtected
+            {$this set_msg dlc_backup_sdwriteprotected})
+         (kOpIncompatibleCard
+            {$this set_msg dlc_backup_sdincompatible})
+         (kOpCorruptCard
+            {$this set_msg dlc_backup_failed})
+         (kOpIncorrectCard
+            {$this set_msg dlc_restore_failed})
+         (kOpSDSize
+            {if_else
+               {==
+                  {content_mgr get_last_result_value}
+                  1}
+               {$this
+                  set_msg
+                  (dlc_backup_nosdspace_singular
+                     {content_mgr get_last_result_value})}
+               {$this
+                  set_msg
+                  (dlc_backup_nosdspace_plural
+                     {content_mgr get_last_result_value})}})
+         (kOpFail
+            {$this set_msg dlc_unknown_error})
+         {$this set_msg dlc_unknown_error}})
+   (set_msg
+      ($msg)
+      {wii_store_dialog_panel set_msg_fmt_ok $msg})
+   (SELECT_MSG
+      {ui
+         goto_screen
+         [result_screen]})
+   (start_backup
+      {if_else
+         [in_download_flow]
+         {wii_store_dialog_panel set_title store_download_title}
+         {wii_store_dialog_panel set_title dlc_backup_title}}
+      {wii_store_dialog_panel
+         set_progress
+         [start_percent]}
+      {wii_store_dialog_panel set_msg dlc_backup_inprogress}
+      {set
+         [state]
+         WII_DLC_BACKUP}
+      {content_mgr
+         start_backup
+         [in_download_flow]})
+   (poll
+      {switch
+         [state]
+         (WII_DLC_BACKUP_CHECK
+            {set
+               [result]
+               {content_mgr get_last_result}}
+            {if
+               {!=
+                  [result]
+                  kOpBusy}
+               {if_else
+                  {==
+                     [result]
+                     kOpSuccess}
+                  {$this start_backup}
+                  {$this backup_check_failed}}})
+         (WII_DLC_BACKUP
+            {if_else
+               {content_mgr backup_is_finished}
+               {do
+                  {set
+                     [state]
+                     WII_DLC_BACKUP_DONE}
+                  {set
+                     [result]
+                     {content_mgr get_last_result}}
+                  {if_else
+                     {==
+                        [result]
+                        kOpSuccess}
+                     {ui
+                        goto_screen
+                        [result_screen]}
+                     {$this backup_failed}}}
+               {do
+                  {if_else
+                     [in_download_flow]
+                     {wii_store_dialog_panel
+                        set_progress
+                        {'+'
+                           {'*'
+                              {content_mgr backup_percent}
+                              0.5}
+                           50.0}}
+                     {wii_store_dialog_panel
+                        set_progress
+                        {content_mgr backup_percent}}}}})})
+   (backup_failed
+      {switch
+         [result]
+         (kOpMissingCard
+            {$this set_msg dlc_backup_sdcardremoved})
+         (kOpIncompatibleCard
+            {$this set_msg dlc_backup_sdincompatible})
+         (kOpCorruptCard
+            {$this set_msg dlc_backup_failed})
+         (kOpSDWriteProtected
+            {$this set_msg dlc_backup_sdwriteprotected})
+         (kOpSDSize
+            {if_else
+               {==
+                  {content_mgr get_last_result_value}
+                  1}
+               {$this
+                  set_msg
+                  (dlc_backup_nosdspace_singular
+                     {content_mgr get_last_result_value})}
+               {$this
+                  set_msg
+                  (dlc_backup_nosdspace_plural
+                     {content_mgr get_last_result_value})}})
+         (kOpFail
+            {$this
+               set_msg
+               (dlc_unknown_error)})
+         {$this
+            set_msg
+            (dlc_unknown_error)}})}

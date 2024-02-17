@@ -1,0 +1,627 @@
+#define kWiiProfileMode_LoadKeyboard
+(0)
+#define kWiiProfileMode_GeneralError
+(1)
+#define kWiiProfileMode_OnlineOfflineChoose
+(2)
+#define kWiiProfileMode_RenameCancelChoose
+(3)
+#define kWiiProifleMode_RenameOfflineChoose
+(4)
+#define kWiiProfileMode_TryOfflineChoose
+(5)
+#define kWiiProfileMode_TryCancelChoose
+(6)
+#define kWiiProfileMode_Done
+(7)
+#define kWiiProfileMode_DoneUnregistered
+(8)
+#define kWiiProfileMode_NoInputWait
+(9)
+#define kWiiProfileMode_OfflineCancelChoose
+(10)
+#define kWiiProfileMode_OfflineChoose
+(11)
+{new
+   WiiProfilePanel
+   wiiprofile_panel
+   (file
+      "wiiprofile.milo")
+   (reset_focus TRUE)
+   (prevents_override TRUE)
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (awaiting_server_connection FALSE)
+   (disp_msg '')
+   (disp_mode kWiiProfileMode_LoadKeyboard)
+   (is_registering FALSE)
+   (try_register_online TRUE)
+   (enter
+      {overshell set_active_status kOvershellInactive}
+      {switch
+         {$this get_wiiprofile_state}
+         (kWiiProfileState_New
+            {print
+               "START NEW PROFILE\n"}
+            {set
+               [is_registering]
+               FALSE}
+            {set
+               [try_register_online]
+               FALSE}
+            {$this enter_name})
+         (kWiiProfileState_Register
+            {print
+               "START REGISTER\n"}
+            {set
+               [is_registering]
+               TRUE}
+            {set
+               [try_register_online]
+               TRUE}
+            {start.trg trigger}
+            {$this check_name})
+         {do
+            {start.trg trigger}
+            {$this general_error}}})
+   (exit
+      {$this clear_active}
+      {overshell set_active_status kOvershellInShell}
+      {exit.trg trigger})
+   (return_to_main
+      {ui goto_screen main_hub_screen})
+   (enter_name
+      {loading.trg trigger}
+      {set
+         [disp_msg]
+         wiiprofile_wait}
+      {set
+         [disp_mode]
+         kWiiProfileMode_LoadKeyboard}
+      {$this
+         set_msg
+         [disp_msg]}
+      {virtual_keyboard
+         show_keyboard
+         {$this get_user}
+         kWiiProfileNameSize
+         {localize wiiprofile_create_vk_title}
+         {localize wiiprofile_create_vk_desc}
+         {localize wiiprofile_create_vk_title}
+         $this
+         kVkNormalEntry
+         1})
+   (check_name
+      {print
+         "CHECKING NAME...\n"}
+      {start.trg trigger}
+      {platform_mgr clear_net_error}
+      {switch
+         {$this check_profile_name}
+         (kWiiProfileNewNameResult_Invalid
+            {set
+               [disp_msg]
+               wiiprofile_create_error_invalid}
+            {$this rename_cancel_mode})
+         (kWiiProfileNewNameResult_TakenLocal
+            {set
+               [disp_msg]
+               wiiprofile_create_error_taken}
+            {$this rename_cancel_name_mode})
+         (kWiiProfileNewNameResult_Waiting
+            {if
+               {==
+                  [is_registering]
+                  FALSE}
+               {do
+                  {$this create_profile}
+                  {saveload_mgr autosave}}}
+            {if_else
+               {==
+                  [try_register_online]
+                  TRUE}
+               {$this check_name_online}
+               {do
+                  {if_else
+                     {platform_mgr is_online_restricted}
+                     {do
+                        {set
+                           [try_register_online]
+                           FALSE}
+                        {$this done_unregistered_mode}}
+                     {$this ask_online_or_offline}}}})})
+   (check_name_online
+      {set
+         [disp_mode]
+         kWiiProfileMode_NoInputWait}
+      {$this set_msg shell_network_busy}
+      {if_else
+         {server is_connected}
+         {if
+            {==
+               {$this check_profile_name_online}
+               FALSE}
+            {do
+               {set
+                  [disp_msg]
+                  wiiprofile_create_error_signin}
+               {$this try_offline_mode}}}
+         {do
+            {set
+               [awaiting_server_connection]
+               TRUE}
+            {platform_mgr run_net_start_utility}}})
+   (show_ok
+      {start.trg trigger}
+      {dialog_title.lbl set_showing FALSE}
+      {msg.lbl set_showing TRUE}
+      {opt1.btn set_showing FALSE}
+      {opt2.btn set_showing FALSE}
+      {ok.btn set_showing TRUE})
+   (show_ok_registered_title
+      {start.trg trigger}
+      {dialog_title.lbl set_showing FALSE}
+      {msg.lbl set_showing TRUE}
+      {opt1.btn set_showing FALSE}
+      {opt2.btn set_showing FALSE}
+      {ok.btn set_showing TRUE})
+   (show_opt2
+      {start.trg trigger}
+      {dialog_title.lbl set_showing FALSE}
+      {msg.lbl set_showing TRUE}
+      {opt1.btn set_showing TRUE}
+      {opt2.btn set_showing TRUE}
+      {ok.btn set_showing FALSE}
+      {num_options.anim set_frame 2})
+   (show_opt2_title
+      {start.trg trigger}
+      {dialog_title.lbl set_showing TRUE}
+      {msg.lbl set_showing TRUE}
+      {opt1.btn set_showing TRUE}
+      {opt2.btn set_showing TRUE}
+      {ok.btn set_showing FALSE}
+      {num_options.anim set_frame 2})
+   (show_msg
+      {start.trg trigger}
+      {dialog_title.lbl set_showing FALSE}
+      {msg.lbl set_showing TRUE}
+      {opt1.btn set_showing FALSE}
+      {opt2.btn set_showing FALSE}
+      {ok.btn set_showing FALSE})
+   (set_custom
+      ($msg $opt1 $opt2 $focus)
+      {$this show_opt2}
+      {start.trg trigger}
+      {msg.lbl set_token_fmt $msg}
+      {opt1.btn set_token_fmt $opt1}
+      {opt2.btn set_token_fmt $opt2}
+      {$this set_focus $focus})
+   (set_ok
+      ($msg)
+      {$this show_ok}
+      {start.trg trigger}
+      {msg.lbl set_token_fmt $msg}
+      {$this set_focus ok.btn})
+   (set_msg
+      ($msg)
+      {$this show_msg}
+      {start.trg trigger}
+      {msg.lbl set_token_fmt $msg})
+   (general_error
+      {set
+         [disp_mode]
+         kWiiProfileMode_GeneralError}
+      {$this show_msg}
+      {msg.lbl set_token_fmt wiiprofile_create_error_invalid})
+   (ask_online_or_offline
+      {print
+         "--ask_online_or_offline--\n"}
+      {set
+         [disp_mode]
+         kWiiProfileMode_OnlineOfflineChoose}
+      {start.trg trigger}
+      {$this show_opt2_title}
+      {dialog_title.lbl set_token_fmt wiiprofile_create_done_title}
+      {msg.lbl
+         set_token_fmt
+         wiiprofile_create_online_or_offline
+         {$this get_profile_name}}
+      {opt1.btn set_token_fmt wiiprofile_create_online}
+      {opt2.btn set_token_fmt wiiprofile_create_offline}
+      {$this set_focus opt1.btn})
+   (try_offline_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_TryOfflineChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]}
+      {opt1.btn set_token_fmt wiiprofile_create_try_again}
+      {opt2.btn set_token_fmt wiiprofile_create_play_offline}
+      {$this set_focus opt1.btn})
+   (rename_offline_name_mode
+      {set
+         [disp_mode]
+         kWiiProifleMode_RenameOfflineChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]
+         {$this get_profile_name}}
+      {opt1.btn set_token_fmt wiiprofile_create_rename}
+      {opt2.btn set_token_fmt wiiprofile_create_play_offline}
+      {$this set_focus opt1.btn})
+   (offline_cancel_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_OfflineCancelChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]}
+      {opt1.btn set_token_fmt wiiprofile_create_play_offline}
+      {opt2.btn set_token_fmt wiiprofile_create_dont}
+      {$this set_focus opt1.btn})
+   (offline_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_OfflineChoose}
+      {start.trg trigger}
+      {$this show_ok}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]}
+      {ok.btn set_token_fmt wiiprofile_create_play_offline}
+      {$this set_focus ok.btn})
+   (rename_cancel_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_RenameCancelChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]}
+      {opt1.btn set_token_fmt wiiprofile_create_rename}
+      {opt2.btn set_token_fmt wiiprofile_create_dont}
+      {$this set_focus opt1.btn})
+   (rename_cancel_name_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_RenameCancelChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]
+         {$this get_profile_name}}
+      {opt1.btn set_token_fmt wiiprofile_create_rename}
+      {opt2.btn set_token_fmt wiiprofile_create_dont}
+      {$this set_focus opt1.btn})
+   (try_cancel_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_TryCancelChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]}
+      {opt1.btn set_token_fmt wiiprofile_create_try_again}
+      {opt2.btn set_token_fmt wiiprofile_create_dont}
+      {$this set_focus opt1.btn})
+   (try_cancel_name_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_TryCancelChoose}
+      {start.trg trigger}
+      {$this show_opt2}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]
+         {$this get_profile_name}}
+      {opt1.btn set_token_fmt wiiprofile_create_try_again}
+      {opt2.btn set_token_fmt wiiprofile_create_dont}
+      {$this set_focus opt1.btn})
+   (done_name_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_Done}
+      {start.trg trigger}
+      {$this show_ok_registered_title}
+      {dialog_title.lbl set_token_fmt wiiprofile_create_done_registered_title}
+      {msg.lbl
+         set_token_fmt
+         [disp_msg]
+         {$this get_profile_name}}
+      {ok.btn set_token_fmt wiiprofile_create_return}
+      {$this set_focus ok.btn})
+   (done_unregistered_mode
+      {set
+         [disp_mode]
+         kWiiProfileMode_DoneUnregistered}
+      {if_else
+         {==
+            [is_registering]
+            TRUE}
+         {do
+            {start.trg trigger}
+            {$this show_ok}
+            {if_else
+               {platform_mgr is_online_restricted}
+               {msg.lbl set_token_fmt wiiprofile_create_done_title}
+               {msg.lbl set_token_fmt wiiprofile_register_done}}
+            {ok.btn set_token_fmt wiiprofile_create_return}
+            {$this set_focus ok.btn}}
+         {do
+            {start.trg trigger}
+            {$this show_ok}
+            {if_else
+               {platform_mgr is_online_restricted}
+               {msg.lbl set_token_fmt wiiprofile_create_done_title}
+               {msg.lbl set_token_fmt wiiprofile_create_done}}
+            {ok.btn set_token_fmt wiiprofile_create_return}
+            {$this set_focus ok.btn}}})
+   (net_start_utility_finished
+      ($net_result)
+      {print
+         "[ISDebug] Got net_start_utility_finished "
+         $net_result
+         "\n"}
+      {if
+         {== $net_result FALSE}
+         {if
+            {==
+               [awaiting_server_connection]
+               TRUE}
+            {do
+               {if_else
+                  {platform_mgr has_net_error}
+                  {do
+                     {set
+                        [disp_msg]
+                        {platform_mgr get_net_error_string}}}
+                  {set
+                     [disp_msg]
+                     wiiprofile_create_error_signin}}
+               {$this try_offline_mode}}}})
+   (server_status_changed
+      ($success)
+      {print
+         "[ISDebug] Got server_status_changed "
+         $success
+         "\n"}
+      {if
+         {==
+            [awaiting_server_connection]
+            TRUE}
+         {do
+            {if_else
+               {== $success TRUE}
+               {do
+                  {if
+                     {==
+                        {$this check_profile_name_online}
+                        FALSE}
+                     {do
+                        {set
+                           [disp_msg]
+                           wiiprofile_create_error_signin}
+                        {$this try_offline_mode}}}}
+               {do
+                  {if_else
+                     {platform_mgr has_net_error}
+                     {do
+                        {set
+                           [disp_msg]
+                           {platform_mgr get_net_error_string}}
+                        {platform_mgr clear_net_error}}
+                     {set
+                        [disp_msg]
+                        wiiprofile_create_error_unknown}}
+                  {$this try_offline_mode}}}
+            {set
+               [awaiting_server_connection]
+               FALSE}}})
+   (naming_result_msg
+      ($name_result $id)
+      {print
+         "[ISDebug] Got naming_result_msg: (("
+         $name_result
+         "))\n"}
+      {switch
+         $name_result
+         (NAMING_RESULT_INVALID
+            {set
+               [disp_msg]
+               wiiprofile_create_error_invalid}
+            {$this rename_cancel_mode})
+         (NAMING_RESULT_UNKNOWN
+            {if_else
+               {platform_mgr has_net_error}
+               {do
+                  {set
+                     [disp_msg]
+                     {platform_mgr get_net_error_string}}
+                  {platform_mgr clear_net_error}}
+               {set
+                  [disp_msg]
+                  wiiprofile_create_error_unknown}}
+            {$this try_offline_mode})
+         (NAMING_RESULT_TIMEOUT
+            {set
+               [disp_msg]
+               wiiprofile_create_error_timeout}
+            {$this try_offline_mode})
+         (NAMING_RESULT_DUPLICATE
+            {set
+               [disp_msg]
+               wiiprofile_create_error_taken_online}
+            {$this rename_offline_name_mode})
+         (NAMING_RESULT_PROFANE
+            {set
+               [disp_msg]
+               wiiprofile_create_error_profane}
+            {$this rename_offline_name_mode})
+         (NAMING_RESULT_ACTIVE_ACCOUNT_LIMIT
+            {set
+               [disp_msg]
+               wiiprofile_create_error_account_limit}
+            {if_else
+               {==
+                  [is_registering]
+                  TRUE}
+               {$this offline_mode}
+               {$this offline_cancel_mode}})
+         (NAMING_RESULT_LIFETIME_ACCOUNT_LIMIT
+            {set
+               [disp_msg]
+               wiiprofile_create_error_lifetime_limit}
+            {if_else
+               {==
+                  [is_registering]
+                  TRUE}
+               {$this offline_mode}
+               {$this offline_cancel_mode}})
+         (NAMING_RESULT_NONE
+            {$this register_profile $id}
+            {saveload_mgr autosave}
+            {if_else
+               {==
+                  [is_registering]
+                  TRUE}
+               {do
+                  {set
+                     [disp_msg]
+                     wiiprofile_register_done_registered}
+                  {$this done_name_mode}}
+               {do
+                  {set
+                     [disp_msg]
+                     wiiprofile_create_done_registered}
+                  {$this done_name_mode}}})})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if_else
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {==
+               {ui focus_panel}
+               $this}}
+         {do
+            {start.trg trigger}
+            {$this set_profile_name $text}
+            {$this check_name}}
+         {do
+            {set
+               [disp_msg]
+               wiiprofile_create_leave_confirm}
+            {$this rename_cancel_mode}}})
+   (SELECT_MSG
+      {print
+         "\nSELECT_MSG in Mode("
+         [disp_mode]
+         ")\n"}
+      {switch
+         [disp_mode]
+         (kWiiProfileMode_GeneralError
+            {$this cancel_profile}
+            {$this return_to_main})
+         (kWiiProfileMode_OnlineOfflineChoose
+            {switch
+               $component
+               (opt1.btn
+                  {set
+                     [try_register_online]
+                     TRUE}
+                  {$this check_name_online})
+               (opt2.btn
+                  {set
+                     [try_register_online]
+                     FALSE}
+                  {$this done_unregistered_mode})})
+         (kWiiProfileMode_Done
+            {switch
+               $component
+               (ok.btn
+                  {if
+                     {==
+                        [is_registering]
+                        FALSE}
+                     {$this switch_to_new}}
+                  {$this return_to_main})})
+         (kWiiProfileMode_DoneUnregistered
+            {switch
+               $component
+               (ok.btn
+                  {if
+                     {&&
+                        {!
+                           {session_mgr is_online_enabled}}
+                        {==
+                           [is_registering]
+                           FALSE}}
+                     {$this switch_to_new}}
+                  {$this return_to_main})})
+         (kWiiProfileMode_TryOfflineChoose
+            {switch
+               $component
+               (opt1.btn
+                  {$this check_name})
+               (opt2.btn
+                  {$this done_unregistered_mode})})
+         (kWiiProifleMode_RenameOfflineChoose
+            {switch
+               $component
+               (opt1.btn
+                  {$this enter_name})
+               (opt2.btn
+                  {$this done_unregistered_mode})})
+         (kWiiProfileMode_RenameCancelChoose
+            {switch
+               $component
+               (opt1.btn
+                  {if_else
+                     {!=
+                        {{$this get_user}
+                           get_pad_type}
+                        0}
+                     {$this enter_name}
+                     {$this disable opt1.btn}})
+               (opt2.btn
+                  {$this cancel_profile}
+                  {$this return_to_main})})
+         (kWiiProfileMode_OfflineCancelChoose
+            {switch
+               $component
+               (opt1.btn
+                  {$this done_unregistered_mode})
+               (opt2.btn
+                  {$this cancel_profile}
+                  {$this return_to_main})})
+         (kWiiProfileMode_OfflineChoose
+            {switch
+               $component
+               (ok.btn
+                  {$this done_unregistered_mode})})
+         (kWiiProfileMode_TryCancelChoose
+            {switch
+               $component
+               (opt1.btn
+                  {$this check_name})
+               (opt2.btn
+                  {$this cancel_profile}
+                  {$this return_to_main})})
+         (kWiiProfileMode_LoadKeyboard)})}
+{new
+   BandScreen
+   wiiprofile_screen
+   (prevents_override TRUE)
+   (panels meta sv3_panel wiiprofile_panel)
+   (focus wiiprofile_panel)
+   (return_screen '')}

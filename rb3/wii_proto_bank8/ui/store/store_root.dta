@@ -1,0 +1,149 @@
+{new
+   StoreRootPanel
+   store_root_panel
+   (file
+      "store_root.milo")
+   (focus dlc_store.btn)
+   (SELECT_MSG
+      {switch
+         $component
+         (dlc_store.btn
+            {store_panel set_store_mode dlc}
+            {store_browser_screen set back_screen store_menu_screen}
+            {ui goto_screen store_menu_screen})
+         (ugc_store.btn
+            {store_panel set_store_mode manage}
+            {store_browser_screen set back_screen store_root_screen}
+            {ui goto_screen store_menu_screen})
+         (redeem_code.btn
+            {ui goto_screen token_redemption_screen_intro})})
+   (enter
+      {store_browser_screen set back_screen store_root_screen}
+      #ifdef HX_WII
+      {if
+         {platform_mgr is_online_restricted}
+         {redeem_code.btn set_state 2}}
+      #endif)}
+{new
+   BandScreen
+   leave_the_store
+   (panels sv2_panel meta)
+   (TRANSITION_COMPLETE_MSG
+      {acc_mgr
+         earn_accomplishment
+         {store_panel get store_user}
+         acc_storevisit}
+      {ui goto_screen main_hub_screen})}
+{new
+   BandScreen
+   store_root_screen
+   (panels sv2_panel meta store_root_panel store_panel)
+   (focus store_root_panel)
+   (back leave_the_store)}
+{new
+   BandScreen
+   store_loading_screen
+   (panels meta sv3_panel meta_loading)
+   (transition_done FALSE)
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [transition_done]
+         TRUE})
+   (enter
+      {set
+         [transition_done]
+         FALSE}
+      {{meta_loading find waiting.lbl}
+         set_showing
+         FALSE})
+   (poll
+      {if
+         {&&
+            [transition_done]
+            {!=
+               {rock_central state}
+               kRCConnecting}
+            {content_mgr refresh_done}
+            {!
+               {platform_mgr is_checking_profanity}}}
+         {set
+            [transition_done]
+            FALSE}
+         {ui goto_screen store_real_loading_screen}})}
+{new
+   BandScreen
+   store_real_loading_screen
+   (panels meta sv3_panel store_panel meta_loading)
+   (enter
+      {{meta_loading find waiting.lbl}
+         set_showing
+         FALSE})
+   (store_mode dlc)
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {store_panel get load_ok}
+         #ifdef HX_WII
+         {ui goto_screen store_loading_metadata_screen}
+         #else
+         {switch
+            [store_mode]
+            (dlc
+               {ui goto_screen store_root_screen})
+            (token
+               {ui goto_screen token_redemption_screen_intro})}
+         #endif})}
+{new
+   BandScreen
+   wii_store_loading_enter_pin_screen
+   (panels meta sv3_panel store_panel)
+   (enter
+      {wii_store_pin_screen set entering_store TRUE}
+      {ui push_screen wii_store_pin_message_screen})
+   (exit
+      {wii_store_pin_screen set entering_store FALSE})}
+{new
+   BandScreen
+   store_loading_metadata_screen
+   (panels meta sv3_panel store_panel meta_loading)
+   (enter
+      {{meta_loading find waiting.lbl}
+         set_showing
+         FALSE}
+      {store_panel load_metadata}
+      {ui goto_screen store_loading_metadata_loaded_screen})}
+{new
+   BandScreen
+   store_loading_metadata_loaded_screen
+   (panels meta sv2_panel store_panel meta_loading)
+   (is_loaded
+      {if_else
+         {store_panel is_metadata_loaded}
+         {do
+            {switch
+               {store_real_loading_screen get store_mode}
+               (dlc
+                  {store_panel set_store_mode dlc}
+                  {store_browser_screen set back_screen store_menu_screen}
+                  {ui goto_screen store_menu_screen})
+               (manage
+                  {store_browser_screen set back_screen store_root_screen}
+                  {store_panel set_store_mode manage}
+                  {ui goto_screen store_menu_screen})
+               (setlist
+                  {store_browser_screen set back_screen store_root_screen}
+                  {store_panel set_store_mode setlist}
+                  {ui goto_screen store_menu_screen})
+               (token
+                  {store_browser_screen set back_screen store_root_screen}
+                  {ui goto_screen token_redemption_screen_intro})}
+            TRUE}
+         {do
+            {store exit_error}
+            FALSE}})
+   (poll
+      {if_else
+         {store exit_error}
+         {store_panel
+            exit_error
+            {store exit_error}}
+         {$this is_loaded}})}
