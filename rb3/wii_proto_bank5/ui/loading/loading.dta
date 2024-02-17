@@ -1,0 +1,59 @@
+{new
+   BandPreloadPanel
+   preload_panel
+   (song_mgr song_mgr)
+   (current_song
+      {meta_performer song})
+   (preload_files
+      ({song_mgr
+            midi_file
+            {meta_performer song}}
+         1))
+   (on_preload_ok
+      {if_else
+         {==
+            {ui current_screen}
+            preloading_screen}
+         {ui
+            goto_screen
+            {gamemode get game_screen}}
+         {ui goto_screen load_nextsong_screen}})
+   (on_preload_failed
+      {passive_messages_panel queue_message passive_message_preload_failed}
+      {if_else
+         {!
+            {meta_performer is_last_song}}
+         {if_else
+            {==
+               {ui current_screen}
+               preloading_screen}
+            {ui goto_screen preloading_failed_screen}
+            {ui goto_screen preload_failed_nextsong_screen}}
+         {ui goto_screen meta_loading_continue_screen}})}
+{new
+   BandScreen
+   preloading_screen
+   (panels meta preload_panel)
+   (focus preload_panel)
+   (enter
+      {session_mgr set_active_roster 1}
+      {overshell set_active_status 0}
+      {seed_random_context
+         {session_mgr get_net_random_seed}}
+      {game set multi_event 0}
+      {song_mgr
+         add_recent_song
+         {meta_performer song}}
+      {if
+         {exists game}
+         {acc_mgr clear_goal_info}})
+   (TRANSITION_COMPLETE_MSG
+      {net_sync disable}
+      kDataUnhandled)}
+{new
+   BandScreen
+   preloading_failed_screen
+   (panels meta)
+   (TRANSITION_COMPLETE_MSG
+      {meta_performer skip_song}
+      {ui goto_screen preloading_screen})}

@@ -1,0 +1,548 @@
+{new
+   PatchPanel
+   patch_panel
+   (file
+      "patchcreator.milo")
+   (bg_color
+      {pack_color 1 1 1})
+   (exit_screen patch_select_screen)
+   (mode modify_menu)
+   (mode_cache modify_menu)
+   (layer_first 0)
+   (edit_layer_idx_cache 0)
+   (size_x 1)
+   (size_y 1)
+   (help_shown 0)
+   (delete_confirm_screen delete_patch_layer_confirm_screen)
+   (patch_player '')
+   (set_size
+      ($x $y)
+      {set
+         [size_x]
+         $x}
+      {set
+         [size_y]
+         $y}
+      {$this set_base_size $x $y})
+   (block_event
+      ($event)
+      {'||'
+         {== $event lost_connection}
+         {== $event disband}})
+   (setup_current_layer
+      {do
+         ($provider
+            {$this layer_provider})
+         ($data
+            {layer.lst selected_data})
+         {$provider set_label_for_data current_layer.lbl $data}
+         {current_layer.mesh
+            set
+            mat
+            {$provider get_mat_for_data $data}}})
+   (modify_modes
+      (move scale rotate flip color warp))
+   (visible_groups
+      {switch
+         [mode]
+         (modify_menu
+            (current_layer.grp modify_menu.grp))
+         (quit
+            (quit.grp))
+         (move
+            (current_layer.grp help.grp edit_help.grp))
+         (flip
+            (current_layer.grp help.grp edit_help.grp))
+         (rotate
+            (current_layer.grp help.grp edit_help.grp))
+         (scale
+            (current_layer.grp help.grp edit_help.grp))
+         (warp
+            (current_layer.grp help.grp edit_help.grp))
+         (color
+            (current_layer.grp color.grp help.grp edit_help.grp))
+         (category
+            (category.grp help.grp))
+         (sticker
+            (stickers.grp help.grp))
+         (layer
+            (layers.grp help.grp))
+         (layer_menu
+            (layers.grp help.grp layers_menu.grp))
+         (layer_move
+            (layers.grp))
+         (edit_done
+            (edit_done.grp))})
+   (on_set_mode
+      {foreach
+         $group
+         {toggle_groups.grp get_draws}
+         {if
+            $group
+            {$group set_showing 0}}}
+      {foreach
+         $group
+         {$this visible_groups}
+         {$group set_showing 1}}
+      {switch
+         [mode]
+         (modify_menu
+            {$this setup_current_layer}
+            {$this set_focus move.btn}
+            {color.btn
+               set_state
+               {if_else
+                  {{$this edit_layer}
+                     allow_color}
+                  0
+                  2}})
+         (quit
+            {$this set_focus cnf_save.btn})
+         (move
+            {help.lbl set text_token patch_help_editing_move}
+            {edit_mode.lbl set text_token move})
+         (flip
+            {help.lbl set text_token patch_help_editing_flip}
+            {edit_mode.lbl set text_token flip})
+         (rotate
+            {help.lbl set text_token patch_help_editing_rotate}
+            {edit_mode.lbl set text_token rotate})
+         (scale
+            {help.lbl set text_token patch_help_editing_scale}
+            {edit_mode.lbl set text_token scale})
+         (warp
+            {help.lbl set text_token patch_help_editing_warp}
+            {edit_mode.lbl set text_token warp})
+         (color
+            {$this set_focus color.lst}
+            {color.lst
+               set_selected
+               {{$this edit_layer}
+                  get
+                  color_idx}}
+            {help.lbl set text_token patch_help_editing_color}
+            {edit_mode.lbl set text_token color})
+         (category
+            {$this set_focus category.lst}
+            {help.lbl set text_token patch_help_selecting})
+         (sticker
+            {sticker.lst
+               set_provider
+               {$this sticker_provider}}
+            {$this set_focus sticker.lst}
+            {help.lbl set text_token patch_help_sticker})
+         (layer
+            {if
+               {!=
+                  [mode]
+                  [mode_cache]}
+               {set
+                  [edit_layer_idx_cache]
+                  {$this
+                     convert_to_layer_index
+                     {layer.lst selected_pos}}}}
+            {layer.lst refresh}
+            {$this set_focus layer.lst}
+            {help.lbl set text_token patch_help_layer})
+         (layer_menu
+            {$this enable layer_copy.btn}
+            {$this set_focus layer_copy.btn}
+            {if
+               {==
+                  -1
+                  {$this empty_layer_ix}}
+               {$this disable layer_copy.btn}})
+         (layer_move
+            {layer.lst refresh}
+            {$this set_focus layer.lst})
+         (edit_done
+            {$this set_focus done_new.btn})}
+      {set
+         [mode_cache]
+         [mode]})
+   (enter
+      {canvas.mat
+         set
+         color
+         [bg_color]}
+      {category.lst
+         set_provider
+         {$this category_provider}}
+      {do
+         ($layer
+            {$this edit_layer})
+         {color.lst
+            set
+            color_palette
+            {$layer color_palette}}
+         {color.lst
+            set_selected
+            {$layer get color_idx}}}
+      {layer.lst
+         set_provider
+         {$this layer_provider}}
+      {layer.lst set_selected 0}
+      {$this
+         set
+         edit_layer_idx
+         {$this
+            convert_to_layer_index
+            {layer.lst selected_pos}}}
+      {$this
+         copy_from_patch
+         {patch_select_panel get editing_patch}}
+      {if_else
+         {[patch]
+            has_layers}
+         {$this set mode layer}
+         {do
+            {$this set edit_layer_idx 0}
+            {$this set mode category}}})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {[delete_confirm_screen]
+            get
+            delete}
+         {[delete_confirm_screen]
+            set
+            delete
+            0}
+         {do
+            {$this
+               clear_layer
+               {$this
+                  convert_to_layer_index
+                  {layer.lst selected_pos}}}
+            {layer.lst
+               set_selected
+               {$this get_edit_layer_list_index}}}
+         {layer.lst refresh}
+         {$this set mode layer}})
+   (SELECT_MSG
+      {switch
+         $component
+         (move.btn
+            {$this store_undo}
+            {$this set mode move})
+         (color.btn
+            {$this store_undo}
+            {$this set mode color})
+         (rotate.btn
+            {$this store_undo}
+            {$this set mode rotate})
+         (warp.btn
+            {$this store_undo}
+            {$this set mode warp})
+         (scale.btn
+            {$this store_undo}
+            {$this set mode scale})
+         (done.btn
+            {$this set mode edit_done})
+         (color.lst
+            {$this set mode modify_menu})
+         (layer_sticker.btn
+            {$this set mode category})
+         (layer_move.btn
+            {$this set mode layer_move})
+         (layer_clear.btn
+            {ui
+               goto_screen
+               [delete_confirm_screen]})
+         (layer_copy.btn
+            {do
+               ($empty_layer_ix
+                  {$this empty_layer_ix})
+               {$this
+                  dupe_layer
+                  {$this
+                     convert_to_layer_index
+                     {layer.lst selected_pos}}}
+               {if
+                  {!= $empty_layer_ix -1}
+                  {$this set edit_layer_idx $empty_layer_ix}}
+               {layer.lst refresh}
+               {layer.lst
+                  set_selected
+                  {$this get_edit_layer_list_index}}
+               {$this set mode layer}})
+         (category.lst
+            {{$this edit_layer}
+               set
+               sticker_category
+               {category.lst selected_sym}}
+            {$this
+               set_sticker_category
+               {category.lst selected_sym}}
+            {$this set mode sticker}
+            {{$this edit_layer}
+               set_scale
+               [size_x]
+               [size_y]}
+            {{$this edit_layer}
+               set_default_color})
+         (sticker.lst
+            {layer.lst refresh}
+            {layer.lst
+               set_selected
+               {$this get_edit_layer_list_index}}
+            {$this set mode modify_menu})
+         (layer.lst
+            {if_else
+               {{$this edit_layer}
+                  has_sticker}
+               {$this set mode modify_menu}
+               {$this set mode category}})
+         (flip.btn
+            {$this set mode flip})
+         (cnf_discard.btn
+            {ui
+               goto_screen
+               [exit_screen]})
+         (cnf_save.btn
+            {$this
+               copy_to_patch
+               {patch_select_panel get editing_patch}}
+            {ui
+               goto_screen
+               [exit_screen]})
+         (cnf_return.btn
+            {preview.grp set_showing 1}
+            {quit.grp set_showing 0}
+            {$this set mode layer})
+         (done_new.btn
+            {do
+               ($empty_layer_ix
+                  {$this empty_layer_ix})
+               {if
+                  {!= $empty_layer_ix -1}
+                  {$this set edit_layer_idx $empty_layer_ix}
+                  {layer.lst
+                     set_selected
+                     {$this get_edit_layer_list_index}}
+                  {$this set mode category}}})
+         (done_layers.btn
+            {$this set mode layer})
+         (done_quit.btn
+            {$this set mode quit})})
+   (SCROLL_MSG
+      {switch
+         [mode]
+         (layer
+            {$this
+               set
+               edit_layer_idx
+               {$this
+                  convert_to_layer_index
+                  {layer.lst selected_pos}}}
+            {{$this edit_layer}
+               select_fx}
+            {$this set mode layer})
+         (sticker
+            {{$this edit_layer}
+               set
+               sticker_idx
+               {sticker.lst selected_pos}}
+            {{$this edit_layer}
+               set_default_color})
+         {switch
+            $component
+            (color.lst
+               {if
+                  {==
+                     {$this get mode}
+                     color}
+                  {{$this edit_layer}
+                     set
+                     color_idx
+                     {$component selected_pos}}})}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {contains
+            [modify_modes]
+            [mode]}
+         {switch
+            $action
+            (3
+               {do
+                  ($ix 0)
+                  {find_elem
+                     [modify_modes]
+                     [mode]
+                     $ix}
+                  {set
+                     $ix
+                     {mod
+                        {'+' $ix 1}
+                        {size
+                           [modify_modes]}}}
+                  {$this
+                     set
+                     mode
+                     {elem
+                        [modify_modes]
+                        $ix}}
+                  {play_instr_sfx $user button_toggle}})
+            (2
+               {$this restore_undo}
+               {play_instr_sfx $user button_back}
+               {$this set mode modify_menu})
+            (1
+               {$this reset_velocities}
+               {$this reset_directions}
+               {play_instr_sfx $user button_select}
+               {$this set mode modify_menu})
+            {switch
+               [mode]
+               (flip
+                  {switch
+                     $raw_button
+                     (12
+                        {play_instr_sfx $user button_toggle}
+                        {{$this edit_layer}
+                           flip_y})
+                     (14
+                        {play_instr_sfx $user button_toggle}
+                        {{$this edit_layer}
+                           flip_y})
+                     (15
+                        {play_instr_sfx $user button_toggle}
+                        {{$this edit_layer}
+                           flip_x})
+                     (13
+                        {play_instr_sfx $user button_toggle}
+                        {{$this edit_layer}
+                           flip_x})
+                     kDataUnhandled})
+               kDataUnhandled}}
+         {switch
+            [mode]
+            (modify_menu
+               {if_else
+                  {== $action 2}
+                  {$this set mode edit_done}
+                  kDataUnhandled})
+            (category
+               {switch
+                  $action
+                  (2
+                     {$this restore_undo}
+                     {play_instr_sfx $user button_back}
+                     {$this set mode layer}
+                     {layer.lst
+                        set_selected
+                        {$this get_edit_layer_list_index}})
+                  kDataUnhandled})
+            (layer_menu
+               {if_else
+                  {'||'
+                     {== $action 2}
+                     {== $action 3}}
+                  {$this set mode layer}
+                  kDataUnhandled})
+            (layer
+               {switch
+                  $action
+                  (3
+                     {$this set mode layer_menu})
+                  (2
+                     {$this set mode quit})
+                  kDataUnhandled})
+            (layer_move
+               {switch
+                  $action
+                  (1
+                     {play_instr_sfx $user button_select}
+                     {$this
+                        set
+                        edit_layer_idx
+                        {$this
+                           convert_to_layer_index
+                           {layer.lst selected_pos}}}
+                     {{$this edit_layer}
+                        select_fx}
+                     {$this set mode layer_menu})
+                  (2
+                     {play_instr_sfx $user button_back}
+                     {$this set mode layer_menu})
+                  (6
+                     {if
+                        {$this
+                           swap_layers
+                           {$this
+                              convert_to_layer_index
+                              {layer.lst selected_pos}}
+                           {$this
+                              convert_to_layer_index
+                              {-
+                                 {layer.lst selected_pos}
+                                 1}}}
+                        {layer.lst
+                           scroll
+                           -1
+                           [patch_player]}
+                        {layer.lst refresh}})
+                  (8
+                     {if
+                        {$this
+                           swap_layers
+                           {$this
+                              convert_to_layer_index
+                              {layer.lst selected_pos}}
+                           {$this
+                              convert_to_layer_index
+                              {'+'
+                                 {layer.lst selected_pos}
+                                 1}}}
+                        {layer.lst
+                           scroll
+                           1
+                           [patch_player]}
+                        {layer.lst refresh}})})
+            (sticker
+               {switch
+                  $action
+                  (2
+                     {$this restore_undo}
+                     {play_instr_sfx $user button_back}
+                     {$this set mode category})
+                  kDataUnhandled})
+            kDataUnhandled}})}
+{new
+   BandScreen
+   patch_screen
+   (panels meta closet_panel patch_panel)
+   (focus patch_panel)}
+{new
+   BandScreen
+   delete_patch_layer_confirm_screen
+   (panels meta closet_panel patch_panel dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_yesno
+         {localize patch_delete_layer_confirm}
+         no.btn}
+      {set
+         [delete]
+         0})
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [returnscreen]
+         $old_screen})
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {set
+               [delete]
+               1}
+            {ui
+               goto_screen
+               [returnscreen]})
+         (no.btn
+            {ui
+               goto_screen
+               [returnscreen]})})
+   (delete 0)
+   (returnscreen
+      "")}

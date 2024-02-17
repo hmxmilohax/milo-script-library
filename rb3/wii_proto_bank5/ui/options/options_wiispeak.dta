@@ -1,0 +1,199 @@
+{new
+   WiiSpeakOptionsPanel
+   wiispeak_options_panel
+   (file options_wiispeak.milo)
+   (parent
+      {ui current_screen})
+   (enter
+      {$this set_focus ToggleWiiSpeak.btn}
+      {FriendsVolume.sld set_num_steps 10}
+      {$this update_from_global_settings}
+      {$this cache_values_for_undo}
+      {platform_mgr set_party_mic_allowed 1}
+      {profile_mgr refresh_wiispeak_toggle})
+   (exit
+      {platform_mgr set_party_mic_allowed 0}
+      {profile_mgr refresh_wiispeak_toggle})
+   (poll
+      {if
+         {$this error_message_active}
+         {do
+            {$this set_focus ErrorContinue.btn}}})
+   (update_from_global_settings
+      {ToggleWiiSpeak.chk
+         set
+         checked
+         {profile_mgr get_wiispeak_toggle}}
+      {FriendsVolume.sld
+         set_current
+         {profile_mgr get_wiispeak_friends_volume}}
+      {MicrophoneSensitivity.sld
+         set_current
+         {profile_mgr get_wiispeak_microphone_sensitivity}}
+      {HeadphoneMode.chk
+         set
+         checked
+         {profile_mgr get_wiispeak_headphone_mode}}
+      {EchoSuppression.chk
+         set
+         checked
+         {profile_mgr get_wiispeak_echo_suppression}}
+      {$this refresh_wiispeak_toggle}
+      {$this refresh_friends_volume}
+      {$this refresh_microphone_sensitivity}
+      {$this refresh_headphone_mode}
+      {$this refresh_echo_suppression}
+      {$this cache_values_for_undo})
+   (SELECT_MSG
+      {switch
+         $component
+         (ErrorContinue.btn
+            {do
+               {$this clear_error_message}
+               {$this set_focus ToggleWiiSpeak.btn}})
+         (ToggleWiiSpeak.btn
+            {do
+               {profile_mgr
+                  set_wiispeak_toggle
+                  {!
+                     {profile_mgr get_wiispeak_toggle}}}
+               {ToggleWiiSpeak.chk
+                  set
+                  checked
+                  {profile_mgr get_wiispeak_toggle}}
+               {set $enabled_state 2}
+               {if
+                  {profile_mgr get_wiispeak_toggle}
+                  {set $enabled_state 0}}
+               {MicrophoneSensitivity.btn set_state $enabled_state}
+               {MicrophoneSensitivity.sld set_state $enabled_state}
+               {HeadphoneMode.btn set_state $enabled_state}
+               {EchoSuppression.btn set_state $enabled_state}
+               {$this refresh_wiispeak_toggle}})
+         (FriendsVolume.btn
+            {do
+               {$this set_focus FriendsVolume.sld}
+               {FriendsVolume.sld store}})
+         (MicrophoneSensitivity.btn
+            {do
+               {$this set_focus MicrophoneSensitivity.sld}
+               {MicrophoneSensitivity.sld store}})
+         (HeadphoneMode.btn
+            {do
+               {profile_mgr
+                  set_wiispeak_headphone_mode
+                  {!
+                     {profile_mgr get_wiispeak_headphone_mode}}}
+               {if
+                  {profile_mgr get_wiispeak_headphone_mode}
+                  {passive_messages_panel queue_message passive_message_use_headphones}}
+               {if
+                  {!
+                     {profile_mgr get_wiispeak_headphone_mode}}
+                  {passive_messages_panel queue_message passive_message_dont_use_headphones}}
+               {HeadphoneMode.chk
+                  set
+                  checked
+                  {profile_mgr get_wiispeak_headphone_mode}}
+               {$this refresh_headphone_mode}})
+         (EchoSuppression.btn
+            {do
+               {profile_mgr
+                  set_wiispeak_echo_suppression
+                  {!
+                     {profile_mgr get_wiispeak_echo_suppression}}}
+               {EchoSuppression.chk
+                  set
+                  checked
+                  {profile_mgr get_wiispeak_echo_suppression}}
+               {$this refresh_echo_suppression}})
+         (Continue.btn
+            {do
+               {play_instr_sfx $user button_select}
+               {saveload_mgr autosave}
+               {ui goto_screen main_hub_screen}})
+         kDataUnhandled})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (2
+            {if
+               {&&
+                  {!=
+                     {$this focus_name}
+                     MicrophoneSensitivity.sld}
+                  {!=
+                     {$this focus_name}
+                     FriendsVolume.sld}}
+               {ui goto_screen main_hub_screen}})
+         kDataUnhandled}
+      {switch
+         {$this focus_name}
+         (FriendsVolume.sld
+            {switch
+               $action
+               (1
+                  {do
+                     {FriendsVolume.sld confirm}
+                     {$this set_focus FriendsVolume.btn}})
+               (2
+                  {do
+                     {FriendsVolume.sld undo $user}
+                     {profile_mgr
+                        set_wiispeak_friends_volume
+                        {FriendsVolume.sld current}}
+                     {$this set_focus FriendsVolume.btn}})
+               kDataUnhandled})
+         (MicrophoneSensitivity.sld
+            {switch
+               $action
+               (1
+                  {do
+                     {MicrophoneSensitivity.sld confirm}
+                     {$this set_focus MicrophoneSensitivity.btn}})
+               (2
+                  {do
+                     {MicrophoneSensitivity.sld undo $user}
+                     {profile_mgr
+                        set_wiispeak_microphone_sensitivity
+                        {MicrophoneSensitivity.sld current}}
+                     {$this set_focus MicrophoneSensitivity.btn}})
+               kDataUnhandled})
+         kDataUnhandled})
+   (SCROLL_MSG
+      {switch
+         $component
+         (MicrophoneSensitivity.sld
+            {profile_mgr
+               set_wiispeak_microphone_sensitivity
+               {MicrophoneSensitivity.sld current}}
+            {$this refresh_microphone_sensitivity})
+         (FriendsVolume.sld
+            {profile_mgr
+               set_wiispeak_friends_volume
+               {FriendsVolume.sld current}}
+            {$this refresh_friends_volume})
+         kDataUnhandled})}
+{new
+   BandScreen
+   wiispeak_save_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno confirm_quit no.btn})
+   (exit
+      {ui goto_screen main_hub_screen})
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {saveload_mgr autosave})
+         (no.btn
+            {wiispeak_options_panel restore_cached_values})})}
+{new
+   BandScreen
+   wiispeak_options_screen
+   (panels meta wiispeak_options_panel)
+   (focus wiispeak_options_panel)
+   (cancel_screen main_hub_screen)
+   (confirm_screen '')}

@@ -1,0 +1,104 @@
+{new
+   UIPanel
+   tour_results_panel
+   (file
+      "tour_results.milo")
+   (focus
+      "continue.btn")
+   (enter
+      {gig_progress.lbl
+         set_token_fmt
+         tour_quest_progress
+         {-
+            {{tour progress}
+               get_current_gig_num}
+            1}
+         {{tour progress}
+            get_total_gigs}}
+      {gig_name.lbl
+         set
+         text_token
+         {{tour performer}
+            current_quest}}
+      {tour update_encore_status encore.lbl}
+      {if_else
+         {{tour progress}
+            does_tour_status_exist
+            1}
+         {do
+            ($stars_needed
+               {{tour progress}
+                  get_num_stars_for_tour_status
+                  1})
+            ($stars_owned
+               {{tour progress}
+                  get_num_stars})
+            {next_rank.lbl
+               set_token_fmt
+               tour_progress_next_status
+               {- $stars_needed $stars_owned}
+               {{tour progress}
+                  get_tour_status
+                  1}}}
+         {next_rank.lbl set text_token ''}}
+      {total.sd
+         set_values
+         {{tour progress}
+            get_num_stars}
+         {{tour progress}
+            get_total_stars_for_tour}}
+      {base_stars.sd
+         set_values
+         {{tour performer}
+            get_gig_stars}
+         {{tour performer}
+            get_total_stars_possible_for_current_gig}})
+   (SELECT_MSG
+      {{tour progress}
+         handle_quest_finished}
+      {if_else
+         {acc_mgr has_new_awards}
+         {do
+            {accomplishments_newaward_panel set next_screen meta_loading_continue_screen}
+            {ui goto_screen accomplishments_newaward_screen}}
+         {ui goto_screen meta_loading_continue_screen}})}
+{new
+   BandScreen
+   tour_results_screen
+   (panels meta tour_results_panel)
+   (focus tour_results_panel)}
+{new
+   BandPreloadPanel
+   tour_preload_panel
+   (song_mgr song_mgr)
+   (current_song
+      {meta_performer song})
+   (preload_files
+      ({song_mgr
+            song_file_path
+            {meta_performer song}
+            ".milo"}
+         0)
+      ({song_mgr
+            midi_file
+            {meta_performer song}}
+         1))
+   (on_preload_ok
+      {ui goto_screen tour_load_nextsong_screen})}
+{new
+   BandScreen
+   tour_preload_nextsong_screen
+   (panels game game_time_panel world_panel coop_track_panel tour_preload_panel)}
+{new
+   BandScreen
+   tour_load_nextsong_screen
+   (panels game_time_panel world_panel coop_track_panel)
+   (TRANSITION_COMPLETE_MSG
+      {song_mgr
+         add_recent_song
+         {meta_performer song}}
+      {$banddirector load_game_song 1}
+      {coop_track_panel set_paused 1}
+      {ui
+         goto_screen
+         {gamemode get game_screen}})}

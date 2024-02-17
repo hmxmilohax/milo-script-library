@@ -1,0 +1,230 @@
+{new
+   UIPanel
+   complete_panel
+   (file complete.milo)
+   (enter
+      {platform_mgr set_notify_ui_location 1}
+      {$this set_focus 0.btn}
+      {session
+         add_sink
+         $this
+         (remote_user_left)}
+      {$this set_up_buttons}
+      {net_sync enable}
+      {$this update_campaign_status})
+   (exit
+      {game clear_draw_glitch}
+      {platform_mgr set_notify_ui_location 0}
+      {session remove_sink $this remote_user_left})
+   (update_campaign_status
+      {if_else
+         {&&
+            {gamemode in_mode campaign}
+            {campaign has_current_goal}}
+         {do
+            ($goal
+               {campaign get_current_goal})
+            ($user
+               {campaign get_user})
+            {if_else
+               {acc_mgr has_completed_goal $user $goal}
+               {do
+                  {campaign_status.lbl set_token_fmt campaign_goal_status $goal}
+                  {campaign clear_current_goal}}
+               {campaign_status.lbl set text_token ''}}}
+         {campaign_status.lbl set text_token ''}})
+   (set_up_buttons
+      {do
+         ($is_setlist
+            {>
+               {meta_performer num_songs}
+               1})
+         ($is_local
+            {session is_local})
+         {$this enable_button 0.btn}
+         {$this enable_button 1.btn}
+         {$this enable_button 2.btn}
+         {$this enable_button 3.btn}
+         {$this enable_button 4.btn}
+         {cond
+            ({&&
+                  {! $is_setlist}
+                  $is_local}
+               {0.btn set text_token comp_selsong}
+               {1.btn set text_token comp_restart}
+               {2.btn set text_token accomplishments}
+               {3.btn set text_token comp_quit}
+               {$this disable_button 4.btn})
+            ({&&
+                  {! $is_setlist}
+                  {! $is_local}}
+               {0.btn set text_token comp_selsong}
+               {1.btn set text_token comp_restart}
+               {2.btn set text_token comp_changebandmembers}
+               {3.btn set text_token comp_quit}
+               {$this disable_button 4.btn})
+            ({&&
+                  $is_setlist
+                  {! $is_local}}
+               {0.btn set text_token comp_selsong}
+               {1.btn set text_token comp_changebandmembers}
+               {2.btn set text_token comp_quit}
+               {$this disable_button 3.btn}
+               {$this disable_button 4.btn})
+            ({&& $is_setlist $is_local}
+               {0.btn set text_token comp_selsong}
+               {1.btn set text_token accomplishments}
+               {2.btn set text_token comp_quit}
+               {$this disable_button 3.btn}
+               {$this disable_button 4.btn})}
+         {if
+            {! $is_local}
+            {$this disable_by_token accomplishments}}
+         {if
+            {<
+               {session num_users}
+               {gamemode get min_players}}
+            {$this disable_by_token comp_restart}
+            {$this disable_by_token comp_selsong}
+            {$this set_focus_by_token comp_quit}}
+         {if
+            {gamemode in_mode campaign}
+            {0.btn set text_token campaign_endscreen_return}
+            {$this disable_and_hide_by_token accomplishments}}})
+   (enable_button
+      ($button)
+      {$button set_showing 1}
+      {$this enable $button})
+   (disable_button
+      ($button)
+      {$button set_showing 0}
+      {$this disable $button}
+      {$button set text_token ''})
+   (disable_by_token
+      ($token)
+      {$this
+         iterate
+         BandButton
+         $b
+         {if
+            {==
+               {$b get text_token}
+               $token}
+            {$this disable $b}}})
+   (disable_and_hide_by_token
+      ($token)
+      {$this
+         iterate
+         BandButton
+         $b
+         {if
+            {==
+               {$b get text_token}
+               $token}
+            {$this disable_button $b}}})
+   (set_focus_by_token
+      ($token)
+      {$this
+         iterate
+         BandButton
+         $b
+         {if
+            {==
+               {$b get text_token}
+               $token}
+            {$this set_focus $b}}})
+   (SELECT_MSG
+      {switch
+         {$component get text_token}
+         (comp_restart
+            {meta_performer restart}
+            {game send_restart_game_net_msg}
+            {game_restart}
+            {net_sync set_ui_state 13})
+         (comp_selsong
+            {ui goto_screen meta_loading_continue_screen})
+         (campaign_endscreen_return
+            {ui goto_screen meta_loading_continue_screen})
+         (accomplishments
+            {user_provider set_state 1}
+            {switch
+               {user_provider get_num_users}
+               (0
+                  {push_basic_confirm_dialog campaign_need_signed_in_user})
+               (1
+                  {campaign
+                     set_user
+                     {user_provider get_user 0}}
+                  {ui goto_screen meta_loading_campaign_screen})
+               {ui push_screen complete_campaign_choose_user_screen}})
+         (comp_quit
+            {net_sync set_ui_state 14}
+            {ui_event_mgr trigger_event quit_to_main})})}
+{new
+   BandScreen
+   complete_screen
+   (panels GAME_SCREEN_PANELS coop_endgame_panel complete_panel)
+   (focus complete_panel)
+   (back coop_endgame_screen)}
+{new
+   UIPanel
+   complete_ranked_panel
+   (file complete_ranked.milo)
+   (enter
+      {platform_mgr set_notify_ui_location 1}
+      {$this set_focus comp_new_match.btn})
+   (exit
+      {platform_mgr set_notify_ui_location 0})
+   (SELECT_MSG
+      {switch
+         $component
+         (comp_new_match.btn
+            {ui_event_mgr trigger_event find_new_opponent})
+         (comp_quit.btn
+            {ui_event_mgr trigger_event quit_to_main})})}
+{new
+   BandScreen
+   complete_ranked_screen
+   (panels complete_ranked_panel)
+   (focus complete_ranked_panel)}
+{new
+   UIPanel
+   complete_campaign_choose_user_panel
+   (file
+      "../overshell/choose_char_owner.milo")
+   (focus players.lst)
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action 2}
+         {ui pop_screen}
+         kDataUnhandled})
+   (SELECT_MSG
+      {do
+         ($selected_user
+            {user_provider
+               get_user
+               {players.lst selected_pos}})
+         {if_else
+            $selected_user
+            {do
+               {campaign set_user $selected_user}
+               {ui pop_screen meta_loading_campaign_screen}}
+            {ui pop_screen}}})
+   (enter
+      {user_provider set_state 1}
+      {players.lst set_provider user_provider}
+      {players.lst
+         set_selected
+         {user_provider first_active}}
+      {title.lbl set text_token campaign_view_user_title}
+      {msg.lbl set text_token campaign_view_user_message}
+      {platform_mgr add_sink $this})
+   (exit
+      {platform_mgr remove_sink $this})}
+{new
+   BandScreen
+   complete_campaign_choose_user_screen
+   (panels complete_campaign_choose_user_panel)
+   (focus complete_campaign_choose_user_panel)}

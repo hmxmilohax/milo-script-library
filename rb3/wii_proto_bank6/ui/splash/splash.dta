@@ -1,0 +1,297 @@
+#define kSplashScreen_Entered
+(0)
+#define kSplashScreen_StartOvershell
+(1)
+#define kSplashScreen_EndOvershell
+(2)
+#define kSplashScreen_PromptCalibration
+(3)
+#define kSplashScreen_Ready
+(4)
+#ifdef HX_WII
+#define kSplashScreen_PromptInstall
+(5)
+#endif
+{new
+   MoviePanel
+   intro_movie_panel
+   (preload 0)
+   (audio 1)
+   (loop 0)
+   (update_presence 1)
+   (videos intro_movie)
+   (movie_done
+      {ui goto_screen splash_screen})
+   (enter
+      {platform_mgr disable_xmp}
+      kDataUnhandled)
+   (exit
+      #ifdef HX_PS3
+      {if
+         {elem
+            {find $syscfg system trophies}
+            1}
+         {register_trophy}}
+      #endif)
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $action 4}
+            {== $action 1}}
+         {ui goto_screen splash_screen}})}
+{new
+   BandScreen
+   intro_movie_screen
+   (panels intro_movie_panel)
+   (focus intro_movie_panel)}
+{new
+   UIPanel
+   splash_panel
+   (file
+      "splash.milo")
+   (focus start.btn)
+   (last_user '')
+   (splash_state kSplashScreen_Entered)
+   (attract_mode_timeout 30.0)
+   (enter_time 0.0)
+   (attract_timeout_done 0)
+   (load
+      {set
+         [splash_state]
+         kSplashScreen_Entered}
+      {overshell set_active_status 0}
+      {session clear})
+   (enter
+      {set
+         [attract_timeout_done]
+         0}
+      {meta music_start}
+      #ifdef HX_PS3
+      {start.btn
+         set
+         text_token
+         {if_else
+            {trophy_registered}
+            shell_press_start_to_rock
+            trophy_initialization_please_wait}}
+      {saveload_mgr autoload}
+      #endif)
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [enter_time]
+         {taskmgr ui_seconds}})
+   (poll
+      #ifdef HX_PS3
+      {if
+         {&&
+            {!=
+               {start.btn get text_token}
+               shell_press_start_to_rock}
+            {trophy_registered}}
+         {start.btn set text_token shell_press_start_to_rock}}
+      {unless
+         {trophy_registered}
+         {set
+            [enter_time]
+            {taskmgr ui_seconds}}}
+      #endif
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               splash_screen}
+            #ifdef HX_PS3
+            {trophy_registered}
+            #endif}
+         #ifndef HX_WII
+         {cond
+            #ifdef HX_PS3
+            ({&&
+                  {elem
+                     {find $syscfg system trophies}
+                     1}
+                  {!
+                     {trophy_disk_space_error_screen get displayed}}
+                  {trophy_disk_space_error}}
+               {ui push_screen trophy_disk_space_error_screen})
+            #endif
+            ({&&
+                  {!
+                     [attract_timeout_done]}
+                  {>
+                     {-
+                        {taskmgr ui_seconds}
+                        [enter_time]}
+                     [attract_mode_timeout]}}
+               {set
+                  [attract_timeout_done]
+                  1}
+               {meta music_stop}
+               {platform_mgr disable_xmp}
+               {ui goto_screen attract_screen})}
+         #endif})
+   (BUTTON_DOWN_MSG
+      {cond
+         #ifdef HX_PS3
+         ({!
+               {trophy_registered}}
+            1)
+         #endif
+         ({== $action 4}
+            {$this button_down $user $raw_button 1 $pad_num})
+         (1 kDataUnhandled)})
+   (SELECT_MSG
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               splash_screen}}
+         {set
+            [attract_timeout_done]
+            1}
+         {set
+            [last_user]
+            $user}
+         {if
+            {==
+               [splash_state]
+               kSplashScreen_Entered}
+            {overshell attempt_to_add_user $user}
+            {handle_type
+               ($this set_splash_state kSplashScreen_StartOvershell)}}})
+   (set_splash_state
+      ($state)
+      {set
+         [splash_state]
+         $state}
+      {switch
+         $state
+         (kSplashScreen_StartOvershell
+            {overshell set_active_status 1}
+            {start.btn set_showing 0})
+         #ifdef HX_WII
+         (kSplashScreen_EndOvershell
+            {if_else
+               {profile_mgr get_has_seen_first_time_calibration}
+               {handle_type
+                  ($this set_splash_state kSplashScreen_PromptCalibration)}
+               {if_else
+                  {&&
+                     {!
+                        {install_mgr is_channel_installed}}
+                     {profile_mgr get_should_show_install_reminder}}
+                  {handle_type
+                     ($this set_splash_state kSplashScreen_PromptInstall)}
+                  {handle_type
+                     ($this set_splash_state kSplashScreen_Ready)}}})
+         #else
+         (kSplashScreen_EndOvershell
+            {if_else
+               {profile_mgr get_has_seen_first_time_calibration}
+               {handle_type
+                  ($this set_splash_state kSplashScreen_Ready)}
+               {handle_type
+                  ($this set_splash_state kSplashScreen_PromptCalibration)}})
+         #endif
+         (kSplashScreen_PromptCalibration
+            {ui push_screen first_time_calibration})
+         (kSplashScreen_Ready
+            {ui goto_screen main_hub_screen})
+         #ifdef HX_WII
+         (kSplashScreen_PromptInstall
+            {ui push_screen install_reminder})
+         #endif})
+   (overshell_allowing_input
+      ($is_allowed)
+      {if
+         {&&
+            {==
+               [splash_state]
+               kSplashScreen_StartOvershell}
+            {== $is_allowed 1}
+            #ifdef HX_WII
+            {==
+               {overshell is_any_slot_signed_in}
+               1}
+            #endif}
+         {handle_type
+            ($this set_splash_state kSplashScreen_EndOvershell)}})}
+{new
+   BandScreen
+   splash_screen
+   (panels meta sv8_panel splash_panel)
+   (focus splash_panel)
+   (enter)}
+#ifdef HX_PS3
+{new
+   BandScreen
+   trophy_disk_space_error_screen
+   (displayed 0)
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {set
+         [displayed]
+         1}
+      {dialog_panel
+         set_msg
+         (trophy_disk_space_error
+            {trophy_file_size_mb})})}
+#endif
+{new
+   BandScreen
+   first_time_calibration
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {profile_mgr set_has_seen_first_time_calibration 1}
+      {dialog_panel set_custom calibration_msg calibration_calibrate calibration_skip opt1.btn})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {ui pop_screen cal_welcome_screen})
+         (opt2.btn
+            {ui pop_screen main_hub_screen})})}
+#ifdef HX_WII
+{new
+   BandScreen
+   install_reminder
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {profile_mgr set_install_reminder_shown}
+      {dialog_panel
+         set_custom_3btn
+         (wii_spinoff_reminder_msg
+            {install_mgr get_channel_name})
+         wii_spinoff_reminder_yes
+         wii_spinoff_reminder_later
+         wii_spinoff_reminder_never
+         opt1.btn})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {ui pop_screen channel_install_entry_screen})
+         (opt2.btn
+            {ui pop_screen main_hub_screen})
+         (opt3.btn
+            {profile_mgr set_install_reminder_never_show}
+            {ui pop_screen main_hub_screen})}
+      kDataUnhandled)}
+#endif
+{new
+   BandScreen
+   bonus_photo_unlock_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {profile_mgr set_bonus_photos_unlocked 1}
+      {dialog_panel set_ok bonus_photo_unlock})
+   (SELECT_MSG
+      {ui pop_screen})}

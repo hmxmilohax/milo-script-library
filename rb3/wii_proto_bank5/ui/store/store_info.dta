@@ -1,0 +1,199 @@
+{new
+   StoreInfoPanel
+   store_info_panel
+   (file
+      "store_info.milo")
+   (focus buttons.lst)
+   (force_exit 1)
+   (purchase_allowed
+      ($offer)
+      {!
+         {{store_panel offer_provider}
+            show_browser_purchased
+            $offer}})
+   (refresh_buttons
+      ($init)
+      {do
+         ($offer
+            [cur_offer])
+         ($is_song
+            {==
+               {$offer offer_type}
+               song})
+         ($buttons
+            ())
+         {resize $buttons 0}
+         {insert_elem $buttons 0 exit}
+         {if
+            $is_song
+            {if
+               {&&
+                  {$offer has_available_demo}
+                  {$this purchase_allowed $offer}}
+               {insert_elem $buttons 0 store_download_demo}}
+            {if
+               {$offer has_available_pack}
+               {insert_elem $buttons 0 store_view_pack}}
+            {if
+               {$offer has_available_album}
+               {insert_elem $buttons 0 store_view_album}}}
+         {if
+            {$offer has_available_upgrade}
+            {if_else
+               {$offer upgrade_purchased}
+               {insert_elem $buttons 0 store_download_upgrade_again}
+               {insert_elem $buttons 0 store_buy_upgrade}}}
+         {if_else
+            {$offer is_purchased}
+            {insert_elem $buttons 0 store_download_again}
+            {if
+               {$this purchase_allowed $offer}
+               {insert_elem $buttons 0 store_buy_now}}}
+         {if
+            {&&
+               $is_song
+               {$offer has_preview_audio}
+               {store_preview_mgr
+                  allow_preview_download
+                  {sprintf
+                     "%s%s"
+                     {store_panel get_request_prefix}
+                     {$offer preview_audio}}}}
+            {insert_elem $buttons 0 store_preview_audio}}
+         {if_else
+            $init
+            {buttons.lst set_data $buttons}
+            {do
+               ($sym
+                  {buttons.lst selected_sym})
+               {buttons.lst set_data $buttons}
+               {buttons.lst set_selected $sym 0}}}})
+   (enter
+      {store_panel hide_sort}
+      {do
+         ($offer
+            [cur_offer])
+         {song.lbl set_offer_name $offer}
+         {$this refresh_buttons 1}
+         {if_else
+            {$this purchase_allowed $offer}
+            {do
+               {cost.lbl set_showing 1}
+               {cost.lbl set_offer_cost $offer}}
+            {cost.lbl set_showing 0}}
+         #ifdef HX_PS3
+         {ps3_info.grp set_showing 1}
+         {drm.lbl set_legal_description $offer}
+         #else
+         {ps3_info.grp set_showing 0}
+         #endif
+         {store_details_panel refresh $offer}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (2
+            {play_instr_sfx $user button_back}
+            {$this go_back})
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         {$component selected_sym}
+         (store_preview_audio
+            {do
+               ($offer
+                  [cur_offer])
+               {if_else
+                  {$offer has_preview_audio}
+                  {do
+                     {store_preview_mgr
+                        download_preview_file
+                        {sprintf
+                           "%s%s"
+                           {store_panel get_request_prefix}
+                           {$offer preview_audio}}}
+                     {store_details_panel refresh $offer}}
+                  {notify
+                     "No preview audio file in store_index\n"}}
+               {$this refresh_buttons 0}})
+         (store_buy_now
+            {if_else
+               {[cur_offer]
+                  in_library}
+               {ui push_screen store_library_warning_screen}
+               {store_panel
+                  check_out
+                  [cur_offer]}})
+         (store_download_again
+            #ifdef HX_XBOX
+            {store_panel
+               check_out
+               [cur_offer]}
+            #else
+            {ui push_screen store_download_again_screen}
+            #endif)
+         (store_buy_upgrade
+            {if_else
+               {[cur_offer]
+                  upgrade_in_library}
+               {ui push_screen store_library_warning_screen}
+               {store_panel
+                  check_out
+                  {[cur_offer]
+                     upgrade}}})
+         (store_download_upgrade_again
+            #ifdef HX_XBOX
+            {store_panel
+               check_out
+               {[cur_offer]
+                  upgrade}}
+            #else
+            {ui push_screen store_download_again_screen}
+            #endif)
+         (store_view_album
+            {$this
+               goto_sub_offer
+               {{store_panel offer_provider}
+                  find_album
+                  [cur_offer]}})
+         (store_view_pack
+            {$this
+               goto_sub_offer
+               {{store_panel offer_provider}
+                  find_pack
+                  [cur_offer]}})
+         (store_download_demo
+            {store_panel
+               check_out
+               {[cur_offer]
+                  demo}})
+         (exit
+            {$this go_back})})
+   (go_back
+      {ui goto_screen store_browser_screen 0 1})
+   (goto_sub_offer
+      ($sub_offer)
+      {store_panel set saved_offer $sub_offer}
+      {ui goto_screen store_info_screen 1})
+   (enum_finished
+      {if
+         {store_panel is_up}
+         {do
+            ($offer
+               [cur_offer])
+            {$this refresh_buttons 0}
+            {cost.lbl
+               set_showing
+               {$this purchase_allowed $offer}}}})}
+{new
+   BandScreen
+   store_info_screen
+   (panels
+      meta
+      store_bg_art_panel
+      store_details_panel
+      (store_menu_panel
+         (active 0)
+         (always_load 0))
+      store_info_panel
+      store_panel)
+   (focus store_info_panel)}

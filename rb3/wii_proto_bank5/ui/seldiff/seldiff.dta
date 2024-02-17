@@ -1,0 +1,99 @@
+{new
+   SelectDifficultyPanel
+   part_difficulty_panel
+   (file seldiff.milo)
+   (marquee_rotation_ms 3000)
+   (enter
+      {if_else
+         {==
+            {meta_performer num_songs}
+            1}
+         {song_count.lbl set text_token 1_song}
+         {song_count.lbl
+            set_token_fmt
+            song_select_song_count
+            {localize_separated_int
+               {meta_performer num_songs}}}})
+   (update_setlist_label
+      ($token)
+      {setlist_title.lbl set text_token $token})
+   (update_preview_song
+      ($random_setlist $song $album_art)
+      {if_else
+         $random_setlist
+         {do
+            {marquee.grp set_showing 0}
+            {coming_up.mesh set_showing 0}
+            {coming_up.lbl set_showing 0}}
+         {do
+            {marquee.grp set_showing 1}
+            {coming_up.lbl set text_token coming_up}
+            {song_preview.lbl set_song_name $song}
+            {artist_preview.lbl set_artist_name_from_shortname $song}
+            {if_else
+               {!
+                  {==
+                     $album_art
+                     ""}}
+               {album_art.pic set tex_file $album_art}
+               {album_art.pic
+                  set
+                  tex_file
+                  "ui/image/blank_album_art_keep.png"}}}})}
+{new
+   BandScreen
+   part_difficulty_screen
+   (panels
+      meta
+      sv4_panel
+      part_difficulty_panel
+      (song_select_panel
+         (active 0)
+         (always_load 0)))
+   (enter
+      {overshell add_sink $this}
+      {if
+         {session_mgr is_leader_local}
+         {overshell begin_override_flow 1}
+         {if
+            {!
+               {gamemode in_mode practice}}
+            {meta_performer select_random_venue}}})
+   (exit
+      {overshell remove_sink $this})
+   (override_ended
+      ($override_type $cancel)
+      {if
+         {&&
+            {== $override_type 1}
+            {is_leader_local}}
+         {if_else
+            $cancel
+            {do
+               {cond
+                  ({gamemode in_mode tour}
+                     {ui
+                        goto_screen
+                        {get_tour_screen}})
+                  ({gamemode in_mode trainer}
+                     {ui
+                        goto_screen
+                        {training_mgr get_return_screen}})
+                  ({gamemode in_mode qp_coop}
+                     {ui goto_screen song_select_screen})
+                  ({gamemode in_mode practice}
+                     {gamemode set_mode qp_coop}
+                     {ui goto_screen song_select_screen})
+                  ({gamemode in_mode party_shuffle}
+                     {ui goto_screen main_hub_screen})
+                  ({gamemode in_mode campaign}
+                     {if_else
+                        {campaign get_was_launched_into_musiclibrary}
+                        {ui goto_screen song_select_screen}
+                        {ui goto_screen accomplishment_screen}})
+                  {ui goto_screen main_hub_screen}}
+               {meta_performer clear_venues}}
+            {if_else
+               {gamemode in_mode practice}
+               {ui goto_screen practice_preloading_screen}
+               {ui goto_screen preloading_screen}}}})}

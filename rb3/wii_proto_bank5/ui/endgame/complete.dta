@@ -1,0 +1,191 @@
+{new
+   UIPanel
+   complete_panel
+   (file
+      "complete.milo")
+   (enter
+      {platform_mgr set_notify_ui_location 1}
+      {$this set_focus continue.btn}
+      {net_sync enable}
+      {$this update_campaign_status})
+   (exit
+      {game clear_draw_glitch}
+      {platform_mgr set_notify_ui_location 0})
+   (update_campaign_status
+      {campaign update_endgame_info campaign_user.lbl campaign_status.lbl campaign.pic campaign.ihp}
+      {if
+         {&&
+            {gamemode in_mode campaign}
+            {campaign has_current_goal}}
+         {if
+            {acc_mgr
+               has_completed_goal
+               {campaign get_user}
+               {campaign get_current_goal}}
+            {campaign clear_current_goal}}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (3
+            {if
+               {campaign has_display_goal}
+               {if_else
+                  {$user can_save_data}
+                  {jump_to_campaign_goal
+                     $user
+                     {campaign get_display_goal}}
+                  {push_basic_confirm_dialog campaign_need_signed_in_user}}})
+         kDataUnhandled})
+   (SELECT_MSG
+      {switch
+         $component
+         (restart.btn
+            {meta_performer restart}
+            {if_else
+               {>
+                  {meta_performer num_songs}
+                  1}
+               {ui goto_screen preload_nextsong_screen}
+               {do
+                  {game send_restart_game_net_msg}
+                  {game_restart}}}
+            {acc_mgr clear_goal_info}
+            {net_sync set_ui_state 14})
+         (continue.btn
+            {ui goto_screen meta_loading_continue_screen})
+         (party_shuffle.btn
+            {gamemode set_mode party_shuffle}
+            {meta_performer restart}
+            {music_library build_party_setlist}
+            {ui goto_screen preload_nextsong_screen}
+            {net_sync set_ui_state 14})})}
+{new
+   BandScreen
+   complete_screen
+   (panels GAME_SCREEN_PANELS coop_endgame_panel complete_panel)
+   (focus complete_panel)
+   (back coop_endgame_screen)}
+{new
+   UIPanel
+   demo_complete_panel
+   (file
+      "complete_demo.milo")
+   (enter
+      {platform_mgr set_notify_ui_location 1}
+      {$this set_focus purchase.btn}
+      {net_sync enable}
+      {$this update_button_states 0})
+   (exit
+      {game clear_draw_glitch}
+      {platform_mgr set_notify_ui_location 0})
+   (update_button_states
+      ($deleted)
+      {if_else
+         $deleted
+         {do
+            {$this disable purchase.btn}
+            {$this disable delete.btn}
+            {$this disable restart.btn}}
+         {do
+            {$this enable purchase.btn}
+            {$this enable delete.btn}
+            {$this enable restart.btn}}})
+   (SELECT_MSG
+      {switch
+         $component
+         (restart.btn
+            {game send_restart_game_net_msg}
+            {game_restart}
+            {net_sync set_ui_state 14})
+         (continue.btn
+            {ui goto_screen meta_loading_continue_screen})
+         (delete.btn
+            {deleting_content_panel
+               setup_deletion
+               {song_mgr
+                  content_name_from_sym
+                  {meta_performer song}}
+               0}
+            {$this update_button_states 1}
+            {ui push_screen deleting_content_screen})
+         (purchase.btn
+            {demo_purchase_panel
+               set
+               song
+               {meta_performer song}}
+            {demo_purchase_panel set user $user}
+            {ui push_screen demo_purchase_screen})})}
+{new
+   BandScreen
+   demo_complete_screen
+   (panels GAME_SCREEN_PANELS demo_complete_panel)
+   (focus demo_complete_panel)}
+{new
+   UGCPurchasePanel
+   demo_purchase_panel
+   (checkout_finished
+      {ui goto_screen demo_purchase_success_screen})
+   (checkout_failed
+      {ui goto_screen demo_purchase_failure_screen})}
+{new
+   BandScreen
+   demo_purchase_screen
+   (panels demo_purchase_panel)}
+{new
+   BandScreen
+   demo_purchase_success_screen
+   (panels dialog_panel)
+   (enter
+      {demo_complete_panel update_button_states 1}
+      {dialog_panel set_ok demo_purchase_success})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   demo_purchase_failure_screen
+   (panels dialog_panel)
+   (enter
+      {dialog_panel set_ok demo_purchase_failure})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   UIPanel
+   complete_campaign_choose_user_panel
+   (file
+      "../overshell/choose_char_owner.milo")
+   (focus players.lst)
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action 2}
+         {ui pop_screen}
+         kDataUnhandled})
+   (SELECT_MSG
+      {do
+         ($selected_user
+            {user_provider
+               get_user
+               {players.lst selected_pos}})
+         {if_else
+            $selected_user
+            {do
+               {campaign set_user $selected_user}
+               {ui pop_screen meta_loading_campaign_screen}}
+            {ui pop_screen}}})
+   (enter
+      {user_provider set_state 1}
+      {players.lst set_provider user_provider}
+      {players.lst
+         set_selected
+         {user_provider first_active}}
+      {title.lbl set text_token campaign_view_user_title}
+      {msg.lbl set text_token campaign_view_user_message}
+      {platform_mgr add_sink $this})
+   (exit
+      {platform_mgr remove_sink $this})}
+{new
+   BandScreen
+   complete_campaign_choose_user_screen
+   (panels complete_campaign_choose_user_panel)
+   (focus complete_campaign_choose_user_panel)}

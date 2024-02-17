@@ -1,0 +1,130 @@
+#define CROWD_AUDIO_HANDLERS
+()
+(CrowdAudio
+   (init
+      {$this set_type band3})
+   (types
+      (band3
+         (results_duck -96)
+         (clap_early_amount_ms 75)
+         (crowd_volume -3.0)
+         (results_fade_ms 120000)
+         (venue_change_fade_ms 2000)
+         (closeup_fade_ms 1250)
+         (fade_in_from_loading_ms 2000)
+         (crossfade_ms 3000)
+         (release_ms 5000)
+         (intro_start
+            {$this play_intro})
+         (intro_skip
+            {$this play_intro})
+         (enter
+            {if
+               {exists gamemode}
+               {set
+                  [crowd_reacts]
+                  {gamemode get crowd_reacts}}})
+         (want_outro_duck
+            {&&
+               {exists meta_performer}
+               {meta_performer is_last_song}})
+         (game_lost
+            {$this on_lose})
+         (music_end
+            {unless
+               {$this done}
+               {unless
+                  'TRUE;'
+                  {'||'
+                     {==
+                        ''
+                        {meta_performer song}}
+                     {song_mgr
+                        mute_win_cues
+                        {meta_performer song}}}
+                  {do
+                     ($cue win_5.cue)
+                     {if
+                        {gamemode is_band_arrangement}
+                        {do
+                           ($num_stars
+                              {{band_0 main_performer}
+                                 num_stars})
+                           {if
+                              {< $num_stars 5}
+                              {set $cue win_4.cue}}}}
+                     {$this play_sequence $cue 0}}}
+               {$this on_win}})
+         (end
+            {$this on_end})
+         (coda_success
+            {$this stop_sequence bre_success.cue}
+            {$this play_sequence bre_success.cue 0})
+         (coda_blown
+            {$this stop_sequence bre_fail.cue}
+            {$this play_sequence bre_fail.cue 0})
+         (finale
+            ($type))
+         (streams
+            (intro
+               crowd_intro.mogg
+               (pan -3 3))
+            (levels
+               (0
+                  crowd_danger.mogg
+                  (pan -3 3))
+               (1
+                  crowd_poor.mogg
+                  (pan -3 3))
+               (2
+                  crowd_norm.mogg
+                  (pan -3 3))
+               (3
+                  crowd_good.mogg
+                  (pan -3 3))
+               (4
+                  crowd_peak.mogg
+                  (pan -3 3)))
+            (venue_intro
+               venue_intro.mogg
+               (pan -3 3))
+            (venue_outro
+               venue_outro.mogg
+               (pan -3 3))))))
+(Object
+   (types
+      (crowd_audio_configuration
+         (editor
+            (deploy_volume_modifier
+               float
+               (help
+                  "The amount (in dB) by which to change crowd audio volume when any player is deploying."))
+            (deploy_ramp_up_time
+               float
+               (help
+                  "The time (in ms) over which to fade the crowd audio to its modified level when the first player starts deploying."))
+            (deploy_ramp_down_time
+               float
+               (help
+                  "The time (in ms) over which to fade the crowd audio to its normal level when the last player stops deploying."))
+            (deploy_boost_timeout
+               float
+               (help
+                  "The minimum time after playing the crowd_boost cue before it can be played again. This prevents unwanted layering of the sound when several players deploy at almost the same time."))
+            (realistic_mode_boost
+               float
+               (help
+                  "The volume boost (in dB) for this venue when realistic mode is active. Use 0.0 for non-realistic-mode venues.")))
+         (deploy_volume_modifier 0)
+         (deploy_ramp_up_time 1000)
+         (deploy_ramp_down_time 1000)
+         (deploy_boost_timeout 3000)
+         (realistic_mode_boost 0)
+         (play_crowd_closeup
+            {if
+               $crowd_audio
+               {$crowd_audio play_crowd_closeup}})
+         (stop_crowd_closeup
+            {if
+               $crowd_audio
+               {$crowd_audio stop_crowd_closeup}}))))

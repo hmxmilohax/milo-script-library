@@ -1,0 +1,157 @@
+{new
+   ChordbookPanel
+   chordbook_panel
+   (file
+      "chordbook_panel.milo")
+   (BUTTON_DOWN_MSG
+      {if
+         {==
+            {ui focus_panel}
+            $this}
+         {switch
+            $action
+            ((1)
+               {$this skip_confirm})
+            ((2)
+               {$this skip_cancel})
+            ((14)
+               {$this skip_push_dialog})}}
+      kDataUnhandled)}
+{new
+   RGTrainerPanel
+   rg_trainer_panel
+   (file
+      "gem_trainer_panel.milo")
+   (enter
+      GEM_TRAINER_PANEL_ENTER
+      {section_list_hide.trig trigger}
+      {chord_legend set_showing 0}
+      {toggle_icon.lbl set_showing 1}
+      {toggle_icon.lbl set text_token s}
+      {$this set_start_stop_lbl})
+   (exit GEM_TRAINER_PANEL_EXIT)
+   GEM_TRAINER_PANEL_SCORING
+   GEM_TRAINER_PANEL_SPEED
+   GEM_TRAINER_PANEL_PREVIEW
+   GEM_TRAINER_PANEL_SECTIONS
+   (on_hit
+      ($gem_id))
+   (on_miss
+      ($gem_id))
+   (on_pass
+      ($gem_id)
+      {if
+         [start_stop]
+         {$this goto_chord_legend $gem_id}})
+   (goto_chordbook
+      {$this set_showing 0}
+      {chordbook_panel start_chordbook}
+      {chordbook_panel set_showing 1}
+      {$this pause_track_hide_track 1}
+      {rg_trainer_screen set_focus_panel chordbook_panel})
+   (end_chordbook
+      {chordbook_panel set_showing 0}
+      {rg_trainer_screen set_focus_panel $this}
+      {$this set_showing 1}
+      {$this goto_preview 1})
+   (goto_preview_no_chordbook
+      ($sec_dir)
+      {gem_preview_panel set sec_dir $sec_dir}
+      {ui push_screen gem_preview_screen})
+   (goto_chord_legend
+      ($gem_id)
+      {$this pause_track 1}
+      {show_chord_legend.trig trigger}
+      {chord_legend play_intro}
+      {foreach_int
+         $i
+         0
+         6
+         {chord_legend
+            set_chord_fret
+            $i
+            {$this get_fret $gem_id $i}}}
+      {chord_legend reset_chord_legend}
+      {chord_legend reset_chord}
+      {$this set_legend_mode 1}
+      {$this set_legend_gem_id $gem_id})
+   (end_chord_legend
+      {$this pause_track 0}
+      {hide_chord_legend.trig trigger}
+      {$this set_legend_mode 0}
+      {$this set_loop_points})
+   (toggle_start_stop
+      {set
+         [start_stop]
+         {!
+            [start_stop]}}
+      {$this set_start_stop_lbl}
+      {if_else
+         [start_stop]
+         {toggle_on.trig trigger}
+         {toggle_off.trig trigger}})
+   (set_start_stop_lbl
+      {if_else
+         [start_stop]
+         {toggle.lbl set text_token stop_start_off}
+         {toggle.lbl set text_token stop_start_on}})
+   (strum_string
+      ($string)
+      {chord_legend strum_string $string})
+   (set_finger_fret
+      ($string $fret)
+      {chord_legend set_finger_fret $string $fret})
+   GEM_TRAINER_PANEL_PROPERTIES
+   (start_stop 0)}
+{new
+   BandScreen
+   rg_trainer_screen
+   (panels game sync_audio_net_panel coop_track_panel rg_trainer_panel chordbook_panel real_guitar_debug_panel)
+   GAME_SCREEN_HANDLERS
+   (my_enter
+      {if_else
+         {chordbook_panel complete}
+         {do
+            {rg_trainer_panel end_chordbook}}
+         {do
+            {rg_trainer_panel goto_chordbook}}})
+   (BUTTON_DOWN_MSG
+      {if
+         {&&
+            {!=
+               {ui focus_panel}
+               chordbook_panel}
+            {!
+               {rg_trainer_panel get_legend_mode}}}
+         {if_else
+            {== $action 7}
+            {{gamemode get game_panel}
+               goto_preview
+               1}
+            {if_else
+               {== $action 9}
+               {{gamemode get game_panel}
+                  goto_preview
+                  -1}
+               {if_else
+                  {== $action 6}
+                  {{gamemode get game_panel}
+                     inc_speed}
+                  {if_else
+                     {== $action 8}
+                     {{gamemode get game_panel}
+                        dec_speed}
+                     {if
+                        {== $action 5}
+                        {{gamemode get game_panel}
+                           toggle_start_stop}}}}}}}
+      {if
+         {&&
+            {!=
+               {ui focus_panel}
+               chordbook_panel}
+            {rg_trainer_panel get_legend_mode}}
+         {if
+            {== $action 2}
+            {{gamemode get game_panel}
+               end_chord_legend}}})}

@@ -1,0 +1,357 @@
+{new
+   UIPanel
+   meta_loading
+   (file meta_loading.milo)
+   (enter
+      {synth stop_all_sfx 1})}
+#define kMetaLoading_Inactive
+(0)
+#define kMetaLoading_Entered
+(1)
+#define kMetaLoading_CheckRewardVignettes
+(2)
+#define kMetaLoading_RewardVignettes
+(3)
+#define kMetaLoading_CheckAwards
+(4)
+#define kMetaLoading_Awards
+(5)
+#define kMetaLoading_AutoSave
+(6)
+#define kMetaLoading_WaitForRemotes
+(7)
+#define kMetaLoading_Leaving
+(8)
+#define META_LOADING_SCREEN_HANDLERS
+((panels
+      meta_loading
+      (meta
+         (active 0)
+         (always_load 0)))
+   (block_event
+      ($event)
+      {&&
+         {!=
+            [state]
+            kMetaLoading_WaitForRemotes}
+         {!=
+            [state]
+            kMetaLoading_Leaving}})
+   (state kMetaLoading_Inactive)
+   (enter
+      {overshell set_active_status 0})
+   (TRANSITION_COMPLETE_MSG
+      {cond
+         ({==
+               [state]
+               kMetaLoading_Inactive}
+            {ui_event_mgr
+               add_sink
+               $this
+               (event_dialog_dismiss)}
+            {net_sync set_ui_state 14}
+            {rnd set_in_game 0}
+            {content_mgr start_refresh}
+            {set
+               [state]
+               kMetaLoading_Entered})
+         ({==
+               [state]
+               kMetaLoading_RewardVignettes}
+            {if_else
+               {acc_mgr has_new_reward_vignettes}
+               {do
+                  ($user
+                     {acc_mgr get_user_for_first_new_reward_vignette})
+                  ($screen
+                     {acc_mgr get_name_for_first_new_reward_vignette $user})
+                  {ui push_screen $screen}
+                  {set
+                     [state]
+                     kMetaLoading_RewardVignettes}}
+               {set
+                  [state]
+                  kMetaLoading_CheckAwards}})
+         ({==
+               [state]
+               kMetaLoading_Awards}
+            {set
+               [state]
+               kMetaLoading_AutoSave})})
+   (exit
+      {ui_event_mgr remove_sink $this event_dialog_dismiss}
+      {set
+         [state]
+         kMetaLoading_Inactive}
+      {overshell set_active_status 1})
+   (maybe_show_remote_exit)
+   (check_advance
+      {do
+         ($ready 1)
+         {machine_mgr
+            foreach_machine
+            $machine
+            {if
+               {!=
+                  {$machine get_net_ui_state}
+                  15}
+               {set $ready 0}}}
+         {if
+            $ready
+            {set
+               [state]
+               kMetaLoading_Leaving}
+            {ui
+               sync_screen
+               [next_screen]
+               0}}})
+   (poll
+      {meta sync_game_timer}
+      {if
+         {&&
+            {==
+               [state]
+               kMetaLoading_Entered}
+            {content_mgr refresh_done}}
+         {meta_performer reset_songs}
+         {if
+            [goto_practice_mode]
+            {do
+               ($song
+                  {meta_performer song})
+               {gamemode set_mode practice}
+               {meta_performer set_song $song}}}
+         {if
+            [goto_campaign_mode]
+            {gamemode set_mode campaign}}
+         {ui set_disband_status 2}
+         {if_else
+            {==
+               {ui_event_mgr current_event}
+               invite_accepted}
+            {do
+               {ui set_invite_accepted 1}
+               {gamemode
+                  set_mode
+                  {{session_searcher get_last_invite_result}
+                     get_mode_name}}}
+            {ui set_invite_accepted 0}}
+         {session_mgr set_local_users_participation 1}
+         {session_mgr set_active_roster 0}
+         {critical_user_listener clear_critical_user}
+         {set
+            [state]
+            kMetaLoading_CheckRewardVignettes}}
+      {if
+         {==
+            [state]
+            kMetaLoading_CheckRewardVignettes}
+         {if_else
+            {acc_mgr has_new_reward_vignettes}
+            {do
+               ($user
+                  {acc_mgr get_user_for_first_new_reward_vignette})
+               ($screen
+                  {acc_mgr get_name_for_first_new_reward_vignette $user})
+               {ui push_screen $screen}
+               {set
+                  [state]
+                  kMetaLoading_RewardVignettes}}
+            {set
+               [state]
+               kMetaLoading_CheckAwards}}}
+      {if
+         {==
+            [state]
+            kMetaLoading_CheckAwards}
+         {if_else
+            {acc_mgr has_new_awards}
+            {do
+               {ui push_screen accomplishments_newaward_screen}
+               {set
+                  [state]
+                  kMetaLoading_Awards}}
+            {set
+               [state]
+               kMetaLoading_AutoSave}}}
+      {if
+         {==
+            [state]
+            kMetaLoading_AutoSave}
+         {saveload_mgr autosave}
+         {net_sync set_ui_state 15}
+         {set
+            [state]
+            kMetaLoading_WaitForRemotes}}
+      {if
+         {==
+            [state]
+            kMetaLoading_WaitForRemotes}
+         {$this check_advance}}))
+{new
+   BandScreen
+   meta_loading_continue_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {if_else
+         {&&
+            {gamemode in_mode h2h}
+            {==
+               {gamemode get ranked}
+               1}}
+         h2h_ranked_preload_screen
+         {if_else
+            {gamemode in_mode tour}
+            tour_quest_outro_screen
+            {if_else
+               {gamemode in_mode campaign}
+               accomplishment_screen
+               song_select_screen}}})}
+{new
+   BandScreen
+   meta_loading_main_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {gamemode get main_screen})}
+{new
+   BandScreen
+   meta_loading_quit_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {gamemode get quit_screen})}
+{new
+   BandScreen
+   meta_loading_pause_new_section_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen practice_preloading_screen)}
+{new
+   BandScreen
+   meta_loading_pause_new_song_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {if_else
+         {gamemode in_mode tour}
+         song_select_screen
+         song_select_screen})}
+{new
+   BandScreen
+   meta_loading_practice_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 1)
+   (goto_campaign_mode 0)
+   (next_screen practice_preloading_screen)}
+{new
+   BandScreen
+   meta_loading_campaign_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 1)
+   (next_screen accomplishment_categories_screen)}
+{new
+   BandScreen
+   meta_loading_signout_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {gamemode get uisink_signout_screen})}
+{new
+   BandScreen
+   meta_loading_join_invite_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen join_invite_screen)}
+{new
+   BandScreen
+   meta_loading_matchmaking_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen main_hub_screen)}
+{new
+   BandScreen
+   meta_loading_uisink_default_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {gamemode get uisink_default_screen})}
+{new
+   BandScreen
+   meta_loading_uisink_lost_connection_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {gamemode get uisink_lost_connection_screen})}
+{new
+   BandScreen
+   meta_loading_leaderboard_error_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {leaderboards_netwatcher_panel get return_screen_in_progress})}
+{new
+   BandScreen
+   meta_loading_return_to_tour_quests_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen
+      {get_tour_screen})}
+{new
+   BandScreen
+   meta_loading_calibration_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen cal_welcome_screen)}
+{new
+   BandScreen
+   meta_loading_wiispeak_options_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen wiispeak_options_screen)}
+{new
+   BandScreen
+   meta_loading_wiiprofile_screen
+   (exit
+      {ui_event_mgr remove_sink $this event_dialog_dismiss}
+      {set
+         [state]
+         kMetaLoading_Inactive}
+      {overshell set_active_status 0})
+   META_LOADING_SCREEN_HANDLERS
+   (prevents_override 1)
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen wiiprofile_screen)}
+{new
+   BandScreen
+   meta_loading_charactercreator_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen charactercreator_screen)}
+#ifndef _SHIP
+{new
+   BandScreen
+   meta_loading_return_to_frame_rate_screen
+   META_LOADING_SCREEN_HANDLERS
+   (goto_practice_mode 0)
+   (goto_campaign_mode 0)
+   (next_screen frame_rate_screen)}
+#endif

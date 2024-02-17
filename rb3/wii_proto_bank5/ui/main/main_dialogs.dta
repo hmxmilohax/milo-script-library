@@ -1,0 +1,182 @@
+{new
+   SigninScreen
+   main_store_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (must_not_be_a_guest 1)
+   (must_be_online 1)
+   (must_be_multiplayer_capable 0)
+   (handle_sign_outs 0)
+   (limit_user_signin 1)
+   (update_display
+      {do
+         ($user
+            {input_mgr get_user})
+         {dialog_panel
+            set_custom
+            {if_else
+               {&&
+                  {platform_mgr is_user_signed_in $user}
+                  {platform_mgr is_user_a_guest $user}}
+               store_need_to_signin_not_guest
+               store_need_to_signin}
+            store_signin_button
+            store_cancel_button
+            opt1.btn}})
+   (enter
+      {$this update_display})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1 1})
+         (opt2.btn
+            {input_mgr clear_user}
+            {ui pop_screen})})
+   (on_signed_into_guest
+      {$this update_display})
+   (on_not_online
+      {$this update_display})
+   (on_signed_in
+      {ui goto_screen main_store_find_cache_screen})}
+{new
+   BandScreen
+   main_store_find_cache_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (time_done 0)
+   (enter_time 0.0)
+   (search_done 0)
+   (search_result 1)
+   (enter
+      {set
+         [time_done]
+         0}
+      {set
+         [enter_time]
+         {taskmgr ui_seconds}}
+      {set
+         [search_done]
+         0}
+      {set
+         [search_result]
+         1}
+      {dialog_panel set_msg store_cache_search}
+      {platform_mgr
+         add_sink
+         $this
+         (signin_changed)}
+      {net_cache_mgr search_for_cache $this})
+   (poll
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               $this}}
+         {if
+            {&&
+               {!
+                  [time_done]}
+               {>=
+                  {-
+                     {taskmgr ui_seconds}
+                     [enter_time]}
+                  1.0}}
+            {set
+               [time_done]
+               1}}
+         {if
+            {&&
+               [time_done]
+               [search_done]}
+            {switch
+               [search_result]
+               (0
+                  {ui pop_screen store_loading_screen})
+               (1
+                  {ui goto_screen main_store_create_cache_screen})
+               {notify
+                  "find_cache: Bad cache_search_result "
+                  [search_result]
+                  "\n"}}}})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (signin_changed
+      {ui pop_screen})
+   (cache_search_result
+      ($result)
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               $this}}
+         {set
+            [search_result]
+            $result}
+         {set
+            [search_done]
+            1}})}
+{new
+   BandScreen
+   main_store_create_cache_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_custom store_cache_create store_cache_button_create store_cache_button_cancel opt1.btn}
+      {platform_mgr
+         add_sink
+         $this
+         (signin_changed)})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {net_cache_mgr
+               choose_cache
+               {input_mgr get_user}
+               $this})
+         (opt2.btn
+            {input_mgr clear_user}
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})
+   (cache_search_result
+      ($result)
+      {if
+         {&&
+            {!
+               {ui in_transition}}
+            {==
+               {ui current_screen}
+               $this}}
+         {switch
+            $result
+            (2
+               {ui pop_screen store_loading_screen})
+            (3)
+            {notify
+               "create_cache: Bad cache_search_result message.\n"}}})}
+{new
+   BandScreen
+   main_store_network_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok store_network_required})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   error_showing_party_ui_dialog_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok error_showing_party_ui})
+   (SELECT_MSG
+      {ui pop_screen})}

@@ -1,0 +1,322 @@
+(RndDir
+   (types
+      (popup_help
+         (editor
+            (reset
+               script
+               (script
+                  {$this reset}))
+            (hide
+               script
+               (script
+                  {$this
+                     help
+                     [last_key]
+                     0
+                     hide}))
+            (kick
+               script
+               (script
+                  {$this help kick 1 drum}))
+            (deploy_guitar
+               script
+               (script
+                  {$this help deploy 1 guitar}))
+            (deploy_bass
+               script
+               (script
+                  {$this help deploy 1 bass}))
+            (deploy_vocals
+               script
+               (script
+                  {$this help deploy 1 vocals}))
+            (drum_fill
+               script
+               (script
+                  {$this help drum_fill 1 drum}))
+            (bre_guitar
+               script
+               (script
+                  {$this help rock_ending 1 guitar}))
+            (bre_drum
+               script
+               (script
+                  {$this help rock_ending 1 drum}))
+            (tambourine
+               script
+               (script
+                  {$this help tambourine 1 vocal}))
+            (tamb_note
+               script
+               (script
+                  {$this tambourine_note}))
+            (dts_guitar
+               script
+               (script
+                  {$this help deploy_to_save 1 guitar}))
+            (dts_bass
+               script
+               (script
+                  {$this help deploy_to_save 1 bass}))
+            (dts_drum
+               script
+               (script
+                  {$this help deploy_to_save 1 drum}))
+            (dts_vocals
+               script
+               (script
+                  {$this help deploy_to_save 1 vocals}))
+            (intro_five_lane_keys
+               script
+               (script
+                  {$this help intro 1 keys})))
+         (last_key none)
+         (active 0)
+         (popup_help_disabled 0)
+         (help
+            ($key $state $instrument)
+            {if_else
+               $state
+               {do
+                  {switch
+                     $key
+                     (kick
+                        {if
+                           {!
+                              [popup_help_disabled]}
+                           {set
+                              [last_key]
+                              kick}
+                           {$this kick}})
+                     (deploy
+                        {if
+                           {!
+                              [popup_help_disabled]}
+                           {if
+                              {== $instrument vocals}
+                              {set
+                                 [last_key]
+                                 deploy}
+                              {$this scream}}
+                           {if
+                              {'||'
+                                 {== $instrument guitar}
+                                 {== $instrument bass}}
+                              {set
+                                 [last_key]
+                                 deploy}
+                              {$this tilt}}})
+                     (drum_fill
+                        {if
+                           {!
+                              [popup_help_disabled]}
+                           {set
+                              [last_key]
+                              fill}
+                           {$this drum_fill}})
+                     (rock_ending
+                        {if
+                           {!
+                              [popup_help_disabled]}
+                           {set
+                              [last_key]
+                              rock_ending}
+                           {if_else
+                              {== $instrument drum}
+                              {$this bre_drums}
+                              {$this bre_guitar}}})
+                     (tambourine
+                        {if
+                           {!
+                              [popup_help_disabled]}
+                           {set
+                              [last_key]
+                              tambourine}
+                           {$this tambourine}})
+                     (deploy_to_save
+                        {$this deploy_to_save_impl 0})
+                     (deploy_to_save_lefty
+                        {$this deploy_to_save_impl 1})
+                     (intro
+                        {set
+                           [last_key]
+                           intro}
+                        {switch
+                           $instrument
+                           (keys
+                              {$this intro_five_lane_keys})})}}
+               {do
+                  {if
+                     {'||'
+                        {== $key deploy_to_save}
+                        {== $key deploy_to_save_lefty}}
+                     {set
+                        [active]
+                        0}
+                     {set $key deploy_to_save}}
+                  {if
+                     {==
+                        $key
+                        [last_key]}
+                     {do
+                        ($task_name)
+                        {set
+                           $task_name
+                           {sprint
+                              $instrument
+                              "_deploy_help"}}
+                        {if
+                           {exists $task_name}
+                           {delete $task_name}}}
+                     {set
+                        [last_key]
+                        "none"}
+                     {$this hide}}}})
+         (deploy_to_save_impl
+            ($lefty)
+            {if
+               {!
+                  [popup_help_disabled]}
+               {if
+                  {!
+                     [active]}
+                  {set
+                     [last_key]
+                     deploy_to_save}
+                  {if_else
+                     $lefty
+                     {switch
+                        $instrument
+                        (guitar
+                           {set $icon tilt_lefty})
+                        (bass
+                           {set $icon tilt_lefty})
+                        (drum
+                           {set $icon drum_deploy_lefty})
+                        (vocals
+                           {set $icon scream})}
+                     {switch
+                        $instrument
+                        (guitar
+                           {set $icon tilt})
+                        (bass
+                           {set $icon tilt})
+                        (drum
+                           {set $icon drum_deploy})
+                        (vocals
+                           {set $icon scream})}}
+                  {{sprintf
+                        "%s.mnm"
+                        $icon}
+                     animate
+                     (loop
+                        0
+                        {{sprintf
+                              "%s.mnm"
+                              $icon}
+                           end_frame})}
+                  {deploy_to_save.trig trigger}
+                  {set
+                     [active]
+                     1}}})
+         (reset
+            {$this
+               help
+               [last_key]
+               0
+               drum}
+            {$this
+               help
+               [last_key]
+               0
+               guitar}
+            {$this
+               help
+               [last_key]
+               0
+               vocals}
+            {$this
+               help
+               [last_key]
+               0
+               bass}
+            {$this
+               help
+               [last_key]
+               0
+               keys}
+            {reset.trig trigger})
+         (hide
+            {hide.trig trigger})
+         (kick_note
+            {if
+               {==
+                  [last_key]
+                  kick}
+               {kick.mnm animate}})
+         (bre_drums
+            {show.trig trigger}
+            {drum_fill.mnm
+               animate
+               (loop
+                  0
+                  {drum_fill.mnm end_frame})})
+         (bre_guitar
+            {show.trig trigger}
+            {strum.mnm
+               animate
+               (loop
+                  0
+                  {strum.mnm end_frame})})
+         (drum_fill
+            {show.trig trigger}
+            {drum_fill.mnm
+               animate
+               (loop
+                  0
+                  {drum_fill.mnm end_frame})})
+         (kick
+            {show.trig trigger}
+            {kick.mnm
+               animate
+               (range 0 0)})
+         (tilt
+            {show.trig trigger}
+            {tilt.mnm
+               animate
+               (loop
+                  0
+                  {tilt.mnm end_frame})}
+            {$this hide_delay 4})
+         (scream
+            {show.trig trigger}
+            {scream.mnm
+               animate
+               (loop
+                  0
+                  {scream.mnm end_frame})})
+         (tambourine
+            {show.trig trigger}
+            {tambourine.mnm
+               animate
+               (range 0 0)})
+         (tambourine_note
+            {if
+               {==
+                  [last_key]
+                  tambourine}
+               {tambourine.mnm animate}})
+         (intro_five_lane_keys
+            {show.trig trigger}
+            {fivelanekeys.mnm
+               animate
+               (loop
+                  0
+                  {fivelanekeys.mnm end_frame})})
+         (hide_delay
+            ($time)
+            {script_task
+               1
+               (delay $time)
+               (script
+                  {$this hide})}))))

@@ -1,0 +1,428 @@
+{new
+   AccomplishmentPanel
+   accomplishment_panel
+   (file
+      "accomplishments.milo")
+   (focus
+      "accomplishments.lst")
+   (scroll_dirty 0)
+   (initially_selected_goal '')
+   (TRANSITION_COMPLETE_MSG
+      {$this update_for_selection})
+   (update_for_selection
+      {details.ihp
+         set
+         showing
+         {$this can_navigate_list}}
+      {launch_setlist.ihp
+         set
+         showing
+         {$this can_launch_goal}}
+      {playsong.ihp
+         set
+         showing
+         {$this can_launch_goal}}
+      {leaderboard.ihp
+         set
+         showing
+         {$this has_leaderboard}}
+      {$this refresh_details})
+   (refresh_details
+      {name.lbl
+         set
+         text_token
+         {$this selected_accomplishment}}
+      {description.lbl
+         set
+         text_token
+         {$this get_accomplishment_description}}
+      {flavor.lbl
+         set
+         text_token
+         {$this get_flavor_text}}
+      {icon.mesh
+         set_showing
+         {$this has_award}}
+      {if_else
+         {$this should_show_progress}
+         {do
+            {progress.md set_showing 1}
+            {progress.md
+               set
+               max_value
+               {$this get_max_value}}
+            {progress.md
+               set
+               current_value
+               {$this get_current_value}}
+            {meter.lbl
+               set_token_fmt
+               meter_progress
+               {localize_separated_int
+                  {$this get_current_value}}
+               {localize_separated_int
+                  {$this get_max_value}}}}
+         {do
+            {progress.md set_showing 0}
+            {meter.lbl set text_token ''}}}
+      {if_else
+         {$this should_show_best}
+         {do
+            {best.lbl set_showing 1}
+            {best.lbl
+               set_token_fmt
+               accomplishment_bestscore
+               {localize_separated_int
+                  {$this get_current_value}}}}
+         {best.lbl set_showing 0}}
+      {fans.lbl
+         set_token_fmt
+         campaign_goal_value
+         {$this get_accomplishment_value}}
+      {fans.lbl
+         set_showing
+         {!
+            {$this is_accomplishment_secret}}})
+   (refresh
+      {$this update_for_selection}
+      {title.lbl
+         set_token_fmt
+         campaign_category_header
+         {$this get_header}
+         {$this get_num_completed}
+         {$this get_total}}
+      {{accomplishments_status_panel find header.lbl}
+         set_token_fmt
+         career_header_category
+         {accomplishment_categories_panel get_group}
+         {$this get_category}}
+      {$this refresh_details}
+      {accomplishments_status_panel refresh})
+   (SCROLL_MSG
+      {set
+         [scroll_dirty]
+         1})
+   (handle_launch_calibration
+      {cal_welcome_screen set cancel_screen accomplishment_screen}
+      {cal_welcome_screen set confirm_screen accomplishment_screen}
+      {ui_event_mgr trigger_event go_to_calibration})
+   (handle_cant_launch_charactercreator
+      {ui push_screen accomplishments_cant_launch_character_creator_screen})
+   (handle_launch_charactercreator
+      {closet_mgr
+         set_user
+         {campaign get_user}}
+      {closet_mgr set_return_screen accomplishment_screen}
+      {ui_event_mgr trigger_event go_to_charactercreator})
+   (handle_cant_launch_bandcreator
+      {ui push_screen accomplishments_cant_launch_band_creator_screen})
+   (handle_launch_bandcreator
+      {create_band_panel set return_screen accomplishment_screen}
+      {meta_performer
+         set_record_label
+         {meta_performer
+            create_new_label
+            {campaign get_user}}}
+      {ui goto_screen create_band_screen})
+   (handle_launch_tour
+      {tour
+         reset_tour_data
+         {campaign get_user}}
+      {tour
+         set_user
+         {campaign get_user}}
+      {tour initialize_tour}
+      {ui sync_screen tour_customize_screen 0})
+   (handle_goto_trainer_lesson
+      ($lesson)
+      {training_mgr
+         set_user
+         {campaign get_user}}
+      {goto_trainer_lesson $lesson accomplishment_screen})
+   (handle_goto_trainer_songlesson
+      ($song $instrument $difficulty)
+      {training_mgr
+         set_user
+         {campaign get_user}}
+      {goto_trainer_song_lesson $song $instrument $difficulty accomplishment_screen})
+   (get_selected_details_entry_index
+      {details.lst selected_pos})
+   (update_details_provider
+      ($provider)
+      {details.lst set_provider $provider})
+   (handle_goto_difficultyselect
+      {ui goto_screen part_difficulty_screen})
+   (get_musiclibrary_nextscreen part_difficulty_screen)
+   (get_musiclibrary_backscreen accomplishment_screen)
+   (handle_goto_musiclibrary
+      {ui goto_screen song_select_screen})
+   (get_initially_selected_goal
+      [initially_selected_goal])
+   (clear_initially_selected_goal
+      {$this set initially_selected_goal ''})
+   (enter)
+   (poll
+      {if
+         [scroll_dirty]
+         {$this update_for_selection}
+         {set
+            [scroll_dirty]
+            0}})
+   (exit)
+   (handle_focus
+      {details.grp set_showing 0}
+      {list.grp set_showing 1}
+      {$this
+         set_focus
+         "accomplishments.lst"})
+   (handle_unfocus
+      {details.grp set_showing 1}
+      {list.grp set_showing 0}
+      {$this
+         set_focus
+         "details.lst"})
+   (handle_new_selection)
+   (hide_list
+      {details.lst set_showing 0}
+      {flavor.lbl set_showing 1})
+   (show_list
+      {details.lst set_showing 1}
+      {flavor.lbl set_showing 0})}
+{new
+   BandScreen
+   accomplishment_screen
+   (panels meta sv7_panel accomplishments_status_panel accomplishment_panel)
+   (focus accomplishment_panel)
+   (navigating_details 0)
+   (enter
+      {accomplishment_panel handle_focus}
+      {$this handle_leave_details})
+   (handle_goto_details
+      {$this set navigating_details 1}
+      {accomplishment_panel handle_unfocus})
+   (handle_leave_details
+      {$this set navigating_details 0}
+      {accomplishment_panel handle_focus})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (1
+            {if_else
+               [navigating_details]
+               {if
+                  {accomplishment_panel can_launch_selected_entry}
+                  {cond
+                     ({!
+                           {session_mgr is_local}}
+                        {ui push_screen accomplishments_no_launch_when_online_screen})
+                     ({!
+                           {accomplishment_panel has_correct_playercount}}
+                        {ui push_screen accomplishments_wrong_playercount_screen})
+                     ({!
+                           {accomplishment_panel is_user_on_correct_instrument}}
+                        {ui push_screen accomplishments_wrong_instrument_screen})
+                     {accomplishment_panel launch_selected_entry}}}
+               {if
+                  {accomplishment_panel can_launch_goal}
+                  {cond
+                     ({!
+                           {session_mgr is_local}}
+                        {ui push_screen accomplishments_no_launch_when_online_screen})
+                     ({!
+                           {accomplishment_panel has_correct_playercount}}
+                        {ui push_screen accomplishments_wrong_playercount_screen})
+                     ({!
+                           {accomplishment_panel is_user_on_correct_instrument}}
+                        {ui push_screen accomplishments_wrong_instrument_screen})
+                     {accomplishment_panel launch_goal}}}}
+            0)
+         (14
+            {if_else
+               [navigating_details]
+               {$this handle_leave_details}
+               {if
+                  {$this can_navigate_list}
+                  {$this handle_goto_details}}}
+            'kDataUnhandled;')
+         (3
+            {if
+               {accomplishment_panel has_leaderboard}
+               {campaign_goals_leaderboard_panel
+                  set_goal
+                  {accomplishment_panel selected_accomplishment}}
+               {campaign_goals_leaderboard_screen set return_screen accomplishment_screen}
+               {ui goto_screen campaign_goals_leaderboard_screen}}
+            'kDataUnhandled;')
+         (2
+            {if_else
+               [navigating_details]
+               {do
+                  {$this handle_leave_details}
+                  0}
+               {do
+                  {accomplishment_categories_panel
+                     set
+                     initially_selected_category
+                     {accomplishment_panel get_category}}
+                  {ui goto_screen accomplishment_categories_screen}
+                  0}})
+         kDataUnhandled})
+   (SELECT_MSG)}
+{new
+   BandScreen
+   accomplishment_pause_screen
+   (panels accomplishment_panel)
+   (focus accomplishment_panel)
+   (back main_hub_screen)}
+#define ACCOMPLISHMENTS_CHOOSE_USER_PANEL
+((file
+      "../overshell/choose_char_owner.milo")
+   (focus players.lst)
+   (return_screen '')
+   (accomplishments_screen '')
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action 2}
+         {do
+            {play_instr_sfx $user button_back}
+            {ui
+               goto_screen
+               [return_screen]}}
+         kDataUnhandled})
+   (SIGNIN_CHANGED_MSG
+      {ui
+         goto_screen
+         [return_screen]})
+   (SELECT_MSG
+      {do
+         ($selected_user
+            {user_provider
+               get_user
+               {players.lst selected_pos}})
+         {if_else
+            $selected_user
+            {do
+               {$this on_go_to_accomplishments_screen}
+               {accomplishment_panel set user $user}
+               {accomplishment_panel set_other_user_to_view $selected_user}
+               {ui
+                  goto_screen
+                  [accomplishments_screen]}}
+            {do
+               {ui
+                  goto_screen
+                  [return_screen]}}}})
+   (enter
+      {user_provider set_state 1}
+      {players.lst set_provider user_provider}
+      {players.lst
+         set_selected
+         {user_provider first_active}}
+      {title.lbl set text_token accomplishments_view_user_title}
+      {msg.lbl set text_token accomplishments_view_user_message}
+      {platform_mgr add_sink $this})
+   (exit
+      {platform_mgr remove_sink $this}))
+{func
+   view_accomplishments_screen
+   ($user $caller $choose_user_screen $no_user_screen $accomplishments_screen $return_screen)
+   {if_else
+      {&&
+         {platform_mgr is_user_signed_in $user}
+         {!
+            {platform_mgr is_user_a_guest $user}}}
+      {do
+         {if
+            $caller
+            {$caller on_go_to_accomplishments_screen}}
+         {accomplishments_status_panel set user $user}
+         {ui goto_screen $accomplishments_screen}}
+      {do
+         {user_provider set_state 1}
+         {switch
+            {user_provider get_num_users}
+            (0
+               {ui goto_screen $no_user_screen})
+            (1
+               {if
+                  $caller
+                  {$caller on_go_to_accomplishments_screen}}
+               {accomplishments_status_panel set user $user}
+               {accomplishments_status_panel
+                  set_other_user_to_view
+                  {user_provider get_user 0}}
+               {ui goto_screen $accomplishments_screen})
+            {pause_accomplishments_choose_user_panel set return_screen pause_screen}
+            {{$choose_user_screen focus_panel}
+               set
+               return_screen
+               $return_screen}
+            {{$choose_user_screen focus_panel}
+               set
+               accomplishments_screen
+               $accomplishments_screen}
+            {ui goto_screen $choose_user_screen}}}}}
+{new
+   UIPanel
+   accomplishments_choose_user_panel
+   ACCOMPLISHMENTS_CHOOSE_USER_PANEL
+   (on_go_to_accomplishments_screen)}
+{new
+   BandScreen
+   accomplishments_choose_user_screen
+   (panels meta accomplishments_choose_user_panel)
+   (focus accomplishments_choose_user_panel)}
+{new
+   BandScreen
+   accomplishments_no_user_screen
+   (panels meta dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok accomplishments_need_signed_in_user})
+   (SELECT_MSG
+      {ui goto_screen main_hub_screen})}
+{new
+   BandScreen
+   accomplishments_wrong_instrument_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok accomplishment_launch_wrong_instrument})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   accomplishments_wrong_playercount_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok accomplishment_launch_wrong_playercount})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   accomplishments_no_launch_when_online_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok accomplishment_no_launch_when_online})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   accomplishments_cant_launch_band_creator_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok accomplishment_cant_launch_band_creator})
+   (SELECT_MSG
+      {ui pop_screen})}
+{new
+   BandScreen
+   accomplishments_cant_launch_character_creator_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok accomplishment_cant_launch_character_creator})
+   (SELECT_MSG
+      {ui pop_screen})}

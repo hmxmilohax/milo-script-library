@@ -1,0 +1,262 @@
+{new
+   MetaBandInfoPanel
+   bandinfo_panel
+   (file
+      "bandinfo.milo")
+   (focus info_options.lst)
+   (roster_provider 0)
+   (modified_name 0)
+   (enter
+      {$this set_state 0}
+      {do
+         ($options
+            {array 0})
+         {push_back $options band_info_view_roster}
+         {push_back $options band_info_view_stats}
+         {if
+            {{meta_performer get_band}
+               has_write_permission}
+            {push_back $options band_info_change_name}
+            {push_back $options band_info_edit_quote}
+            {push_back $options band_info_edit_logo}
+            {push_back $options band_info_customize_appearance}}
+         {push_back $options band_info_leave_band}
+         {info_options.lst set_data $options}}
+      {stats.lst
+         set_data
+         (band_info_stats_recent_activity band_info_stats_favorite_songs band_info_stats_best_performances)}
+      {do
+         ($band
+            {meta_performer get_band})
+         {band_name.lbl set_band_name $band}
+         {founding_date.lbl
+            set_token_fmt
+            band_info_founding_info
+            {$band get_band_leader_name}
+            {$band get_creation_date_string}
+            {localize
+               {$band city}}}
+         {band_quote.lbl set_band_quote $band}})
+   (exit
+      {$this set_state 4}
+      {saveload_mgr autosave})
+   (update_state
+      ($state)
+      {reset.trg trigger}
+      {switch
+         $state
+         (0
+            {band_overview.trg trigger}
+            {$this set_focus info_options.lst})
+         (1
+            {roster.trg trigger}
+            {$this set_focus roster.lst}
+            {$this component_scroll roster.lst 0})
+         (2
+            {potential_members.trg trigger}
+            {$this set_focus potential_members.lst})
+         (3
+            {stats.trg trigger}
+            {$this set_focus stats.lst})})
+   (set_band_member_providers
+      ($band_member_provider $band_roster_provider $add_member_provider)
+      {members.lst set_provider $band_member_provider}
+      {roster.lst set_provider $band_roster_provider}
+      {if
+         $add_member_provider
+         {potential_members.lst set_provider $add_member_provider}}
+      {set
+         [roster_provider]
+         $band_roster_provider}
+      {set
+         [potential_members_provider]
+         $add_member_provider})
+   (set_band_scores
+      ($total_score $rb3_score)
+      {band_score.lbl
+         set_token_fmt
+         band_info_total_score
+         {localize_separated_int $total_score}}
+      {rb3_score.lbl
+         set_token_fmt
+         band_info_rb3_score
+         {localize_separated_int $rb3_score}})
+   (refresh_band_member_provider
+      {members.lst refresh})
+   (refresh_potential_members
+      {if
+         [potential_members_provider]
+         {potential_members.lst refresh}})
+   (SELECT_MSG
+      {switch
+         $component
+         (info_options.lst
+            {switch
+               {info_options.lst selected_sym}
+               (band_info_view_stats
+                  {if_else
+                     {$this is_online}
+                     {$this set_state 3}
+                     {push_basic_confirm_dialog band_info_stats_online_only}})
+               (band_info_view_roster
+                  {$this set_state 1})
+               (band_info_change_name
+                  {set
+                     [modified_name]
+                     1}
+                  {virtual_keyboard
+                     show_keyboard
+                     $user
+                     80
+                     {localize create_band_vk_title}
+                     {localize rename_band_vk_desc}
+                     ""
+                     $this})
+               (band_info_edit_quote
+                  {set
+                     [modified_name]
+                     0}
+                  {virtual_keyboard
+                     show_keyboard
+                     $user
+                     80
+                     {localize band_profile_vk_motto_title}
+                     {localize band_profile_vk_motto_desc}
+                     ""
+                     $this})
+               (band_info_edit_logo)
+               (band_info_customize_appearance)
+               (band_info_leave_band
+                  {ui push_screen bandinfo_confirm_leave})})
+         (roster.lst
+            {if_else
+               {&&
+                  {{meta_performer get_band}
+                     has_write_permission}
+                  {==
+                     {roster.lst selected_pos}
+                     0}}
+               {$this set_state 2}
+               {$this
+                  view_gamercard
+                  {$user get_pad_num}
+                  {roster.lst selected_pos}}})
+         (potential_members.lst
+            {[potential_members_provider]
+               add_potential_member_to_band
+               {potential_members.lst selected_pos}}
+            {roster.lst refresh}
+            {members.lst refresh}
+            {potential_members.lst refresh})})
+   (BUTTON_DOWN_MSG
+      {do
+         ($current_state
+            {$this get_state})
+         {cond
+            ({== $action 2}
+               {switch
+                  $current_state
+                  (1
+                     {$this set_state 0})
+                  (2
+                     {$this set_state 1})
+                  (3
+                     {$this set_state 0})
+                  kDataUnhandled})
+            ({== $action 3}
+               {switch
+                  $current_state
+                  (1
+                     {do
+                        ($band $selected_pos)
+                        {set
+                           $band
+                           {meta_performer get_band}}
+                        {set
+                           $selected_pos
+                           {roster.lst selected_pos}}
+                        {if
+                           {$band has_write_permission}
+                           {cond
+                              ({> $selected_pos 1}
+                                 {[roster_provider]
+                                    remove_band_member
+                                    $selected_pos})}}})
+                  kDataUnhandled})
+            (1 kDataUnhandled)}})
+   (SCROLL_MSG
+      {if_else
+         {== $component roster.lst}
+         {do
+            ($band
+               {meta_performer get_band})
+            {cond
+               ({&&
+                     {$band has_write_permission}
+                     {==
+                        {roster.lst selected_pos}
+                        0}}
+                  {remove_member.ihp set_showing 0}
+                  {roster_view_gamercard.ihp set_showing 0})
+               ({$band has_write_permission}
+                  {remove_member.ihp set_showing 1}
+                  {roster_view_gamercard.ihp set_showing 1})
+               (1
+                  {remove_member.ihp set_showing 0}
+                  {roster_view_gamercard.ihp set_showing 1})}}
+         kDataUnhandled})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {==
+               {ui focus_panel}
+               bandinfo_panel}
+            {!
+               {==
+                  $text
+                  ""}}
+            {!
+               {==
+                  $text
+                  " "}}}
+         {if_else
+            [modified_name]
+            {do
+               {{meta_performer get_band}
+                  set_name
+                  $text}
+               {{bandinfo_panel find band_name.lbl}
+                  set_band_name
+                  {meta_performer get_band}}}
+            {do
+               {{meta_performer get_band}
+                  set_quote
+                  $text}
+               {{bandinfo_panel find band_quote.lbl}
+                  set_band_quote
+                  {meta_performer get_band}}}}})}
+{new
+   BandScreen
+   bandinfo_screen
+   (panels meta bandinfo_panel)
+   (focus bandinfo_panel)
+   (back main_hub_screen)}
+{new
+   BandScreen
+   bandinfo_confirm_leave
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_yesno bandinfo_confirm_leave no.btn})
+   (SELECT_MSG
+      {if_else
+         {== $component yes.btn}
+         {do
+            {bandinfo_panel delete_band}
+            {ui
+               pop_screen
+               {bandinfo_screen get back}}}
+         {ui pop_screen}})}

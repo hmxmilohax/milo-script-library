@@ -1,0 +1,187 @@
+#define TRACKER_DISPLAY_COMMON_EDITOR
+((hide
+      script
+      (script
+         {$this hide})
+      (help
+         "Fade the display out, hiding it."))
+   (target_progress
+      script
+      (script
+         {$this target_progress})
+      (help
+         "Simulate the tracker incrementing, but not passing a target value."))
+   (advance_target
+      script
+      (script
+         {$this advance_target 0 target})
+      (help
+         "Simulate passing a target."))
+   (last_target_passed
+      script
+      (script
+         {$this last_target_passed})
+      (help
+         "Simulate passing the last target.")))
+#define TRACKER_DISPLAY_COMMON_HANDLERS
+((set_progress
+      ($data_array)
+      {tg_main_text_middle.lbl set_token_fmt $data_array})
+   (set_int_progress
+      ($int)
+      {tg_main_text_middle.lbl set_int $int 1})
+   (set_target
+      ($data_array)
+      {if_else
+         {size $data_array}
+         {tg_main_text_bottom.lbl set_token_fmt $data_array}
+         {tg_main_text_bottom.lbl
+            set_token_fmt
+            ""}})
+   (target_progress
+      {target_progress.trig trigger})
+   (advance_target
+      ($passed_target_index $new_target_description)
+      {thread_task
+         0
+         (script
+            {target_pass.trig trigger}
+            {$task sleep 1.0}
+            {tg_main_text_bottom.lbl set_token_fmt $new_target_description})})
+   (last_target_passed
+      {thread_task
+         0
+         (script
+            {target_pass.trig trigger})}))
+(RndDir
+   (types
+      (tracker_band_display
+         (editor
+            TRACKER_DISPLAY_COMMON_EDITOR
+            (show
+               script
+               (script
+                  {$this show description_token})
+               (help
+                  "Fade the display in."))
+            (graphic_type
+               script
+               (script
+                  {$this set_display_type 0})
+               (help
+                  "Change the display mode to graphic."))
+            (text_type
+               script
+               (script
+                  {$this set_display_type 1})
+               (help
+                  "Change the display mode to text.")))
+         TRACKER_DISPLAY_COMMON_HANDLERS
+         (set_display_type
+            ($type)
+            {switch
+               $type
+               (0
+                  {configure_type.anim set_frame 0})
+               (1
+                  {configure_type.anim set_frame 1})})
+         (show
+            ($description)
+            {show.trig trigger}
+            {tg_main_text_top.lbl set text_token $description})
+         (hide
+            {hide.trig trigger})
+         (set_progress_percentage
+            ($percentage)
+            {star_display
+               set
+               num_stars
+               {'*' $percentage 5.0}}))
+      (tracker_player_display
+         (editor
+            TRACKER_DISPLAY_COMMON_EDITOR
+            (gain_focus
+               script
+               (script
+                  {$this gain_focus})
+               (help
+                  "Fade the display in."))
+            (lose_focus_success
+               script
+               (script
+                  {$this lose_focus 1})
+               (help
+                  "Player succeeded in passing focus."))
+            (lose_focus_failure
+               script
+               (script
+                  {$this lose_focus 0})
+               (help
+                  "Focus moves, but without success."))
+            (fail
+               script
+               (script
+                  {$this failed})
+               (help
+                  "Player failed.")))
+         TRACKER_DISPLAY_COMMON_HANDLERS
+         (set_type
+            ($type)
+            {switch
+               $type
+               (0
+                  {configure_type.anim set_frame 0})
+               (1
+                  {configure_type.anim set_frame 1})})
+         (hide
+            {hide.trig trigger}
+            {meter_wipe.anim set_frame 0.0})
+         (gain_focus
+            {show.trig trigger}
+            {meter_wipe.anim set_frame 0.0})
+         (lose_focus
+            ($success)
+            {if_else
+               $success
+               {focus_success.trig trigger}
+               {focus_failure.trig trigger}}
+            {hide.trig trigger}
+            {meter_wipe.anim set_frame 0.0})
+         (failed
+            {failed.trig trigger}
+            {meter_wipe.anim set_frame 0.0})
+         (set_dynamic_message
+            ($message)
+            {tg_main_text_top.lbl set text_token $message})
+         (set_static_message
+            ($message)
+            {static_message.lbl set text_token $message}
+            {static_message.lbl set showing 1})
+         (set_progress_percentage
+            ($percentage)
+            {meter_wipe.anim set_frame $percentage}))
+      (tracker_broadcast_display
+         (editor
+            (show
+               script
+               (script
+                  {$this show})
+               (help
+                  "Show the display."))
+            (hide
+               script
+               (script
+                  {$this hide})
+               (help
+                  "Hide the display.")))
+         (show
+            {tg_desc_show.trig trigger})
+         (hide
+            {tg_desc_hide.trig trigger})
+         (set_description
+            ($description)
+            {tg_desc.lbl set text_token $description})
+         (broadcast
+            ($data_array)
+            {tg_desc.lbl set_token_fmt $data_array}
+            {broadcast.trig trigger}))))

@@ -1,0 +1,196 @@
+{new
+   UIPanel
+   lose_panel
+   (file
+      "lose.milo")
+   (quit_confirm_screen lose_confirm_quit_screen)
+   (quit_button '')
+   (enter
+      {$this set_focus lose_restart.btn}
+      {lose_song_data.lbl
+         set_song_name
+         {meta_performer song}}
+      {do
+         ($mp
+            {beatmatch main_performer})
+         {lose_progress_data.lbl
+            set_token_fmt
+            percent_complete_format
+            {int
+               {'*'
+                  {beatmatch get_fraction_completed}
+                  100.0}}}
+         {song_section.lbl
+            set
+            text_token
+            {beatmatch
+               get_section_at_ms
+               {$mp progress_ms}}}}
+      {do
+         ($has_part 0)
+         {user_mgr
+            foreach_user
+            $user
+            {if
+               {meta_performer
+                  part_plays_in_song
+                  {$user get_track_sym}}
+               {set $has_part 1}}}
+         {if_else
+            {&&
+               {gamemode in_mode qp_coop}
+               {==
+                  {session num_users}
+                  1}
+               $has_part}
+            {$this enable lose_practice.btn}
+            {$this disable lose_practice.btn}}}
+      {overshell set_active_status 2}
+      {session
+         add_sink
+         $this
+         (remote_user_left)}
+      {$this set_up_buttons}
+      {$this update_nofail_checkbox})
+   (exit
+      {session remove_sink $this remote_user_left})
+   (set_up_buttons
+      {if_else
+         {<
+            {session num_users}
+            {gamemode get min_players}}
+         {do
+            {$this disable lose_restart.btn}
+            {$this disable lose_resume.btn}}
+         {do
+            {$this enable lose_restart.btn}
+            {if_else
+               {gamemode get can_resume_songs}
+               {$this enable lose_resume.btn}
+               {$this disable lose_resume.btn}}}})
+   (REMOTE_USER_LEFT_MSG
+      {$this set_up_buttons})
+   (SELECT_MSG
+      {switch
+         $component
+         (lose_restart.btn
+            {game send_restart_game_net_msg}
+            {game_restart})
+         (lose_resume.btn
+            {game
+               send_resume_no_score_game_net_msg
+               {beatmatch get_fraction_completed}}
+            {game_resume_no_score
+               {beatmatch get_fraction_completed}})
+         (lose_practice.btn
+            {practice_panel
+               set
+               uses_harmony
+               {meta_performer is_now_using_vocal_harmony}}
+            {[quit_confirm_screen]
+               set
+               quitting
+               1}
+            {practice_sel_section_panel
+               set_initial_section
+               {beatmatch
+                  get_section_at_ms
+                  {{beatmatch main_performer}
+                     progress_ms}}}
+            {$this confirm_goto meta_loading_practice_screen})
+         (lose_nofail.btn
+            {if_else
+               {meta_performer is_no_fail_active}
+               {meta_performer use_no_fail 0}
+               {meta_performer use_no_fail 1}}
+            {$this update_nofail_checkbox})
+         (lose_quit.btn
+            {[quit_confirm_screen]
+               set
+               quitting
+               1}
+            {$this confirm_goto meta_loading_continue_screen})})
+   (confirm_goto
+      ($destination)
+      {[quit_confirm_screen]
+         set
+         return_screen
+         {ui current_screen}}
+      {[quit_confirm_screen]
+         set
+         confirm_screen
+         $destination}
+      {ui
+         goto_screen
+         [quit_confirm_screen]})
+   (update_nofail_checkbox
+      {if_else
+         {meta_performer is_no_fail_active}
+         {nofail.chk set checked 1}
+         {nofail.chk set checked 0}})}
+{new
+   BandScreen
+   lose_screen
+   (panels lose_panel)
+   (focus lose_panel)
+   (enter
+      {if
+         {!=
+            {rnd aspect}
+            2}
+         {rnd set_aspect 3}})}
+{new
+   BandScreen
+   lose_confirm_quit_screen
+   (panels lose_panel dialog_panel)
+   (focus dialog_panel)
+   (confirm_screen '')
+   (return_screen '')
+   (quitting 0)
+   (enter
+      {dialog_panel set_yesno confirm_quit no.btn}
+      {$this set_up_buttons}
+      {session
+         add_sink
+         $this
+         (remote_user_left)})
+   (exit
+      {session remove_sink $this remote_user_left}
+      {unless
+         [quitting]
+         {net_sync enable}})
+   (set_up_buttons
+      {if
+         {<
+            {session num_users}
+            {gamemode get min_players}}
+         {{dialog_panel find no.btn}
+            set_state
+            2}
+         {dialog_panel
+            set_focus
+            {dialog_panel find yes.btn}}})
+   (REMOTE_USER_LEFT_MSG
+      {$this set_up_buttons})
+   (SELECT_MSG
+      {switch
+         $component
+         (yes.btn
+            {if_else
+               {==
+                  [confirm_screen]
+                  meta_loading_main_screen}
+               {ui_event_mgr trigger_event quit_to_main}
+               {if_else
+                  [quitting]
+                  {ui
+                     pop_screen
+                     [confirm_screen]}
+                  {ui
+                     sync_screen
+                     [confirm_screen]
+                     0}}})
+         (no.btn
+            {ui
+               goto_screen
+               [return_screen]})})}

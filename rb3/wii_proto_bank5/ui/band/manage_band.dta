@@ -1,0 +1,132 @@
+{new
+   UIPanel
+   create_band_panel
+   (file
+      "manage_band.milo")
+   (return_screen '')
+   (enter
+      {profile_mgr
+         add_sink
+         $this
+         (profile_changed_msg)}
+      {$this update_band_name_label}
+      {logo.mat
+         set
+         diffuse_tex
+         {if_else
+            {{meta_performer get_record_label}
+               get_logo_tex}
+            {{meta_performer get_record_label}
+               get_logo_tex}
+            logo.tex}}
+      {$this set_focus band_name.btn})
+   (exit
+      {profile_mgr remove_sink $this profile_changed_msg})
+   (profile_changed_msg
+      ($profile)
+      {meta_performer clear_record_label}
+      {ui
+         goto_screen
+         [return_screen]})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {==
+               {ui focus_panel}
+               $this}
+            {!
+               {==
+                  $text
+                  ""}}
+            {!
+               {==
+                  $text
+                  " "}}}
+         {if_else
+            {profile_mgr
+               can_record_label_use_name
+               {meta_performer get_record_label}
+               $text}
+            {do
+               {{meta_performer get_record_label}
+                  set_name
+                  $text}
+               {$this update_band_name_label}}
+            {push_basic_confirm_dialog create_band_duplicate_name}}
+         {$this set_focus band_name.btn}})
+   (SELECT_MSG
+      {switch
+         $component
+         (band_name.btn
+            {virtual_keyboard
+               show_keyboard
+               $user
+               35
+               {localize create_band_vk_title}
+               {localize create_band_vk_desc}
+               {$this get_default_vk_name}
+               $this})
+         (logo.btn
+            {patch_entry_panel
+               setup_for_band_logo
+               {meta_performer get_record_label}}
+            {patch_entry_panel set patch_return_screen create_band_screen}
+            {ui goto_screen patch_entry_screen})
+         (continue.btn
+            {do
+               ($name
+                  {{meta_performer get_record_label}
+                     get_name})
+               {if_else
+                  {!=
+                     $name
+                     ""}
+                  {do
+                     {meta_performer handle_record_label_created}
+                     {ui
+                        goto_screen
+                        [return_screen]}}
+                  {push_basic_confirm_dialog shell_createband_no_name}}})})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action 2}
+         {do
+            {if_else
+               {==
+                  {$this focus_name}
+                  band_name.lbl}
+               {$this set_focus band_name.btn}
+               {do
+                  {meta_performer cancel_new_label}
+                  {ui
+                     goto_screen
+                     [return_screen]}}}}
+         kDataUnhandled})
+   (update_band_name_label
+      {band_name.lbl
+         set_record_label_name
+         {meta_performer get_record_label}})
+   (get_default_vk_name
+      {do
+         ($name
+            {{meta_performer get_record_label}
+               get_name})
+         {if_else
+            {!=
+               $name
+               ""}
+            $name
+            {sprintf
+               "%s %s"
+               {localize
+                  {name_generator get_random_name band_firstnames}}
+               {localize
+                  {name_generator get_random_name band_secondnames}}}}})}
+{new
+   BandScreen
+   create_band_screen
+   (panels meta create_band_panel)
+   (focus create_band_panel)}
