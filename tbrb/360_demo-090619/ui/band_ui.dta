@@ -1,0 +1,298 @@
+#define COMMON_ERROR_HANDLERS
+(COMMON_DIALOG_PANEL_HANDLERS
+   (helpbar
+      ((confirm helpbar_select))))
+(INVITE_ACCEPTED_MSG
+   {cond
+      ($expired
+         {passive_messages_panel queue_message error_invite_expired})
+      (TRUE
+         #ifndef HX_PS3
+         {main_panel set invited_user_pad $pad_num}
+         #endif
+         {finding_panel set_joining_pads_from_session}
+         {ui_event_mgr trigger_event invite_accepted})})
+#define COMMON_PAD_LOST
+((init_text
+      ($user $none_token $controller_token $quit_token)
+      {do
+         ($pad_num
+            {$user get_pad_num})
+         ($name
+            {$user get_player_name})
+         ($controller
+            {$user get_controller_sym})
+         {unless
+            {== $controller none}
+            {set
+               $controller
+               {sprint
+                  $controller
+                  "_pad_lost"}}}
+         {$this
+            set_custom
+            {if_else
+               {== $controller none}
+               ($none_token
+                  $name
+                  {'+' $pad_num 1})
+               ($controller_token
+                  {if_else
+                     {'||'
+                        {==
+                           {system_language}
+                           eng}
+                        {==
+                           {system_language}
+                           fre}}
+                     $name
+                     {localize $controller}}
+                  {if_else
+                     {'||'
+                        {==
+                           {system_language}
+                           eng}
+                        {==
+                           {system_language}
+                           fre}}
+                     {localize $controller}
+                     $name}
+                  {'+' $pad_num 1})}
+            continue
+            $quit_token
+            opt1.btn}}))
+(ui_event_mgr
+   (dialog_events
+      (error_message
+         COMMON_ERROR_HANDLERS
+         (init
+            ($token)
+            {$this set_ok $token})
+         (SELECT_DONE_MSG
+            {ui_event_mgr dismiss_event}))
+      (disband_error
+         COMMON_ERROR_HANDLERS
+         (init
+            ($error)
+            {$this
+               set_ok
+               {switch
+                  $error
+                  (kLoneH2H error_lone_h2h)
+                  (kLoneH2HRanked error_lone_h2h_win)
+                  (kNoLeader error_no_leader)
+                  (kKicked error_kicked)
+                  (kBadConfiguration error_bad_configuration)}})
+         (SELECT_DONE_MSG
+            {ui_event_mgr dismiss_event}))
+      (pad_lost
+         COMMON_ERROR_HANDLERS
+         COMMON_PAD_LOST
+         (init
+            ($user)
+            {$this init_text $user error_pad_lost_none error_pad_lost error_return_to_main})
+         (SELECT_MSG
+            {switch
+               $component
+               (opt2.btn
+                  {ui_event_mgr trigger_event quit_early})})
+         (SELECT_DONE_MSG
+            {switch
+               $component
+               (opt1.btn
+                  {$this dismiss_if_controllers_valid}
+                  {helpbar update_icons})})
+         (dismiss_if_controllers_valid
+            {do
+               ($invalid_user
+                  {input_mgr get_user_with_invalid_controller})
+               {if_else
+                  $invalid_user
+                  {do
+                     {feedback.anim animate}
+                     {$this init $invalid_user}}
+                  {ui_event_mgr dismiss_event}}})
+         (input_limit_changed
+            {$this dismiss_if_controllers_valid}))
+      (matchmaking_pad_lost
+         COMMON_ERROR_HANDLERS
+         COMMON_PAD_LOST
+         (init
+            ($user)
+            {$this init_text $user error_matchmaking_pad_lost_none error_matchmaking_pad_lost error_abandon_session})
+         (SELECT_DONE_MSG
+            {if_else
+               {== $component opt1.btn}
+               {do
+                  ($invalid_user
+                     {matchmaking_screen get_user_with_invalid_controller})
+                  {if_else
+                     $invalid_user
+                     {$this init $invalid_user}
+                     {ui_event_mgr dismiss_event}}}
+               {matchmaking_screen abandon_session}}))
+      (remote_exit
+         COMMON_ERROR_HANDLERS
+         (enter
+            {synth play button_back})
+         (init
+            {$this set_yesno error_confirm_remote_exit no.btn})
+         (SELECT_MSG
+            {if
+               {== $component yes.btn}
+               {ui_event_mgr trigger_event quit_early}})
+         (SELECT_DONE_MSG
+            {if
+               {!= $component yes.btn}
+               {ui_event_mgr dismiss_event}})
+         (input_limit_changed
+            {unless
+               {input_mgr allow_remote_exit}
+               {ui_event_mgr dismiss_event}})))
+   (transition_events
+      (disband
+         (next_screen meta_loading_uisink_default_screen)
+         (destination_screen
+            {meta_loading_uisink_default_screen get next_screen})
+         (init
+            ($error_reason)
+            {unless
+               {== $error_reason kAbandoned}
+               {ui_event_mgr
+                  trigger_event
+                  disband_error
+                  (dummy init $error_reason)}}))
+      (leaderboard_error
+         (next_screen meta_loading_leaderboard_error_screen)
+         (destination_screen
+            {meta_loading_leaderboard_error_screen get next_screen})
+         (init
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy init error_lost_leaderboards)}))
+      (invite_accepted
+         (next_screen meta_loading_finding_screen)
+         (destination_screen
+            {meta_loading_finding_screen get next_screen})
+         (init
+            {forfeit_ranked_game}))
+      (storage_changed
+         (next_screen meta_loading_uisink_default_screen)
+         (destination_screen
+            {meta_loading_uisink_default_screen get next_screen})
+         (init
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy init error_storage_devices_changed)}))
+      (data_error
+         (next_screen meta_loading_uisink_default_screen)
+         (destination_screen
+            {meta_loading_uisink_default_screen get next_screen})
+         (init
+            ($corrupt $info_str)
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy
+                  init
+                  {if_else
+                     $corrupt
+                     (error_corrupt_song_data $info_str)
+                     error_lost_song_data})}))
+      (lost_connection
+         (next_screen meta_loading_uisink_lost_connection_screen)
+         (destination_screen
+            {meta_loading_uisink_lost_connection_screen get next_screen})
+         (init
+            ($reason)
+            {forfeit_ranked_game}
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy
+                  init
+                  {switch
+                     $reason
+                     (kLostConnection error_lost_connection)
+                     (kLostServer error_lost_server)
+                     (kEthernetUnplugged error_ethernet_unplugged)})}))
+      (sign_out
+         (next_screen meta_loading_signout_screen)
+         (destination_screen
+            {meta_loading_signout_screen get next_screen})
+         (init
+            ($reason)
+            {forfeit_ranked_game}
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy
+                  init
+                  {switch
+                     $reason
+                     (kLocalUserSignedOut error_local_user_signed_out)
+                     (kBandOwnerSignedOut error_band_owner_signed_out)
+                     (kProfileOwnerSignedOut error_profile_owner_signed_out)})}))
+      (disc_error
+         (next_screen meta_loading_uisink_lost_connection_screen)
+         (destination_screen
+            {meta_loading_uisink_lost_connection_screen get next_screen})
+         (init
+            {forfeit_ranked_game}
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy init error_disc)}))
+      (store_load_failed
+         (next_screen meta_loading_uisink_default_screen)
+         (destination_screen
+            {meta_loading_uisink_default_screen get next_screen})
+         (init
+            ($error)
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy
+                  init
+                  {switch
+                     $error
+                     (kStoreErrorNoContent store_error_no_content)
+                     (kStoreErrorCacheNoSpace store_error_cache_no_space)
+                     (kStoreErrorCacheRemoved store_error_cache_removed)
+                     (kStoreErrorLiveServer store_error_live_server)
+                     (kStoreErrorStoreServer store_error_store_server)
+                     (kStoreErrorSignedOut store_error_signed_out)
+                     (kStoreErrorNoMetadata store_error_no_metadata)})}))
+      (finding_error
+         (next_screen
+            {finding_panel back_screen})
+         (destination_screen
+            {finding_panel back_screen})
+         (init
+            ($error_token)
+            {ui_event_mgr
+               trigger_event
+               error_message
+               (dummy init $error_token)}))
+      (quit_early
+         (next_screen meta_loading_main_screen)
+         (destination_screen
+            {meta_loading_main_screen get next_screen})
+         (init
+            {forfeit_ranked_game}))
+      (forfeit
+         (next_screen meta_loading_matchmaking_screen)
+         (destination_screen
+            {meta_loading_matchmaking_screen get next_screen})
+         (init
+            {forfeit_ranked_game}))
+      (quit_to_main
+         (next_screen sell_splash_screen)
+         (destination_screen
+            {sell_splash_screen get next_screen}))
+      (find_new_opponent
+         (next_screen meta_loading_finding_screen)
+         (destination_screen
+            {meta_loading_finding_screen get next_screen}))))
