@@ -1,0 +1,926 @@
+{new
+   MoviePanel
+   intro_movie_panel
+   (preload FALSE)
+   (audio TRUE)
+   (loop FALSE)
+   (update_presence TRUE)
+   (videos intro)
+   (movie_done
+      {ui goto_screen intro_to_splash_screen})
+   (enter
+      {platform_mgr disable_xmp}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if
+         {'||'
+            {== $button kPad_Start}
+            {== $button kPad_X}}
+         {ui goto_screen intro_to_splash_screen}})}
+{new
+   UIScreen
+   intro_movie_screen
+   (panels intro_movie_panel)
+   (focus intro_movie_panel)
+   (poll
+      {ui reset_retail_demo_timeout}
+      {ui reset_launcher_demo_timeout})}
+{new
+   UIScreen
+   intro_to_splash_screen
+   (panels)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen splash_screen})}
+{new
+   MoviePanel
+   movie_panel
+   (preload TRUE)
+   (audio FALSE)
+   (loop TRUE)
+   (update_presence FALSE)
+   (videos background)}
+{new
+   UIPanel
+   fx
+   (file
+      {if_else
+         {==
+            {rnd aspect}
+            kRegularAspect}
+         "fx_standard.milo"
+         "fx_widescreen.milo"})
+   (in_transition FALSE)
+   (enter
+      {set
+         [in_transition]
+         FALSE}
+      {fade.mnm set_frame 25})
+   (fade_in
+      {$this choose_movie}
+      {set
+         [in_transition]
+         FALSE}
+      {fade.mnm stop_animation}
+      {fade.mnm
+         animate
+         (range 0 25)})
+   (fade_out
+      {$this choose_movie}
+      {set
+         [in_transition]
+         TRUE}
+      {fade.mnm
+         animate
+         (range 25 0)})
+   (is_faded_out
+      {==
+         {fade.mnm frame}
+         0})
+   (choose_movie
+      {do
+         ($num 0)
+         ($rand_idx 0)
+         ($movie_idx)
+         ($movie)
+         {$this
+            iterate
+            EventTrigger
+            $m
+            {'++' $num}}
+         {set
+            $rand_idx
+            {random_int 0 $num}}
+         {$this
+            iterate
+            EventTrigger
+            $m
+            {if
+               {== $movie_idx $rand_idx}
+               {set $movie $m}}
+            {'++' $movie_idx}}
+         {$movie trigger}})}
+{new
+   UIPanel
+   splash_panel
+   #ifndef BAND_RETAIL_360
+   (file
+      "splash.milo")
+   #else
+   (file
+      "retail_splash.milo")
+   #endif
+   (focus start.btn)
+   (player_num -1)
+   (last_player_num -1)
+   (enter
+      {meta music_start})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $button kPad_Start}
+         {$this button_down kPad_X $player_num}
+         kDataUnhandled})
+   (SELECT_START_MSG
+      {set
+         [last_player_num]
+         $player_num}
+      {ui goto_screen main_screen}
+      kDataUnhandled)}
+{new
+   UIScreen
+   splash_screen
+   (panels meta movie_panel splash_panel fx)
+   (focus splash_panel)
+   (enter
+      {meta music_start}
+      {first_time_drum_screen set considered FALSE}
+      {first_time_guitar_screen set considered FALSE}
+      {first_time_vocals_screen set considered FALSE}
+      {first_time_screen set considered TRUE}
+      {char_cache cache_update})
+   (poll
+      {ui reset_retail_demo_timeout})}
+{new
+   UIScreen
+   any_to_splash_screen
+   (panels splash_panel meta_loading)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen splash_screen})}
+{new
+   UIScreen
+   unlock_all_screen
+   (panels dialog_panel helpbar)
+   (focus dialog_panel)
+   (player_num -1)
+   (helpbar
+      ('' helpbar_continue))
+   (enter
+      {dialog_panel
+         set_ok
+         {localize_token unlock_all_msg}})
+   (SELECT_MSG
+      {ui pop_screen})}
+#define COMMON_FIRST_TIME_STUFF
+({if
+      {!
+         {ui in_transition}}
+      {do
+         ($dest_screen
+            {get_intro_screen})
+         {if_else
+            {!= '' $dest_screen}
+            {if_else
+               {==
+                  main_screen
+                  {ui current_screen}}
+               {ui push_screen $dest_screen}
+               {ui goto_screen $dest_screen}}
+            {if_else
+               {find_elem
+                  (auto_load_screen first_time_screen first_time_vocals_screen first_time_guitar_screen first_time_drum_screen)
+                  {ui current_screen}}
+               {autosave_goto_pop}
+               {autosave}}}}})
+{func
+   get_intro_screen
+   {do
+      ($result '')
+      {if_else
+         {!
+            {main_panel is_up}}
+         ''
+         {do
+            ($controllers
+               (drum guitar vocals))
+            ($screens
+               (first_time_drum_screen first_time_guitar_screen first_time_vocals_screen))
+            {foreach_int
+               $i
+               0
+               3
+               {if
+                  {&&
+                     {!=
+                        {splash_panel get last_player_num}
+                        -1}
+                     {==
+                        {gamecfg
+                           get_instrument_from_controller
+                           {splash_panel get last_player_num}}
+                        {elem $controllers $i}}
+                     {!
+                        {{elem $screens $i}
+                           get
+                           considered}}}
+                  {set
+                     $result
+                     {elem $screens $i}}}
+               {{elem $screens $i}
+                  set
+                  considered
+                  TRUE}
+               {if
+                  {!= $result ''}
+                  {set $i 3}}}}}
+      $result}}
+#define FIRST_TIME_SCREEN_HANDLERS
+((considered FALSE)
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen})
+   (SELECT_MSG COMMON_FIRST_TIME_STUFF))
+{new
+   UIPanel
+   first_time_drum_panel
+   (file
+      "first_time_drum.milo")
+   (focus ok.btn)}
+{new
+   UIScreen
+   first_time_drum_screen
+   (panels first_time_drum_panel helpbar)
+   (focus first_time_drum_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {profile_mgr set_not_first_timers drum}
+      {platform_mgr add_sink $this signin_changed})}
+{new
+   UIPanel
+   first_time_guitar_panel
+   (file
+      "first_time_guitar.milo")
+   (focus ok.btn)}
+{new
+   UIScreen
+   first_time_guitar_screen
+   (panels first_time_guitar_panel helpbar)
+   (focus first_time_guitar_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {profile_mgr set_not_first_timers guitar}
+      {platform_mgr add_sink $this signin_changed})}
+{new
+   UIPanel
+   first_time_vocals_panel
+   (file
+      "first_time_vocals.milo")
+   (focus ok.btn)}
+{new
+   UIScreen
+   first_time_vocals_screen
+   (panels first_time_vocals_panel helpbar)
+   (focus first_time_vocals_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {profile_mgr set_not_first_timers vocals}
+      {platform_mgr add_sink $this signin_changed})}
+{new
+   UIScreen
+   first_time_screen
+   (panels dialog_panel helpbar)
+   (focus dialog_panel)
+   (helpbar
+      ('' helpbar_continue))
+   FIRST_TIME_SCREEN_HANDLERS
+   (enter
+      {dialog_panel
+         set_ok
+         {localize_token calibration_notice}}
+      {profile_mgr set_not_first_timers}
+      {platform_mgr add_sink $this signin_changed})}
+#define MAIN_SCREEN_TRANSITION_HANDLER
+((TRANSITION_COMPLETE_MSG
+      {main_panel set finished_loading TRUE}
+      kDataUnhandled))
+{new
+   UIPanel
+   main_panel
+   (file
+      "main.milo")
+   (mode_focus solo.btn)
+   (msg_last_frame 0)
+   (finished_loading FALSE)
+   (load
+      {content_mgr start_refresh}
+      {if
+         {fx is_up}
+         {fx fade_out}})
+   (is_loaded
+      {content_mgr refresh_done})
+   (enter
+      {if
+         {'||'
+            {==
+               [mode_focus]
+               tutorial.btn}
+            {==
+               [mode_focus]
+               community.btn}}
+         {set
+            [mode_focus]
+            solo.btn}}
+      {$this
+         set_focus
+         [mode_focus]}
+      {session add_sink $this signin_changed}
+      {profile_mgr add_sink $this profile_activated_msg}
+      {memcardmgr add_sink $this save_load_all_complete_msg}
+      {session clear}
+      {tour clear_performer}
+      {gamemode set_mode init}
+      {set
+         [msg_last_frame]
+         0}
+      {game reset_config}
+      {meta music_start}
+      {$this disable tutorial.btn})
+   (exit
+      {fx fade_out}
+      {session remove_sink $this signin_changed}
+      {profile_mgr remove_sink $this profile_activated_msg})
+   (poll
+      {if
+         {&&
+            [finished_loading]
+            {==
+               {ui current_screen}
+               main_screen}}
+         COMMON_FIRST_TIME_STUFF
+         {set
+            [finished_loading]
+            FALSE}})
+   (signin_changed
+      {$this attempt_to_autoload})
+   (profile_activated_msg
+      {$this attempt_to_autoload})
+   (attempt_to_autoload
+      {if
+         {&&
+            {!
+               {band_ui_sink is_forced_transition_active}}
+            {{ui current_screen}
+               has_panel
+               main_panel}}
+         {autoload_deferred_save}})
+   (save_load_all_complete_msg
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+      {set
+         [finished_loading]
+         TRUE}
+      kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if_else
+         {content_mgr refresh_done}
+         kDataUnhandled
+         TRUE})
+   (FOCUS_MSG
+      {if
+         $new_focus
+         {set
+            [mode_focus]
+            {$new_focus name}}})
+   (SELECT_START_MSG
+      {switch
+         $component
+         (solo.btn
+            {ui goto_screen main_solomode_screen})
+         (multi.btn
+            {ui goto_screen main_multimode_screen})
+         #ifndef BAND_RETAIL_360
+         (tutorial.btn
+            {synth reset_mics_changed}
+            {ui goto_screen training_menu_screen})
+         #endif
+         (options.btn
+            {ui goto_screen options_screen})
+         (community.btn
+            {platform_mgr return_to_launcher})}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_lower3rd_panel
+   (file
+      "pat_rock_3.milo")}
+{new
+   UIScreen
+   main_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel fx)
+   (focus main_panel)
+   (back splash_screen)
+   (access_all
+      {$this
+         enable
+         {main_panel find solo.btn}}
+      {$this
+         enable
+         {main_panel find multi.btn}}
+      {$this
+         enable
+         {main_panel find tutorial.btn}})
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (enter
+      {game
+         foreach_player_config
+         $pcfg
+         {$pcfg set_lefty_flip_off}}
+      {profile_mgr set_all_lefty_flip_off}
+      {char_cache cache_update})}
+{new
+   UIScreen
+   main_band_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_band_tour_need_to_signin}
+         {localize main_tour_signin_button}
+         {localize main_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   UIScreen
+   main_solo_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_solo_tour_need_to_signin}
+         {localize main_tour_signin_button}
+         {localize main_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   UIScreen
+   main_solo_qp_signin_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_solo_qp_signin_not_guest}
+         {localize main_tour_signin_button}
+         {localize main_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   UIScreen
+   main_solo_signin_not_guest_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (player_num -1)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token main_solo_tour_signin_not_guest}
+         {localize main_tour_signin_button}
+         {localize main_tour_cancel_button}
+         opt1.btn}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SELECT_MSG
+      {switch
+         $component
+         (opt1.btn
+            {platform_mgr signin 1})
+         (opt2.btn
+            {ui pop_screen})})
+   (signin_changed
+      {ui pop_screen})}
+{new
+   SessionPanel
+   main_solomode_panel
+   (file
+      "main_solomode.milo")
+   (focus quickplay.btn)
+   (login_status kDesirable)
+   (load
+      {main_panel set mode_focus solo.btn})
+   (exit
+      {synth reset_mics_changed})
+   (enter
+      {$this set_focus quickplay.btn}
+      {$this disable tour.btn})
+   (SELECT_START_MSG
+      {if_else
+         {gamecfg is_missing_mic $player_num FALSE}
+         {do
+            {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+            {ui push_screen vocalist_must_have_mic_screen}}
+         {do
+            {switch
+               $component
+               (quickplay.btn
+                  {cond
+                     ({&&
+                           {platform_mgr is_player_signed_in $player_num}
+                           {platform_mgr is_player_a_guest $player_num}}
+                        {main_solo_qp_signin_guest_screen set player_num $player_num}
+                        {ui push_screen main_solo_qp_signin_guest_screen})
+                     (TRUE
+                        {gamemode set_mode qp_solo $player_num}
+                        {$this wait_for_session_ready}
+                        {session_mgr
+                           add_local_player
+                           $player_num
+                           {gamecfg get_controller_type_from_controller $player_num}})})
+               #ifndef BAND_RETAIL_360
+               (tour.btn
+                  {cond
+                     ({!
+                           {platform_mgr is_player_signed_in $player_num}}
+                        {main_solo_signin_screen set player_num $player_num}
+                        {ui push_screen main_solo_signin_screen})
+                     ({&&
+                           {platform_mgr is_player_signed_in $player_num}
+                           {platform_mgr is_player_a_guest $player_num}}
+                        {main_solo_signin_not_guest_screen set player_num $player_num}
+                        {ui push_screen main_solo_signin_not_guest_screen})
+                     (TRUE
+                        {gamemode set_mode tour_solo $player_num}
+                        {$this wait_for_session_ready}
+                        {session_mgr
+                           add_local_player
+                           $player_num
+                           {gamecfg get_controller_type_from_controller $player_num}})})
+               #endif}
+            kDataUnhandled}})
+   (session_ready_complete_msg
+      {gamecfg auto_assign_missing_slots}
+      #ifndef BAND_RETAIL_360
+      {do
+         ($player_num
+            {gamemode get player_num})
+         {if_else
+            {gamemode get auto_choose_char}
+            {do
+               ($pcfg
+                  {game get_player_config $player_num})
+               {$pcfg
+                  set_char
+                  {available_prefab
+                     $player_num
+                     {$pcfg get_controller_sym}}}
+               {goto_after_network_connect qp_selsong_screen FALSE}}
+            {goto_after_network_connect
+               {gamemode get matchmaking_screen}
+               FALSE}}}
+      #else
+      {do
+         ($pcfg
+            {game
+               get_player_config
+               {gamemode get player_num}})
+         {$pcfg
+            set_char
+            {available_prefab
+               $player_num
+               {$pcfg get_controller_sym}}}
+         {goto_after_network_connect qp_selsong_screen FALSE}}
+      #endif)}
+{new
+   UIScreen
+   main_solomode_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_solomode_panel fx)
+   (focus main_solomode_panel)
+   (back main_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (enter
+      {char_cache cache_update})}
+{new
+   UIPanel
+   main_multimode_panel
+   (file
+      "main_multimode.milo")
+   (mode_focus bandqp.btn)
+   (load
+      {main_panel set mode_focus multi.btn})
+   (enter
+      {set
+         [mode_focus]
+         bandqp.btn}
+      {$this
+         set_focus
+         [mode_focus]}
+      {$this disable bandtour.btn}
+      {$this disable headtohead.btn}
+      {$this disable headtohead_pro.btn})
+   (SELECT_START_MSG
+      {switch
+         $component
+         (bandqp.btn
+            {ui goto_screen main_bandcoop_screen})
+         #ifndef BAND_RETAIL_360
+         (bandtour.btn
+            {cond
+               ({!
+                     {platform_mgr is_player_signed_in $player_num}}
+                  {main_solo_signin_screen set player_num $player_num}
+                  {ui push_screen main_band_signin_screen})
+               (TRUE
+                  {main_panel set mode_focus multi.btn}
+                  {main_multimode_panel set mode_focus bandtour.btn}
+                  {gamemode set_mode tour_world_local}
+                  {char_cache cache_update}
+                  {goto_after_network_connect tour_band_sel_screen FALSE})})
+         (headtohead.btn
+            {ui goto_screen main_hth_split_screen})
+         (headtohead_pro.btn
+            {ui goto_screen main_hth_pro_screen})
+         #endif}
+      kDataUnhandled)}
+{new
+   UIScreen
+   main_multimode_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_multimode_panel fx)
+   (focus main_multimode_panel)
+   (back main_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (enter
+      {char_cache cache_update})}
+#define MAIN_HTH_PANEL_HANDLERS
+(#ifdef HX_PS3
+   (file
+      "main_hth_ps3.milo")
+   #else
+   (file
+      "main_hth.milo")
+   #endif
+   (focus local.btn)
+   (enter
+      {if
+         {profile_mgr get_all_unlocked}
+         {$this set_focus local.btn}
+         {unranked.btn set_state kDisabled}
+         #ifndef HX_PS3
+         {ranked.btn set_state kDisabled}
+         #endif})
+   (SELECT_START_MSG
+      {do
+         ($dest_screen
+            {if_else
+               {gamemode get ranked}
+               {gamemode get main_mode_screen}
+               {gamemode get matchmaking_screen}})
+         {if_else
+            {!
+               {gamemode get local_network}}
+            {goto_after_network_connect $dest_screen TRUE}
+            {ui goto_screen $dest_screen}}}
+      kDataUnhandled))
+{new
+   UIPanel
+   main_hth_split_panel
+   MAIN_HTH_PANEL_HANDLERS
+   (mode_focus local.btn)
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus headtohead.btn})}
+{new
+   UIScreen
+   main_hth_split_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_split_panel fx)
+   (focus main_hth_split_panel)
+   (back main_multimode_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_hth_local_split)
+            (unranked.btn qp_hth_unranked_split)
+            (ranked.btn qp_hth_ranked_split)}
+         $player_num}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_hth_panel
+   MAIN_HTH_PANEL_HANDLERS
+   (mode_focus local.btn)
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus headtohead_pro.btn})}
+{new
+   UIScreen
+   main_hth_pro_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_panel fx)
+   (focus main_hth_panel)
+   (back main_multimode_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_hth_local)
+            (unranked.btn qp_hth_unranked)
+            (ranked.btn qp_hth_ranked)}
+         $player_num}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_hth_seldiff_panel
+   (file
+      "main_hth_seldiff.milo")
+   (difficulty
+      {elem
+         (DIFF_SYMBOLS)
+         {elem
+            {find $syscfg tour solo default_difficulty}
+            1}})
+   (enter
+      {$this
+         set_focus
+         {sprint
+            [difficulty]
+            ".btn"}})
+   (SELECT_START_MSG
+      {set
+         [difficulty]
+         {basename
+            {$component name}}}
+      {ui
+         goto_screen
+         {gamemode get matchmaking_screen}})}
+{new
+   UIScreen
+   main_hth_split_ranked_seldiff_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel fx)
+   (focus main_hth_seldiff_panel)
+   (back main_hth_split_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode set_mode qp_hth_ranked_split $player_num}
+      kDataUnhandled)}
+{new
+   UIScreen
+   main_hth_unsplit_ranked_seldiff_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel fx)
+   (focus main_hth_seldiff_panel)
+   (back main_hth_pro_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (SELECT_START_MSG
+      {gamemode set_mode qp_hth_ranked $player_num}
+      kDataUnhandled)}
+{new
+   UIPanel
+   main_bandcoop_panel
+   (file
+      "main_bandcoop.milo")
+   (focus local.btn)
+   (enter
+      #ifndef BAND_RETAIL_360
+      {if
+         {profile_mgr get_all_unlocked}
+         {if
+            {==
+               kFocused
+               {online.btn get_state}}
+            {$this set_focus local.btn}}
+         {online.btn set_state kDisabled}}
+      #else
+      {$this set_focus local.btn}
+      {$this disable online.btn}
+      #endif)
+   (load
+      {main_panel set mode_focus multi.btn}
+      {main_multimode_panel set mode_focus bandqp.btn})
+   (SELECT_START_MSG
+      {gamemode
+         set_mode
+         {switch
+            $component
+            (local.btn qp_coop_local)
+            #ifndef BAND_RETAIL_360
+            (online.btn qp_coop_online)
+            #endif}
+         $player_num}
+      {if_else
+         {!
+            {gamemode get local_network}}
+         {goto_after_network_connect
+            {gamemode get matchmaking_screen}
+            TRUE}
+         {ui
+            goto_screen
+            {gamemode get matchmaking_screen}}}
+      kDataUnhandled)}
+{new
+   UIScreen
+   main_bandcoop_screen
+   (panels meta movie_panel main_lower3rd_panel main_panel main_bandcoop_panel fx)
+   (focus main_bandcoop_panel)
+   (back main_multimode_screen)
+   MAIN_SCREEN_TRANSITION_HANDLER
+   (enter
+      {char_cache cache_update})}
+{new
+   CreditsPanel
+   credits_panel
+   (file
+      "credits.milo")
+   (poll
+      {if
+         {!
+            {credits.lst is_scrolling}}
+         {if
+            {!
+               {ui in_transition}}
+            {handle
+               (ui credits_done)}}})}
+{new
+   UIScreen
+   credits_screen
+   (panels meta credits_panel helpbar)
+   (focus credits_panel)
+   (back community_specialfeatures_screen)
+   (scroll_sfx FALSE)
+   (helpbar
+      (helpbar_back))
+   (enter
+      {meta music_stop}
+      {platform_mgr disable_xmp})
+   (credits_done
+      {ui goto_screen community_specialfeatures_screen})}
+{new
+   UIScreen
+   vocalist_must_have_mic_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (message band_vocalist_needs_mic)
+   (enter
+      {dialog_panel
+         set_custom
+         {localize_token
+            [message]}
+         ""
+         {localize_token RETURN}
+         opt2.btn}
+      {dialog_panel
+         disable
+         {dialog_panel find opt1.btn}}
+      {gamecfg
+         set
+         joining_allowed
+         {!
+            {gamecfg get joining_allowed}}}
+      {platform_mgr add_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+      {gamecfg
+         set
+         joining_allowed
+         {!
+            {gamecfg get joining_allowed}}}
+      {dialog_panel
+         enable
+         {dialog_panel find opt1.btn}})
+   (SIGNIN_CHANGED_MSG
+      {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen})}

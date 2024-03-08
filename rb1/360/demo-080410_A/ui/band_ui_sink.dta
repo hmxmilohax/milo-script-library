@@ -1,0 +1,181 @@
+(BUTTON_DOWN_MSG
+   {if
+      {&&
+         {== $button kPad_Tri}
+         {!
+            {is_leader_local}}
+         {ui current_screen}}
+      {do
+         ($exit
+            {handle_ret
+               ({ui current_screen}
+                  allow_remote_exit)})
+         {if
+            {&&
+               $exit
+               {!= $exit kDataUnhandled}}
+            {band_ui_sink trigger_event remote_exit}}}}
+   kDataUnhandled)
+#define COMMON_ERROR_HANDLERS
+(DIALOG_PANEL_HANDLERS
+   (limit none)
+   (SELECT_START_MSG
+      {synth play button_select}
+      kDataUnhandled))
+(events
+   (error_message
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockNone)
+      (init
+         ($token)
+         {$this
+            set_ok
+            {localize_token $token}})
+      (SELECT_MSG
+         {band_ui_sink dismiss_event}))
+   (default
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockNone)
+      (destination_screen meta_loading_uisink_default_screen)
+      (init
+         ($error_reason)
+         {$this
+            set_ok
+            {localize_token
+               {switch
+                  $error_reason
+                  (kLoneHeadToHead error_lone_hth)
+                  (kLoneBandCoop error_lone_band_coop)
+                  (kNoLeader error_no_leader)
+                  (kKicked error_kicked)
+                  (kLostSongData error_lost_song_data)}}}
+         {band_ui_sink goto_event})
+      (SELECT_MSG
+         {band_ui_sink dismiss_event}))
+   (lost_connection
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockNone)
+      (destination_screen meta_loading_uisink_lost_connection_screen)
+      (init
+         ($reason)
+         {$this
+            set_ok
+            {localize_token
+               {switch
+                  $reason
+                  (kLostConnection error_lost_connection)
+                  (kLostServer error_lost_server)
+                  (kEthernetUnplugged error_ethernet_unplugged)}}}
+         {band_ui_sink goto_event})
+      (SELECT_MSG
+         {band_ui_sink dismiss_event}))
+   (leaderboard_error
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockNone)
+      (destination_screen meta_loading_leaderboard_error_screen)
+      (init
+         {$this
+            set_ok
+            {localize_token error_lost_leaderboards}}
+         {band_ui_sink goto_event})
+      (SELECT_MSG
+         {band_ui_sink dismiss_event}))
+   (sign_out
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockRankedResults)
+      (destination_screen meta_loading_signout_screen)
+      (init
+         ($reason)
+         {$this
+            set_ok
+            {localize_token
+               {switch
+                  $reason
+                  (kLocalUserSignedOut error_local_user_signed_out)
+                  (kBandOwnerSignedOut error_band_owner_signed_out)
+                  (kProfileOwnerSignedOut error_profile_owner_signed_out)}}}
+         {band_ui_sink goto_event})
+      (SELECT_MSG
+         {band_ui_sink dismiss_event}))
+   (invite_accepted
+      COMMON_ERROR_HANDLERS
+      (show_dialog FALSE)
+      (max_block_mode kBlockRankedResults)
+      (destination_screen meta_loading_matchmaking_screen)
+      (init
+         ($expired)
+         {set
+            [show_dialog]
+            {! $expired}}
+         {if_else
+            $expired
+            {$this
+               set_ok
+               {localize_token error_invite_expired}}
+            {do
+               {tour set_bwtmode kMetaTour_KnownRemote}
+               {band_ui_sink set invite_accepted TRUE}
+               {band_ui_sink goto_event}}})
+      (SELECT_MSG
+         {band_ui_sink dismiss_event}))
+   (pad_lost
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockRankedResults)
+      (destination_screen meta_loading_quit_early_screen)
+      (init
+         ($player_name $port $controller_sym)
+         {$this
+            set_custom
+            {sprintf
+               {localize error_pad_lost}
+               $player_name
+               {localize_token $controller_sym}
+               {'+' $port 1}}
+            {localize_token continue}
+            {localize_token error_return_to_main}
+            opt1.btn})
+      (on_set_controller_level
+         ($new_level)
+         {if
+            {== $new_level kControllerLevelNone}
+            {band_ui_sink dismiss_event}})
+      (SELECT_MSG
+         {switch
+            $component
+            (opt1.btn
+               {band_ui_sink dismiss_event}
+               {if
+                  {band_ui_sink check_controllers TRUE}
+                  {handle
+                     (ui on_controllers_ok)}})
+            (opt2.btn
+               {handle
+                  (ui on_controllers_quit)}
+               {band_ui_sink goto_event}
+               {band_ui_sink dismiss_event})}))
+   (remote_exit
+      COMMON_ERROR_HANDLERS
+      (show_dialog TRUE)
+      (max_block_mode kBlockRankedResults)
+      (destination_screen meta_loading_quit_early_screen)
+      (init
+         {$this
+            set_yesno
+            {localize_token error_confirm_remote_exit}
+            no.btn})
+      (on_set_controller_level
+         ($new_level)
+         {if
+            {== $new_level kControllerLevelNone}
+            {band_ui_sink dismiss_event}})
+      (SELECT_MSG
+         {if
+            {== $component yes.btn}
+            {band_ui_sink goto_event}}
+         {band_ui_sink dismiss_event})))

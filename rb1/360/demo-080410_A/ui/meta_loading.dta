@@ -1,0 +1,296 @@
+{new
+   UIPanel
+   meta_loading
+   (file meta_loading.milo)
+   (poll
+      {ui reset_retail_demo_timeout})}
+#define AUTOSAVE_WAIT_SCREEN_HANDLERS
+((next_screen '')
+   (show_error FALSE)
+   (enter
+      {game
+         foreach_local_player_config
+         $pcfg
+         {$pcfg set_ui_waiting FALSE}}
+      {session add_sink $this}
+      {$this check_advance})
+   (exit
+      {session remove_sink $this})
+   (REMOTE_PLAYER_CHANGED_MSG
+      {$this check_advance})
+   (REMOTE_PLAYER_LEFT_MSG
+      {unless
+         {session disabled}
+         {$this check_advance}})
+   (check_advance
+      {do
+         ($ready TRUE)
+         {game
+            foreach_player_config
+            $pcfg
+            {if
+               {&&
+                  {session
+                     has_player
+                     {$pcfg get player_num}}
+                  {$pcfg ui_waiting}
+                  {!
+                     {gamemode get ranked}}}
+               {set $ready FALSE}}}
+         {if
+            $ready
+            {band_ui_sink set_net_sync TRUE}
+            {ui
+               goto_screen
+               [next_screen]}}}))
+{new
+   UIScreen
+   autosave_wait_screen
+   (panels meta_loading)
+   AUTOSAVE_WAIT_SCREEN_HANDLERS}
+{new
+   UIScreen
+   autosave_wait_in_meta_screen
+   (panels meta_loading meta)
+   AUTOSAVE_WAIT_SCREEN_HANDLERS}
+#define META_LOADING_TRANSITION_HANDLERS
+((transition_screen
+      {object
+         ""})
+   (show_error FALSE)
+   (delay_frames -1)
+   (enter
+      #ifndef _SHIP
+      {char_cache check_outside_refs}
+      #endif
+      {set
+         [delay_frames]
+         2}
+      {if
+         {[transition_screen]
+            get
+            clear_game_state}
+         {session
+            clear
+            {[transition_screen]
+               get
+               session_leaving_early}}
+         {tour clear_performer}
+         {gamecfg reset_config}
+         {if
+            {band_ui_sink get invite_accepted}
+            {gamemode
+               set_mode
+               {{session_searcher get_last_invite_result}
+                  get_mode_name}}}}
+      {gamecfg set_active_roster FALSE})
+   (poll
+      {--
+         [delay_frames]}
+      {if
+         {==
+            [delay_frames]
+            0}
+         {set
+            [delay_frames]
+            -1}
+         {band_ui_sink set ui_disabled FALSE}
+         {band_ui_sink set block_mode kBlockNone}
+         {char_cache meta_configure_characters}
+         {game
+            foreach_local_player_config
+            $pcfg
+            {$pcfg set_ui_waiting TRUE}}
+         {do
+            ($autosave_screen
+               {if_else
+                  {meta is_up}
+                  autosave_wait_in_meta_screen
+                  autosave_wait_screen})
+            {$autosave_screen
+               set
+               next_screen
+               {[transition_screen]
+                  get
+                  next_screen}}
+            {autosave_push_goto $autosave_screen}}}))
+{new
+   UIScreen
+   meta_loading_screen
+   (panels meta_loading)
+   META_LOADING_TRANSITION_HANDLERS}
+{new
+   UIScreen
+   meta_loading_in_meta_screen
+   (panels meta_loading meta)
+   META_LOADING_TRANSITION_HANDLERS}
+#define META_LOADING_SCREEN_HANDLERS
+((panels meta_loading)
+   (loading_screen '')
+   (delay_frames -1)
+   (show_error FALSE)
+   (enter
+      {rnd set_in_game FALSE}
+      {if
+         {==
+            {ui current_screen}
+            meta_loading_retail_demo_timeout_screen}
+         {game
+            foreach_player_config
+            $pcfg
+            {$pcfg set_lefty_flip_off}}
+         {profile_mgr set_all_lefty_flip_off}}
+      {set
+         [delay_frames]
+         3}
+      {set
+         [loading_screen]
+         {if_else
+            {meta is_up}
+            meta_loading_in_meta_screen
+            meta_loading_screen}}
+      {[loading_screen]
+         set
+         transition_screen
+         $this}
+      {band_ui_sink set ui_disabled TRUE})
+   (poll
+      {--
+         [delay_frames]}
+      {if
+         {==
+            [delay_frames]
+            0}
+         {set
+            [delay_frames]
+            -1}
+         {band_ui_sink set_net_sync FALSE}
+         {band_ui_sink set ui_disabled FALSE}
+         {band_ui_sink
+            force_reset_screen
+            [loading_screen]}
+         {band_ui_sink set ui_disabled TRUE}}))
+{new
+   UIScreen
+   meta_loading_continue_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get continue_screen})}
+{new
+   UIScreen
+   meta_loading_main_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get main_screen})}
+{new
+   UIScreen
+   meta_loading_pause_new_section_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen practice_sel_section_screen)}
+{new
+   UIScreen
+   meta_loading_pause_new_song_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get pause_new_song_screen})}
+{new
+   UIScreen
+   meta_loading_quit_early_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early TRUE)
+   (next_screen main_screen)}
+{new
+   UIScreen
+   meta_loading_retail_demo_timeout_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early TRUE)
+   (next_screen any_to_splash_screen)}
+{new
+   UIScreen
+   meta_loading_ready_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get ready_screen})}
+{new
+   UIScreen
+   meta_loading_practice_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen practice_pre_sel_section_screen)}
+{new
+   UIScreen
+   meta_loading_tour_win_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get tour_win_screen})}
+{new
+   UIScreen
+   meta_loading_signout_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early TRUE)
+   (next_screen
+      {gamemode get uisink_signout_screen})}
+{new
+   UIScreen
+   meta_loading_matchmaking_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early TRUE)
+   (next_screen
+      {gamemode get matchmaking_screen})}
+{new
+   UIScreen
+   meta_loading_matchmaking_forfeit_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early TRUE)
+   (next_screen
+      {gamemode get matchmaking_screen})}
+{new
+   UIScreen
+   meta_loading_changemembers_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get matchmaking_screen})}
+{new
+   UIScreen
+   meta_loading_uisink_default_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {gamemode get uisink_default_screen})}
+{new
+   UIScreen
+   meta_loading_uisink_lost_connection_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state TRUE)
+   (session_leaving_early TRUE)
+   (next_screen
+      {gamemode get uisink_lost_connection_screen})}
+{new
+   UIScreen
+   meta_loading_leaderboard_error_screen
+   META_LOADING_SCREEN_HANDLERS
+   (clear_game_state FALSE)
+   (session_leaving_early FALSE)
+   (next_screen
+      {leaderboards_netwatcher_panel get return_screen})}
