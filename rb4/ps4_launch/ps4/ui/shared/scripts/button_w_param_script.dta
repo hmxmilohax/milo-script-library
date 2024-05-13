@@ -1,0 +1,177 @@
+(define Interface 
+   (description "This handles the setting of Text and resizing of the Scale 9 Quad wrapper to fit accordingly, but with a second text field and a second string of text.") 
+   (props 
+      (button_text symbol 
+         (set_on_instance TRUE) 
+         (default ) 
+         (help "Use token name please!")) 
+      (param_text symbol 
+         (set_on_instance TRUE) 
+         (default ) 
+         (help "Input whatever")) 
+      (disabled bool 
+         (set_on_instance TRUE) 
+         (default FALSE)) 
+      (focused bool 
+         (view_on_instance TRUE) 
+         (default FALSE)) 
+      (localize_param bool 
+         (set_on_instance TRUE) 
+         (default FALSE)) 
+      (show_cursor bool 
+         (set_on_instance TRUE) 
+         (default FALSE)) 
+      (allow_lower_case bool 
+         (set_on_instance TRUE) 
+         (default FALSE)) 
+      (button_textobj object 
+         (help "The text object we are using.") 
+         (required_coms 
+            (Text))) 
+      (param_textobj object 
+         (help "The text object we are using.") 
+         (required_coms 
+            (Text))) 
+      (mirror_textobj object 
+         (help "The text object we are using.") 
+         (required_coms 
+            (Text))) 
+      (button_quad object 
+         (help "The quad object we are using.") 
+         (required_coms 
+            (Scale9Quad))) 
+      (x_padding float 
+         (default 1.0)) 
+      (y_padding float 
+         (default 1.0)) 
+      (space_padding float 
+         (default 1.0)) 
+      (total_width float 
+         (help "How big is this concatenated string? We need to cap it at some point.") 
+         (read_only TRUE)) 
+      (constrained_width float 
+         (help "What size Text Objects can we allow now?") 
+         (read_only TRUE)) 
+      (max_width float 
+         (help "Maximum allowable width of the collection of Text Objects here.."))))
+(enter 
+   {if 
+      [$this button_text ]
+      {do 
+         {set 
+            [
+               (
+                  [$this button_textobj ] Text)localized_token ]
+            [$this button_text ]}
+         {$this update_param }}} 
+   {print 
+      [$this button_text ]} 
+   {$this update_quad })
+(poll 
+   {$this update_quad } 
+   {$this update_param })
+(update_param 
+   {if_else 
+      [$this localize_param ]
+      {set 
+         [
+            (
+               [$this param_textobj ] Text)localized_token ]
+         [$this param_text ]}
+      {set 
+         [
+            (
+               [$this param_textobj ] Text)text ]
+         [$this param_text ]}})
+(update_quad 
+   {local $t_width 
+      [
+         (
+            [$this button_textobj ] Text)bounding_box width ]} 
+   {local $t_height 
+      [
+         (
+            [$this button_textobj ] Text)bounding_box height ]} 
+   {local $m_width 
+      [
+         (
+            [$this mirror_textobj ] Text)bounding_box width ]} 
+   {local $p_width 
+      [
+         (
+            [$this param_textobj ] Text)bounding_box width ]} 
+   {local $p_height 
+      [
+         (
+            [$this param_textobj ] Text)bounding_box height ]} 
+   {set 
+      [
+         (
+            [$this param_textobj ] Transform)x ]
+      {+ $t_width 
+         [$this space_padding ]}} 
+   {set 
+      [
+         (
+            [$this mirror_textobj ] Transform)x ]
+      {+ $t_width 
+         [$this space_padding ]}} 
+   {local $adjusted_height 
+      {+ $t_height 
+         [$this y_padding ]}} 
+   {if_else 
+      {> $m_width 0 }
+      {if_else 
+         {> $m_width $p_width }
+         {local $adjusted_width 
+            {+ 
+               {+ $t_width $p_width }
+               {+ 
+                  [$this x_padding ]
+                  [$this space_padding ]}}}
+         {local $adjusted_width 
+            {+ 
+               {+ $t_width $m_width }
+               {+ 
+                  [$this x_padding ]
+                  [$this space_padding ]}}}}
+      {local $adjusted_width 
+         {+ 
+            {+ $t_width $m_width }
+            {+ 
+               [$this x_padding ]0 }}}} 
+   {set 
+      [
+         (
+            [$this button_quad ] Scale9Quad)height ]$adjusted_height } 
+   {set 
+      [
+         (
+            [$this button_quad ] Scale9Quad)width ]$adjusted_width } 
+   {if_else 
+      {> $m_width $p_width }
+      {local $mid_point 
+         {/ 
+            {+ 
+               {+ $t_width $p_width }
+               [$this space_padding ]}2 }}
+      {local $mid_point 
+         {/ 
+            {+ 
+               {+ $t_width $m_width }
+               [$this space_padding ]}2 }}} 
+   {set 
+      [
+         (
+            [$this button_quad ] Transform)x ]$mid_point } 
+   {set 
+      [$this total_width ]$adjusted_width } 
+   {set 
+      [$this constrained_width ]
+      {- 
+         [$this max_width ]
+         {+ 
+            [$this space_padding ]
+            [
+               (
+                  [$this button_textobj ] Text)bounding_box width ]}}})

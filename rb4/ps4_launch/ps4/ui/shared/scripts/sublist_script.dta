@@ -1,0 +1,155 @@
+(define Interface 
+   (rev 2) 
+   (description "This handles the layout of sublists") 
+   (props 
+      (sublist array 
+         (help "An array of parent items and their child subcontrols.") 
+         (item struct 
+            (help "A struct array item with a display name and summary defined.") 
+            (display_name 
+               {do 
+                  {local $name 
+                     [$this sublist 
+                        {elem $path 1 }name ]}
+                  {if_else $name $name 
+                     {sprintf "%d" 
+                        {elem $path 1 }}}}) 
+            (summary "Parent/child relationships") 
+            (props 
+               (name symbol 
+                  (help "The name of the list item, just to help with keeping track of longer sublists.")) 
+               (parent object 
+                  (help "Register your parent control object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (parent_z float 
+                  (default 0.0) 
+                  (hidden TRUE)) 
+               (child object 
+                  (help "Register your child subcontrol object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (padding float 
+                  (help "Set the amount of space to give the child subcontrol object when it expands...sorry this is manual.") 
+                  (default 84.0)) 
+               (fixed_position bool 
+                  (help "Lock it in place during when subcontrols are visible?") 
+                  (default FALSE))))) 
+      (in_sublist bool 
+         (default FALSE) 
+         (help "Tracks whether we are focused on a parent control or child subcontrol.")) 
+      (last_in_sublist bool 
+         (default FALSE) 
+         (hidden TRUE) 
+         (help "Internal variable for tracking sublist state changes.")) 
+      (current_parent object 
+         (help "Tracks currently 'active' parent.") 
+         (required_coms 
+            (DrawNode))) 
+      (current_child object 
+         (help "Tracks currently 'active' child.") 
+         (required_coms 
+            (DrawNode))) 
+      (current_index int 
+         (help "Tracks currently 'active' index in sublist array.") 
+         (default 0))))
+(enter 
+   {$this init_layout } 
+   {$this update_layout })
+(poll 
+   {$this update_layout } 
+   {$this set_current_selection })
+(init_layout 
+   {foreach_int $i 0 
+      {size 
+         [$this sublist ]}
+      {set 
+         [$this sublist $i parent_z ]
+         [
+            (
+               [$this sublist $i parent ] Transform)z ]}} 
+   {set 
+      [$this last_in_sublist ]
+      [$this in_sublist ]})
+(set_current_selection 
+   {foreach_int $i 0 
+      {size 
+         [$this sublist ]}
+      {if 
+         [
+            (
+               [$this sublist $i parent ] Instance)focused ]
+         {do 
+            {set 
+               [$this current_parent ]
+               [$this sublist $i parent ]}
+            {set 
+               [$this current_child ]
+               [$this sublist $i child ]}
+            {set 
+               [$this current_index ]$i }}}} 
+   {if 
+      [$this in_sublist ]
+      {foreach_int $i 0 
+         {size 
+            [$this sublist ]}
+         {set 
+            [
+               (
+                  [$this sublist $i parent ] Instance)disabled ]TRUE }}} 
+   {if 
+      {!= 
+         [$this last_in_sublist ]
+         [$this in_sublist ]}
+      {do 
+         {if 
+            {== 
+               [$this in_sublist ]FALSE }
+            {foreach_int $i 0 
+               {size 
+                  [$this sublist ]}
+               {set 
+                  [
+                     (
+                        [$this sublist $i parent ] Instance)disabled ]FALSE }}}
+         {set 
+            [$this last_in_sublist ]
+            [$this in_sublist ]}}} 
+   {if 
+      [$this current_child ]
+      {set 
+         [
+            (
+               [$this sublist 
+                  [$this current_index ]child ] DrawNode)showing ]
+         [$this in_sublist ]}})
+(update_layout 
+   {foreach_int $i 
+      {+ 
+         [$this current_index ]1 }
+      {size 
+         [$this sublist ]}
+      {if_else 
+         [$this in_sublist ]
+         {do 
+            {if_else 
+               [$this sublist $i fixed_position ]
+               {set 
+                  [
+                     (
+                        [$this sublist $i parent ] Transform)z ]
+                  [$this sublist $i parent_z ]}
+               {set 
+                  [
+                     (
+                        [$this sublist $i parent ] Transform)z ]
+                  {- 
+                     [$this sublist $i parent_z ]
+                     [$this sublist 
+                        [$this current_index ]padding ]}}}}
+         {do 
+            {set 
+               [
+                  (
+                     [$this sublist $i parent ] Transform)z ]
+               [$this sublist $i parent_z ]}}}})

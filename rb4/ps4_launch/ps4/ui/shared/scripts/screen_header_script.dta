@@ -1,0 +1,193 @@
+(define Interface 
+   (rev 3) 
+   (description "Allows for dynamically setting screen header and breadcrumb text. Handles necessary layout changes as well.") 
+   (props 
+      (previous_text object 
+         (help "The text object that will display the name of the previous/parent screen.") 
+         (required_coms 
+            (Text))) 
+      (previous_screen_token symbol 
+         (help "The localized_token to display the previous/parent screen name. Leave empty if no breadcrumb is desired.") 
+         (set_on_instance TRUE)) 
+      (previous_screen_prelocalized_text symbol 
+         (help "Some prelocalized text to display the previous/parent screen name. Leave empty if no breadcrumb is desired.") 
+         (set_on_instance TRUE)) 
+      (current_text object 
+         (help "The text object that will display the name of current screen.") 
+         (required_coms 
+            (Text))) 
+      (current_screen_token symbol 
+         (help "The localized_token to display the current screen name.") 
+         (set_on_instance TRUE)) 
+      (current_screen_prelocalized_text symbol 
+         (help "Some prelocalized text to display the current screen name.") 
+         (set_on_instance TRUE)) 
+      (slash_text object 
+         (help "The text object that will display a slash separator.") 
+         (required_coms 
+            (Text))) 
+      (current_section symbol 
+         (help "The section of the shell, drives coloring of the screen header.") 
+         (allowed_values 
+            (
+               (game "The Gameplay Section of the shell") 
+               (options "The Options Section of the shell") 
+               (store "The Store Section of the shell"))) 
+         (set_on_instance TRUE) 
+         (default game)) 
+      (section_line object 
+         (help "Object to tint based on current section") 
+         (required_coms 
+            (DrawNode))) 
+      (game_color color 
+         (help "Game section color")) 
+      (options_color color 
+         (help "Options section color")) 
+      (store_color color 
+         (help "Store section color")) 
+      (total_width float 
+         (help "How big is this concatenated string? We need to cap it at some point.") 
+         (read_only TRUE)) 
+      (constrained_width float 
+         (help "What size Text Objects can we allow now?") 
+         (read_only TRUE)) 
+      (max_width float 
+         (help "Maximum allowable width of the collection of Text Objects here.."))))
+(enter 
+   {$this update_text } 
+   {$this update_color })
+(poll 
+   {$this update_text })
+(update_color 
+   {if 
+      {== 
+         [$this current_section ]game }
+      {set 
+         [
+            (
+               [$this section_line ] Material)color ]
+         [$this game_color ]}} 
+   {if 
+      {== 
+         [$this current_section ]options }
+      {set 
+         [
+            (
+               [$this section_line ] Material)color ]
+         [$this options_color ]}} 
+   {if 
+      {== 
+         [$this current_section ]store }
+      {set 
+         [
+            (
+               [$this section_line ] Material)color ]
+         [$this store_color ]}})
+(update_text 
+   {if_else 
+      [$this previous_screen_token ]
+      {set 
+         [
+            (
+               [$this previous_text ] Text)localized_token ]
+         [$this previous_screen_token ]}
+      {set 
+         [
+            (
+               [$this previous_text ] Text)text ]
+         [$this previous_screen_prelocalized_text ]}} 
+   {if_else 
+      [$this current_screen_token ]
+      {set 
+         [
+            (
+               [$this current_text ] Text)localized_token ]
+         [$this current_screen_token ]}
+      {set 
+         [
+            (
+               [$this current_text ] Text)text ]
+         [$this current_screen_prelocalized_text ]}} 
+   {if_else 
+      {|| 
+         [$this previous_screen_token ]
+         [$this previous_screen_prelocalized_text ]}
+      {do 
+         {set 
+            [
+               (
+                  [$this previous_text ] DrawNode)showing ]1 }
+         {set 
+            [
+               (
+                  [$this slash_text ] DrawNode)showing ]1 }
+         {local $previous_x 
+            [
+               (
+                  [$this previous_text ] Transform)x ]}
+         {local $previous_width_plus_margin 
+            {+ 
+               [
+                  (
+                     [$this previous_text ] Text)bounding_box width ]10 }}
+         {local $slash_x 
+            {+ $previous_x $previous_width_plus_margin }}
+         {set 
+            [
+               (
+                  [$this slash_text ] Transform)x ]$slash_x }
+         {local $previous_width_plus_slash 
+            {+ 
+               [
+                  (
+                     [$this slash_text ] Transform)x ]
+               [
+                  (
+                     [$this slash_text ] Text)bounding_box width ]}}
+         {local $current_x 
+            {+ $previous_width_plus_slash 10 }}
+         {set 
+            [
+               (
+                  [$this current_text ] Transform)x ]$current_x }}
+      {do 
+         {local $current_x 
+            [
+               (
+                  [$this previous_text ] Transform)x ]}
+         {set 
+            [
+               (
+                  [$this previous_text ] DrawNode)showing ]0 }
+         {set 
+            [
+               (
+                  [$this slash_text ] DrawNode)showing ]0 }
+         {set 
+            [
+               (
+                  [$this current_text ] Transform)x ]$current_x }}} 
+   {set 
+      [$this total_width ]
+      {+ 
+         [
+            (
+               [$this slash_text ] Text)bounding_box width ]
+         {+ 
+            [
+               (
+                  [$this previous_text ] Text)bounding_box width ]
+            [
+               (
+                  [$this current_text ] Text)bounding_box width ]}}} 
+   {set 
+      [$this constrained_width ]
+      {- 
+         [$this max_width ]
+         {+ 
+            [
+               (
+                  [$this slash_text ] Text)bounding_box width ]
+            [
+               (
+                  [$this previous_text ] Text)bounding_box width ]}}})
