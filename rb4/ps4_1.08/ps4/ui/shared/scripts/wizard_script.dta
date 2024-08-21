@@ -1,0 +1,162 @@
+(define Interface 
+   (rev 3) 
+   (description "This handles the flow of wizards.") 
+   (props 
+      (wizard array 
+         (help "An array of usable wizard items.") 
+         (item struct 
+            (help "A struct array item with a display name and summary defined.") 
+            (display_name 
+               {do 
+                  {local $name 
+                     [$this wizard 
+                        {elem $path 1 }name ]}
+                  {if_else $name $name 
+                     {sprintf "%d" 
+                        {elem $path 1 }}}}) 
+            (summary "Objects used in the Wizard") 
+            (props 
+               (name symbol 
+                  (help "The name of the list item, just to help with keeping track of longer wizards.")) 
+               (token symbol 
+                  (help "The localized token should we use for the label_obj of the container.")) 
+               (label_obj object 
+                  (help "Register your label object here.") 
+                  (required_coms 
+                     (Text))) 
+               (parent_obj object 
+                  (help "Register your parent container object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (list_obj object 
+                  (help "Register your list interaction object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (combo_obj object 
+                  (help "Register your combo interaction object here.") 
+                  (required_coms 
+                     (DrawNode))) 
+               (list_mode bool 
+                  (help "Are we using a list or combobox? If this is set to true, it will use a list.") 
+                  (default TRUE))))) 
+      (in_wizard bool 
+         (default FALSE) 
+         (help "Tracks whether we are in wizard mode.")) 
+      (going_up bool 
+         (default TRUE) 
+         (help "Tracks direction of wizard traversal, forward/TRUE or backward/FALSE")) 
+      (previous_control object 
+         (help "Tracks previously 'active' child.") 
+         (required_coms 
+            (DrawNode))) 
+      (current_control object 
+         (help "Tracks currently 'active' parent.") 
+         (required_coms 
+            (DrawNode))) 
+      (next_control object 
+         (help "Tracks next 'active' child.") 
+         (required_coms 
+            (DrawNode))) 
+      (current_step int 
+         (help "What step are we on?") 
+         (default 0)) 
+      (previous_step int 
+         (help "What step were we on? Helps to figure out if we are moving forward or backwards") 
+         (default 0)) 
+      (step_count int 
+         (help "How many steps does this wizard need. Independent from the number of objects we registered, because we won't always use all of them.") 
+         (default 0))))
+(enter 
+   {$this update_layout } 
+   {$this set_text_labels })
+(poll 
+   {$this update_layout })
+(update_layout 
+   {if 
+      {&& 
+         [$this going_up ]
+         {!= 
+            [$this current_step ]0 }}
+      {set 
+         [$this previous_step ]
+         {- 
+            [$this current_step ]1 }}} 
+   {if 
+      {! 
+         [$this going_up ]}
+      {set 
+         [$this previous_step ]
+         {+ 
+            [$this current_step ]1 }}} 
+   {if 
+      [$this wizard 
+         [$this current_step ]list_mode ]
+      {set 
+         [$this current_control ]
+         [$this wizard 
+            [$this current_step ]list_obj ]}
+      {set 
+         [
+            (
+               [$this wizard 
+                  [$this current_step ]combo_obj ] DrawNode)showing ]FALSE }
+      {set 
+         [
+            (
+               [$this wizard 
+                  [$this current_step ]list_obj ] DrawNode)showing ]TRUE }} 
+   {if 
+      {! 
+         [$this wizard 
+            [$this current_step ]list_mode ]}
+      {set 
+         [$this current_control ]
+         [$this wizard 
+            [$this current_step ]combo_obj ]}
+      {set 
+         [
+            (
+               [$this wizard 
+                  [$this current_step ]list_obj ] DrawNode)showing ]FALSE }
+      {set 
+         [
+            (
+               [$this wizard 
+                  [$this current_step ]combo_obj ] DrawNode)showing ]TRUE }} 
+   {if 
+      [$this wizard 
+         [$this current_step ]label_obj ]
+      {set 
+         [
+            (
+               [$this wizard 
+                  [$this current_step ]label_obj ] Text)localized_token ]
+         [$this wizard 
+            [$this current_step ]token ]}} 
+   {set 
+      [
+         (
+            [$this wizard 
+               [$this current_step ]parent_obj ] DrawNode)showing ]TRUE } 
+   {foreach_int $i 
+      {+ 
+         [$this current_step ]1 }
+      {size 
+         [$this wizard ]}
+      {set 
+         [
+            (
+               [$this wizard $i parent_obj ] DrawNode)showing ]FALSE }})
+(set_text_labels 
+   {foreach_int $i 0 
+      {size 
+         [$this wizard ]}
+      {if 
+         {&& 
+            [$this wizard $i label_obj ]
+            [$this wizard $i token ]}
+         {set 
+            [
+               (
+                  [$this wizard $i label_obj ] Text)localized_token ]
+            [$this wizard $i token ]}}})
