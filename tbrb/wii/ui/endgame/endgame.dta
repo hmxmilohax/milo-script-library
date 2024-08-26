@@ -1,0 +1,336 @@
+#include endgame_helpers.dta
+#define ENDGAME_PANEL_COMMON_ENTER
+({input_mgr set_limit kLimitSession}
+   {if
+      {$this exists instarank.lbl}
+      {if_else
+         {gamemode get insta_rank}
+         {do
+            {if_else
+               {meta_performer has_instarank_data}
+               {$this set_instarank}
+               {do
+                  {instarank.lbl set text_token ir_fetching}
+                  {instarank_warning.lbl set_showing FALSE}}}
+            {instarank.grp set_showing TRUE}}
+         {instarank.grp set_showing FALSE}}})
+#define ENDGAME_PANEL_COMMON_EXIT
+({unless
+      {gamemode get ranked}
+      {input_mgr set_limit kLimitSessionLeader}}
+   {rnd set_dof_tint FALSE 0.0 0.0 0.0})
+{new
+   VoiceoverPanel
+   coop_endgame_vo_panel
+   (file '')
+   (voiceover_symbol '')
+   (enter
+      {$this set_volume_offset_symbol voiceover_winscreen_volume_offset}
+      {$this
+         set
+         voiceover_symbol
+         {random_context_allow_failure
+            {find $syscfg vo_winsong_context}}}
+      {if
+         {!=
+            [voiceover_symbol]
+            ''}
+         {$this
+            set_voiceover_symbol
+            [voiceover_symbol]}
+         {$this set_preload FALSE}
+         {$this play_voiceover}})}
+{new
+   MicInputPanel
+   coop_endgame_panel
+   (file
+      "coop_endgame.milo")
+   (show_harmony_grid FALSE)
+   (show_toggle_harmony FALSE)
+   (network_mic_setup TRUE)
+   ENDGAME_PANEL_HANDLERS
+   (enter
+      {geometry.grp set_showing TRUE}
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set_results}
+      ENDGAME_PANEL_COMMON_ENTER
+      {do
+         ($frame
+            {if_else
+               {gamemode get is_solo}
+               1
+               0})
+         {player0.tnm set_frame $frame}
+         {player01.tnm set_frame $frame}
+         {player02.tnm set_frame $frame}
+         {player03.tnm set_frame $frame}}
+      {meta_performer add_sink $this})
+   (exit
+      ENDGAME_PANEL_COMMON_EXIT
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+      {meta_performer remove_sink $this})}
+{new
+   BandScreen
+   coop_details_endgame_screen
+   (panels coop_endgame_panel coop_endgame_vo_panel more_details_panel)
+   (focus more_details_panel)
+   (leave
+      {ui goto_screen coop_endgame_screen})
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_confirm)))}
+{new
+   BandScreen
+   coop_endgame_screen
+   (panels coop_endgame_panel coop_endgame_vo_panel)
+   (focus coop_endgame_panel)
+   ENDGAME_SCREEN_HANDLERS
+   (more_details_screen coop_details_endgame_screen)}
+#define NEXTSONG_SCREEN_HANDLERS
+((show_helpbar_during_transition
+      {coop_endgame_panel get show_toggle_harmony})
+   (update_helpbar
+      {if
+         {coop_endgame_panel get show_toggle_harmony}
+         {if_else
+            {coop_endgame_panel get show_harmony_grid}
+            {helpbar set_widget view_modify show_simple_vocal_results}
+            {helpbar set_widget view_modify show_advanced_vocal_results}}}))
+{new
+   BandScreen
+   nextsong_screen
+   NEXTSONG_SCREEN_HANDLERS
+   (enter
+      {net_sync disable}
+      {ui
+         pop_screen
+         {gamemode get nextstats_screen}})}
+{new
+   NextSongPanel
+   nextsong_panel
+   ENDGAME_PANEL_HANDLERS
+   (file
+      "nextsong.milo")
+   (min_time 5.0)
+   (allowed_transition_actions
+      (kAction_ViewModify))
+   (network_mic_setup TRUE)
+   (enter
+      {platform_mgr
+         add_sink
+         $this
+         (microphones_changed)}
+      {if_else
+         {meta_performer is_next_song_in_different_venue}
+         {geometry.grp set_showing TRUE}
+         {do
+            {geometry.grp set_showing FALSE}
+            {if
+               $p9director
+               {$p9director set shot OUTRO_MULTI}}}}
+      {$this set_results}
+      {songs.lbl
+         set_token_fmt
+         story_event_songs
+         {meta_performer num_completed}
+         {meta_performer num_songs}}
+      {next_song_name.lbl
+         set_song_name
+         {meta_performer song}}
+      {do
+         ($icons
+            "")
+         {no_part_icons.lbl set_showing TRUE}
+         {no_part_message.lbl set_showing TRUE}
+         {user_mgr
+            foreach_user
+            $user
+            {if
+               {!
+                  {meta_performer
+                     part_plays_in_song
+                     {$user get_track_sym}}}
+               {switch
+                  {$user get_track_sym}
+                  (guitar
+                     {append_str
+                        $icons
+                        "G"})
+                  (drum
+                     {append_str
+                        $icons
+                        "D"})
+                  (vocals
+                     {append_str
+                        $icons
+                        "V"})
+                  (bass
+                     {append_str
+                        $icons
+                        "B"})}}}
+         {if_else
+            {==
+               $icons
+               ""}
+            {do
+               {no_part_icons.lbl set_showing FALSE}
+               {no_part_message.lbl set_showing FALSE}}
+            {do
+               {no_part_icons.lbl set_showing TRUE}
+               {no_part_message.lbl set_showing TRUE}
+               {no_part_icons.lbl set_token_fmt missing_instrument_icons $icons}
+               {$this disable no_part_icons.lbl}}}}
+      {if
+         {!
+            {meta_performer disband_if_bad_configuration}}
+         {ui
+            goto_screen
+            {gamemode get preload_nextsong_screen}}})
+   (exit_complete
+      {platform_mgr remove_sink $this microphones_changed})
+   (microphones_changed
+      ($active_mic_removed)
+      {if
+         {&&
+            $active_mic_removed
+            {participating_vocalist_exists}}
+         {game_screen set mic_removed_mid_setlist TRUE}})}
+{new
+   BandScreen
+   nextstats_screen
+   (panels game world_panel coop_track_panel nextsong_panel)
+   (focus nextsong_panel)
+   NEXTSONG_SCREEN_HANDLERS
+   (enter
+      {$this update_helpbar})}
+{new
+   PreloadPanel
+   preload_nextsong_panel
+   (content_name
+      "")
+   (corrupt FALSE)
+   (enter
+      {if_else
+         [preload_ok]
+         {ui
+            goto_screen
+            {gamemode get load_nextsong_screen}}
+         {ui
+            content_file_read_failed
+            [content_name]
+            [corrupt]}})}
+{new
+   GameTimePanel
+   game_time_panel
+   (load
+      {game set multi_event TRUE})}
+{new
+   BandScreen
+   preload_nextsong_screen
+   (panels game game_time_panel world_panel coop_track_panel nextsong_panel preload_nextsong_panel)
+   (focus nextsong_panel)
+   NEXTSONG_SCREEN_HANDLERS
+   (enter
+      {$this update_helpbar})}
+{new
+   BandScreen
+   load_nextsong_screen
+   (panels game_time_panel world_panel coop_track_panel nextsong_panel)
+   (focus nextsong_panel)
+   NEXTSONG_SCREEN_HANDLERS
+   (enter
+      {$this update_helpbar})
+   (TRANSITION_COMPLETE_MSG
+      {song_mgr
+         add_recent_song
+         {meta_performer song}}
+      {$p9director load_next_song}
+      {coop_track_panel set_paused TRUE}
+      {ui
+         goto_screen
+         {gamemode get game_screen}})}
+{new
+   BandScreen
+   load_nextsong_newvenue_screen
+   (panels game_time_panel coop_track_panel nextsong_panel)
+   (focus nextsong_panel)
+   NEXTSONG_SCREEN_HANDLERS
+   (enter
+      {$this update_helpbar}
+      {meta_performer choose_venue_for_next_song})
+   (TRANSITION_COMPLETE_MSG
+      {song_mgr
+         add_recent_song
+         {meta_performer song}}
+      {coop_track_panel set_paused TRUE}
+      {ui
+         goto_screen
+         {gamemode get game_screen}})}
+#define H2H_END_GAME_PANEL_HANDLERS
+((focus continue.btn)
+   ENDGAME_PANEL_HANDLERS
+   (enter
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set_results}
+      ENDGAME_PANEL_COMMON_ENTER
+      {if
+         {gamemode get ranked}
+         {net_sync set_ui_state kNetUI_MetaLoadingPreSave}
+         {ui set_disband_status kDisbandsDisabled}})
+   #ifdef HX_XBOX
+   (update_true_skill
+      ($skill0 $skill1)
+      {rank0.lbl set_int $skill0}
+      {rank1.lbl set_int $skill1}
+      {rank0_text.lbl set_showing TRUE}
+      {rank1_text.lbl set_showing TRUE})
+   #endif
+   (exit
+      ENDGAME_PANEL_COMMON_EXIT
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}))
+{new
+   H2HEndGamePanel
+   score_duel_endgame_panel
+   (file
+      "score_duel_endgame.milo")
+   H2H_END_GAME_PANEL_HANDLERS}
+{new
+   BandScreen
+   score_duel_details_endgame_screen
+   (panels score_duel_endgame_panel more_details_panel)
+   (focus more_details_panel)
+   (leave
+      {ui goto_screen score_duel_endgame_screen})
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_confirm)))}
+{new
+   BandScreen
+   score_duel_endgame_screen
+   (panels score_duel_endgame_panel)
+   (focus score_duel_endgame_panel)
+   ENDGAME_SCREEN_HANDLERS
+   (more_details_screen score_duel_details_endgame_screen)}
+{new
+   H2HEndGamePanel
+   tow_endgame_panel
+   (file
+      "tow_endgame.milo")
+   H2H_END_GAME_PANEL_HANDLERS}
+{new
+   BandScreen
+   tow_details_endgame_screen
+   (panels tow_endgame_panel more_details_panel)
+   (focus more_details_panel)
+   (leave
+      {ui goto_screen tow_endgame_screen})
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_confirm)))}
+{new
+   BandScreen
+   tow_endgame_screen
+   (panels tow_endgame_panel)
+   (focus tow_endgame_panel)
+   ENDGAME_SCREEN_HANDLERS
+   (more_details_screen tow_details_endgame_screen)}

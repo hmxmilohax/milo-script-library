@@ -1,0 +1,580 @@
+{new
+   TutorialChallenge
+   drum_thrash_challenge
+   (enter
+      {{gamemode get main_panel}
+         add_drum_hit_callback
+         $this}
+      {{gamemode get main_panel}
+         enable_controller}
+      {{gamemode get main_panel}
+         set_sfx_volume
+         0.0}
+      {foreach_int
+         $i
+         0
+         {size
+            [pad_count]}
+         {set_elem
+            [pad_count]
+            $i
+            0}})
+   (exit
+      {{gamemode get main_panel}
+         remove_drum_hit_callback
+         $this})
+   (drum_hit
+      ($pad_num)
+      {if_else
+         {{{session_mgr get_leader_user}
+               get_gameplay_options}
+            get_lefty}
+         {do
+            {if_else
+               {== $pad_num 0}
+               {set $sample_num 0}
+               {set
+                  $sample_num
+                  {- 5 $pad_num}}}}
+         {do
+            {set $sample_num $pad_num}}}
+      {{{gamemode get main_panel}
+            find
+            [sample_names $sample_num]}
+         play}
+      {{{gamemode get main_panel}
+            find
+            {elem
+               [hit_triggers]
+               $pad_num}}
+         trigger}
+      {if
+         {<
+            {elem
+               [pad_count]
+               $pad_num}
+            [num_plays]}
+         {set_elem
+            [pad_count]
+            $pad_num
+            {'+'
+               1
+               {elem
+                  [pad_count]
+                  $pad_num}}}
+         {if
+            {==
+               {elem
+                  [pad_count]
+                  $pad_num}
+               [num_plays]}
+            {{{gamemode get main_panel}
+                  find
+                  {elem
+                     [triggers]
+                     $pad_num}}
+               trigger}}})
+   (is_running
+      {!
+         {$this success}})
+   (success
+      {&&
+         {>=
+            {elem
+               [pad_count]
+               0}
+            [num_plays]}
+         {>=
+            {elem
+               [pad_count]
+               1}
+            [num_plays]}
+         {>=
+            {elem
+               [pad_count]
+               2}
+            [num_plays]}
+         {>=
+            {elem
+               [pad_count]
+               3}
+            [num_plays]}
+         {>=
+            {elem
+               [pad_count]
+               4}
+            [num_plays]}})
+   (success_level 0)
+   (pad_count
+      (0 0 0 0 0))
+   (num_plays 4)
+   (hit_triggers
+      (c0_hit0.trig c0_hit1.trig c0_hit2.trig c0_hit3.trig c0_hit4.trig))
+   (triggers
+      (c0_pad0.trig c0_pad1.trig c0_pad2.trig c0_pad3.trig c0_pad4.trig))
+   (sample_names
+      (ds1005.cue ds1001.cue ds1002.cue ds1003.cue ds1004.cue))}
+{new
+   TutorialChallenge
+   drum_onehand_challenge
+   (enter
+      {{beatmatch active_player 0}
+         add_sink
+         $this}
+      {set
+         [perfect]
+         TRUE}
+      {set
+         [num_gems_hit]
+         0}
+      {{gamemode get main_panel}
+         tut_set_challenge_score
+         [num_gems_hit]
+         [gems_to_hit]})
+   (exit
+      {{beatmatch active_player 0}
+         remove_sink
+         $this}
+      {{gamemode get main_panel}
+         tut_track_out})
+   (hit
+      {if
+         {<
+            [num_gems_hit]
+            [gems_to_hit]}
+         {'++'
+            [num_gems_hit]}
+         {{gamemode get main_panel}
+            tut_set_challenge_score
+            [num_gems_hit]
+            [gems_to_hit]}})
+   (miss
+      {set
+         [perfect]
+         FALSE})
+   (pass
+      {set
+         [perfect]
+         FALSE})
+   (is_running
+      {!
+         {$this success}})
+   (success
+      {>=
+         [num_gems_hit]
+         [gems_to_hit]})
+   (success_level
+      {if_else
+         [perfect]
+         1
+         0})
+   (num_gems_hit 0)
+   (gems_to_hit 8)
+   (perfect TRUE)}
+{new
+   TutorialChallenge
+   drum_twohands_challenge
+   (enter
+      {{beatmatch active_player 0}
+         add_sink
+         $this}
+      {set
+         [perfect]
+         TRUE}
+      {set
+         [num_gems_hit]
+         0}
+      {set
+         [last_hit_time]
+         0.0}
+      {{gamemode get main_panel}
+         tut_set_challenge_score
+         [num_gems_hit]
+         [gems_to_hit]})
+   (exit
+      {{beatmatch active_player 0}
+         remove_sink
+         $this}
+      {{gamemode get main_panel}
+         tut_track_out})
+   (hit
+      {if_else
+         {!=
+            [last_hit_time]
+            0.0}
+         {$this attempt_pair_match}
+         {set
+            [last_hit_time]
+            {taskmgr tutorial_seconds}}})
+   (attempt_pair_match
+      {if_else
+         {<
+            {-
+               {taskmgr tutorial_seconds}
+               [last_hit_time]}
+            0.1}
+         {$this pair_matched}
+         {set
+            [last_hit_time]
+            {taskmgr tutorial_seconds}}})
+   (pair_matched
+      {set
+         [last_hit_time]
+         0.0}
+      {if
+         {<
+            [num_gems_hit]
+            [gems_to_hit]}
+         {'++'
+            [num_gems_hit]}
+         {{gamemode get main_panel}
+            tut_set_challenge_score
+            [num_gems_hit]
+            [gems_to_hit]}})
+   (miss
+      {set
+         [perfect]
+         FALSE})
+   (pass
+      {set
+         [perfect]
+         FALSE})
+   (is_running
+      {!
+         {$this success}})
+   (success
+      {>=
+         [num_gems_hit]
+         [gems_to_hit]})
+   (success_level
+      {if_else
+         [perfect]
+         0
+         1})
+   (num_gems_hit 0)
+   (gems_to_hit 8)
+   (perfect TRUE)
+   (last_hit_time 0.0)}
+{new
+   TutorialChallenge
+   drum_kick_challenge
+   (enter
+      {{beatmatch active_player 0}
+         add_sink
+         $this}
+      {set
+         [perfect]
+         TRUE}
+      {set
+         [num_gems_hit]
+         0}
+      {{gamemode get main_panel}
+         tut_set_challenge_score
+         [num_gems_hit]
+         [gems_to_hit]})
+   (exit
+      {{beatmatch active_player 0}
+         remove_sink
+         $this}
+      {{gamemode get main_panel}
+         tut_track_out})
+   (hit
+      {if
+         {<
+            [num_gems_hit]
+            [gems_to_hit]}
+         {'++'
+            [num_gems_hit]}
+         {{gamemode get main_panel}
+            tut_set_challenge_score
+            [num_gems_hit]
+            [gems_to_hit]}})
+   (miss
+      {set
+         [perfect]
+         FALSE})
+   (pass
+      {set
+         [perfect]
+         FALSE})
+   (is_running
+      {!
+         {$this success}})
+   (success
+      {>=
+         [num_gems_hit]
+         [gems_to_hit]})
+   (success_level
+      {if_else
+         [perfect]
+         0
+         1})
+   (num_gems_hit 0)
+   (gems_to_hit 8)
+   (perfect TRUE)}
+{new
+   TutorialChallenge
+   drum_interface_challenge
+   (enter)
+   (exit)
+   (is_running FALSE)
+   (success TRUE)
+   (success_level 0)}
+{new
+   TutorialChallenge
+   drum_beat1_challenge
+   (enter
+      {{beatmatch active_player 0}
+         add_sink
+         $this}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         KICK_SLOT}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         SNARE_SLOT}
+      {{{get_track_panel}
+            get_first_track}
+         disable_slot
+         HIHAT_SLOT}
+      {set
+         [state]
+         0}
+      {foreach_int
+         $i
+         0
+         {size
+            [gems_hit]}
+         {set_elem
+            [gems_hit]
+            $i
+            0}}
+      {$this update_score}
+      {{{gamemode get main_panel}
+            get_lesson}
+         set
+         fail_vo
+         tute_drum2_kicksnarefail}
+      {set
+         [enable_hit]
+         TRUE})
+   (exit
+      {{beatmatch active_player 0}
+         remove_sink
+         $this}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         KICK_SLOT}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         SNARE_SLOT}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         HIHAT_SLOT}
+      {{gamemode get main_panel}
+         tut_track_out})
+   (hit
+      {if
+         [enable_hit]
+         {set_elem
+            [gems_hit]
+            [state]
+            {'+'
+               1
+               {elem
+                  [gems_hit]
+                  [state]}}}
+         {$this update_score}
+         {if_else
+            {==
+               [state]
+               0}
+            {if
+               {==
+                  {elem
+                     [gems_hit]
+                     0}
+                  {elem
+                     [gems_to_hit]
+                     0}}
+               {$this next_state}}
+            {if
+               {==
+                  {elem
+                     [gems_hit]
+                     1}
+                  {elem
+                     [gems_to_hit]
+                     1}}
+               {set
+                  [enable_hit]
+                  FALSE}}}})
+   (mistake
+      {if
+         [enable_hit]
+         {set_elem
+            [gems_hit]
+            [state]
+            0}
+         {$this update_score}})
+   (miss
+      {$this mistake})
+   (pass
+      {$this mistake})
+   (update_score
+      {{gamemode get main_panel}
+         tut_set_challenge_score
+         {elem
+            [gems_hit]
+            [state]}
+         {elem
+            [gems_to_hit]
+            [state]}})
+   (next_state
+      {{gamemode get main_panel}
+         play_vo
+         tute_drum2_kicksnarewin}
+      {{{gamemode get main_panel}
+            find
+            task_text.lbl}
+         set
+         text_token
+         drum2_lesson1_beat_task2}
+      {set
+         [state]
+         1}
+      {set
+         [enable_hit]
+         FALSE}
+      {{{gamemode get main_panel}
+            get_lesson}
+         set
+         fail_vo
+         tute_drum2_allfail}
+      {script_task
+         kTaskSeconds
+         (delay 7)
+         (script
+            {$this enable_everything})})
+   (enable_everything
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         KICK_SLOT}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         SNARE_SLOT}
+      {{{get_track_panel}
+            get_first_track}
+         enable_slot
+         HIHAT_SLOT}
+      {set
+         [enable_hit]
+         TRUE}
+      {$this update_score})
+   (is_running
+      {!
+         {$this success}})
+   (success
+      {&&
+         {>=
+            {elem
+               [gems_hit]
+               0}
+            {elem
+               [gems_to_hit]
+               0}}
+         {>=
+            {elem
+               [gems_hit]
+               1}
+            {elem
+               [gems_to_hit]
+               1}}})
+   (success_level 0)
+   (gems_hit
+      (0 0))
+   (gems_to_hit
+      (10 12))
+   (enable_hit TRUE)
+   (state 0)}
+{new
+   TutorialChallenge
+   drum_combos_challenge
+   (enter
+      {{beatmatch active_player 0}
+         add_sink
+         $this}
+      {set
+         [spotlight_phrases_hit]
+         0})
+   (exit
+      {{beatmatch active_player 0}
+         remove_sink
+         $this}
+      {{gamemode get main_panel}
+         tut_track_out})
+   (unison_hit
+      {'++'
+         [spotlight_phrases_hit]})
+   (is_running
+      {!
+         {$this success}})
+   (success
+      {>=
+         [spotlight_phrases_hit]
+         [spotlight_phrases_to_hit]})
+   (success_level 0)
+   (spotlight_phrases_hit 0)
+   (spotlight_phrases_to_hit 2)}
+{new
+   TutorialChallenge
+   drum_deploy_challenge
+   (enter
+      {{beatmatch active_player 0}
+         add_sink
+         $this}
+      {set
+         [deployed]
+         FALSE})
+   (exit
+      {{beatmatch active_player 0}
+         remove_sink
+         $this}
+      {{gamemode get main_panel}
+         tut_track_out})
+   (note_seen
+      ($id)
+      {if
+         {&&
+            {'||'
+               {== $id 38}
+               {== $id 62}}
+            {!
+               [deployed]}}
+         {{gamemode get main_panel}
+            play_vo
+            tute_drum2_deployhelp}})
+   (deploy
+      {set
+         [deployed]
+         TRUE})
+   (pass
+      ($id)
+      {$this note_seen $id})
+   (hit
+      ($slot $id)
+      {$this note_seen $id})
+   (is_running
+      {!
+         [deployed]})
+   (success
+      [deployed])
+   (success_level 0)
+   (deployed FALSE)}

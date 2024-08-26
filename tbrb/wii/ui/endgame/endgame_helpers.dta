@@ -1,0 +1,705 @@
+{func
+   send_player_stats
+   ($player)
+   {$player
+      send_remote_stats
+      {$player get_user}}}
+{new
+   BandScreen
+   endgame_waiting_screen
+   (panels)
+   (entered FALSE)
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [entered]
+         TRUE}
+      {beatmatch
+         foreach_active_player
+         $p
+         {if
+            {!
+               {$p is_net}}
+            {$p finalize_stats}
+            {send_player_stats $p}}})
+   (exit
+      {set
+         [entered]
+         FALSE})
+   (poll
+      {if
+         {is_leader_local}
+         {if
+            [entered]
+            {do
+               ($proceed TRUE)
+               {beatmatch
+                  foreach_active_player
+                  $p
+                  {if
+                     {!
+                        {$p stats_finalized}}
+                     {set $proceed FALSE}}}
+               {if
+                  {&&
+                     $proceed
+                     {!
+                        {ui in_transition}}}
+                  {beatmatch
+                     foreach_active_player
+                     $p
+                     {send_player_stats $p}}
+                  {ui goto_screen endgame_waiting_complete_screen}}}}})}
+{new
+   BandScreen
+   endgame_waiting_complete_screen
+   (TRANSITION_COMPLETE_MSG
+      {story
+         set
+         win_sequence
+         {meta_performer is_winning}}
+      {meta_performer trigger_song_completion}
+      {if
+         {meta_performer is_last_song}
+         {input_mgr set_limit kLimitSessionLeader}}
+      {if
+         {is_leader_local}
+         {ui goto_screen endgame_advance_screen}})}
+{new
+   BandScreen
+   endgame_advance_screen
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {is_leader_local}
+         {do
+            ($screen
+               {gamemode get endgame_screen})
+            {meta_performer
+               advance_song
+               {{beatmatch main_performer}
+                  num_stars}}
+            #ifndef _SHIP
+            {if
+               $cheat.win_event
+               {while
+                  {!
+                     {meta_performer is_last_song}}
+                  {meta_performer trigger_song_completion}
+                  {meta_performer
+                     advance_song
+                     {{beatmatch main_performer}
+                        num_stars}}}
+               {set $cheat.win_event FALSE}}
+            #endif
+            {ui goto_screen $screen}}})}
+#define ENDGAME_PANEL_HANDLERS
+(#define SELECTED_AWARDS
+   (())
+   (set_results
+      {heading.lbl
+         set_song_name
+         {meta_performer get_completed_song}}
+      {if
+         {!
+            {gamemode in_mode h2h}}
+         {score.lbl set_showing TRUE}
+         {stars.sd set_showing TRUE}
+         {if_else
+            {meta_performer is_using_persistent_data}
+            {do
+               {score.lbl
+                  set_int
+                  {{beatmatch main_performer}
+                     accumulated_score}
+                  TRUE}
+               {stars.sd
+                  set_values
+                  {meta_performer get_total_stars_capped}
+                  {'*'
+                     5
+                     {meta_performer num_completed}}}}
+            {do
+               {score.lbl
+                  set_int
+                  {{beatmatch main_performer}
+                     score}
+                  TRUE}
+               {stars.sd
+                  set_values
+                  {{beatmatch main_performer}
+                     num_stars}
+                  5}}}}
+      {if
+         {gamemode in_mode h2h}
+         #ifndef HX_WII
+         {rank0_text.lbl set_showing FALSE}
+         {rank1_text.lbl set_showing FALSE}
+         {rank0.lbl
+            set
+            text_token
+            ""}
+         {rank1.lbl
+            set
+            text_token
+            ""}
+         #endif
+         {do
+            ($slot0
+               {h2h_track_panel band_to_slot 0})
+            ($slot1
+               {h2h_track_panel band_to_slot 1})
+            ($lbl0
+               {sprintf
+                  "win%d.lbl"
+                  $slot0})
+            ($lbl1
+               {sprintf
+                  "win%d.lbl"
+                  $slot1})
+            ($win_token endgame_winner)
+            {if
+               {gamemode get separate_parts}
+               {do
+                  ($max_delta_points
+                     {beatmatch max_delta_points})
+                  ($score0
+                     {{{user_mgr get_user_from_slot $slot0}
+                           get_player}
+                        score})
+                  ($score1
+                     {{{user_mgr get_user_from_slot $slot1}
+                           get_player}
+                        score})
+                  ($score_diff
+                     {if_else
+                        {< $score0 $score1}
+                        {- $score1 $score0}
+                        {- $score0 $score1}})
+                  {set
+                     $win_token
+                     {cond
+                        ({<
+                              $score_diff
+                              {/ $max_delta_points 4}}
+                           h2h_narrow_win)
+                        ({<
+                              $score_diff
+                              {/ $max_delta_points 2}}
+                           h2h_win)
+                        ({< $score_diff $max_delta_points}
+                           h2h_big_win)
+                        (TRUE h2h_huge_win)}}}}
+            {switch
+               {beatmatch get_result TRUE}
+               (kWonTie
+                  {$lbl0 set text_token endgame_tie}
+                  {$lbl1 set text_token endgame_tie}
+                  {$lbl0 set_showing TRUE}
+                  {$lbl1 set_showing TRUE})
+               (kWonBand0
+                  {$lbl0 set text_token $win_token}
+                  {$lbl0 set_showing TRUE}
+                  {$lbl1 set_showing FALSE})
+               (kWonBand1
+                  {$lbl1 set text_token $win_token}
+                  {$lbl1 set_showing TRUE}
+                  {$lbl0 set_showing FALSE})}}}
+      {coop_endgame_panel set show_toggle_harmony FALSE}
+      {helpbar set_widget view_modify}
+      {do
+         {resize SELECTED_AWARDS 0}
+         {foreach_int
+            $slot
+            0
+            {players.set
+               size
+               (objects)}
+            {do
+               ($pxy
+                  {players.set
+                     get
+                     (objects $slot)})
+               ($user
+                  {user_mgr get_user_from_slot $slot})
+               {$pxy set_showing TRUE}
+               {handle
+                  ($this lock_mics)}
+               {$pxy
+                  set_focus
+                  {$pxy find difficulty.lbl}}
+               {if_else
+                  {!
+                     {beatmatch is_active_user $user}}
+                  {if_else
+                     {'||'
+                        {gamemode in_mode h2h}
+                        {gamemode is_solo}}
+                     {$pxy set_showing FALSE}
+                     {do
+                        {{$pxy find player.grp}
+                           set_showing
+                           FALSE}
+                        {if
+                           {$pxy exists no_player.grp}
+                           {{$pxy find no_player.grp}
+                              set_showing
+                              TRUE}}
+                        {if
+                           {$pxy exists no_instrument.lbl}
+                           {{$pxy find no_instrument.lbl}
+                              set
+                              icon
+                              {missing_slot_to_track_icon $slot}}
+                           {$pxy
+                              disable
+                              {$pxy find no_instrument.lbl}}}}}
+                  {do
+                     ($perfect_harmony FALSE)
+                     {if
+                        {$pxy exists no_player.grp}
+                        {{$pxy find no_player.grp}
+                           set_showing
+                           FALSE}}
+                     {{$pxy find player.grp}
+                        set_showing
+                        TRUE}
+                     {if
+                        {$pxy exists player.lbl}
+                        {{$pxy find player.lbl}
+                           set_intro_name
+                           $user}}
+                     {{$pxy find instrument.lbl}
+                        set
+                        icon
+                        {$user get_track_icon}}
+                     {if
+                        {gamemode in_mode h2h}
+                        {do
+                           ($label
+                              {sprintf
+                                 "score%i.lbl"
+                                 $slot})
+                           {if_else
+                              {gamemode separate_parts}
+                              {$label
+                                 set
+                                 text_token
+                                 ""}
+                              {$label
+                                 set_int
+                                 {{$user player}
+                                    score}
+                                 TRUE}}}}
+                     {if
+                        {$pxy exists noteshit.lbl}
+                        {{$pxy find noteshit.lbl}
+                           set_token_fmt
+                           endgame_player_noteshit_fmt
+                           {int
+                              {'*'
+                                 100
+                                 {{$user player}
+                                    notes_hit_fraction}}}}}
+                     {if
+                        {$pxy exists streak.lbl}
+                        {{$pxy find streak.lbl}
+                           set_token_fmt
+                           {if_else
+                              {==
+                                 {{$user player}
+                                    instrument}
+                                 vocals}
+                              (endgame_phrase_streak
+                                 {localize_separated_int
+                                    {{$user player}
+                                       longest_streak}})
+                              (endgame_note_streak
+                                 {localize_separated_int
+                                    {{$user player}
+                                       longest_streak}})}}}
+                     {if
+                        {$pxy exists difficulty.lbl}
+                        {{$pxy find difficulty.lbl}
+                           set
+                           text_token
+                           {$user get_difficulty_sym}}}
+                     {{$pxy find disable_harmony_grid.trg}
+                        play_end_of_anims}
+                     {if_else
+                        {&&
+                           {!
+                              {gamemode in_mode h2h}}
+                           {==
+                              {{$user player}
+                                 instrument}
+                              vocals}}
+                        {do
+                           ($singerCount
+                              {{$user player}
+                                 get_singer_count})
+                           ($vocalPartCount
+                              {{$user player}
+                                 get_song_num_vocal_parts})
+                           {coop_endgame_panel set show_toggle_harmony TRUE}
+                           {if_else
+                              {coop_endgame_panel get show_harmony_grid}
+                              {helpbar set_widget view_modify show_simple_vocal_results}
+                              {helpbar set_widget view_modify show_advanced_vocal_results}}
+                           {switch
+                              $vocalPartCount
+                              (3
+                                 {{$pxy find vocal_harmony_3parts.trg}
+                                    trigger}
+                                 {{$pxy find instrument.lbl}
+                                    set
+                                    icon
+                                    {get_font_char_for_harmony_mics
+                                       3
+                                       {$user get_hardcore_icon_level}}})
+                              (2
+                                 {{$pxy find vocal_harmony_2parts.trg}
+                                    trigger}
+                                 {{$pxy find instrument.lbl}
+                                    set
+                                    icon
+                                    {get_font_char_for_harmony_mics
+                                       2
+                                       {$user get_hardcore_icon_level}}})
+                              (1
+                                 {{$pxy find vocal_harmony_1part.trg}
+                                    trigger})
+                              {notify
+                                 "A song does not have 1-3 vocal parts!"}}
+                           {if
+                              {$pxy exists vocal_results_grid.grp}
+                              {foreach_int
+                                 $iSinger
+                                 0
+                                 $singerCount
+                                 {foreach_int
+                                    $iRank
+                                    0
+                                    $vocalPartCount
+                                    {do
+                                       ($percentage
+                                          {{$user player}
+                                             get_singer_ranked_percentage
+                                             $iSinger
+                                             $iRank})
+                                       ($part
+                                          {{$user player}
+                                             get_singer_ranked_part
+                                             $iSinger
+                                             $iRank})
+                                       ($labelName
+                                          {sprintf
+                                             "singer%d_part%d.lbl"
+                                             $iSinger
+                                             $iRank})
+                                       ($colorAnimName
+                                          {sprintf
+                                             "vox_scoring_bg_singer%d_part%d.anim"
+                                             $iSinger
+                                             $iRank})
+                                       ($label
+                                          {$pxy find $labelName})
+                                       ($colorAnim
+                                          {$pxy find $colorAnimName})
+                                       {$label
+                                          set_token_fmt
+                                          endgame_player_noteshit_fmt
+                                          {int
+                                             {'*' 100 $percentage}}}
+                                       {$colorAnim set frame $part}}}}}
+                           {if_else
+                              {&&
+                                 {==
+                                    {{$user player}
+                                       get_double_harmony_total}
+                                    {{$user player}
+                                       get_double_harmony_hit}}
+                                 {==
+                                    {{$user player}
+                                       get_triple_harmony_total}
+                                    {{$user player}
+                                       get_triple_harmony_hit}}}
+                              {do
+                                 {set $perfect_harmony TRUE}
+                                 {if
+                                    {$pxy exists perfect_harmony_pulse.trg}
+                                    {{$pxy find perfect_harmony_pulse.trg}
+                                       trigger}}}
+                              {do
+                                 {set $perfect_harmony FALSE}
+                                 {if
+                                    {$pxy exists perfect_harmony_pulse_stop.trg}
+                                    {{$pxy find perfect_harmony_pulse_stop.trg}
+                                       trigger}}}}
+                           {if
+                              {$pxy exists doubleharmonies.lbl}
+                              {if_else
+                                 $perfect_harmony
+                                 {{$pxy find doubleharmonies.lbl}
+                                    set_state
+                                    kComponentFocused}
+                                 {{$pxy find doubleharmonies.lbl}
+                                    set_state
+                                    kComponentNormal}}
+                              {if_else
+                                 {{$user player}
+                                    get_double_harmony_total}
+                                 {do
+                                    {{$pxy find doubleharmonies.lbl}
+                                       set_showing
+                                       TRUE}
+                                    {{$pxy find doubleharmonies.lbl}
+                                       set_token_fmt
+                                       completed_double_harmonies
+                                       {{$user player}
+                                          get_double_harmony_hit}
+                                       {{$user player}
+                                          get_double_harmony_total}}}
+                                 {{$pxy find doubleharmonies.lbl}
+                                    set_showing
+                                    FALSE}}}
+                           {if
+                              {$pxy exists tripleharmonies.lbl}
+                              {if_else
+                                 $perfect_harmony
+                                 {{$pxy find tripleharmonies.lbl}
+                                    set_state
+                                    kComponentFocused}
+                                 {{$pxy find tripleharmonies.lbl}
+                                    set_state
+                                    kComponentNormal}}
+                              {if_else
+                                 {{$user player}
+                                    get_triple_harmony_total}
+                                 {do
+                                    {{$pxy find tripleharmonies.lbl}
+                                       set_showing
+                                       TRUE}
+                                    {{$pxy find tripleharmonies.lbl}
+                                       set_token_fmt
+                                       completed_triple_harmonies
+                                       {{$user player}
+                                          get_triple_harmony_hit}
+                                       {{$user player}
+                                          get_triple_harmony_total}}}
+                                 {{$pxy find tripleharmonies.lbl}
+                                    set_showing
+                                    FALSE}}}}
+                        {if
+                           {$pxy exists no_vocal_harmony.trg}
+                           {{$pxy find no_vocal_harmony.trg}
+                              trigger}}}}}}}})
+   (setup_mics
+      ($hasmic1 $hasmic2 $hasmic3)
+      {foreach_int
+         $slot
+         0
+         {players.set
+            size
+            (objects)}
+         {do
+            ($pxy
+               {players.set
+                  get
+                  (objects $slot)})
+            ($user
+               {user_mgr get_user_from_slot $slot})
+            ($num_mics_trigger
+               "mic")
+            {if
+               {&&
+                  $user
+                  {==
+                     {$user get_track_sym}
+                     vocals}}
+               {if
+                  $hasmic1
+                  {append_str
+                     $num_mics_trigger
+                     "A"}}
+               {if
+                  $hasmic2
+                  {append_str
+                     $num_mics_trigger
+                     "B"}}
+               {if
+                  $hasmic3
+                  {append_str
+                     $num_mics_trigger
+                     "C"}}
+               {append_str
+                  $num_mics_trigger
+                  ".trg"}
+               {if
+                  {$pxy exists $num_mics_trigger}
+                  {{$pxy find $num_mics_trigger}
+                     trigger}}
+               {if_else
+                  {coop_endgame_panel get show_harmony_grid}
+                  {{$pxy find enable_harmony_grid.trg}
+                     play_end_of_anims}
+                  {{$pxy find disable_harmony_grid.trg}
+                     play_end_of_anims}}}}})
+   (instarank_done
+      {$this set_instarank})
+   (set_instarank
+      {if
+         {$this exists instarank.lbl}
+         {instarank.lbl
+            set_instarank
+            {meta_performer get_instarank}}
+         {instarank_warning.lbl set_showing TRUE}})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_ViewModify
+            {foreach_int
+               $slot
+               0
+               {players.set
+                  size
+                  (objects)}
+               {do
+                  ($pxy
+                     {players.set
+                        get
+                        (objects $slot)})
+                  ($user
+                     {user_mgr get_user_from_slot $slot})
+                  {if
+                     {&&
+                        {!
+                           {gamemode in_mode h2h}}
+                        $user
+                        {==
+                           {$user get_track_sym}
+                           vocals}
+                        {'||'
+                           TRUE
+                           {$user is_local}}}
+                     {if_else
+                        {coop_endgame_panel get show_harmony_grid}
+                        {do
+                           {{$pxy find disable_harmony_grid.trg}
+                              trigger}
+                           {coop_endgame_panel set show_harmony_grid FALSE}
+                           {helpbar set_widget view_modify show_advanced_vocal_results}
+                           {play_instr_sfx_local $user button_back}}
+                        {do
+                           {{$pxy find enable_harmony_grid.trg}
+                              trigger}
+                           {coop_endgame_panel set show_harmony_grid TRUE}
+                           {helpbar set_widget view_modify show_simple_vocal_results}
+                           {play_instr_sfx_local $user button_select}}}}}})
+         kDataUnhandled}))
+#include complete.dta
+#define ENDGAME_SCREEN_HANDLERS
+((enter
+      {ui_event_mgr
+         add_sink
+         $this
+         (event_dialog_dismiss)}
+      {$this update_helpbar})
+   (exit
+      {ui_event_mgr remove_sink $this event_dialog_dismiss})
+   (update_helpbar
+      {helpbar
+         set_config
+         ()}
+      {if
+         {coop_endgame_panel get show_toggle_harmony}
+         {if_else
+            {coop_endgame_panel get show_harmony_grid}
+            {helpbar set_widget view_modify show_simple_vocal_results}
+            {helpbar set_widget view_modify show_advanced_vocal_results}}}
+      {if
+         {'||'
+            {is_leader_local}
+            {gamemode get ranked}}
+         {helpbar set_widget confirm endgame_hb_finishsong}}
+      #ifdef HX_XBOX
+      {if
+         {&&
+            {gamemode get online_play_required}
+            {>
+               {session num_users}
+               0}}
+         {helpbar set_widget option endgame_hb_details}}
+      #endif)
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         #ifdef HX_XBOX
+         (kAction_Option
+            {if
+               {!
+                  {gamemode get ranked}}
+               {net_sync disable}}
+            {if
+               {gamemode get online_play_required}
+               {ui
+                  goto_screen
+                  [more_details_screen]}})
+         #endif
+         (kAction_Confirm
+            {if_else
+               {gamemode in_mode story}
+               {if
+                  {is_leader_local}
+                  {play_instr_sfx $user button_select}
+                  {ui sync_screen story_chapter_setcomplete_screen 1}}
+               {if_else
+                  {gamemode get ranked}
+                  {do
+                     {play_instr_sfx $user button_select}
+                     {ui goto_screen complete_ranked_screen}}
+                  {if
+                     {is_leader_local}
+                     {play_instr_sfx $user button_select}
+                     {ui sync_screen complete_screen 1}}}})
+         (kAction_Cancel
+            {if_else
+               {&&
+                  {!
+                     {is_leader_local}}
+                  {!
+                     {gamemode get ranked}}}
+               {ui_event_mgr trigger_event remote_exit}
+               kDataUnhandled})
+         kDataUnhandled})
+   (set_up_helpbar
+      {unless
+         {is_leader_local}
+         {if
+            {coop_endgame_panel get show_toggle_harmony}
+            {if_else
+               {coop_endgame_panel get show_harmony_grid}
+               {helpbar set_widget view_modify show_simple_vocal_results}
+               {helpbar set_widget view_modify show_advanced_vocal_results}}}
+         #ifdef HX_XBOX
+         {helpbar set_widget option endgame_hb_details}
+         #endif
+         {if_else
+            {gamemode get ranked}
+            {helpbar set_widget confirm endgame_hb_finishsong}
+            {do
+               {helpbar set_widget cancel endgame_hb_leave_session}
+               {do
+                  ($leader_name
+                     {{session_mgr get_leader_user}
+                        get_player_name})
+                  {helpbar
+                     set_widget
+                     waiting
+                     (helpbar_waiting_for $leader_name)}}}}})
+   (TRANSITION_COMPLETE_MSG
+      {$this set_up_helpbar}
+      {if
+         {!
+            {gamemode get ranked}}
+         {net_sync enable}})
+   (event_dialog_dismiss
+      {$this set_up_helpbar}))

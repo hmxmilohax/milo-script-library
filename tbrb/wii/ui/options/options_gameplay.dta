@@ -1,0 +1,322 @@
+{new
+   UIPanel
+   options_gameplay_panel
+   #ifdef HX_PS3
+   (file
+      "options_gameplay_ps3_keep.milo")
+   #else
+   (file
+      "options_gameplay.milo")
+   #endif
+   #ifdef HX_WII
+   (allow_home_menu TRUE)
+   #endif
+   #ifdef HX_WII
+   (focus disable_nets.btn)
+   #endif
+   (signin_change_waiting FALSE)
+   (enter
+      SET_UP_GAMERTAG
+      {platform_mgr
+         add_sink
+         $this
+         (signin_changed)}
+      {$this update_checks}
+      #ifndef HX_WII
+      {$this set_focus leftymode.btn}
+      #endif
+      #ifdef HX_PS3
+      {$this set_focus hardcore_icon.btn}
+      #endif
+      #ifdef HX_WII
+      {$this set_focus disable_nets.btn}
+      #endif)
+   (exit
+      {platform_mgr remove_sink $this signin_changed})
+   (SIGNIN_CHANGED_MSG
+      {if
+         {platform_mgr
+            has_user_signin_changed
+            {input_mgr get_user}}
+         {if_else
+            {==
+               {ui current_screen}
+               options_gameplay_screen}
+            {$this process_signin_change}
+            {if
+               {!
+                  {==
+                     {ui current_screen}
+                     option_profile_change_warning_screen}}
+               {$this set signin_change_waiting TRUE}}}})
+   (TRANSITION_COMPLETE_MSG
+      COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT
+      {$this
+         update_helpbar
+         {$this focus_name}}
+      {$this update_checks})
+   (process_signin_change
+      {if
+         {==
+            {ui current_screen}
+            options_gameplay_screen}
+         {ui goto_screen option_profile_change_warning_screen}})
+   (FOCUS_MSG
+      {$this
+         update_helpbar
+         {$new_focus name}})
+   (update_helpbar
+      ($component)
+      {switch
+         $component
+         (disable_nets.btn
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_toggleoption))})
+         #ifndef HX_WII
+         (leftymode.btn
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_toggleoption))})
+         ((vocalstyle.btn hardcore_icon.btn mic_level.btn)
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_changesetting))})
+         #endif
+         ((vocalhudtype.lst hardcore_icon.lst)
+            {helpbar
+               set_config
+               ((cancel helpbar_cancel)
+                  (confirm helpbar_confirmsetting))})
+         FAIL})
+   (SELECT_MSG
+      {switch
+         $component
+         (disable_nets.btn
+            {profile_mgr
+               set_nets_disabled
+               {!
+                  {profile_mgr are_nets_disabled}}}
+            {if
+               {server is_connected}
+               {rock_central force_logout}}
+            {$this update_checks})
+         #ifndef HX_WII
+         (leftymode.btn
+            {do
+               ($options
+                  {{input_mgr get_user}
+                     get_gameplay_options})
+               ($lefty_flipped
+                  {$options get_lefty})
+               {$options
+                  set_lefty
+                  {! $lefty_flipped}}
+               {$this update_checks}})
+         #endif
+         (hardcore_icon.btn
+            {if_else
+               {>
+                  {hardcore_icon.lst num_data}
+                  1}
+               {do
+                  {{$this find hardcore_icon.lst}
+                     store}
+                  {$this
+                     set_focus
+                     {$this find hardcore_icon.lst}}}
+               {ui push_screen icon_warning_screen}})
+         #ifndef HX_WII
+         (vocalstyle.btn
+            {{$this find vocalhudtype.lst}
+               store}
+            {$this
+               set_focus
+               {$this find vocalhudtype.lst}})
+         (mic_level.btn
+            {mic_level.sld store}
+            {$this set_focus mic_level.sld})
+         #endif})
+   (BUTTON_DOWN_MSG
+      {switch
+         {$this focus_name}
+         (hardcore_icon.lst
+            {switch
+               $action
+               (kAction_Confirm
+                  {hardcore_icon.lst confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus hardcore_icon.btn})
+               (kAction_Cancel
+                  {hardcore_icon.lst undo $user}
+                  {$this set_focus hardcore_icon.btn})
+               kDataUnhandled})
+         #ifndef HX_WII
+         (vocalhudtype.lst
+            {switch
+               $action
+               (kAction_Confirm
+                  {vocalhudtype.lst confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus vocalstyle.btn})
+               (kAction_Cancel
+                  {vocalhudtype.lst undo $user}
+                  {$this set_focus vocalstyle.btn})
+               kDataUnhandled})
+         (mic_level.sld
+            {switch
+               $action
+               (kAction_Confirm
+                  {mic_level.sld confirm}
+                  {play_instr_sfx $user button_select}
+                  {$this set_focus mic_level.btn})
+               (kAction_Cancel
+                  {mic_level.sld undo $user}
+                  {$this set_focus mic_level.btn})
+               kDataUnhandled})
+         #endif
+         {if_else
+            {== $action kAction_Cancel}
+            {if
+               {&&
+                  {!
+                     {ui in_transition}}
+                  {==
+                     {ui current_screen}
+                     options_gameplay_screen}
+                  {!
+                     {ui_event_mgr has_active_transition_event}}}
+               {do
+                  {play_instr_sfx $user button_back}
+                  {ui goto_screen main_screen_2_popup}}}
+            kDataUnhandled}})
+   (SCROLL_MSG
+      {switch
+         $component
+         (hardcore_icon.lst
+            {do
+               ($profile
+                  {profile_mgr
+                     get_profile
+                     {input_mgr get_user}})
+               {switch
+                  {hardcore_icon.lst selected_sym}
+                  (icon_normal
+                     {$profile set_hardcore_icon_level 0})
+                  (icon_level1
+                     {$profile set_hardcore_icon_level 1})
+                  (icon_level2
+                     {$profile set_hardcore_icon_level 2})
+                  (icon_level3
+                     {$profile set_hardcore_icon_level 3})}})
+         #ifndef HX_WII
+         (vocalhudtype.lst
+            {do
+               ($options
+                  {{input_mgr get_user}
+                     get_gameplay_options})
+               {switch
+                  {vocalhudtype.lst selected_sym}
+                  (vocalstyle_static
+                     {$options set_vocal_style kVocalStyleStatic})
+                  (vocalstyle_scrolling
+                     {$options set_vocal_style kVocalStyleScrolling})}})
+         (mic_level.sld
+            {{{input_mgr get_user}
+                  get_gameplay_options}
+               set_vocal_volume
+               {$component current}}
+            {profile_mgr
+               update_vocal_volume
+               {input_mgr get_user}})
+         #endif})
+   (update_checks
+      {{options_gameplay_panel find check_nets.mesh}
+         set_showing
+         {profile_mgr are_nets_disabled}}
+      {do
+         ($profile
+            {profile_mgr
+               get_profile
+               {input_mgr get_user}})
+         {if_else
+            {platform_mgr
+               is_user_signed_in
+               {input_mgr get_user}}
+            {hardcore_icon.lst
+               set_data
+               {switch
+                  {{$profile get_accomplishment_progress}
+                     get_icon_hardcore_status}
+                  (kHardCoreStatusNormal
+                     (icon_normal))
+                  (kHardCoreStatusSilver
+                     (icon_normal icon_level1))
+                  (kHardCoreStatusGold
+                     (icon_normal icon_level1 icon_level2))
+                  (kHardCoreStatusPsychedelic
+                     (icon_normal icon_level1 icon_level2 icon_level3))}}
+            {hardcore_icon.lst
+               set_data
+               (icon_normal)}}}
+      {switch
+         {{profile_mgr
+               get_profile
+               {input_mgr get_user}}
+            get_hardcore_icon_level}
+         (0
+            {hardcore_icon.lst set_selected icon_normal})
+         (1
+            {hardcore_icon.lst set_selected icon_level1})
+         (2
+            {hardcore_icon.lst set_selected icon_level2})
+         (3
+            {hardcore_icon.lst set_selected icon_level3})}
+      #ifndef HX_PS3
+      #ifndef HX_WII
+      {{options_gameplay_panel find check_lefty.mesh}
+         set_showing
+         {{{input_mgr get_user}
+               get_gameplay_options}
+            get_lefty}}
+      {do
+         ($options
+            {{input_mgr get_user}
+               get_gameplay_options})
+         {vocalhudtype.lst
+            set_data
+            (vocalstyle_static vocalstyle_scrolling)}
+         {switch
+            {$options get_vocal_style}
+            (kVocalStyleStatic
+               {vocalhudtype.lst set_selected vocalstyle_static})
+            (kVocalStyleScrolling
+               {vocalhudtype.lst set_selected vocalstyle_scrolling})}}
+      {mic_level.sld set_num_steps 12}
+      {mic_level.sld
+         set_current
+         {{{input_mgr get_user}
+               get_gameplay_options}
+            get_vocal_volume}}
+      #endif
+      #endif)}
+{new
+   BandScreen
+   options_gameplay_screen
+   (panels meta background_panel main_popup_bg_panel options_gameplay_panel)
+   (focus options_gameplay_panel)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_toggleoption)))}
+{new
+   BandScreen
+   icon_warning_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok options_icon_warning})
+   (SELECT_MSG
+      {ui pop_screen})}
