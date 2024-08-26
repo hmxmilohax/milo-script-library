@@ -1,0 +1,63 @@
+#define PAUSE_ON_MIC_DISCONNECT
+((delayed_mic_check FALSE)
+   (microphones_changed
+      ($active_mic_removed)
+      {if
+         $active_mic_removed
+         {$this pause_for_mic_check_removed}})
+   (pause_for_mic
+      {set
+         [delayed_mic_check]
+         FALSE}
+      {set
+         [mic_removed_mid_setlist]
+         FALSE}
+      {net_sync set_ui_state kNetUI_InGame}
+      {ui push_screen pause_mics_screen})
+   (pause_for_mic_check
+      {$this pause_for_mic_check_helper FALSE})
+   (pause_for_mic_check_removed
+      {$this pause_for_mic_check_helper TRUE})
+   (pause_for_mic_check_helper
+      ($active_mic_removed)
+      {if_else
+         {&&
+            {==
+               {ui bottom_screen}
+               $this}
+            {!=
+               {ui current_screen}
+               pause_mics_screen}
+            {!
+               {ui in_transition}}
+            {gamemode get check_mics}
+            {participating_vocalist_exists}
+            {'||'
+               [delayed_mic_check]
+               $active_mic_removed
+               {!
+                  {are_enough_mics_connected}}}}
+         {if_else
+            {!
+               {game is_game_over}}
+            {if_else
+               {'||'
+                  {!=
+                     {ui current_screen}
+                     {ui bottom_screen}}
+                  {platform_mgr guide_showing}}
+               {do
+                  {set
+                     [delayed_mic_check]
+                     TRUE}
+                  FALSE}
+               {do
+                  {$this pause_for_mic}
+                  TRUE}}
+            {game_screen set mic_removed_mid_setlist TRUE}}
+         FALSE}))
+#define PAUSE_MICS_ON_GUIDE_CHANGE
+({if
+      {!
+         {platform_mgr guide_showing}}
+      {$this pause_for_mic_check}})

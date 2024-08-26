@@ -1,0 +1,200 @@
+{new
+   AccomplishmentPanel
+   accomplishment_panel
+   (file
+      "accomplishments.milo")
+   #ifdef HX_WII
+   (allow_home_menu TRUE)
+   #endif
+   (focus
+      "accomplishments.lst")
+   (user '')
+   (managing_user FALSE)
+   (load
+      {content_loading_panel allowed_to_show TRUE})
+   (finish_load
+      {content_loading_panel allowed_to_show FALSE})
+   (is_loaded
+      {content_mgr refresh_done})
+   (TRANSITION_COMPLETE_MSG
+      {if
+         {!
+            {session is_local}}
+         {session
+            add_sink
+            $this
+            (game_ended)}
+         {if
+            {&&
+               {game is_up}
+               {!
+                  {session is_in_game}}}
+            {input_mgr set_user ''}
+            {ui pop_screen}}})
+   (GAME_ENDED_MSG
+      {input_mgr set_user ''}
+      {ui pop_screen})
+   (BUTTON_DOWN_MSG
+      {switch
+         $action
+         (kAction_Confirm
+            {if_else
+               {$this can_navigate_list}
+               kDataUnhandled
+               0})
+         (kAction_Cancel
+            {if_else
+               {$this is_navigating_list}
+               {do
+                  {$this stop_navigating_list}
+                  {$this refresh_helpbar}
+                  {play_instr_sfx $user button_back}
+                  0}
+               kDataUnhandled})
+         kDataUnhandled})
+   (SELECT_MSG
+      {$this start_navigating_list}
+      {$this refresh_helpbar})
+   (enter
+      {if_else
+         {input_mgr has_user}
+         {$this set managing_user FALSE}
+         {do
+            {$this set managing_user TRUE}
+            {input_mgr
+               set_user
+               [user]}}}
+      {gamertag.lbl
+         set_intro_name
+         {accomplishment_panel get_user}})
+   (exit
+      {if
+         {==
+            [managing_user]
+            TRUE}
+         {input_mgr clear_user}}
+      {session remove_sink $this game_ended})
+   (handle_new_selection
+      {$this refresh_helpbar})
+   (refresh_helpbar
+      {if_else
+         {$this is_navigating_list}
+         {helpbar
+            set_config
+            ((cancel helpbar_back))}
+         {if_else
+            {$this can_navigate_list}
+            {helpbar
+               set_config
+               ((cancel helpbar_back)
+                  (confirm helpbar_select))}
+            {helpbar
+               set_config
+               ((cancel helpbar_back))}}})}
+{new
+   BandScreen
+   accomplishment_screen
+   (panels meta accomplishment_panel)
+   (focus accomplishment_panel)
+   (helpbar
+      ((cancel helpbar_back)))
+   (back MAIN_MENU_RETURN_SCREEN)}
+{new
+   BandScreen
+   accomplishment_pause_screen
+   (panels accomplishment_panel)
+   (focus accomplishment_panel)
+   (helpbar
+      ((cancel helpbar_back)))
+   (back MAIN_MENU_RETURN_SCREEN)}
+#define ACCOMPLISHMENTS_CHOOSE_USER_PANEL
+((file
+      "../matchmaking/choose_char_owner.milo")
+   (focus players.lst)
+   (helpbar
+      ((cancel helpbar_back)
+         (confirm helpbar_select)))
+   (return_screen '')
+   (accomplishments_screen '')
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {play_instr_sfx $user button_back}
+            {ui
+               goto_screen
+               [return_screen]}}
+         kDataUnhandled})
+   (SIGNIN_CHANGED_MSG
+      {ui
+         goto_screen
+         [return_screen]})
+   (SELECT_MSG
+      {do
+         ($selected_user
+            {user_provider
+               get_user
+               {players.lst selected_pos}})
+         {if_else
+            $selected_user
+            {do
+               {$this on_go_to_accomplishments_screen}
+               {accomplishment_panel set user $user}
+               {accomplishment_panel set_other_user_to_view $selected_user}
+               {ui
+                  goto_screen
+                  [accomplishments_screen]}}
+            {do
+               {ui
+                  goto_screen
+                  [return_screen]}}}})
+   (enter
+      {user_provider set_state kGameBUPS_SignedInUsers}
+      {players.lst set_provider user_provider}
+      {players.lst
+         set_selected
+         {user_provider first_active}}
+      {title.lbl set text_token accomplishments_view_user_title}
+      {msg.lbl set text_token accomplishments_view_user_message}
+      {platform_mgr add_sink $this})
+   (exit
+      {platform_mgr remove_sink $this}))
+{func
+   view_accomplishments_screen
+   ($user $caller $choose_user_screen $no_user_screen $accomplishments_screen $return_screen)
+   {if_else
+      {&&
+         {platform_mgr is_user_signed_in $user}
+         {!
+            {platform_mgr is_user_a_guest $user}}}
+      {do
+         {if
+            $caller
+            {$caller on_go_to_accomplishments_screen}}
+         {accomplishment_panel set user $user}
+         {ui goto_screen $accomplishments_screen}}
+      {do
+         {user_provider set_state kGameBUPS_SignedInUsers}
+         {switch
+            {user_provider get_num_users}
+            (0
+               {ui goto_screen $no_user_screen})
+            (1
+               {if
+                  $caller
+                  {$caller on_go_to_accomplishments_screen}}
+               {accomplishment_panel set user $user}
+               {accomplishment_panel
+                  set_other_user_to_view
+                  {user_provider get_user 0}}
+               {ui goto_screen $accomplishments_screen})
+            {pause_accomplishments_choose_user_panel set return_screen pause_screen}
+            {{$choose_user_screen focus_panel}
+               set
+               return_screen
+               $return_screen}
+            {{$choose_user_screen focus_panel}
+               set
+               accomplishments_screen
+               $accomplishments_screen}
+            {ui goto_screen $choose_user_screen}}}}}

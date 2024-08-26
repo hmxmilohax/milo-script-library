@@ -1,0 +1,1976 @@
+{new
+   UIPanel
+   manage_friends_panel
+   (file
+      "mm_manage_friends.milo")
+   (focus friendlist.lst)
+   (friendlist_pos 0)
+   (keyboard_active FALSE)
+   (polls 0)
+   (friend_added FALSE)
+   (inv_op FALSE)
+   (friend_code
+      "")
+   (naming_done FALSE)
+   (enter
+      {if_else
+         {==
+            {server is_connected}
+            TRUE}
+         {do
+            {friendcode.lbl
+               set_token_fmt
+               friend_code_label
+               {invitations
+                  make_dashed
+                  {invitations get_friend_code}}}
+            {friendlist.lst set_showing TRUE}
+            {loading.lbl set_showing FALSE}}
+         {do
+            {friendlist.lst set_showing FALSE}
+            {loading.lbl set_showing TRUE}}}
+      {empty.lbl set_showing FALSE}
+      {helpbar
+         set_config
+         ((cancel helpbar_back))}
+      {invitations add_sink $this}
+      {friends_provider add_sink $this}
+      {invitations allow_add_friend TRUE}
+      {set
+         [show_pending]
+         FALSE}
+      {set
+         [selected_friend]
+         FALSE}
+      {set
+         [friend_added]
+         FALSE}
+      {set
+         [polls]
+         0}
+      {set
+         [keyboard_active]
+         FALSE})
+   (exit
+      {set
+         [inv_op]
+         FALSE}
+      {set
+         [polls]
+         0}
+      {friends_provider remove_sink $this}
+      {invitations remove_sink $this}
+      {friends_provider cleanup})
+   (poll
+      {unless
+         {>
+            [polls]
+            5}
+         {'++'
+            [polls]}}
+      {if
+         {&&
+            [naming_done]
+            {>
+               [polls]
+               4}}
+         {set
+            [naming_done]
+            FALSE}
+         {if_else
+            {invitations
+               is_your_key
+               [friend_code]}
+            {do
+               {print
+                  "entering_own_key_dialog "
+                  [friend_code]
+                  "\n"}
+               {ui goto_screen mm_entering_own_key_dialog}}
+            {if_else
+               {friends_provider
+                  does_friend_exist
+                  [friend_code]}
+               {do
+                  {print
+                     "invalid_friendcode_dialog "
+                     [friend_code]
+                     "\n"}
+                  {ui goto_screen mm_invalid_friendcode_dialog}}
+               {if_else
+                  {invitations
+                     check_friend_code
+                     [friend_code]}
+                  {do
+                     {print
+                        "add_friend "
+                        $text
+                        "\n"}
+                     {set
+                        [friend_added]
+                        TRUE}
+                     {invitations
+                        add_friend
+                        [friend_code]}}
+                  {do
+                     {print
+                        "invalid_friendcode_dialog "
+                        [friend_code]
+                        "\n"}
+                     {ui goto_screen mm_invalid_friendcode_dialog}}}}}})
+   (TRANSITION_COMPLETE_MSG
+      {$this enumerate})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               [keyboard_active]
+               FALSE}
+            {>
+               [polls]
+               4}}
+         {do
+            {switch
+               $action
+               (kAction_Confirm
+                  {if
+                     [inv_op]
+                     {if
+                        {!=
+                           {friends_provider
+                              get_friend_nickname
+                              [friendlist_pos]}
+                           ""}
+                        {ui goto_screen mm_remove_friend_dialog}}})
+               (kAction_Option
+                  {if
+                     [inv_op]
+                     {$this add_friend}})
+               (kAction_Option1
+                  {if
+                     [inv_op]
+                     {$this add_friend}})
+               (kAction_ViewModify
+                  {if
+                     [inv_op]
+                     {set
+                        [show_pending]
+                        {!
+                           [show_pending]}}
+                     {$this enumerate}})
+               kDataUnhandled}}
+         {do
+            {if_else
+               {== $action kAction_WiiHomeMenu}
+               kDataUnhandled
+               TRUE}}})
+   (add_friend
+      {set
+         [keyboard_active]
+         TRUE}
+      {synth keyboard_pause_voices TRUE}
+      {virtual_keyboard
+         show_keyboard
+         $user
+         kFriendCodeLength
+         ""
+         ""
+         ""
+         $this
+         kVkNumbersOnlyEntry})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {==
+               {ui focus_panel}
+               $this}
+            {!
+               {==
+                  $text
+                  ""}}}
+         {do
+            {set
+               [friend_code]
+               {invitations make_undashed $text}}
+            {set
+               [naming_done]
+               TRUE}
+            {set
+               [inv_op]
+               FALSE}
+            {$this update}}}
+      {synth keyboard_pause_voices FALSE}
+      {set
+         [keyboard_active]
+         FALSE}
+      {set
+         [polls]
+         0})
+   (enumerate
+      {loading.lbl set_showing TRUE}
+      {empty.lbl set_showing FALSE}
+      {if_else
+         [show_pending]
+         {do
+            {type_label.lbl set text_token friend_list_pending}
+            {friends_provider enumerate_pending}}
+         {do
+            {type_label.lbl set text_token friend_list_current}
+            {friends_provider enumerate_friends}}}
+      {friendlist.lst refresh_provider friends_provider}
+      {friendlist.lst set_selected 1}
+      {set
+         [inv_op]
+         FALSE}
+      {$this update})
+   (update
+      {set
+         [friendlist_pos]
+         {friendlist.lst selected_pos}}
+      {if
+         [inv_op]
+         {mm_remove_friend_dialog
+            set
+            friend_nickname
+            {friends_provider
+               get_friend_nickname
+               [friendlist_pos]}}
+         {mm_remove_friend_dialog
+            set
+            friend_code
+            {friends_provider
+               get_friend_code
+               [friendlist_pos]}}
+         {do
+            ($helpbar_config
+               {array 0})
+            {push_back
+               $helpbar_config
+               (cancel helpbar_cancel)}
+            {push_back
+               $helpbar_config
+               (option wii_hb_addfriend)}
+            {if
+               {!=
+                  {friends_provider
+                     get_friend_nickname
+                     [friendlist_pos]}
+                  ""}
+               {push_back
+                  $helpbar_config
+                  (confirm wii_hb_removefriend)}}
+            {if_else
+               [show_pending]
+               {push_back
+                  $helpbar_config
+                  (view_modify wii_hb_showcurrent)}
+               {push_back
+                  $helpbar_config
+                  (view_modify wii_hb_showpending)}}
+            {helpbar set_config $helpbar_config}}}
+      {if_else
+         {>
+            {friends_provider get_friends_count}
+            9}
+         {do
+            {scroller.mesh set_showing TRUE}
+            {scroll.mesh set_showing TRUE}
+            {scroller.mesh
+               set_local_scale
+               1
+               {min
+                  1
+                  {/
+                     {friendlist.lst get display_num}
+                     {friends_provider get_friends_count}}}
+               1}
+            {scroll.tnm
+               set_frame
+               {/
+                  {min
+                     {friendlist.lst first_showing}
+                     {max
+                        0
+                        {-
+                           {friends_provider get_friends_count}
+                           {friendlist.lst get display_num}}}}
+                  {friends_provider get_friends_count}}}}
+         {do
+            {scroller.mesh set_showing FALSE}
+            {scroll.mesh set_showing FALSE}}})
+   (SCROLL_MSG
+      {$this update})
+   (invitations_op_complete
+      ($success)
+      {if
+         [friend_added]
+         {set
+            [inv_op]
+            TRUE}
+         {set
+            [friend_added]
+            FALSE}
+         {if
+            {==
+               {server is_connected}
+               TRUE}
+            {if_else
+               $success
+               {ui goto_screen mm_friend_registered_dialog}
+               {ui goto_screen mm_friend_error_screen}}}})
+   (sorting_op_complete
+      ($success)
+      {loading.lbl set_showing FALSE}
+      {set
+         [inv_op]
+         TRUE}
+      {if_else
+         {>
+            {friends_provider get_friends_count}
+            0}
+         {empty.lbl set_showing FALSE}
+         {empty.lbl set_showing TRUE}}
+      {friendlist.lst refresh_provider friends_provider}
+      {invitations send_friendlist_changed}
+      {$this update})}
+{new
+   BandScreen
+   manage_friends_screen
+   (panels mm_net_options_panel manage_friends_panel)
+   (focus manage_friends_panel)
+   (back mm_net_options_screen)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   MATCHMAKING_OPTIONS_SUBSCREEN_HANDLERS
+   (allow_leader_to_continue FALSE)}
+{new
+   UIPanel
+   friendlist_panel
+   (file
+      "friendlist_dialog_wii.milo")
+   (focus friendlist.lst)
+   (friendlist_pos 0)
+   (keyboard_active FALSE)
+   (polls 0)
+   (friend_added FALSE)
+   (inv_op FALSE)
+   (friend_code
+      "")
+   (naming_done FALSE)
+   (enter
+      {if_else
+         {==
+            {server is_connected}
+            TRUE}
+         {do
+            {friendcode.lbl
+               set_token_fmt
+               friend_code_label
+               {invitations
+                  make_dashed
+                  {invitations get_friend_code}}}
+            {friendlist.lst set_showing TRUE}
+            {loading.lbl set_showing FALSE}}
+         {do
+            {friendlist.lst set_showing FALSE}
+            {loading.lbl set_showing TRUE}}}
+      {empty.lbl set_showing FALSE}
+      {helpbar
+         set_config
+         ((cancel helpbar_back))}
+      {invitations add_sink $this}
+      {friends_provider add_sink $this}
+      {invitations allow_add_friend TRUE}
+      {set
+         [show_pending]
+         FALSE}
+      {set
+         [selected_friend]
+         FALSE}
+      {set
+         [friend_added]
+         FALSE}
+      {set
+         [polls]
+         0}
+      {set
+         [keyboard_active]
+         FALSE})
+   (poll
+      {unless
+         {>
+            [polls]
+            5}
+         {'++'
+            [polls]}}
+      {if
+         {&&
+            [naming_done]
+            {>
+               [polls]
+               4}}
+         {set
+            [naming_done]
+            FALSE}
+         {if_else
+            {invitations
+               is_your_key
+               [friend_code]}
+            {do
+               {print
+                  "entering_own_key_dialog "
+                  [friend_code]
+                  "\n"}
+               {ui push_screen entering_own_key_dialog}}
+            {if_else
+               {friends_provider
+                  does_friend_exist
+                  [friend_code]}
+               {do
+                  {print
+                     "invalid_friendcode_dialog "
+                     [friend_code]
+                     "\n"}
+                  {ui push_screen invalid_friendcode_dialog}}
+               {if_else
+                  {invitations
+                     check_friend_code
+                     [friend_code]}
+                  {do
+                     {print
+                        "add_friend "
+                        $text
+                        "\n"}
+                     {set
+                        [friend_added]
+                        TRUE}
+                     {invitations
+                        add_friend
+                        [friend_code]}}
+                  {do
+                     {print
+                        "invalid_friendcode_dialog "
+                        [friend_code]
+                        "\n"}
+                     {ui push_screen invalid_friendcode_dialog}}}}}})
+   (TRANSITION_COMPLETE_MSG
+      {$this enumerate})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               [keyboard_active]
+               FALSE}
+            {>
+               [polls]
+               4}}
+         {do
+            {switch
+               $action
+               (kAction_Confirm
+                  {if
+                     [inv_op]
+                     {play_instr_sfx $user button_select}
+                     {do
+                        {if
+                           {!=
+                              {friends_provider
+                                 get_friend_nickname
+                                 [friendlist_pos]}
+                              ""}
+                           {ui push_screen remove_friend_dialog}}}})
+               (kAction_Option
+                  {if
+                     [inv_op]
+                     {$this add_friend}
+                     {play_instr_sfx $user button_select}})
+               (kAction_Option1
+                  {if
+                     [inv_op]
+                     {$this add_friend}
+                     {play_instr_sfx $user button_select}})
+               (kAction_ViewModify
+                  {if
+                     [inv_op]
+                     {play_instr_sfx $user button_select}
+                     {set
+                        [show_pending]
+                        {!
+                           [show_pending]}}
+                     {$this enumerate}})
+               kDataUnhandled}}
+         {do
+            {if_else
+               {== $action kAction_WiiHomeMenu}
+               kDataUnhandled
+               TRUE}}})
+   (add_friend
+      {set
+         [keyboard_active]
+         TRUE}
+      {synth keyboard_pause_voices TRUE}
+      {virtual_keyboard
+         show_keyboard
+         $user
+         kFriendCodeLength
+         ""
+         ""
+         ""
+         $this
+         kVkNumbersOnlyEntry})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {!
+               {==
+                  $text
+                  ""}}}
+         {do
+            {set
+               [friend_code]
+               {invitations make_undashed $text}}
+            {set
+               [naming_done]
+               TRUE}
+            {set
+               [inv_op]
+               FALSE}
+            {$this update}}}
+      {synth keyboard_pause_voices FALSE}
+      {set
+         [keyboard_active]
+         FALSE}
+      {set
+         [polls]
+         0})
+   (enumerate
+      {loading.lbl set_showing TRUE}
+      {empty.lbl set_showing FALSE}
+      {if_else
+         [show_pending]
+         {do
+            {type_label.lbl set text_token friend_list_pending}
+            {friends_provider enumerate_pending}}
+         {do
+            {type_label.lbl set text_token friend_list_current}
+            {friends_provider enumerate_friends}}}
+      {friendlist.lst refresh_provider friends_provider}
+      {friendlist.lst set_selected 1}
+      {set
+         [inv_op]
+         FALSE}
+      {$this update})
+   (update
+      {set
+         [friendlist_pos]
+         {friendlist.lst selected_pos}}
+      {if
+         [inv_op]
+         {remove_friend_dialog
+            set
+            friend_nickname
+            {friends_provider
+               get_friend_nickname
+               [friendlist_pos]}}
+         {remove_friend_dialog
+            set
+            friend_code
+            {friends_provider
+               get_friend_code
+               [friendlist_pos]}}
+         {do
+            ($helpbar_config
+               {array 0})
+            {push_back
+               $helpbar_config
+               (cancel helpbar_cancel)}
+            {push_back
+               $helpbar_config
+               (option wii_hb_addfriend)}
+            {if
+               {!=
+                  {friends_provider
+                     get_friend_nickname
+                     [friendlist_pos]}
+                  ""}
+               {push_back
+                  $helpbar_config
+                  (confirm wii_hb_removefriend)}}
+            {if_else
+               [show_pending]
+               {push_back
+                  $helpbar_config
+                  (view_modify wii_hb_showcurrent)}
+               {push_back
+                  $helpbar_config
+                  (view_modify wii_hb_showpending)}}
+            {helpbar set_config $helpbar_config}}}
+      {if_else
+         {>
+            {friends_provider get_friends_count}
+            6}
+         {do
+            {scroller.mesh set_showing TRUE}
+            {scroll.mesh set_showing TRUE}
+            {scroller.mesh
+               set_local_scale
+               1
+               {min
+                  1
+                  {/
+                     {friendlist.lst get display_num}
+                     {friends_provider get_friends_count}}}
+               1}
+            {scroll.tnm
+               set_frame
+               {/
+                  {min
+                     {friendlist.lst first_showing}
+                     {max
+                        0
+                        {-
+                           {friends_provider get_friends_count}
+                           {friendlist.lst get display_num}}}}
+                  {friends_provider get_friends_count}}}}
+         {do
+            {scroller.mesh set_showing FALSE}
+            {scroll.mesh set_showing FALSE}}})
+   (SCROLL_MSG
+      {$this update})
+   (invitations_op_complete
+      ($success)
+      {if
+         [friend_added]
+         {set
+            [inv_op]
+            TRUE}
+         {set
+            [friend_added]
+            FALSE}
+         {if
+            {==
+               {server is_connected}
+               TRUE}
+            {if_else
+               $success
+               {ui push_screen friend_registered_dialog}
+               {ui push_screen friend_error_screen}}}})
+   (sorting_op_complete
+      ($success)
+      {loading.lbl set_showing FALSE}
+      {set
+         [inv_op]
+         TRUE}
+      {if_else
+         {>
+            {friends_provider get_friends_count}
+            0}
+         {empty.lbl set_showing FALSE}
+         {empty.lbl set_showing TRUE}}
+      {friendlist.lst refresh_provider friends_provider}
+      {invitations send_friendlist_changed}
+      {$this update})
+   (exit
+      {input_mgr clear_user}
+      {set
+         [inv_op]
+         FALSE}
+      {set
+         [polls]
+         0}
+      {friends_provider remove_sink $this}
+      {invitations remove_sink $this}
+      {friends_provider cleanup})}
+{new
+   BandScreen
+   main_manage_friends_screen
+   (panels background_panel main_popup_bg_panel meta friendlist_panel)
+   (focus friendlist_panel)
+   (back main_screen_2_popup)}
+{new
+   UIPanel
+   change_username_panel
+   (file
+      "change_username_wii.milo")
+   (focus change_nickname.btn)
+   (username
+      "")
+   (keyboard_active FALSE)
+   (polls 0)
+   (naming_done FALSE)
+   (enter
+      {set
+         [polls]
+         0}
+      {set
+         [keyboard_active]
+         FALSE})
+   (poll
+      {'++'
+         [polls]}
+      {if
+         {&&
+            [naming_done]
+            {>
+               [polls]
+               4}}
+         {set
+            [naming_done]
+            FALSE}
+         {if_else
+            {stricmp
+               {profile_mgr get_username}
+               [username]}
+            {if_else
+               {==
+                  [username]
+                  ""}
+               {ui push_screen change_username_empty_error}
+               {do
+                  {gamemode set_mode attempting_rename}
+                  {print
+                     "set_mode attempting_rename\n"}
+                  {goto_after_network_connect changing_username_screen TRUE}}}
+            {ui push_screen change_username_already_error}}})
+   (TRANSITION_COMPLETE_MSG
+      {gamemode set_mode online_options}
+      {print
+         "set_mode online_options\n"}
+      {current_nickname.lbl
+         set_token_fmt
+         (current_nickname
+            {profile_mgr get_username})})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               [keyboard_active]
+               FALSE}
+            {>
+               [polls]
+               4}}
+         {do
+            {if
+               {== $action kAction_Confirm}
+               {if_else
+                  {'||'
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 0}}
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 1}}
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 2}}
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 3}}}
+                  {do
+                     {set
+                        [keyboard_active]
+                        TRUE}
+                     {synth keyboard_pause_voices TRUE}
+                     {virtual_keyboard
+                        show_keyboard
+                        $user
+                        kRockCentralNameLength
+                        ""
+                        ""
+                        ""
+                        $this
+                        kVkNormalEntry}}
+                  {do
+                     {ui push_screen change_username_autosave_error_screen}}}}
+            {if
+               {== $action kAction_Cancel}
+               {server remove_sink $this naming_result_msg}
+               {goto_else_after_network_connect main_screen_2_popup main_popup_swapper TRUE}
+               {play_instr_sfx $user button_back}}}
+         {do
+            {if_else
+               {== $action kAction_WiiHomeMenu}
+               kDataUnhandled
+               TRUE}}})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if_else
+         {&& $ok $this}
+         {do
+            {set
+               [username]
+               $text}
+            {changing_username_panel
+               set
+               username
+               [username]}
+            {server_connect_panel set change_username TRUE}
+            {network_start_continue_panel set change_username TRUE}
+            {gamemode set_mode attempting_rename}
+            {print
+               "set_mode attempting_rename\n"}
+            {set
+               [naming_done]
+               TRUE}}
+         {print
+            "CCS DEBUG: Keyboard fail\n"}}
+      {synth keyboard_pause_voices FALSE}
+      {set
+         [keyboard_active]
+         FALSE}
+      {set
+         [polls]
+         0})}
+{new
+   BandScreen
+   change_username_screen
+   (panels meta background_panel main_popup_bg_panel change_username_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm wii_hb_changeusername)))
+   (focus change_username_panel)
+   (back main_screen_2_popup)}
+{new
+   BandScreen
+   change_username_success_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (username
+      "")
+   (enter
+      {dialog_panel
+         set_ok
+         (change_username_success_local
+            {change_username_success_screen get username})})
+   (exit)
+   (SELECT_MSG
+      {do
+         {autosave_goto ''}})}
+{new
+   BandScreen
+   change_username_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (quazal_error 0)
+   (username
+      "")
+   (enter
+      {switch
+         [quazal_error]
+         (0
+            {dialog_panel set_ok rockcentral_error_string_three}
+            {fail
+               "Quazal error set to 0\n"})
+         (NAMING_RESULT_DUPLICATE
+            {platform_mgr set_connected FALSE}
+            {dialog_panel
+               set_ok
+               (rockcentral_error_string_one
+                  {change_username_error_screen get username})})
+         (NAMING_RESULT_PROFANE
+            {platform_mgr set_connected FALSE}
+            {dialog_panel
+               set_ok
+               (rockcentral_error_string_two
+                  {change_username_error_screen get username})})
+         (NAMING_RESULT_INVALID
+            {rock_central force_logout}
+            {dialog_panel set_ok rockcentral_error_string_three})
+         (NAMING_RESULT_UNKNOWN
+            {platform_mgr set_connected FALSE}
+            {dialog_panel set_ok rockcentral_error_string_three})})
+   (SELECT_MSG
+      {do
+         {change_username_panel set retry TRUE}
+         {ui pop_screen}})}
+{new
+   BandScreen
+   change_username_already_error
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok change_username_already_local})
+   (SELECT_MSG
+      {do
+         {ui pop_screen}})}
+{new
+   BandScreen
+   change_username_empty_error
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok change_username_empty_local})
+   (SELECT_MSG
+      {do
+         {ui pop_screen}})}
+{new
+   BandScreen
+   change_username_autosave_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok change_username_autosave_error_local})
+   (SELECT_MSG
+      {do
+         {ui pop_screen}})}
+{new
+   UIPanel
+   mailbox_panel
+   (file
+      "mailbox_wii.milo")
+   (focus messagelist.lst)
+   (selected_message FALSE)
+   (inv_op FALSE)
+   (BUTTON_DOWN_MSG
+      {cond
+         ({== $action kAction_Cancel}
+            {do
+               {ui goto_screen main_screen_2_popup}
+               {play_instr_sfx $user button_back}})
+         ({&&
+               {== $action kAction_Confirm}
+               {>
+                  {messaging_provider get_messages_count}
+                  0}}
+            {if
+               [inv_op]
+               {synth play button_select}
+               {messagelist.lst set_showing FALSE}
+               {set
+                  [selected_message]
+                  TRUE}
+               {message_panel
+                  set
+                  subject_lbl
+                  {messaging_provider
+                     get_subject
+                     {messagelist.lst selected_pos}}}
+               {message_panel
+                  set
+                  message_lbl
+                  {messaging_provider
+                     get_textbody
+                     {messagelist.lst selected_pos}}}
+               {message_panel
+                  set
+                  messagelist_pos
+                  {messagelist.lst selected_pos}}
+               {accepting_invite_panel
+                  set
+                  messagelist_pos
+                  {messagelist.lst selected_pos}}
+               {accepting_invite_panel
+                  set
+                  gid_lbl
+                  {messaging_provider
+                     get_gid
+                     {messagelist.lst selected_pos}}}
+               {ui goto_screen message_screen}})
+         ({&&
+               {== $action kAction_Option}
+               {>
+                  {messaging_provider get_messages_count}
+                  0}}
+            {if
+               [inv_op]
+               {messaging_provider
+                  delete_message
+                  {messagelist.lst selected_pos}}})
+         ({&&
+               {== $action kAction_Option1}
+               {>
+                  {messaging_provider get_messages_count}
+                  0}}
+            {if
+               [inv_op]
+               {messaging_provider
+                  delete_message
+                  {messagelist.lst selected_pos}}})
+         ({>
+               {messaging_provider get_messages_count}
+               0}
+            kDataUnhandled)
+         (TRUE TRUE)})
+   (enter
+      {invitations add_sink $this}
+      {messaging_provider add_sink $this}
+      {title.lbl set text_token mailbox_title_local}
+      {empty.lbl set text_token empty_label_local}
+      {set
+         [selected_message]
+         FALSE}
+      {$this enumerate})
+   (enumerate
+      {loading.lbl set_showing TRUE}
+      {empty.lbl set_showing FALSE}
+      {messaging_provider enumerate_messages}
+      {set
+         [inv_op]
+         FALSE}
+      {messagelist.lst refresh_provider messaging_provider}
+      {messagelist.lst set_selected 1}
+      {$this update})
+   (sorting_op_complete
+      ($success)
+      {loading.lbl set_showing FALSE}
+      {set
+         [inv_op]
+         TRUE}
+      {if_else
+         {>
+            {messaging_provider get_messages_count}
+            0}
+         {empty.lbl set_showing FALSE}
+         {empty.lbl set_showing TRUE}}
+      {messagelist.lst refresh_provider messaging_provider}
+      {$this update})
+   (delete_op_complete
+      ($success)
+      {$this enumerate})
+   (update
+      {if
+         [inv_op]
+         {if_else
+            {==
+               {messaging_provider get_messages_count}
+               0}
+            {do
+               ($helpbar_config
+                  {array 0})
+               {push_back
+                  $helpbar_config
+                  (cancel helpbar_back)}
+               {helpbar set_config $helpbar_config}}
+            {do
+               ($helpbar_config
+                  {array 0})
+               {push_back
+                  $helpbar_config
+                  (cancel helpbar_back)}
+               {push_back
+                  $helpbar_config
+                  (confirm helpbar_select)}
+               {push_back
+                  $helpbar_config
+                  (option wii_hb_deletemessage)}
+               {helpbar set_config $helpbar_config}}}})
+   (exit
+      {set
+         [inv_op]
+         FALSE}
+      {messaging_provider remove_sink $this}
+      {invitations remove_sink $this}
+      {messaging_provider cleanup})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {== $showing FALSE}
+            {==
+               [selected_message]
+               TRUE}}
+         {ui pop_screen}})}
+{new
+   BandScreen
+   mailbox_screen
+   (panels background_panel main_popup_bg_panel meta mailbox_panel)
+   (focus mailbox_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_select)))
+   (back main_screen_2_popup)}
+{new
+   UIPanel
+   message_panel
+   (file
+      "message_wii.milo")
+   (focus Message.lbl)
+   (messagelist_pos 0)
+   (subject_lbl
+      "")
+   (message_lbl
+      "")
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Confirm}
+         {accepting_invite_panel set from_mm FALSE}
+         {messaging_provider
+            delete_message
+            [messagelist_pos]}
+         {ui push_screen accepting_invite_screen}}
+      {if_else
+         {== $action kAction_Cancel}
+         {ui goto_screen mailbox_screen}
+         kDataUnhandled})
+   (SELECT_MSG)
+   (enter
+      {Subject.lbl
+         set
+         text_token
+         [subject_lbl]}
+      {Message.lbl
+         set
+         text_token
+         [message_lbl]}
+      {friends_provider enumerate_friends})}
+{new
+   BandScreen
+   message_screen
+   (panels meta background_panel main_popup_bg_panel message_panel)
+   (focus message_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm wii_hb_acceptinvite)))
+   (back mailbox_screen)}
+{new
+   UIPanel
+   mm_mailbox_panel
+   (file
+      "mm_mailbox_wii.milo")
+   (focus messagelist.lst)
+   (selected_message FALSE)
+   (BUTTON_DOWN_MSG
+      {cond
+         ({== $action kAction_Cancel}
+            {do
+               {synth play button_back}
+               {ui goto_screen mm_net_options_screen}})
+         ({&&
+               {== $action kAction_Confirm}
+               {>
+                  {messaging_provider get_messages_count}
+                  0}}
+            {if
+               [inv_op]
+               {synth play button_select}
+               {messagelist.lst set_showing FALSE}
+               {set
+                  [selected_message]
+                  TRUE}
+               {mm_message_panel
+                  set
+                  subject_lbl
+                  {messaging_provider
+                     get_subject
+                     {messagelist.lst selected_pos}}}
+               {mm_message_panel
+                  set
+                  message_lbl
+                  {messaging_provider
+                     get_textbody
+                     {messagelist.lst selected_pos}}}
+               {mm_message_panel
+                  set
+                  messagelist_pos
+                  {messagelist.lst selected_pos}}
+               {accepting_invite_panel
+                  set
+                  messagelist_pos
+                  {messagelist.lst selected_pos}}
+               {accepting_invite_panel
+                  set
+                  gid_lbl
+                  {messaging_provider
+                     get_gid
+                     {messagelist.lst selected_pos}}}
+               {ui goto_screen mm_message_screen}})
+         ({&&
+               {== $action kAction_Option}
+               {>
+                  {messaging_provider get_messages_count}
+                  0}}
+            {if
+               [inv_op]
+               {messaging_provider
+                  delete_message
+                  {messagelist.lst selected_pos}}})
+         ({&&
+               {== $action kAction_Option1}
+               {>
+                  {messaging_provider get_messages_count}
+                  0}}
+            {if
+               [inv_op]
+               {messaging_provider
+                  delete_message
+                  {messagelist.lst selected_pos}}})
+         ({>
+               {messaging_provider get_messages_count}
+               0}
+            kDataUnhandled)
+         (TRUE TRUE)})
+   (enter
+      {invitations add_sink $this}
+      {messaging_provider add_sink $this})
+   (TRANSITION_COMPLETE_MSG
+      {set
+         [selected_message]
+         FALSE}
+      {$this enumerate})
+   (enumerate
+      {loading.lbl set_showing TRUE}
+      {empty.lbl set_showing FALSE}
+      {messaging_provider enumerate_messages}
+      {set
+         [inv_op]
+         FALSE}
+      {messagelist.lst set_selected 1}
+      {$this update})
+   (sorting_op_complete
+      ($success)
+      {loading.lbl set_showing FALSE}
+      {set
+         [inv_op]
+         TRUE}
+      {if_else
+         {>
+            {messaging_provider get_messages_count}
+            0}
+         {do
+            {empty.lbl set_showing FALSE}
+            {messagelist.lst set_showing TRUE}}
+         {do
+            {empty.lbl set_showing TRUE}
+            {messagelist.lst set_showing FALSE}}}
+      {messagelist.lst refresh_provider messaging_provider}
+      {$this update})
+   (delete_op_complete
+      ($success)
+      {$this enumerate})
+   (update
+      {if
+         [inv_op]
+         {if_else
+            {==
+               {messaging_provider get_messages_count}
+               0}
+            {do
+               ($helpbar_config
+                  {array 0})
+               {push_back
+                  $helpbar_config
+                  (cancel helpbar_back)}
+               {helpbar set_config $helpbar_config}}
+            {do
+               ($helpbar_config
+                  {array 0})
+               {push_back
+                  $helpbar_config
+                  (cancel helpbar_back)}
+               {push_back
+                  $helpbar_config
+                  (confirm helpbar_select)}
+               {push_back
+                  $helpbar_config
+                  (option wii_hb_deletemessage)}
+               {helpbar set_config $helpbar_config}}}})
+   (exit
+      {set
+         [inv_op]
+         FALSE}
+      {messaging_provider remove_sink $this}
+      {invitations remove_sink $this}
+      {messaging_provider cleanup})
+   (UI_CHANGED_MSG
+      {if
+         {&&
+            {== $showing FALSE}
+            {==
+               [selected_message]
+               TRUE}}
+         {ui pop_screen}})
+   (leave
+      {ui goto_screen mm_net_options_screen})}
+{new
+   BandScreen
+   mm_mailbox_screen
+   (panels mm_net_options_panel mm_mailbox_panel)
+   (focus mm_mailbox_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm helpbar_select)))
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (allow_leader_to_continue TRUE)}
+{new
+   UIPanel
+   mm_message_panel
+   (file
+      "mm_message_wii.milo")
+   (focus Message.lbl)
+   (messagelist_pos 0)
+   (subject_lbl
+      "")
+   (message_lbl
+      "")
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Confirm}
+         {accepting_invite_panel set from_mm TRUE}
+         {messaging_provider
+            delete_message
+            [messagelist_pos]}
+         {ui goto_screen accepting_invite_screen}}
+      {if_else
+         {== $action kAction_Cancel}
+         {ui goto_screen mm_mailbox_screen}
+         kDataUnhandled})
+   (leave
+      {ui goto_screen mm_net_options_screen})
+   (enter
+      {Subject.lbl
+         set
+         text_token
+         [subject_lbl]}
+      {Message.lbl
+         set
+         text_token
+         [message_lbl]}
+      {friends_provider enumerate_friends})}
+{new
+   BandScreen
+   mm_message_screen
+   (panels mm_mailbox_panel mm_message_panel)
+   (focus mm_message_panel)
+   (helpbar
+      ((cancel helpbar_cancel)
+         (confirm wii_hb_acceptinvite)))
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (allow_leader_to_continue TRUE)}
+{new
+   UIPanel
+   accepting_invite_panel
+   (file
+      "finding_players.milo")
+   (gid_lbl
+      "")
+   (is_expired FALSE)
+   (from_mm FALSE)
+   (messagelist_pos 0)
+   (enter
+      {invitations add_sink $this}
+      {finding.lbl set text_token accepting_invite_local}
+      {presence.lbl set_showing FALSE}
+      {retry.btn set_showing FALSE}
+      {$this disable retry.btn}
+      {set
+         [is_expired]
+         FALSE}
+      {friends_provider enumerate_friends})
+   (invitations_op_complete
+      ($success)
+      {if_else
+         {friends_provider
+            does_friend_exist
+            {messaging_provider
+               get_senderid
+               [messagelist_pos]}}
+         {platform_mgr
+            accept_invite
+            [gid_lbl]}
+         {ui goto_screen invite_error_screen}})
+   (poll
+      {if
+         [is_expired]
+         {if_else
+            [from_mm]
+            {ui goto_screen mm_mailbox_screen}
+            {ui pop_screen mailbox_screen}}})
+   (exit
+      {invitations remove_sink $this})}
+{new
+   BandScreen
+   accepting_invite_screen
+   (panels accepting_invite_panel)
+   (focus accepting_invite_panel)
+   (helpbar
+      ((min_height 0)))}
+{new
+   BandScreen
+   remove_friend_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (friend_nickname
+      "")
+   (friend_code
+      "")
+   (chosen FALSE)
+   (enter
+      {invitations add_sink $this}
+      {dialog_panel
+         set_yesno
+         (remove_friend_dialog_local
+            {remove_friend_dialog get friend_nickname}
+            {remove_friend_dialog get friend_code})
+         no.btn}
+      {set
+         [chosen]
+         FALSE}
+      {helpbar
+         set_config
+         ((cancel helpbar_cancel)
+            (confirm helpbar_select))})
+   (exit
+      {invitations remove_sink $this})
+   (SELECT_MSG
+      {if
+         {!
+            [chosen]}
+         {set
+            [chosen]
+            TRUE}
+         {switch
+            $component
+            (yes.btn
+               {invitations
+                  remove_friend
+                  {invitations
+                     make_undashed
+                     [friend_code]}})
+            (no.btn
+               {ui pop_screen})}}
+      TRUE)
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {ui pop_screen}
+            {play_instr_sfx $user button_back}}
+         kDataUnhandled})
+   (invitations_op_complete
+      ($success)
+      {if_else
+         $success
+         {ui pop_screen}
+         {ui goto_screen friend_error_screen}})}
+{new
+   BandScreen
+   mm_remove_friend_dialog
+   (panels manage_friends_panel dialog_panel)
+   (focus dialog_panel)
+   (friend_nickname
+      "")
+   (friend_code
+      "")
+   (chosen FALSE)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {invitations add_sink $this}
+      {dialog_panel
+         set_yesno
+         (remove_friend_dialog_local
+            {mm_remove_friend_dialog get friend_nickname}
+            {mm_remove_friend_dialog get friend_code})
+         no.btn}
+      {set
+         [chosen]
+         FALSE}
+      {helpbar
+         set_config
+         ((cancel helpbar_cancel)
+            (confirm helpbar_select))})
+   (exit
+      {invitations remove_sink $this})
+   (SELECT_MSG
+      {if
+         {!
+            [chosen]}
+         {set
+            [chosen]
+            TRUE}
+         {switch
+            $component
+            (yes.btn
+               {invitations
+                  remove_friend
+                  {invitations
+                     make_undashed
+                     [friend_code]}})
+            (no.btn
+               {if_else
+                  {session has_user $user}
+                  {ui goto_screen manage_friends_screen}
+                  {ui pop_screen matchmaking_screen}})}}
+      TRUE)
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {do
+            {if_else
+               {session has_user $user}
+               {ui goto_screen manage_friends_screen}
+               {ui pop_screen matchmaking_screen}}
+            {play_instr_sfx $user button_back}}
+         kDataUnhandled})
+   (invitations_op_complete
+      ($success)
+      {if_else
+         $success
+         {ui goto_screen manage_friends_screen}
+         {ui goto_screen friend_error_screen}})}
+{new
+   BandScreen
+   invited_to_game_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel
+         set_ok
+         (invited_to_game_local
+            {friend_options_panel get friend_name})})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   invite_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (sel_pos 0)
+   (enter
+      {dialog_panel
+         set_ok
+         {platform_mgr get_dwc_error_string 80430}})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   username_info_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (keyboard_active FALSE)
+   (polls 0)
+   (username
+      "")
+   (naming_done FALSE)
+   (destination '')
+   (strict FALSE)
+   (enter
+      {dialog_panel set_custom username_info create_nickname_local disable_nets opt1.btn}
+      {helpbar
+         set_config
+         ((cancel helpbar_cancel)
+            (confirm helpbar_select))}
+      {set
+         [polls]
+         0}
+      {set
+         [keyboard_active]
+         FALSE})
+   (poll
+      {'++'
+         [polls]}
+      {if
+         {&&
+            [naming_done]
+            {>
+               [polls]
+               4}}
+         {set
+            [naming_done]
+            FALSE}
+         {if_else
+            {==
+               [username]
+               ""}
+            {ui goto_screen change_username_empty_error}
+            {do
+               {network_start_continue_panel set wait_for_dwc_profane TRUE}
+               {ui goto_screen network_start_screen}}}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {== $action kAction_Cancel}
+         {ui pop_screen}
+         kDataUnhandled})
+   (SELECT_MSG
+      {if_else
+         {&&
+            {==
+               [keyboard_active]
+               FALSE}
+            {>
+               [polls]
+               4}}
+         {switch
+            $component
+            (opt1.btn
+               {if_else
+                  {'||'
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 0}}
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 1}}
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 2}}
+                     {profile_mgr
+                        is_autosave_enabled
+                        {user_mgr get_user_from_pad_num 3}}}
+                  {do
+                     {set
+                        [keyboard_active]
+                        TRUE}
+                     {synth keyboard_pause_voices TRUE}
+                     {virtual_keyboard
+                        show_keyboard
+                        $user
+                        kRockCentralNameLength
+                        ""
+                        ""
+                        ""
+                        $this
+                        kVkNormalEntry}}
+                  {do
+                     {network_autosave_error_screen
+                        set
+                        destination
+                        [destination]}
+                     {network_autosave_error_screen
+                        set
+                        strict
+                        [strict]}
+                     {ui goto_screen network_autosave_error_screen}}})
+            (opt2.btn
+               {profile_mgr set_nets_disabled TRUE}
+               {if_else
+                  {==
+                     {network_start_panel get strict}
+                     TRUE}
+                  {do
+                     {autosave_goto ''}}
+                  {finish_network_goto_with_autosave
+                     {network_start_panel get destination}
+                     TRUE}})
+            kDataUnhandled}
+         {do
+            {if_else
+               {== $action kAction_WiiHomeMenu}
+               kDataUnhandled
+               TRUE}}})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         $this
+         {if_else
+            $ok
+            {do
+               {set
+                  [username]
+                  $text}
+               {server
+                  set_new_username
+                  [username]}
+               {server_connect_panel
+                  set
+                  username
+                  [username]}
+               {server_connect_panel set wait_for_naming TRUE}
+               {server_connect_panel set change_username FALSE}
+               {set
+                  [naming_done]
+                  TRUE}}
+            {if_else
+               {==
+                  {network_start_continue_panel get strict}
+                  TRUE}
+               {ui pop_screen}
+               {ui goto_screen network_warning_screen}}}}
+      {synth keyboard_pause_voices FALSE}
+      {set
+         [keyboard_active]
+         FALSE}
+      {set
+         [polls]
+         0})}
+{new
+   BandScreen
+   rockcentral_username_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (keyboard_active FALSE)
+   (polls 0)
+   (quazal_error 0)
+   (username
+      "")
+   (naming_done FALSE)
+   (block_event
+      ($event)
+      TRUE)
+   (enter
+      {if
+         {&&
+            {==
+               [username]
+               ""}
+            {profile_mgr check_username}}
+         {set
+            [username]
+            {profile_mgr get_username}}
+         {profile_mgr clear_username}}
+      {switch
+         [quazal_error]
+         (0
+            {fail
+               "Quazal error is 0\n"})
+         (NAMING_RESULT_DUPLICATE
+            {platform_mgr set_connected FALSE}
+            {dialog_panel
+               set_ok
+               (rockcentral_error_string_one
+                  {rockcentral_username_error_screen get username})})
+         (NAMING_RESULT_PROFANE
+            {platform_mgr set_connected FALSE}
+            {dialog_panel
+               set_ok
+               (rockcentral_error_string_two
+                  {rockcentral_username_error_screen get username})})
+         (NAMING_RESULT_INVALID
+            {rock_central force_logout}
+            {dialog_panel set_ok rockcentral_error_string_three})
+         (NAMING_RESULT_UNKNOWN
+            {platform_mgr set_connected FALSE}
+            {dialog_panel set_ok rockcentral_error_string_three})}
+      {helpbar
+         set_config
+         ((cancel helpbar_cancel)
+            (confirm helpbar_select))}
+      {set
+         [polls]
+         0}
+      {set
+         [keyboard_active]
+         FALSE})
+   (poll
+      {'++'
+         [polls]}
+      {if
+         {&&
+            [naming_done]
+            {>
+               [polls]
+               4}}
+         {set
+            [naming_done]
+            FALSE}
+         {if_else
+            {==
+               [username]
+               ""}
+            {ui goto_screen change_username_empty_error}
+            {do
+               {network_start_continue_panel set wait_for_dwc_profane TRUE}
+               {ui goto_screen network_start_screen}}}})
+   (BUTTON_DOWN_MSG
+      {if_else
+         {&&
+            {==
+               [keyboard_active]
+               FALSE}
+            {>
+               [polls]
+               4}}
+         {switch
+            $action
+            (kAction_Confirm
+               {set
+                  [keyboard_active]
+                  TRUE}
+               {synth keyboard_pause_voices TRUE}
+               {virtual_keyboard
+                  show_keyboard
+                  $user
+                  kRockCentralNameLength
+                  ""
+                  ""
+                  ""
+                  $this
+                  kVkNormalEntry})
+            (kAction_Cancel
+               {if_else
+                  {==
+                     {network_start_continue_panel get strict}
+                     TRUE}
+                  {ui pop_screen}
+                  {do
+                     {network_warning_screen
+                        set
+                        destination
+                        {network_start_continue_panel get destination}}
+                     {ui goto_screen network_warning_screen}}})
+            kDataUnhandled}
+         {do
+            {if_else
+               {== $action kAction_WiiHomeMenu}
+               kDataUnhandled
+               TRUE}}})
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         $this
+         {if_else
+            $ok
+            {do
+               {set
+                  [username]
+                  $text}
+               {server
+                  set_new_username
+                  [username]}
+               {server_connect_panel
+                  set
+                  username
+                  [username]}
+               {server_connect_panel set wait_for_naming TRUE}
+               {server_connect_panel set change_username FALSE}
+               {set
+                  [naming_done]
+                  TRUE}}
+            {do
+               {if_else
+                  {==
+                     {network_start_continue_panel get strict}
+                     TRUE}
+                  {ui pop_screen}
+                  {ui goto_screen network_warning_screen}}}}}
+      {synth keyboard_pause_voices FALSE}
+      {set
+         [keyboard_active]
+         FALSE}
+      {set
+         [polls]
+         0})}
+{new
+   BandScreen
+   username_net_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok username_net_error})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {if_else
+               {==
+                  {network_start_continue_panel get strict}
+                  TRUE}
+               {ui pop_screen}
+               {ui goto_screen network_warning_screen}})})}
+{new
+   BandScreen
+   invalid_friendcode_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok invalid_friendcode_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   mm_invalid_friendcode_dialog
+   (panels manage_friends_panel dialog_panel)
+   (focus dialog_panel)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_ok invalid_friendcode_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {if_else
+               {session has_user $user}
+               {ui goto_screen manage_friends_screen}
+               {ui pop_screen matchmaking_screen}})})}
+{new
+   BandScreen
+   friend_registered_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok friend_registered_dialog_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   mm_friend_registered_dialog
+   (panels manage_friends_panel dialog_panel)
+   (focus dialog_panel)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_ok friend_registered_dialog_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {if_else
+               {session has_user $user}
+               {ui goto_screen manage_friends_screen}
+               {ui pop_screen matchmaking_screen}})})}
+{new
+   BandScreen
+   friend_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok friend_error_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   mm_friend_error_screen
+   (panels manage_friends_panel dialog_panel)
+   (focus dialog_panel)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_ok friend_error_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {if_else
+               {session has_user $user}
+               {ui goto_screen manage_friends_screen}
+               {ui pop_screen matchmaking_screen}})})}
+{new
+   BandScreen
+   entering_own_key_dialog
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter
+      {dialog_panel set_ok entering_own_key_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {ui pop_screen})})}
+{new
+   BandScreen
+   mm_entering_own_key_dialog
+   (panels manage_friends_panel dialog_panel)
+   (focus dialog_panel)
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+   (enter
+      {dialog_panel set_ok entering_own_key_local})
+   (SELECT_MSG
+      {switch
+         $component
+         (ok.btn
+            {if_else
+               {session has_user $user}
+               {ui goto_screen manage_friends_screen}
+               {ui pop_screen matchmaking_screen}})})}

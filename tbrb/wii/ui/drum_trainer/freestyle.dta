@@ -1,0 +1,148 @@
+{new
+   FreestylePanel
+   drum_trainer_freestyle_panel
+   (file
+      {gamemode get assets})
+   METRONOME_DEFINES
+   KIT_DEFINES
+   (enter
+      {set
+         [mute_metronome]
+         TRUE}
+      {$this script_set_metronome FALSE}
+      {set
+         [current_drums]
+         0}
+      {$this change_drums 0}
+      {trainer_freestyle.trig trigger}
+      {set
+         [current_bpm]
+         100}
+      {$this update_bpm}
+      {name.lbl set text_token freestyle_text_token}
+      {platform_mgr enable_xmp})
+   (script_set_metronome
+      ($state)
+      {if_else
+         $state
+         {show_metronome.trig trigger}
+         {hide_metronome.trig trigger}}
+      {$this set_metronome $state})
+   (freestyle_button_down
+      ($raw_button)
+      {switch
+         $raw_button
+         (kPad_DUp
+            {if
+               {&&
+                  {!
+                     [dpad_left]}
+                  {!
+                     [dpad_right]}}
+               {dpad_up.trig trigger}
+               {set
+                  [dpad_up]
+                  TRUE}
+               {$this inc_bpm}})
+         (kPad_DDown
+            {if
+               {&&
+                  {!
+                     [dpad_left]}
+                  {!
+                     [dpad_right]}}
+               {dpad_down.trig trigger}
+               {set
+                  [dpad_down]
+                  TRUE}
+               {$this dec_bpm}})
+         (kPad_Select
+            {button_drums.trig trigger}
+            {$this inc_drums})})
+   (dpad_left FALSE)
+   (dpad_right FALSE)
+   (update_bpm
+      {$this
+         set_bpm
+         [current_bpm]}
+      {$this update_bpm_label})
+   (update_bpm_label
+      {bpm.lbl
+         set_token_fmt
+         drum_trainer_bpm
+         [current_bpm]}
+      {beat_thermometer.anim
+         animate
+         (dest
+            [current_bpm])
+         (period 0.2)})
+   (pause)
+   (unpause)
+   (pad_hit
+      ($pad)
+      {do
+         ($trigger_name
+            {sprint
+               "pad"
+               $pad
+               ".trig"})
+         {{$this find $trigger_name}
+            trigger}})
+   (bpm_interval 20)}
+{new
+   BandScreen
+   drum_trainer_freestyle_screen
+   (panels drum_trainer_background_panel drum_trainer_freestyle_panel)
+   (focus drum_trainer_freestyle_panel)
+   (BUTTON_DOWN_MSG
+      {if
+         {== $action kAction_Start}
+         {input_mgr set_user $user}
+         {ui push_screen pause_screen}}
+      {drum_trainer_freestyle_panel freestyle_button_down $raw_button}
+      kDataUnhandled)
+   (JOYPAD_CONNECT_MSG
+      {$this check_lost_controller})
+   (check_lost_controller
+      {if_else
+         {&&
+            {==
+               {ui current_screen}
+               drum_trainer_freestyle_screen}
+            {!
+               {ui in_transition}}
+            {session is_in_game}
+            {!
+               {input_mgr check_controllers}}}
+         {do
+            {net_sync set_ui_state kNetUI_InGame}
+            {ui push_screen pause_controller_screen}
+            TRUE}
+         FALSE})}
+{new
+   BandScreen
+   drum_trainer_freestyle_greeting_screen
+   (panels drum_trainer_background_panel drum_trainer_freestyle_panel drum_trainer_greeting_panel)
+   (focus drum_trainer_greeting_panel)
+   (helpbar
+      ((confirm helpbar_select)))
+   (enter
+      {{gamemode get game_panel}
+         pause}
+      {{drum_trainer_greeting_panel find beat_practice.grp}
+         set_showing
+         FALSE}
+      {{drum_trainer_greeting_panel find ringo_practice.grp}
+         set_showing
+         FALSE}
+      {{drum_trainer_greeting_panel find freeplay.grp}
+         set_showing
+         TRUE}
+      {drum_trainer_freestyle_screen set_showing TRUE})
+   (exit
+      {{gamemode get game_panel}
+         set
+         mute_metronome
+         FALSE}
+      {{gamemode get game_panel}
+         unpause})}
