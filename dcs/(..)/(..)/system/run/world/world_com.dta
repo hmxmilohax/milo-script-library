@@ -1,0 +1,567 @@
+(BoidCom
+   (description
+      "A trans that is controlled by a BoidController to simulate being a member of a flock")
+   (user_can_add TRUE)
+   (required_classes Trans)
+   (editor
+      (BoidCom
+         (struct
+            (enable_control
+               bool
+               (no_test)
+               (help
+                  "Enable/disable updating of this boid's movement, so other things can control it. NOT currently saved."))
+            (controller
+               object
+               (class BoidController)
+               (no_test)
+               (help
+                  "BoidController in charge of this Boid"))
+            (flip_y
+               bool
+               (help
+                  "When false, puts the +y axis in the direction of movement"))
+            (lock_scale
+               bool
+               (help
+                  "When true, prevents scale from drifting"))
+            (change_pitch
+               bool
+               (help
+                  "When false, this boid only changes its yaw and keeps its pitch at zero."))
+            (override_controller
+               bool
+               (help
+                  "When true, this boid can have a maximum speed and acceleration independent of its controller's settings"))
+            (broadcast_prop_changes_offscreen
+               bool
+               (help
+                  "Should property changes be broadcast when offscreen? Note enabling this can be slow"))
+            (never_broadcast_prop_changes
+               bool
+               (help
+                  "If true, NEVER broadcast property changes at all. A nice optimization if you know there arent flows needing to be updated by BoidCom outputs"))
+            (accel_override
+               float
+               (hide
+                  {!
+                     [BoidCom override_controller]})
+               (help
+                  "If override_controller is true, this boid has this max accel"))
+            (speed_override
+               float
+               (hide
+                  {!
+                     [BoidCom override_controller]})
+               (help
+                  "If override_controller is true, this boid has this max speed"))
+            (velocity
+               VECTOR3
+               (read_only TRUE)
+               (help
+                  "Velocity of this Boid"))
+            (alignment_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of alignment acceleration"))
+            (attractor_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of acceleration from attractors and repulsors"))
+            (bounds_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of acceleration when out-of-bounds"))
+            (brake_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of braking acceleration"))
+            (chase_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of chasing acceleration"))
+            (cohesion_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of cohesion acceleration"))
+            (collision_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of collision avoidance acceleration"))
+            (separation_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of separation acceleration"))
+            (stay_in_view_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of acceleration to stay within the view frustum"))
+            (wander_magnitude
+               float
+               (read_only TRUE)
+               (help
+                  "Magnitude of wander acceleration"))
+            (turn_rate
+               float
+               (read_only TRUE)
+               (help
+                  "How quickly is the boid turning? (degrees/sec)"))
+            (yaw_velocity
+               float
+               (read_only TRUE)
+               (help
+                  "How quickly is the boid turning in yaw? (degrees/sec)"))
+            (pitch_velocity
+               float
+               (read_only TRUE)
+               (help
+                  "How quickly is the boid turning in pitch? (degrees/sec)"))
+            (move_to_controller
+               script
+               (script
+                  {$this move_to_controller})
+               (help
+                  "Moves this Boid to its controller"))
+            (randomize_wander
+               script
+               (script
+                  {$this randomize_wander})
+               (help
+                  "Randomizes the wander point")))))
+   (events_in
+      (move_to_controller
+         (help
+            "Causes the boid to move to its controller object"))
+      (set_wander_point
+         (editor
+            (wander_point
+               object
+               (class Trans)
+               (help
+                  "Where to wander to")))
+         (help
+            "Sets this boid's wander point"))
+      (wander_forward
+         (editor
+            (distance
+               float
+               (help
+                  "Distance ahead of this boid to set the wander point")))
+         (help
+            "Sets this boid's wander point directly ahead of it"))
+      (wander_cam_relative
+         (editor
+            (cam_x
+               float
+               (range -1.0 1.0)
+               (help
+                  "proportion of movement along x axis of camera"))
+            (cam_y
+               float
+               (range -1.0 1.0)
+               (help
+                  "proportion of movement along y axis of camera"))
+            (cam_z
+               float
+               (range -1.0 1.0)
+               (help
+                  "proportion of movement along z axis of camera"))
+            (distance
+               float
+               (help
+                  "Distance from boid to new position"))
+            (pick_closest_direction
+               bool
+               (default FALSE)
+               (help
+                  "Do we allow inverting the direction on individual axes to more closely match the boid's current facing?")))
+         (help
+            "Sets wander point a given distance away along one or more of the camera's axes. You can get them to swim toward/parallel to the cam with this..."))
+      (randomize_wander
+         (help
+            "Chooses a new random wander point"))
+      (recall_boid
+         (help
+            "If this boid was spawned, this lets you recall it, removing it from the flock"))
+      (set_boid_velocity
+         (help
+            "Slams the velocity of the boid to the provided vector")
+         (editor
+            (x
+               float
+               (help
+                  "x component of velocity"))
+            (y
+               float
+               (help
+                  "y component of velocity"))
+            (z
+               float
+               (help
+                  "z component of velocity"))
+            (local
+               bool
+               (help
+                  "is this vector relative the the boid?")))))
+   (events_out
+      (boid_impact
+         (editor
+            (obj
+               object
+               (class Object)
+               (help
+                  "The object that this Boid impacted")))
+         (help
+            "called when the boid is impacted, passes you the object it impacted"))))
+(BoidAttractorRepulsorCom
+   (description
+      "A trans that attracts or repulses Boids")
+   (user_can_add TRUE)
+   (required_classes Trans)
+   (editor
+      (boid_attractor_repulsor
+         (struct
+            (distances
+               MINMAXVECTOR2
+               (help
+                  "Minimum distance to apply full acceleration, and maximum distance to be affect at all by this attractor/repulsor"))
+            (weight
+               float
+               (help
+                  "(CYAN) Weight to apply to a boid towards or away from this object.  Positive to attract, negative to repel."))))))
+(CameraShakeCom
+   (alias
+      "Camera Shake")
+   (description
+      "Lets shake it up baby now, come on baby, I shake the camera.. (shake the camera)")
+   (user_can_add TRUE)
+   (required_classes CameraNode)
+   (editor
+      (shake_noisefreq
+         float
+         (alias
+            "frequency")
+         (slider)
+         (range 0.0 1.0)
+         (help
+            "From 0 to 1, the noise frequency for camera shake (i.e. how often it changes direction)"))
+      (shake_noiseamp
+         float
+         (alias
+            "amplitude")
+         (help
+            "Noise amplitude for camera shake"))
+      (shake_maxangle
+         VECTOR2
+         (alias
+            "maximum angle")
+         (help
+            "In degrees, the maximum angle for camera shake"))
+      (shake_gain
+         float
+         (alias
+            "gain")
+         (help
+            "Will speed/slow the shake movement")
+         (range 0.0 0.999))
+      (shake_damp
+         float
+         (alias
+            "dampening")
+         (help
+            "Will dampen the speed of shake")
+         (range 0.0 0.999))))
+(CameraLookAtCom
+   (alias
+      "Camera Look At")
+   (description
+      "Gives the camera a look at target to track")
+   (user_can_add TRUE)
+   (required_classes CameraNode)
+   (editor
+      (look_at_target
+         object
+         (alias
+            "target")
+         (class Trans)
+         (interp_handlers lookat_target_interp)
+         (help
+            "What object in the scene should we look at"))
+      (look_at_up
+         object
+         (class Trans)
+         (alias
+            "up vector")
+         (help
+            "If set, this camera uses this object's +z direction as the camera's up direction"))
+      (look_at_lock_z
+         bool
+         (alias
+            "lock z?")
+         (help
+            "Should the camera's z axis always be vertical?"))
+      (look_at_filter
+         float
+         (alias
+            "smoothing")
+         (help
+            "Should we smooth our lookat? (0 is no smoothing, 1 is no movement)"))))
+(CameraDoFCom
+   (alias
+      "Camera Depth of Field")
+   (description
+      "Gives the camera Depth of Field effects")
+   (user_can_add TRUE)
+   (required_classes CameraNode)
+   (editor
+      (dof_enabled
+         bool
+         (alias
+            "enabled?"))
+      (dof_focus_target
+         object
+         (class Trans)
+         (alias
+            "target")
+         (interp_handlers dof_target_interp)
+         (help
+            "Which object is depth of field focus centered around? (if unset, offset is just applied as distance from the camera)")
+         (read_only
+            {!
+               [dof_enabled]}))
+      (quality
+         (indent
+            (dof_quality
+               int
+               (list DOF_QUALITY_ENUM)
+               (alias
+                  "blur quality")
+               (help
+                  "Quality of the depth of field result"))
+            (dof_reduce_bleeding
+               bool
+               (alias
+                  "reduce bleeding artifacts")
+               (help
+                  "Reduce bleeding of in focus objects into out of focus background"))
+            (dof_spread_foreground_blur
+               bool
+               (read_only
+                  {!
+                     [dof_reduce_bleeding]})
+               (alias
+                  "spread foreground blur")
+               (help
+                  "Spread blur of foreground objects over in focus background")))
+         (read_only
+            {!
+               [dof_enabled]}))
+      (dof_focus_offset
+         float
+         (alias
+            "focus offset")
+         (help
+            "An amount to offset the focal distance from the dof_focus_target, in world units (if there is no target, then this is just the distance from the camera)")
+         (read_only
+            {!
+               [dof_enabled]}))
+      (dof_focus_width
+         float
+         (alias
+            "focus width")
+         (help
+            "The width of the window centered around the focus (in world units), where the minimum blur is in effect throughout")
+         (range 0.0 100000.0)
+         (read_only
+            {!
+               [dof_enabled]}))
+      (dof_min_blur
+         float
+         (alias
+            "minimum blur")
+         (help
+            "Amount of blur (0 to 1) within the focal window")
+         (range 0.0 1.0)
+         (slider)
+         (read_only
+            {!
+               [dof_enabled]})
+         (record_all))
+      (dof_near_max_blur
+         float
+         (alias
+            "near maximum blur")
+         (help
+            "Amount of blur (0 to 1) beyond the near falloff window")
+         (range 0.0 1.0)
+         (slider)
+         (read_only
+            {!
+               [dof_enabled]})
+         (record_all))
+      (dof_far_max_blur
+         float
+         (alias
+            "far maximum blur")
+         (help
+            "Amount of blur (0 to 1) beyond the far falloff window")
+         (range 0.0 1.0)
+         (slider)
+         (read_only
+            {!
+               [dof_enabled]})
+         (record_all))
+      (dof_near_falloff_width
+         float
+         (alias
+            "near falloff width")
+         (help
+            "Width (in world units) that blur falls off from 'dof_min_blur' to 'dof_max_blur_near' as you move outside the focus window on the near side")
+         (range 0.0 100000.0)
+         (read_only
+            {!
+               [dof_enabled]}))
+      (dof_far_falloff_width
+         float
+         (alias
+            "far falloff width")
+         (help
+            "Width (in world units) that blur falls off from 'dof_min_blur' to 'dof_max_blur_far' as you move outside the focus window on the far side")
+         (range 0.0 100000.0)
+         (read_only
+            {!
+               [dof_enabled]}))))
+(CameraDollyCom
+   (alias
+      "Camera Dolly")
+   (description
+      "Allows you to dolly the camera")
+   (user_can_add TRUE)
+   (required_classes CameraNode)
+   (editor
+      (dolly_x_range
+         float
+         (alias
+            "x range")
+         (help
+            "The amount the camera can dolly left/right"))
+      (dolly_range_right
+         float
+         (alias
+            "TEMP: right range")
+         (help
+            "The amount the camera can dolly right"))
+      (dolly_x_pos
+         float
+         (alias
+            "x pos")
+         (help
+            "From -1 to 1, this drives the horizontal dollying of the camera from left to right.  -1 is fully left, 0 is no dollying, and 1  fully right.  The range of motion is set with the 'dolly_x_range' property"))
+      (dolly_y_range
+         float
+         (alias
+            "y range")
+         (help
+            "The amount the camera can dolly in/out"))
+      (dolly_y_pos
+         float
+         (alias
+            "y pos")
+         (help
+            "From -1 to 1, this drives the dollying of the camera in and out.  -1 is fully out, 0 is no dollying, and 1  fully in.  The range of motion is set with the 'dolly_y_range' property"))
+      (dolly_z_range
+         float
+         (alias
+            "z range")
+         (help
+            "The amount the camera can dolly up/down"))
+      (dolly_z_pos
+         float
+         (alias
+            "z pos")
+         (help
+            "From -1 to 1, this drives the vertical dollying of the camera from down to up.  -1 is fully down, 0 is no dollying, and 1  fully up.  The range of motion is set with the 'dolly_z_range' property"))))
+(CameraPanTiltRollCom
+   (alias
+      "Camera Pan Tilt Roll")
+   (description
+      "Allows you to pan, tilt, or roll a camera")
+   (user_can_add TRUE)
+   (required_classes CameraNode)
+   (editor
+      (pan_range
+         float
+         (alias
+            "pan range")
+         (help
+            "In degrees, how much we are able to pan the camera to the left/right."))
+      (pan_range_right
+         float
+         (alias
+            "TEMP: right")
+         (help
+            "In degrees, how much we are able to pan the camera to the right."))
+      (pan_position
+         float
+         (alias
+            "position")
+         (help
+            "from -1 to 1, this drives the panning of the camera from left to right.  -1 is fully left, 0 is no panning, and 1 is fully right.  The range of motion is set with the 'pan_range_left' and 'pan_range_right' properties"))
+      (tilt_range
+         float
+         (alias
+            "tilt range")
+         (help
+            "In degrees, how much we are able to tilt the camera down/up."))
+      (tilt_position
+         float
+         (alias
+            "position")
+         (help
+            "from -1 to 1, this drives the tilting of the camera from down to up.  -1 is fully down, 0 is no tilting, and 1 is fully up.  The range of motion is set with the 'tilt_range_up' and 'tilt_range_down' properties"))
+      (roll_range
+         float
+         (alias
+            "roll range")
+         (help
+            "In degrees, how much we are able to roll the camera clockwise/counterclockwise."))
+      (roll_position
+         float
+         (alias
+            "position")
+         (help
+            "from -1 to 1, this drives the roll of the camera from ccw to cw.  -1 is fully ccw, 0 is no rolling, and 1 is fully cw.  The range of motion is set with the 'tilt_range_cw' and 'tilt_range_ccw' properties"))))
+(CutsceneCom
+   (description
+      "Cutscene properties for a prop anim")
+   (user_can_add TRUE)
+   (required_classes PropAnim)
+   (editor
+      (CutsceneCom
+         (struct
+            (anim_scrubbing_enabled
+               bool
+               (help
+                  "Allow scrubbing an animation node to work, may have to turn this off if you want to work on non-cutscene stuff.")
+               (no_test serialize))))))
+(VegetationSettingsCom
+   (alias
+      "Vegetation Settings")
+   (description
+      "A component attached to vegetation entities to define their vegetation settings.")
+   (user_can_add TRUE)
+   (required_classes Entity)
+   (editor
+      (entity_radius
+         float
+         (help
+            "The minimum radius between the vegetation entity and any other vegetation."))))

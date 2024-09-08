@@ -1,0 +1,778 @@
+(CameraNode
+   (description
+      "Base class for camera nodes, which move the camera around and potential blend with other cams")
+   (superclasses PropAnim Trans)
+   (allowed_dirs)
+   (category Camera)
+   (layers
+      ())
+   (editor
+      (camera_layer
+         symbol
+         (list
+            {$this get_layer_list})
+         (help
+            "layer for camera; higher layers will overwrite lower ones"))
+      (min_weight
+         float
+         (help
+            "minimum weight for this camera; animate this if you want manual weight control")
+         (no_test)
+         (range 0.0 1.0))
+      (weight_multiplier
+         float
+         (help
+            "weight for this camera; animate this if you want manual weight control")
+         (no_test)
+         (range 0.0 1.0))
+      (fov
+         float
+         (alias
+            "field of view")
+         (help
+            "The vertical field of view of the camera, in degrees (0 to 180)")
+         (range 0.0 180.0)
+         (slider))
+      (near_plane
+         float
+         (help
+            "The near clip plane distance")
+         (range
+            {/
+               [far_plane]
+               {cam_get_max_far_near_ratio}}
+            [far_plane]))
+      (far_plane
+         float
+         (help
+            "The far clip plane distance")
+         (range
+            [near_plane]
+            {'*'
+               [near_plane]
+               {cam_get_max_far_near_ratio}}))))
+(PathCamera
+   (description
+      "Allows camera to animate along a path, as defined in a prop anim")
+   (superclasses CameraNode)
+   (converts_to StaticCamera AnimCamera)
+   (allowed_dirs Scene Entity)
+   (ext pathcam)
+   (editor))
+(StaticCamera
+   (description
+      "A static camera position")
+   (superclasses CameraNode)
+   (converts_to PathCamera AnimCamera)
+   (allowed_dirs Scene Entity)
+   (ext staticcam)
+   (editor))
+(AnimCamera
+   (description
+      "Camera which sets its PropAnim transform and fov keys from a camera animation exported from Maya")
+   (superclasses CameraNode)
+   (converts_to StaticCamera PathCamera)
+   (allowed_dirs Scene Entity)
+   (ext animcam)
+   (editor
+      (anim_file
+         file
+         (help
+            "File containing camera animation data exported from Maya")
+         (history FALSE))
+      (regen_keys
+         script
+         (alias
+            "Regenerate PropAnim Keys")
+         (script
+            {$this regenerate_keys})
+         (help
+            "Regenerates the PropAnim keys from the exported Maya animation"))))
+(FreeLookCam
+   (description
+      "Free look camera for debugging and taking screen shots.")
+   (allowed_dirs Scene Entity)
+   (user_creatable FALSE)
+   (superclasses CameraNode)
+   (ext freelookcam)
+   (editor))
+#define kSMNone
+(0)
+#define kSMInstanceFromEntity
+(1)
+#define kSMGenerateTube
+(2)
+(SplineMesh
+   (description
+      "Instances an entity along a spline, great for chains, fences, etc..")
+   (category Control)
+   (allowed_dirs Entity Scene)
+   (superclasses Spline)
+   (ext mspline)
+   (editor
+      (entity_file
+         file
+         (ext
+            "entity"
+            entity)
+         (hide PropAnim Flow)
+         (help
+            "Entity to instance along spline"))
+      (spacing
+         float
+         (hide PropAnim Flow)
+         (help
+            "spacing between objects"))
+      (spacing_var
+         float
+         (hide PropAnim Flow)
+         (help
+            "spacing variance"))
+      (align
+         bool
+         (hide PropAnim Flow)
+         (help
+            "Which axis, if any, to align the object to along the spline"))
+      (orientation
+         VECTOR3
+         (hide PropAnim Flow)
+         (help
+            "starting orientation of the object"))
+      (twist
+         VECTOR3
+         (hide PropAnim Flow)
+         (help
+            "rotate each object by this amount as you go down the spline"))
+      (jitter_pos
+         VECTOR3
+         (hide PropAnim Flow)
+         (help
+            "random position offset per instance, in local space"))
+      (jitter_rot
+         VECTOR3
+         (hide PropAnim Flow)
+         (help
+            "random rotation per instance"))
+      (jitter_scale
+         VECTOR3
+         (hide PropAnim Flow)
+         (help
+            "random scale per instance"))
+      (seed
+         int
+         (hide PropAnim Flow)
+         (help
+            "random seed"))
+      (physics_mode
+         int
+         (list
+            (("kSMNone"
+                  (alias
+                     "None")
+                  (help
+                     "No physics"))
+               ("kSMInstanceFromEntity"
+                  (alias
+                     "Instance From Entity")
+                  (help
+                     "instances the first found ridged body"))
+               ("kSMGenerateTube"
+                  (alias
+                     "Generate")
+                  (help
+                     "Generate a tube along the spline to use for physics"))))
+         (help
+            "Physics representation for the spline mesh"))
+      (physics_width
+         float
+         (hide
+            {!=
+               [physics_mode]
+               kSMGenerateTube})
+         (help
+            "width of physics representation"))))
+(WorldCrowd
+   (description
+      "A quickly-rendered bunch of instanced characters within an area")
+   (allowed_dirs)
+   (ext crd)
+   (editor
+      (num
+         int
+         (help
+            "Number of characters to place"))
+      (characters
+         (array
+            (struct
+               (character
+                  object
+                  (class Character)
+                  (struct characters)
+                  (help
+                     "The character to use as the archetype"))
+               (height
+                  float
+                  (struct characters)
+                  (help
+                     "The height at which to render the character"))
+               (density
+                  float
+                  (struct characters)
+                  (help
+                     "Density to place this character"))
+               (radius
+                  float
+                  (struct characters)
+                  (help
+                     "Collision radius of the character - characters won't be placed within this range"))))
+         (help
+            "Character archetypes for the crowd"))
+      (placement_mesh
+         object
+         (class Mesh)
+         (help
+            "The placement mesh"))
+      (environ
+         object
+         (class Environ)
+         (help
+            "The environ to render the imposter billboards with"))
+      (environ_3d
+         object
+         (class Environ)
+         (help
+            "The environ used when rendering the 3D crowd set by a cam shot"))
+      (focus
+         object
+         (class Trans)
+         (help
+            "Optional crowd facing focus when rotate is set to kCrowdRotateNone"))
+      (rebuild_crowd
+         script
+         (script
+            {$this rebuild})
+         (help
+            "Completely rebuilds the crowd placements")
+         (no_test))
+      ('Assign Random Colors'
+         script
+         (script
+            {$this assign_random_colors})
+         (help
+            "Reassigns the random crowd colors"))
+      (force_3D_crowd
+         bool
+         (help
+            "Makes crowd be 3D regardless of the CamShot"))
+      (show_3d_only
+         bool
+         (help
+            "Shows only the 3D crowd, but ONLY in Milo so you can more easily distinguish them from the 2d crowd")))
+   (superclasses Draw))
+(ColorPalette
+   (description
+      "List of primary/secondary colors for a WorldCrowd")
+   (allowed_dirs)
+   (ext pal)
+   (editor
+      (colors
+         (array
+            color
+            (help
+               "Color for materials")))))
+(BoidController
+   (description
+      "Hive-mind of a flock of Boids")
+   (allowed_dirs Entity Scene)
+   (superclasses Trans Poll)
+   (ext boidc)
+   (editor
+      (boids
+         (array
+            object
+            (class Trans)
+            (no_null))
+         (no_test)
+         (help
+            "List of boids controlled by this BoidController"))
+      (num_boids
+         int
+         (alias
+            "Number of boids")
+         (read_only TRUE)
+         (help
+            "Number of boids controlled by this controller"))
+      (boid_spawner
+         object
+         (class EntityPool)
+         (help
+            "An EntityPool to spawn boids dynamically with"))
+      (num_spawned_boids
+         int
+         (hide
+            {!
+               [boid_spawner]})
+         (help
+            "The desired number of dynamic boids, to be spawned using the boid spawner"))
+      (spawn_boid
+         script
+         (script
+            {$this spawn_boid})
+         (hide
+            {!
+               [boid_spawner]})
+         (help
+            "test spawning a boid.  You can also edit the num_spawned_boids property"))
+      (recall_boid
+         script
+         (script
+            {$this recall_boid})
+         (hide
+            {!
+               [boid_spawner]})
+         (help
+            "test recalling a spawned boid. You can also edit the num_spawned_boids property"))
+      (move_boids_to_center
+         script
+         (script
+            {$this move_boids_to_center})
+         (help
+            "Moves all boids controlled by this BoidController to this BoidController's location"))
+      (frames_per_update
+         int
+         (range 1 30)
+         (help
+            "Recalculates accelerations on each boid in this flock only once every this many frames"))
+      (poll_when_offscreen
+         bool
+         (help
+            "Does this BoidController continue to poll when it's offscreen and all boids are within bounds?"))
+      (max_speed
+         float
+         (help
+            "(WHITE ARROW) Maximum speed of any boid in this flock"))
+      (max_accel
+         float
+         (help
+            "(WHITE) Maximum acceleration of any boid in this flock"))
+      (max_turn
+         float
+         (help
+            "Maximum direction of turn away from current velocity, in degrees/s."))
+      (Bounds
+         (indent
+            (bounds_weight
+               float
+               (help
+                  "(BLACK) Weight to turn back towards the center of this BoidController after leaving bounds_distance"))
+            (use_rectangular_bounds
+               bool
+               (help
+                  "If true, confine the boids to a rectangular prism.  If false, use a sphere"))
+            (bounds_distance
+               MINMAXVECTOR2
+               (hide
+                  [use_rectangular_bounds])
+               (help
+                  "Minimum distance to turn boids back towards the center, and maximum distance to apply full acceleration towards the center."))
+            (inner_rectangular_bounds_distance
+               VECTOR3
+               (hide
+                  {!
+                     [use_rectangular_bounds]})
+               (help
+                  "Minimum distance to begin to turn boids back towards the center"))
+            (outer_rectangular_bounds_distance
+               VECTOR3
+               (hide
+                  {!
+                     [use_rectangular_bounds]})
+               (help
+                  "Maximum distance to begin to turn boids back towards the center")))
+         (help
+            "The volume in space the boids try to stay within.  When they hit the edge, they turn back towards the center"))
+      (Attractors/Chasing
+         (indent
+            (attractors
+               (array
+                  object
+                  (class Trans)
+                  (no_null))
+               (help
+                  "List of attractors/repulsors affecting this flock"))
+            (chase_weight
+               float
+               (help
+                  "(BLUE) Minimum and maximum weight to apply to chasing [chase_target].  If negative, will instead flee from [chase_target]"))
+            (chase_target
+               object
+               (class Trans)
+               (help
+                  "Object to chase or flee from"))
+            (chase_distance
+               MINMAXVECTOR2
+               (help
+                  "Minimum distance to apply full chase/flee acceleration, and maximum distance to apply any chase/flee acceleration")))
+         (help
+            "Points of attaction and repulsion for the boids."))
+      (Alignment
+         (indent
+            (alignment_weight
+               float
+               (help
+                  "(ORANGE) Weight to orient in the direction of nearby Boids controlled by this BoidController"))
+            (alignment_distance
+               MINMAXVECTOR2
+               (help
+                  "Minimum distance to apply full alignment acceleration, and maximum distance to apply any alignment acceleration")))
+         (help
+            "Relates to boids wanting to face the same direction as their nearby neighbors"))
+      (Cohesion
+         (indent
+            (cohesion_weight
+               float
+               (help
+                  "(YELLOW) Weight to remain near other Boids controlled by this BoidController"))
+            (cohesion_distance
+               MINMAXVECTOR2
+               (help
+                  "Minimum distance to apply any cohesion acceleration, and maximum distance to apply full cohesion acceleration")))
+         (help
+            "Relates to boids wanting to stay close to nearby boids"))
+      (Separation
+         (indent
+            (separation_weight
+               float
+               (help
+                  "(GREEN) Weight to remain away from other Boids controlled by this BoidController"))
+            (separation_distance
+               MINMAXVECTOR2
+               (help
+                  "Minimum distance to apply full separation acceleration, and maximum distance to apply any separation acceleration")))
+         (help
+            "To keep boids from bumping into nearby boids.  Generally wants to be smaller than the cohesion distance to have useful effect"))
+      (Braking
+         (indent
+            (brake_weight
+               float
+               (help
+                  "(RED) Weight to apply to braking")))
+         (help
+            "Use this to keep your boids from tending to always move at their max velocity"))
+      (Obstacles
+         (indent
+            (collision_weight
+               float
+               (help
+                  "(MAGENTA) Weight to apply to avoiding obstacles"))
+            (collision_distance
+               MINMAXVECTOR2
+               (help
+                  "Minimum distance to apply full acceleration to avoid obstacles, and maximum distance to apply any avoidance acceleration"))
+            (randomize_on_avoid_collision
+               bool
+               (help
+                  "If true, boids will choose a new wander point if they begin turning away from an obstacle"))
+            (impact_distance
+               float
+               (help
+                  "Distance at which the on_impact event will be fired"))
+            (reverse_on_impact
+               bool
+               (help
+                  "If true, boids will reverse their direction if they impact an obstacle")))
+         (help
+            "To avoid rigid body obstacles in the world"))
+      ('Stay in View'
+         (indent
+            (stay_in_view_weight
+               float
+               (help
+                  "(BROWN) Weight to remain within the view frustum"))
+            (stay_in_view_distance
+               float
+               (help
+                  "Distance inward from the edge of any plane in the view frustum where boids no longer apply acceleration to stay in view"))
+            (stay_in_view_near_plane_distance
+               float
+               (help
+                  "Boids that are out of view will accelerate towards a point in the middle of the view frustum this far away from the near plane"))))
+      (Wander
+         (indent
+            (wander_weight
+               float
+               (help
+                  "(GREY) Weight to move towards a randomly selected point"))
+            (wander_time
+               MINMAXVECTOR2
+               (help
+                  "Boids will move towards a new wander target a random number of seconds betweent these numbers")))
+         (help
+            "A tendency to wander to random points within our bounds")))
+   (events_in
+      (move_boids_to_center
+         (help
+            "move boids to center of the system"))
+      (spawn_boid
+         (help
+            "Will spawn another boid if boid spawner is setup on this controller"))
+      (recall_boid
+         (help
+            "Will remove a spawned boid from the simulation if a boid spawner is setup on this controller"))))
+#define kScaleAll
+(0)
+#define kScaleZ
+(1)
+#define kScaleXY
+(2)
+(Vegetation
+   (description
+      "Spray down objects, galore!")
+   (allowed_dirs Scene Entity)
+   (superclasses Trans Draw)
+   (ext veg)
+   (editor
+      (update_debug_info
+         script
+         (script
+            {$this update_debug_info})
+         (tab debug))
+      (debug_info
+         (array
+            (struct
+               (entity
+                  string
+                  (help
+                     "the placed entity"))
+               (count
+                  int
+                  (help
+                     "the number of times it was placed"))
+               (mesh_count
+                  int
+                  (help
+                     "the number of meshes in this entity"))
+               (mat_count
+                  int
+                  (help
+                     "the number of mats in this entity"))
+               (vert_count
+                  int
+                  (help
+                     "the number of verticies in this entity"))))
+         (read_only true)
+         (tab debug))
+      (debug_entities
+         (array
+            object
+            (class Object))
+         (help
+            "entities with vegetation on them")
+         (tab debug)
+         (read_only true))
+      (total_entities
+         int
+         (tab debug)
+         (read_only true)
+         (help
+            "total number of entities managed by this vegetation object"))
+      (active_brush
+         symbol
+         (list
+            {$this get_brushes}))
+      (radius
+         float
+         (help
+            "Brush radius")
+         (range 0.1 100)
+         (slider)
+         (no_test))
+      (density
+         float
+         (help
+            "How fast to spray down objects")
+         (range 1.0e-2 1)
+         (slider)
+         (no_test))
+      (activate_brush
+         script
+         (script
+            {forge set_viewport_delegate $this})
+         (no_test)
+         (custom_history)
+         (alias
+            "Activate Brush")
+         (help
+            "Activates the vegetation painter."))
+      (deactivate_brush
+         script
+         (script
+            {forge set_viewport_delegate ''})
+         (no_test)
+         (custom_history)
+         (alias
+            "Deactivate Brush")
+         (help
+            "Deactivates the vegetation painter."))
+      (brushes
+         (array
+            (struct
+               (name
+                  symbol
+                  (help
+                     "The name of the vegetation brush."))
+               (vegetation_layer
+                  symbol
+                  (list
+                     {$this get_vegetation_layers})
+                  (help
+                     "The vegetation layer that the brush paints on."))
+               (entities
+                  (array
+                     (struct
+                        (path
+                           file
+                           (ext
+                              "Entity files"
+                              "entity")
+                           (help
+                              "The vegetation entity."))
+                        (rotation
+                           VECTOR2
+                           (help
+                              "min/max rotation"))
+                        (scale
+                           float
+                           (range 0.1 10.0)
+                           (slider)
+                           (help
+                              "The average scale applied to the vegetation instances."))
+                        (scale_variance
+                           float
+                           (range 0.0 10.0)
+                           (slider)
+                           (help
+                              "The variance in the scaling applied to the vegetation instances. Set this to 0.0 to apply a constant scale."))
+                        (scale_mode
+                           int
+                           (list
+                              ("kScaleAll"
+                                 "kScaleZ"
+                                 "kScaleXY"))
+                           (help
+                              "how to apply scale"))
+                        (align
+                           bool
+                           (help
+                              "Align to slope?"))
+                        (spacing
+                           float
+                           (range 0.0 100)
+                           (slider)
+                           (help
+                              "The minimum spacing between the vegetation entity's instances and other vegetation."))
+                        (slope
+                           (struct
+                              (x float)
+                              (y float))
+                           (editor_type slope_range)
+                           (help
+                              "min, max slope. -90 to 90 degrees"))))))))))
+(Occlusion
+   (description
+      "Test object for testing occlusion effects on vegetation, dynamic entities, and remeshed nodes")
+   (category Graphics)
+   (superclasses Poll)
+   (allowed_dirs Scene)
+   (user_creatable FALSE)
+   (functest no_test)
+   (ext occ)
+   (editor
+      (include_movable
+         bool
+         (hide
+            [only_selected]))
+      (include_gi_probes
+         bool
+         (hide
+            [only_selected]))
+      (include_remesh_nodes
+         bool
+         (hide
+            [only_selected]))
+      (include_entities
+         bool
+         (hide
+            [only_selected]))
+      (include_vegetation
+         bool
+         (hide
+            [only_selected]))
+      (include_clouds
+         bool
+         (hide
+            [only_selected]))
+      (only_selected
+         bool
+         (help
+            "only generate + show the data for the selected drawable"))
+      (generate
+         script
+         (script
+            {$this generate})
+         (help
+            "Generates the occlusion for all included categories or just for selected"))
+      (apply
+         bool
+         (help
+            "Actually apply the occlusion once per frame"))
+      (show_hulls
+         bool
+         (help
+            "show the bounding hulls in green or red next apply"))
+      (show_green_hulls
+         bool
+         (help
+            "if false, only show the red occluded hulls"))
+      (test_camera
+         bool
+         (help
+            "when true, generates everything for this camera position only"))
+      (use_z
+         bool
+         (help
+            "use z buffer, helps to make 3d sense"))
+      (draw_lines
+         bool
+         (help
+            "if true, draws red lines rather than red + green squares"))
+      (show_unobstructed
+         bool
+         (help
+            "if true, puts green squares where no obstruction is"))
+      (show_all_sources
+         bool
+         (help
+            "shows all the sources during generation"))
+      (selected_veg
+         int
+         (help
+            "index of veg to select, acts like selection"))
+      (clear_generate_graph
+         script
+         (script
+            {$this clear_generate_graph})
+         (help
+            "Clears the generate graph"))
+      (apply_once
+         script
+         (script
+            {$this set_apply_once})
+         (help
+            "set true to apply for one frame only, will print stats and disable vsync too, good for timings"))
+      (clear_unoccludable_entities
+         script
+         (script
+            {$this clear_unoccludable_entities})
+         (help
+            "clears out entities which now have occlusion set false"))))
