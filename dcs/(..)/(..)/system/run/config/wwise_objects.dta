@@ -1,0 +1,1712 @@
+#define FILTER_TYPES
+((("Low-Pass Filter"
+         (help
+            "A low-pass filter."))
+      ("Band-Pass Filter"
+         (help
+            "A band-pass filter."))
+      ("High-Pass Filter"
+         (help
+            "A high-pass filter."))))
+#define PORTAMENTO_MODES
+((("Legato"
+         (help
+            "portamento pitch is reset when all notes are released"))
+      ("Persistent"
+         (help
+            "portamento pitch is maintained even when no notes are playing"))))
+#define LFO_SHAPES
+((("Sine"
+         (help
+            "sine wave shape."))
+      ("Square"
+         (help
+            "square wave shape."))
+      ("Ramp Up"
+         (help
+            "upward sawtooth wave shape."))
+      ("Ramp Down"
+         (help
+            "downward sawtooth wave shape."))
+      ("Triangle"
+         (help
+            "triangluar wave shape."))))
+#define LFO_TARGETS
+((("None"
+         (help
+            "no target"))
+      ("Pan"
+         (help
+            "target pan"))
+      ("Pitch"
+         (help
+            "target pitch"))
+      ("Filter Freq"
+         (help
+            "target the filter frequency"))))
+#define RAND_TARGETS
+((("None"
+         (help
+            "no target"))
+      ("Start Point"
+         (help
+            "randomize start point"))
+      ("Pitch"
+         (help
+            "randomize pitch"))))
+#define ADSR0_TARGETS
+((("Volume"
+         (help
+            "target volume"))))
+#define ADSR1_TARGETS
+((("None"
+         (help
+            "no target"))
+      ("Filter Freq"
+         (help
+            "target the filter frequency"))))
+#define FREQUENCY_SLIDER
+((slider)
+   (interpolator
+      (exp 20 20000 0 1 4.335))
+   (range 20 20000)
+   (default 20.0)
+   (units
+      "Hz")
+   (min_digits 6))
+#define LFO_FREQUENCY_SLIDER
+((slider)
+   (interpolator
+      (exp 0.1 30 0 1 2.74))
+   (range 0.1 30)
+   (default 0.1)
+   (units
+      "Hz")
+   (min_digits 3))
+(MidiInstrument
+   (description
+      "Plays samples with a given pitch and velocity.")
+   (category Sound)
+   (allowed_dirs)
+   (hide_from_editor FALSE)
+   (ext inst)
+   (editor
+      (soundbank
+         symbol
+         (no_test)
+         (alias
+            "Wwise soundbank")
+         (list
+            {get_wwise_soundbank_names})
+         (help
+            "Wwise bank file with required play event"))
+      (play_event
+         symbol
+         (no_test)
+         (alias
+            "Wwise play event")
+         (list
+            {$this get_valid_event_names})
+         (help
+            "Wwise event used to start playback"))
+      (stop_event
+         symbol
+         (no_test)
+         (alias
+            "Wwise stop event")
+         (list
+            {$this get_valid_event_names})
+         (help
+            "Wwise event used to stop playback. No event means abrupt stop."))
+      (sample_id_switch
+         symbol
+         (no_test)
+         (alias
+            "Sample ID Switch")
+         (list
+            {$this get_valid_switches})
+         (help
+            "Wwise switch name used select samples"))
+      (note_regions
+         (array
+            (struct
+               (sample_id
+                  symbol
+                  (no_test)
+                  (alias
+                     "Sample ID")
+                  (list
+                     {$this get_valid_switch_values})
+                  (help
+                     "Switch value to use (if any) for this note region. Notes in this region are assigned this switch value."))
+               (min_note
+                  int
+                  (help
+                     "Lowest note that plays this sample"))
+               (center_note
+                  int
+                  (help
+                     "Note that plays this sample without pitch change"))
+               (max_note
+                  int
+                  (help
+                     "Highest note that plays this sample")))
+            (header
+               {sprint
+                  "note range ["
+                  {$this
+                     get
+                     {flatten $editor_prop_path min_note}}
+                  ", "
+                  {$this
+                     get
+                     {flatten $editor_prop_path max_note}}
+                  "] centered on "
+                  {$this
+                     get
+                     {flatten $editor_prop_path center_note}}
+                  " with switch: "
+                  {$this
+                     get
+                     {flatten $editor_prop_path sample_id}}})))
+      (test_note
+         int
+         (range 0 127)
+         (no_test serialize copy))
+      (test_velocity
+         int
+         (range 0 127)
+         (no_test serialize copy))
+      (play_test_note
+         script
+         (no_test)
+         (script
+            {$this play_test_note}))
+      (stop_test_note
+         script
+         (no_test)
+         (script
+            {$this stop_test_note})))
+   (events_in
+      (play_note
+         (editor
+            (note_number
+               int
+               (range 0 127)
+               (help
+                  "The MIDI note number to play. 60 is middle C."))
+            (velocity
+               int
+               (range 0 127)
+               (help
+                  "The note velocity.")))
+         (help
+            "play a note with velocity"))
+      (stop_note
+         (editor
+            (note_number
+               int
+               (range 0 127)
+               (help
+                  "The MIDI note number to stop. 60 is middle C.")))
+         (help
+            "stop a note number"))
+      (stop_all_notes
+         (help
+            "stop all the notes currently playing"))))
+(FusionSampler
+   (description
+      "A virtual musical instrument that uses FusionPatches to generate sound.\nWhen triggered, it processes and plays the patch samples back,\naccording to current settings and triggering arguments (such as 'which note' and 'how loud').")
+   (category Sound)
+   (user_creatable TRUE)
+   (allowed_dirs Scene UIScreen Entity)
+   (hide_from_editor FALSE)
+   (superclasses Trans)
+   (ext sampler)
+   (editor
+      (activation_event
+         symbol
+         (no_test)
+         (list
+            {$this get_event_names})
+         (help
+            "The Wwise play event used to "
+            'play"'
+            (i.e. activate)
+            a
+            Fusion
+            audio
+            object.
+            Fusion
+            will
+            immediately
+            start
+            mixing
+            a
+            silent
+            signal
+            into
+            the
+            audio
+            bus.
+            When
+            keyzones
+            are
+            'triggered,'
+            then
+            actual
+            audio
+            data
+            makes
+            it
+            into
+            the
+            'bus."'))
+      (broadcast_audio_level
+         bool
+         (alias
+            "Broadcast Audio Level?")
+         (help
+            "Enable this to broadcast audio level for flows.  If unchecked, this will only be for reading in the editor"))
+      (audio_level
+         float
+         (alias
+            "Audio Level")
+         (slider)
+         (units
+            "dB")
+         (decimals 1)
+         (read_only TRUE)
+         (range -96 0)
+         (no_test)
+         (help
+            "The audio level output of all channels and voices for this sampler."))
+      (is_active
+         bool
+         (read_only TRUE)
+         (no_test)
+         (help
+            "Active means that Fusion is passing samples to Wwise--possibly zeros if no MIDI is being played.\n                Inactive means that it is not passing any samples to Wwise."))
+      (channels
+         (array
+            (struct
+               (patch
+                  object
+                  (class FusionChannel)
+                  (help
+                     "FusionChannel to assign to this channel number")
+                  (no_test))
+               (mix_level
+                  float
+                  (slider)
+                  (range -96 0)
+                  (units
+                     "dB")
+                  (no_test))
+               (pitch
+                  float
+                  (slider)
+                  (range -1 1)
+                  (hide propedit)
+                  (read_only
+                     {!
+                        [is_active]}))
+               (volume
+                  float
+                  (slider)
+                  (range 0 1)
+                  (hide propedit)
+                  (read_only
+                     {!
+                        [is_active]}))
+               (pan
+                  float
+                  (slider)
+                  (range -1 1)
+                  (hide propedit)
+                  (read_only
+                     {!
+                        [is_active]})
+                  (help
+                     "-1=left, 0=center, 1=right"))
+               (release
+                  float
+                  (slider)
+                  (range 0 1)
+                  (hide propedit)
+                  (read_only
+                     {!
+                        [is_active]}))
+               (attack
+                  float
+                  (slider)
+                  (range 0 1)
+                  (hide propedit)
+                  (read_only
+                     {!
+                        [is_active]}))))
+         (fixed_size TRUE)
+         (alias
+            "MIDI Channel Numbers")
+         (help
+            "Assign FusionChannels to a MIDI Channel Number")
+         (no_test)))
+   (events_in
+      (play_note
+         (editor
+            (channel
+               int
+               (range 0 15)
+               (help
+                  "The MIDI channel to talk to."))
+            (note
+               int
+               (range 0 127)
+               (help
+                  "The MIDI note number to play. 60 is middle C."))
+            (velocity
+               int
+               (range 0 127)
+               (help
+                  "The note velocity.")))
+         (help
+            "play a note with velocity"))
+      (stop_note
+         (editor
+            (channel
+               int
+               (range 0 15)
+               (help
+                  "The MIDI channel to talk to."))
+            (note
+               int
+               (range 0 127)
+               (help
+                  "The MIDI note number to stop. 60 is middle C.")))
+         (help
+            "stop a note number"))
+      (stop_all_notes
+         (help
+            "stop all the notes currently playing"))))
+(FusionChannel
+   (description
+      "A channel for a musical instrument that loads a Fusion patch,\n(waveforms and sound synthesis parameters) and can trigger notes using that patch.")
+   (category Sound)
+   (user_creatable TRUE)
+   (allowed_dirs Scene UIScreen Entity)
+   (hide_from_editor FALSE)
+   (ext fusion)
+   (editor
+      (file
+         file
+         (alias
+            "Patch File")
+         (ext
+            "Fusion patch files"
+            "fusion")
+         (help
+            "Path to the .fusion patch file.")
+         (record_all))
+      (bus
+         object
+         (class FusionSampler)
+         (alias
+            "Bus")
+         (help
+            "Bus this channel is assigned to")
+         (hide PropAnim Flow))
+      (voice_pool
+         object
+         (class FusionVoicePool)
+         (alias
+            "Voice Pool")
+         (help
+            "Voice pool this channel draws from.")
+         (hide PropAnim Flow))
+      (test
+         (indent
+            (note_on
+               (indent
+                  (test_note_on
+                     script
+                     (no_test)
+                     (alias
+                        "Note On")
+                     (script
+                        {$this
+                           note_on
+                           [test_note]
+                           127})
+                     (history FALSE))
+                  (test_note
+                     int
+                     (range 0 127)
+                     (no_test)))
+               (editor_type vector))
+            (test_note_off_all
+               script
+               (no_test)
+               (alias
+                  "Note Off All")
+               (script
+                  {$this note_off_all})
+               (history FALSE))))
+      (num_voices_in_use
+         int
+         (help
+            "Number of voices this channel is currently using")
+         (read_only TRUE))
+      (mix_volume
+         float
+         (slider)
+         (range kDbSilence 0.0)
+         (interpolator
+            (exp kDbSilence 0 0 1 0.3))
+         (help
+            "The mix volume of this channel (in dB).")
+         (units
+            "dB"))
+      (volume
+         float
+         (alias
+            "trim")
+         (read_only
+            {exists forge})
+         (hide
+            {exists forge})
+         (slider)
+         (range kDbSilence 0.0)
+         (help
+            "The trim level of this patch (in dB).")
+         (units
+            "dB")
+         (no_test))
+      (expression
+         float
+         (slider)
+         (range 0.0 1.0)
+         (help
+            "The volume expression (CC11) of this channel (in dB).")
+         (no_test))
+      (pan
+         float
+         (slider)
+         (range -1.0 1.0)
+         (help
+            "The left/right pan (CC10) value for this patch.")
+         (no_test))
+      (pitch
+         float
+         (slider)
+         (range -1.0 1.0)
+         (help
+            "The pitch bend amount for this patch.")
+         (no_test))
+      (fine_tune
+         float
+         (slider)
+         (range -100.0 100.0)
+         (units
+            ("cent"
+               "cents"))
+         (help
+            "The fine tuning offset for this patch, in cents.")
+         (no_test))
+      (pitch_bend_range
+         (indent
+            (max_upward_pitch_bend
+               int
+               (slider)
+               (alias
+                  "Upward")
+               (range 0 24)
+               (units
+                  ("semitone"
+                     "semitones"))
+               (help
+                  "Maximum upward pitch bend amount.")
+               (no_test))
+            (max_downward_pitch_bend
+               int
+               (slider)
+               (alias
+                  "Downward")
+               (range 0 24)
+               (units
+                  ("semitone"
+                     "semitones"))
+               (help
+                  "Maximum downward pitch bend amount.")
+               (no_test))))
+      (max_num_voices
+         int
+         (alias
+            "Polyphony")
+         (units
+            ("voice"
+               "voices"))
+         (range 1 100)
+         (no_test)
+         (read_only
+            [portamento_is_enabled])
+         (help
+            "The maximum number of active voices this channel can use simultaneously (note that released voices that are in the decay phase do not count toward this limit)."))
+      (portamento
+         (indent
+            (portamento_is_enabled
+               bool
+               (alias
+                  {if_else
+                     $fusion_editor
+                     "Portamento"
+                     "portamento is enabled?"})
+               (help
+                  "Is this channel using portamento to slur note pitches?")
+               (no_test))
+            (portamento_mode
+               symbol
+               (alias
+                  {if_else
+                     $fusion_editor
+                     "Mode"
+                     "Portamento"})
+               (list PORTAMENTO_MODES)
+               (read_only
+                  {!
+                     {$this
+                        get
+                        {editor_prop_path_sibling portamento_is_enabled}}})
+               (help
+                  "The portamento mode.\nLegato mode means that when no notes are playing, the portamento pitch is forgotten.\nAfter a period of silence, the next note will attack with no pitch bend.\nPersistent mode means that the portamento pitch will be remembered,\nand the next note will bend from that pitch regardless of a period of silence.")
+               (no_test))
+            (portamento_time
+               float
+               (alias
+                  "Time")
+               (slider)
+               (interpolator
+                  (exp 0 10 0 1 5.32))
+               (range 0 10)
+               (default 0.1)
+               (units
+                  ("second"
+                     "seconds"))
+               (min_digits 3)
+               (read_only
+                  {!
+                     {$this
+                        get
+                        {editor_prop_path_sibling portamento_is_enabled}}})
+               (help
+                  "The amount of time over which portamento occurs.")
+               (no_test)))
+         (editor_type vector))
+      (start_point
+         float
+         (slider)
+         (range 0 1000)
+         (interpolator
+            (exp 0 1000 0 1 3.322))
+         (units
+            "ms")
+         (help
+            "The offset (in ms) from the beginning of the sample, from which to start playback.")
+         (no_test))
+      (unique_samples
+         int
+         (read_only TRUE)
+         (help
+            "The number of unique samples used in this patch."))
+      (total_memory_cost
+         float
+         (read_only TRUE)
+         (units
+            "MB")
+         (help
+            "The total memory cost of all unique samples used in this patch."))
+      (keyzones
+         (array
+            (struct
+               (sample
+                  file
+                  (ext
+                     "Samples"
+                     wav)
+                  (help
+                     "The sample file for this keyzone."))
+               (looping
+                  bool
+                  (help
+                     "Does this sample loop during its sustain phase?")
+                  (read_only TRUE))
+               (min_note
+                  int
+                  (range
+                     0
+                     {$this
+                        get
+                        {editor_prop_path_sibling max_note}})
+                  (no_test)
+                  (units
+                     {midi_note_to_text
+                        {$this get $editor_prop_path}})
+                  (help
+                     "The minimum MIDI note at which this keyzone will sound."))
+               (max_note
+                  int
+                  (range
+                     {$this
+                        get
+                        {editor_prop_path_sibling min_note}}
+                     127)
+                  (no_test)
+                  (units
+                     {midi_note_to_text
+                        {$this get $editor_prop_path}})
+                  (help
+                     "The maximum MIDI note at which this keyzone will sound."))
+               (root_note
+                  int
+                  (range 0 127)
+                  (no_test)
+                  (units
+                     {midi_note_to_text
+                        {$this get $editor_prop_path}})
+                  (help
+                     "The root MIDI note of this keyzone, at which no pitch adjustment is performed on the sample."))
+               (min_velocity
+                  int
+                  (range 0 127)
+                  (no_test)
+                  (read_only TRUE)
+                  (help
+                     "The minimum velocity at which this keyzone will sound."))
+               (max_velocity
+                  int
+                  (range 0 127)
+                  (no_test)
+                  (read_only TRUE)
+                  (help
+                     "The maximum velocity at which this keyzone will sound."))
+               (min_volume
+                  float
+                  (slider)
+                  (range kDbSilence 0.0)
+                  (no_test)
+                  (read_only TRUE)
+                  (units
+                     "dB")
+                  (help
+                     "The volume offset for this keyzone when played at minimum velocity."))
+               (max_volume
+                  float
+                  (slider)
+                  (range kDbSilence 0.0)
+                  (no_test)
+                  (read_only TRUE)
+                  (units
+                     "dB")
+                  (help
+                     "The volume offset for this keyzone when played at maximum velocity."))
+               (volume
+                  float
+                  (slider)
+                  (range kDbSilence 0.0)
+                  (no_test)
+                  (units
+                     "dB")
+                  (help
+                     "The base volume level for this particular keyzone, in dB.")
+                  (decimals 2))
+               (pan
+                  float
+                  (slider)
+                  (range -1.0 1.0)
+                  (no_test)
+                  (help
+                     "The pan offset of this particular keyzone."))
+               (fine_tune
+                  float
+                  (slider)
+                  (range -100.0 100.0)
+                  (no_test)
+                  (units
+                     ("cent"
+                        "cents"))
+                  (help
+                     "The pitch offset of this particular keyzone, in cents."))
+               (num_channels
+                  int
+                  (read_only TRUE)
+                  (help
+                     "The number of channels of audio assigned to this keyzone."))
+               (length
+                  float
+                  (read_only TRUE)
+                  (units
+                     ("second"
+                        "seconds"))
+                  (help
+                     "The length of the audio file in seconds."))
+               (memory_cost
+                  float
+                  (read_only TRUE)
+                  (units
+                     "MB")
+                  (help
+                     "The memory cost of this keyzone's sample."))))
+         (read_only
+            {exists forge})
+         (no_test))
+      (adsrs
+         (array
+            (struct
+               (enabled
+                  bool
+                  (alias
+                     {sprintf
+                        "ADSR %d"
+                        {elem $editor_prop_path 1}})
+                  (read_only
+                     {<
+                        {elem $editor_prop_path 1}
+                        1})
+                  (help
+                     "Is this ADSR enabled and affecting audio output?")
+                  (no_test))
+               (target
+                  symbol
+                  (list
+                     {if_else
+                        {==
+                           {elem $editor_prop_path 1}
+                           0}
+                        ADSR0_TARGETS
+                        ADSR1_TARGETS})
+                  (read_only
+                     {'||'
+                        {<
+                           {elem $editor_prop_path 1}
+                           1}
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling enabled}}}})
+                  (help
+                     "The property being affected by this ADSR.")
+                  (no_test))
+               (depth
+                  float
+                  (slider)
+                  (range 0.0 1.0)
+                  (read_only
+                     {'||'
+                        {<
+                           {elem $editor_prop_path 1}
+                           1}
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling enabled}}}})
+                  (help
+                     "The depth of the effect produced by this ADSR.")
+                  (no_test))
+               (attack
+                  float
+                  (slider)
+                  (range 0.0 10.0)
+                  (interpolator
+                     (exp 0.0 10.0 0.0 1.0 3.323))
+                  (units
+                     ("second"
+                        "seconds"))
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The attack time of this ADSR, in seconds.")
+                  (no_test))
+               (decay
+                  float
+                  (slider)
+                  (range 0.0 10.0)
+                  (interpolator
+                     (exp 0.0 10.0 0.0 1.0 3.323))
+                  (units
+                     ("second"
+                        "seconds"))
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The decay time of this ADSR in seconds.")
+                  (no_test))
+               (sustain
+                  float
+                  (slider)
+                  (range 0.0 1.0)
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The sustain level of this ADSR, as a fractional amount.")
+                  (no_test))
+               (release
+                  float
+                  (slider)
+                  (range 0.0 10.0)
+                  (interpolator
+                     (exp 0.0 10.0 0.0 1.0 3.323))
+                  (units
+                     ("second"
+                        "seconds"))
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The release time of this ADSR, in seconds.")
+                  (no_test))))
+         (alias
+            "ADSRs")
+         (no_test)
+         (fixed_size TRUE))
+      (filter
+         (indent
+            (filter_is_enabled
+               bool
+               (alias
+                  "filter")
+               (help
+                  "Is this filter enabled and affecting audio output?")
+               (no_test))
+            (filter_type
+               symbol
+               (alias
+                  "type")
+               (list FILTER_TYPES)
+               (help
+                  "The type of filtering to be performed on audio output.")
+               (read_only
+                  {!
+                     {$this
+                        get
+                        {editor_prop_path_sibling filter_is_enabled}}})
+               (no_test))
+            (filter_frequency
+               float
+               (alias
+                  "freq")
+               FREQUENCY_SLIDER
+               (read_only
+                  {!
+                     {$this
+                        get
+                        {editor_prop_path_sibling filter_is_enabled}}})
+               (help
+                  "The frequency of the filter effect.")
+               (no_test))
+            (filter_q
+               float
+               (alias
+                  "q")
+               (slider)
+               (interpolator
+                  (exp 0.1 10 0 1 4.03))
+               (range 0.1 10)
+               (read_only
+                  {!
+                     {$this
+                        get
+                        {editor_prop_path_sibling filter_is_enabled}}})
+               (help
+                  "The Q value of the filter effect.")
+               (no_test))))
+      (lfos
+         (array
+            (struct
+               (enabled
+                  bool
+                  (alias
+                     {sprintf
+                        "LFO %d"
+                        {elem $editor_prop_path 1}})
+                  (help
+                     "Is this LFO enabled and affecting audio output?")
+                  (no_test))
+               (target
+                  symbol
+                  (list LFO_TARGETS)
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The property being affected by this LFO.")
+                  (no_test))
+               (depth
+                  float
+                  (slider)
+                  (range 0.0 1.0)
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The depth of the effect produced by this LFO.")
+                  (no_test))
+               (shape
+                  symbol
+                  (list LFO_SHAPES)
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The shape of the effect produced by this LFO.")
+                  (no_test))
+               (frequency
+                  float
+                  (alias
+                     "freq")
+                  LFO_FREQUENCY_SLIDER
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "The frequency of the effect produced by this LFO.")
+                  (no_test))
+               (retrigger
+                  bool
+                  (alias
+                     {if_else
+                        $fusion_editor
+                        "Retrigger"
+                        "retrigger?"})
+                  (read_only
+                     {!
+                        {$this
+                           get
+                           {editor_prop_path_sibling enabled}}})
+                  (help
+                     "Should the LFO retrigger the initial phase when it starts?")
+                  (no_test))
+               (initial_phase
+                  float
+                  (slider)
+                  (range -180 180)
+                  (decimals 0)
+                  (read_only
+                     {'||'
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling retrigger}}}
+                        {!
+                           {$this
+                              get
+                              {editor_prop_path_sibling enabled}}}})
+                  (help
+                     "Initial phase if retrigger option is selected.")
+                  (no_test))))
+         (alias
+            "LFOs")
+         (no_test)
+         (fixed_size TRUE))
+      (randomizers
+         (array
+            (struct
+               (target
+                  symbol
+                  (alias
+                     {if_else
+                        $fusion_editor
+                        {sprintf
+                           "Randomizer %d"
+                           {elem $editor_prop_path 1}}
+                        "Random"})
+                  (hide propanim flow)
+                  (list RAND_TARGETS)
+                  (help
+                     "The property being affected by this randomizer.")
+                  (no_test))
+               (range
+                  float
+                  (range 0 1000000)
+                  (hide propanim flow)
+                  (no_test)
+                  (units
+                     {$this
+                        get
+                        {editor_prop_path_sibling units}})
+                  (prefix
+                     {$this
+                        get
+                        {editor_prop_path_sibling mode}}))
+               (depth
+                  float
+                  (slider)
+                  (range 0.0 1.0)
+                  (help
+                     "The depth of the effect produced by this randomizer.")
+                  (no_test))))
+         (no_test)
+         (fixed_size TRUE))
+      (velocitymods
+         (array
+            (struct
+               (target
+                  symbol
+                  (alias
+                     {if_else
+                        $fusion_editor
+                        {sprintf
+                           "Velocity Mod %d"
+                           {elem $editor_prop_path 1}}
+                        "Velocity Mod"})
+                  (hide propanim flow)
+                  (list RAND_TARGETS)
+                  (help
+                     "The property being affected by this velocity modulator.")
+                  (no_test))
+               (range
+                  float
+                  (range 0 1000000)
+                  (hide propanim flow)
+                  (no_test)
+                  (units
+                     {$this
+                        get
+                        {editor_prop_path_sibling units}})
+                  (prefix
+                     {$this
+                        get
+                        {editor_prop_path_sibling mode}}))
+               (depth
+                  float
+                  (slider)
+                  (range 0.0 1.0)
+                  (help
+                     "The depth of the effect produced by this velocity modulator.")
+                  (no_test))))
+         (alias
+            "Velocity Mods")
+         (no_test)
+         (fixed_size TRUE)))
+   (events_in
+      (note_on
+         (editor
+            (note
+               int
+               (range 0 127)
+               (help
+                  "The MIDI note number to play. 60 is middle C."))
+            (velocity
+               int
+               (range 0 127)
+               (help
+                  "The note velocity.")))
+         (help
+            "play a note with velocity"))
+      (note_off
+         (editor
+            (note
+               int
+               (range 0 127)
+               (help
+                  "The MIDI note number to stop. 60 is middle C.")))
+         (help
+            "release a note number"))
+      (note_off_all
+         (help
+            "release all notes"))))
+(FusionVoicePool
+   (description
+      "A pool of voices for a Fusion channel to draw from.")
+   (category Sound)
+   (user_creatable TRUE)
+   (allowed_dirs Scene UIScreen Entity)
+   (hide_from_editor FALSE)
+   (ext fvp)
+   (editor
+      (voice_count_hard_limit
+         int
+         (range 1 256)
+         (hide propanim flow))
+      (voice_count_soft_limit
+         int
+         (range
+            1
+            [voice_count_hard_limit]))
+      (num_voices_in_use
+         int
+         (read_only TRUE))
+      (peak_voice_usage
+         int
+         (read_only TRUE))))
+(MultiPointSound
+   (description
+      "Multi-Point Sound")
+   (category Sound)
+   (allowed_dirs Scene UIScreen Entity)
+   (superclasses Sound)
+   (converts_to Sound)
+   (ext sound)
+   (editor
+      (num_points
+         int
+         (range 1 99)
+         (alias
+            "Number of Points")
+         (help
+            "How many points make up this multi-point sound object.")
+         (hide propanim flow)
+         (record_all))))
+(MultiPointSoundPoint
+   (description
+      "Multi-Point Sound Point")
+   (category Sound)
+   (allowed_dirs)
+   (ext point)
+   (editor
+      (local_xfm
+         TRANSFORM
+         (alias
+            "Local Transform")
+         (help
+            "Point transform (realtive to the MultiPointSound's main transform)."))))
+(Song
+   (description
+      "Song class")
+   (category Sound)
+   (allowed_dirs Scene UIScreen)
+   (superclasses SoundBase)
+   (ext song)
+   (editor
+      (song_name
+         symbol
+         (list
+            {song_mgr get_song_list TRUE})
+         (no_test)
+         (help
+            "Short name of the song to use"))
+      (segment_name
+         symbol
+         (list
+            {$this get_valid_segment_names})
+         (no_test)
+         (history FALSE)
+         (help
+            "Segment of the song currently playing"))
+      (segment_type
+         symbol
+         (read_only TRUE)
+         (help
+            "Type of the current segment"))
+      (next_segment
+         symbol
+         (list
+            {$this get_valid_segment_names})
+         (no_test)
+         (history FALSE)
+         (help
+            "Segment of the song currently playing"))
+      (seconds
+         float
+         (alias Position)
+         (no_test)
+         (history FALSE)
+         (group Time)
+         (hide propedit)
+         (help
+            "position of playback in seconds"))
+      (beat_number
+         float
+         (no_test)
+         (read_only TRUE)
+         (group Time)
+         (hide propedit))
+      (segment_time
+         SONG_POS
+         (group Time))
+      (play_time
+         SONG_POS
+         (group Time))
+      (play_time_history
+         BEAT_SOURCE_RANGE_HISTORY
+         (group Time)
+         (tab debug))
+      (segments
+         (array SONG_SEGMENT)
+         (read_only TRUE)
+         (tab debug)))
+   (events_in
+      (set_segment_name
+         (editor
+            (segment_name
+               symbol
+               (list
+                  {[target]
+                     get_valid_segment_names}))))
+      (set_next_segment
+         (editor
+            (segment_name
+               symbol
+               (list
+                  {[target]
+                     get_valid_segment_names})))))
+   (events_out
+      (music_sync_segment_name
+         (editor
+            (segment_name
+               symbol
+               (list
+                  {$this get_valid_segment_names}))))
+      (on_seek)))
+(Sound
+   (description
+      "Sound class")
+   (category Sound)
+   (allowed_dirs Scene UIScreen Entity)
+   (superclasses Trans SoundBase)
+   (converts_to MultiPointSound)
+   (ext sound)
+   (editor
+      (soundbank
+         symbol
+         (no_test)
+         (list
+            {get_wwise_soundbank_names})
+         (help
+            "Wwise bank file with sound waveform data"))
+      (play_event
+         symbol
+         (no_test)
+         (list
+            {$this get_valid_event_names})
+         (help
+            "Wwise event used to start playback"))
+      (play_on_enter
+         bool
+         (help
+            "Select this if the sound should start playback when the scene is entered."))
+      (current_music_segment
+         symbol
+         (read_only TRUE)
+         (no_test)
+         (help
+            "Name of the currently playing music segment"))
+      (current_secs
+         float
+         (alias Position)
+         (group Time)
+         (no_test)
+         (help
+            "Progression through the current music segment")
+         (hide propedit))
+      (duration_secs
+         float
+         (group Time)
+         (read_only TRUE)
+         (no_test)
+         (help
+            "The duration of the current music segment")))
+   (events_out
+      (sound_completed
+         (help
+            "Sound is done."))))
+(SoundBase
+   (description
+      "Shared base of Sound and Song")
+   (category Sound)
+   (superclasses BeatSource)
+   (editor
+      (timeline
+         int
+         (list TASK_UNITS)
+         (group Time)
+         (help
+            "Timeline to play and pause with.")
+         (no_test copy serialize))
+      (is_beat_provider
+         bool
+         (read_only TRUE)
+         (group Time)
+         (no_test)
+         (history FALSE)
+         (help
+            "Is this sound the global beat provider?")))
+   (events_in
+      (set_as_beat_provider
+         (no_test)))
+   (events_out
+      (stopped
+         (help
+            "Sound was stopped"))
+      (music_sync_entry
+         (help
+            "entered music segment due to transition or loop"))
+      (music_sync_exit
+         (help
+            "exited music segment due to transition or loop"))
+      (music_sync_cue
+         (editor
+            (cue_name symbol))
+         (help
+            "music system reached a named cue"))
+      (music_sync_segment_name
+         (editor
+            (music_sync_segment_name symbol))
+         (help
+            "music system transitioned"))))
+(SoundFile
+   (description
+      "Sound file player")
+   (category Sound)
+   (superclasses Anim)
+   (allowed_dirs)
+   (hide_from_editor FALSE)
+   (ext sndfile)
+   (editor
+      (file
+         file
+         (alias File)
+         (ext
+            "WAV files"
+            "wav")
+         (help
+            "Path to the file"))
+      (gain
+         float
+         (alias
+            "Gain (dB)")
+         (slider)
+         (range -96 0)
+         (units
+            "dB")
+         (help
+            "Gain to apply to the file"))
+      (plays_in_center
+         bool
+         (alias
+            "Plays in Center")
+         (hide
+            {!=
+               [num_channels]
+               1})
+         (help
+            "Check to make this sound play in the center channel."))
+      (pan_right
+         float
+         (slider)
+         (alias
+            "Pan Right (%)")
+         (range -100 100)
+         (hide
+            {!=
+               [num_channels]
+               1})
+         (read_only
+            [plays_in_center])
+         (help
+            "Percentage of hard right pan. Left=-100%. Center=0%. Right=100%."))
+      (playback_rate
+         float
+         (slider)
+         (range 0.25 4.0)
+         (interpolator
+            (exp 0.25 4.0 0 1 2.323))
+         (no_test)
+         (hide propanim))
+      (play
+         script
+         (script
+            {$this play})
+         (no_test)
+         (help
+            "Plays the file")
+         (history FALSE))
+      (pause
+         script
+         (script
+            {$this pause})
+         (no_test)
+         (help
+            "Pauses the file")
+         (history FALSE))
+      (stop
+         script
+         (script
+            {$this stop})
+         (no_test)
+         (help
+            "Stops the file")
+         (history FALSE))
+      (transport_state
+         symbol
+         (alias State)
+         (list TRANSPORT_STATES)
+         (read_only TRUE)
+         (help
+            "indicates playing, paused, or stopped status"))
+      (elapsed_time
+         float
+         (alias Position)
+         (read_only
+            {!
+               [can_set_position]})
+         (help
+            "position of playback in seconds"))
+      (total_time
+         float
+         (alias Length)
+         (read_only TRUE)
+         (help
+            "total length in seconds"))
+      (sample_rate
+         int
+         (alias
+            "Sample Rate (Hz)")
+         (read_only TRUE)
+         (help
+            "sample frames per second"))
+      (bit_depth
+         int
+         (alias
+            "Bit Depth")
+         (read_only TRUE)
+         (help
+            "bits per sample"))
+      (num_channels
+         int
+         (alias
+            "Channels")
+         (read_only TRUE)
+         (help
+            "bits per sample"))
+      (can_set_position
+         bool
+         (hide TRUE)
+         (read_only TRUE)))
+   (events_in
+      (play
+         (no_test)
+         (help
+            "play the file"))
+      (stop
+         (no_test)
+         (help
+            "stop the file"))))
+(WwiseBank
+   (description
+      "Wwise sound bank.  Loads events to be posted through Flow.")
+   (category Sound)
+   (ext wbnk)
+   (allowed_dirs)
+   (hide_from_editor FALSE))
+(TinySequencer
+   (description
+      "A tiny programmable step sequencer that controls a FusionSampler in time with the BeatProvider.")
+   (category Sound)
+   (user_creatable TRUE)
+   (allowed_dirs Scene Entity UIScreen)
+   (hide_from_editor FALSE)
+   (ext seq)
+   (editor
+      (ticks_per_step
+         float
+         (no_test)
+         (range 60 1920))
+      (duty_cycle
+         float
+         (slider)
+         (no_test)
+         (range 0.1 0.9))
+      (is_playing
+         bool
+         (read_only TRUE))
+      (tracks
+         (array
+            (struct
+               (channel
+                  object
+                  (class FusionChannel)
+                  (help
+                     "FusionChannel to use as note-on target"))
+               (staccato_mode
+                  bool
+                  (help
+                     "staccacto mode means note-offs will occur between steps. legato mode means note-offs occur when velocity is zero."))
+               (notes
+                  (array
+                     (struct
+                        (note
+                           int
+                           (range 0 127)
+                           (units
+                              {midi_note_to_text
+                                 {$this get $editor_prop_path}}))
+                        (velocity
+                           int
+                           (slider)
+                           (range 0 127))
+                        (status_display
+                           symbol
+                           (read_only TRUE)
+                           (hide TRUE)))
+                     (editor_type vector)
+                     (header
+                        {sprint
+                           {'+'
+                              {elem $editor_prop_path 3}
+                              1}
+                           " "
+                           {$this
+                              get
+                              {flatten $editor_prop_path status_display}}}))
+                  (fixed_size
+                     [is_playing]))))
+         (fixed_size
+            [is_playing])))
+   (events_in)
+   (events_out))
+(WwiseGlobalData
+   (description
+      "Object that manages Wwise global states and global game parameters")
+   (category Sound)
+   (ext wglobal)
+   (hide_from_editor TRUE)
+   (allowed_dirs)
+   (editor))
+#define INFO_COMMANDS
+((("show"
+         (help
+            "show the debug info overlay"))
+      ("hide"
+         (help
+            "hide the debug info overlay"))
+      ("reset"
+         (help
+            "reset the peaks on the debug info overlay"))))
+(AudioMgr
+   (description
+      "A global object that allows the playing of dialogue and Wwise events")
+   (category Sound)
+   (user_creatable FALSE)
+   (allowed_dirs)
+   (functest singleton no_test)
+   (editor
+      (soundbanks_path
+         string
+         (read_only TRUE))
+      (fusion_voice_pool_size
+         int
+         (hide propanim)))
+   (events_in
+      (post_dialogue_event
+         (menu_description
+            "Add Dialogue Events")
+         (editor
+            (source_object
+               object
+               (dir
+                  {if_else
+                     {exists forge}
+                     {forge get edit_focus_dir}
+                     ''})
+               (components
+                  (WwiseComponent))
+               (help
+                  "object generating the dialogue event"))
+            (event_name
+               symbol
+               (list
+                  {[target]
+                     get_dialogue_events
+                     [parameters source_object]})
+               (help
+                  "name of dialogue event")))
+         (help
+            "post a dialogue event"))
+      (post_event
+         (menu_description
+            "Add Audio Events")
+         (editor
+            (source_object
+               object
+               (dir
+                  {if_else
+                     {exists forge}
+                     {forge get edit_focus_dir}
+                     ''})
+               (components
+                  (WwiseComponent))
+               (help
+                  "object generating the event"))
+            (event_name
+               symbol
+               (list
+                  {[target]
+                     get_events
+                     [parameters source_object]})
+               (help
+                  "name of event")))
+         (help
+            "post an audio event"))
+      (info
+         (editor
+            (command
+               symbol
+               (list INFO_COMMANDS)))
+         (help
+            "show/hide/reset the debug info overlay"))
+      (help))
+   (events_out
+      (dialogue_event
+         (editor
+            (event_name
+               symbol
+               (help
+                  "The name of the event"))
+            (character_name
+               string
+               (help
+                  "The name of the character in this event"))
+            (subtitle
+               symbol
+               (help
+                  "The subtitle associated with this event"))
+            (time_ms
+               int
+               (help
+                  "time of this event"))
+            (result
+               int
+               (help
+                  "The error value for this event (0 = success)"))))
+      (dialogue_event_ended
+         (editor
+            (event_name
+               symbol
+               (help
+                  "The name of the event"))
+            (character_name
+               string
+               (help
+                  "The name of the character in this event"))
+            (subtitle
+               symbol
+               (help
+                  "The subtitle associated with this event"))))))

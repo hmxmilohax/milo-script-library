@@ -1,0 +1,408 @@
+(UINavCom
+   (description
+      "Manages navigation among UI screens and lists and owns the focused object.")
+   (required_classes UIScreen UIList)
+   (user_can_add FALSE)
+   (alias
+      "UI Navigation")
+   (editor
+      (nav_controller
+         object
+         (class UINavController)
+         (help
+            "UINavController to dictate how the player controls this nav"))
+      (focus
+         object
+         (class Trans)
+         (components
+            (UIFocusableCom))
+         (help
+            "Object with focus")
+         (hide
+            {$this is_a UIList})
+         (no_test))
+      (direction
+         int
+         (list UINAVDIRECTION_ENUM)
+         (help
+            "Direction the player navigates through widgets when using the joypad"))
+      (wrap
+         bool
+         (help
+            "Can the player get to the right-most widget if they press left while on the left-most widget, etc.?"))))
+(UIFocusableCom
+   (description
+      "Makes a UI object navigable.")
+   (required_classes UILabel UIPicture UIList Entity)
+   (user_can_add TRUE)
+   (alias
+      "UI Focusable")
+   (editor
+      (state
+         int
+         (list UISTATE_ENUM)
+         (help
+            "State of the UI widget (player 0)"))
+      (state1
+         int
+         (list UISTATE_ENUM)
+         (help
+            "State of the UI widget (player 1)"))
+      (hover_value
+         float
+         (range 0.0 1.0)
+         (help
+            "An indication of how close this widget is to being hovered over (player 0)"))
+      (hover_value1
+         float
+         (range 0.0 1.0)
+         (help
+            "An indication of how close this widget is to being hovered over (player 1)"))
+      (hover_time_ms
+         float
+         (range 0.0 10000.0)
+         (help
+            "Time in ms before a hand cursor must be over a widget before hover_value goes to 1.")
+         (disk_prop))
+      (selection_value
+         float
+         (range 0.0 1.0)
+         (help
+            "An indication of how close this widget is to being selected"))
+      (select_flow
+         object
+         (class Flow)
+         (disk_prop)
+         (help
+            "This flow will be run when the object is selected, and screens will not move on until it's done."))
+      (select_cmd
+         symbol
+         (list
+            {find_data $syscfg ui select_cmd_list})
+         (help
+            "An optional symbol to help UI logic know what button was pushed and what should happen in response."))
+      (widget_override
+         object
+         (class Object)
+         (help
+            "An optional object whic   h is sent in the Select message as the source of the select, not serialized.")
+         (no_test copy serialize))
+      (focus_center
+         object
+         (class Trans)
+         (help
+            "Object to use as a trans override for navigation")
+         (disk_prop))
+      (force_joypad_nav_left
+         (indent
+            (override_nav_left
+               bool
+               (help
+                  "Override left navigation?")
+               (instance_prop))
+            (nav_left_obj
+               object
+               (class Trans)
+               (help
+                  "Object to focus on if you press left from here")
+               (instance_prop)
+               (components
+                  (UIFocusableCom))
+               (hide
+                  {!
+                     [override_nav_left]})))
+         (editor_type vector))
+      (force_joypad_nav_right
+         (indent
+            (override_nav_right
+               bool
+               (help
+                  "Override right navigation?")
+               (instance_prop))
+            (nav_right_obj
+               object
+               (class Trans)
+               (help
+                  "Object to focus on if you press right from here")
+               (instance_prop)
+               (components
+                  (UIFocusableCom))
+               (hide
+                  {!
+                     [override_nav_right]})))
+         (editor_type vector))
+      (force_joypad_nav_up
+         (indent
+            (override_nav_up
+               bool
+               (help
+                  "Override up navigation?")
+               (instance_prop))
+            (nav_up_obj
+               object
+               (class Trans)
+               (help
+                  "Object to focus on if you press up from here")
+               (instance_prop)
+               (components
+                  (UIFocusableCom))
+               (hide
+                  {!
+                     [override_nav_up]})))
+         (editor_type vector))
+      (force_joypad_nav_down
+         (indent
+            (override_nav_down
+               bool
+               (help
+                  "Override down navigation?")
+               (instance_prop))
+            (nav_down_obj
+               object
+               (class Trans)
+               (help
+                  "Object to focus on if you press down from here")
+               (instance_prop)
+               (components
+                  (UIFocusableCom))
+               (hide
+                  {!
+                     [override_nav_down]})))
+         (editor_type vector))))
+(UITransCom
+   (description
+      "Allows a UI object to specify entering and exiting flows for UI transition.")
+   (required_classes UIScreen UILabel UIPicture UIList Entity)
+   (user_can_add TRUE)
+   (alias
+      "UI Transition")
+   (editor
+      (entering_flow
+         object
+         (class Flow)
+         (help
+            "This flow will be run when the UI object is entered and it will not finish entering until it terminates (so it MUST terminate).")
+         (disk_prop))
+      (exiting_flow
+         object
+         (class Flow)
+         (help
+            "This flow will be run when the UI object is exited and it will not finish exiting until it terminates (so it MUST terminate).")
+         (disk_prop))))
+(UIDrawHelperCom
+   (description
+      "UI component to harvest 2D and 3D drawables.")
+   (required_classes UIScreen Entity)
+   (user_can_add FALSE)
+   (superclasses DrawHelperCom)
+   (group Render)
+   (editor
+      (debug_draw_order
+         (array
+            (struct
+               (draw
+                  object
+                  (class Draw))
+               (layer_name string)
+               (is_2d bool)
+               (no_bound bool))
+            (header
+               {{$this
+                     get
+                     {editor_prop_path_child draw}}
+                  name})
+            (summary
+               {do
+                  ($is_2d
+                     {if_else
+                        {$this
+                           get
+                           {editor_prop_path_child is_2d}}
+                        " (2D)"
+                        ""})
+                  ($is_no_bound
+                     {if_else
+                        {$this
+                           get
+                           {editor_prop_path_child no_bound}}
+                        " (no bound)"
+                        ""})
+                  {sprintf
+                     "layer %s%s%s"
+                     {$this
+                        get
+                        {editor_prop_path_child layer_name}}
+                     $is_2d
+                     $is_no_bound}}))
+         (alias
+            "Most Recent Draw Order")
+         (read_only TRUE)
+         (tab debug))))
+(UIKinectCursorCom
+   (description
+      "Put on an entity to have it act as a Durango Kinect Cursor.")
+   (required_classes Entity)
+   (user_can_add TRUE)
+   (alias
+      "UI Kinect Cursor")
+   (editor
+      (player_index
+         int
+         (help
+            "Index of player controlling this cursor. [0, n).")
+         (instance_prop))
+      (right_hand
+         bool
+         (help
+            "True if this cursor is on the right hand, false if on the left.")
+         (instance_prop))
+      (press_extent
+         float
+         (help
+            "How far the player is pressing this cursor. [0, 1].")
+         (read_only TRUE))
+      (gripping
+         bool
+         (help
+            "Is the player currently gripping with this cursor?")
+         (read_only TRUE))
+      (enabled
+         bool
+         (help
+            "Is this cursor currently enabled?")
+         (read_only TRUE))
+      (is_visible
+         bool
+         (help
+            "Is this cursor currently visible?")
+         (read_only TRUE))))
+(UIGestureRecognizerCom
+   (description
+      "Put on an entity to allow it to react to Durango NUI gestures (push to select, hold, etc).")
+   (required_classes Entity)
+   (user_can_add TRUE)
+   (alias
+      "UI Kinect Button")
+   (editor
+      (top_left_trans
+         object
+         (class Trans)
+         (disk_prop)
+         (help
+            "Trans at the top left corner"))
+      (bottom_right_trans
+         object
+         (class Trans)
+         (disk_prop)
+         (help
+            "Trans at the bottom right corner"))
+      (magnet_trans
+         object
+         (class Trans)
+         (disk_prop)
+         (help
+            "Trans at the center, used for magnetization")))
+   (events_out
+      (on_button_tap)
+      (on_fully_pressed)))
+(UIScrollingContainerCom
+   (description
+      "Holds an array of entities that scroll together in response to Kinect scrolling gestures. Allows the group to use Kinect-style bookmarks for scrolling.")
+   (required_classes Entity)
+   (user_can_add TRUE)
+   (alias
+      "UI Kinect Scrolling Container")
+   (editor
+      (entities
+         (array
+            object
+            (class Entity))
+         (disk_prop)
+         (help
+            "Array of entities to display in this scrolling container."))
+      (snap_to_center
+         bool
+         (instance_prop)
+         (help
+            "If set, we line each entity up to be a full screen's width and snap to keep them centered."))
+      (spacing
+         float
+         (instance_prop)
+         (help
+            "Horizontal spacing between elements in local space."))
+      (smoothing_constant
+         float
+         (instance_prop)
+         (help
+            "How smoothed scrolling is. Higher is faster, lower is slower."))
+      (manipulation_offset
+         float
+         (instance_prop)
+         (help
+            "Tweaky number to make the scroll manipulation feel better on the title screen."))
+      (current_entity_index
+         int
+         (read_only TRUE)
+         (help
+            "The index of the current entity. This is the last entity which starts left of screen center.")
+         (no_test))
+      (can_scroll_right
+         bool
+         (read_only TRUE)
+         (help
+            "Can this scrolling container currently scroll right?")
+         (no_test))
+      (can_scroll_left
+         bool
+         (read_only TRUE)
+         (help
+            "Can this scrolling container currently scroll left?")
+         (no_test))
+      (velocity
+         float
+         (read_only TRUE)
+         (help
+            "The current velocity of the scrolling container, in pixels/frame.")
+         (no_test)))
+   (events_in
+      (scroll_right)
+      (scroll_left)
+      (scroll_to_entity_index
+         (editor
+            (index
+               int
+               (help
+                  "Index to scroll to"))
+            (immediately
+               bool
+               (help
+                  "Do it immediately?"))))))
+(UIBookmarkCom
+   (description
+      "Turns a button into a bookmark into a UI Kinect Scrolling Container.")
+   (required_classes Entity)
+   (user_can_add TRUE)
+   (alias
+      "UI Kinect Bookmark")
+   (editor
+      (scrolling_container
+         object
+         (class Entity)
+         (instance_prop)
+         (help
+            "The scrolling container this is a bookmark into."))
+      (bookmark_index
+         int
+         (instance_prop)
+         (help
+            "The index of the entity in the UI Kinect Scrolling Container this is a bookmark to.")
+         (hide
+            {!
+               {$this
+                  get
+                  {editor_prop_path_sibling scrolling_container}}}))
+      (is_current_entity
+         bool
+         (help
+            "Is the scrolling container currently showing our entity?")
+         (no_test))))
