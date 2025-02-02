@@ -1,20 +1,16 @@
-#define INITIAL_RESULTS_DURATION
-(9)
-#define PHOTO_DISPLAY_DURATION
-(3)
-#define CRASH_RECOVERY_DURATION
-(10)
-{func
-   get_playlist_continue_screen
-   {if_else
-      {meta_performer is_last_song}
+#define INITIAL_RESULTS_DURATION (9)
+#define PHOTO_DISPLAY_DURATION (3)
+#define CRASH_RECOVERY_DURATION (10)
+{func get_playlist_continue_screen
+   {if_else {meta_performer is_last_song}
       perform_continue_screen
-      playlist_perform_continue_screen}}
-{func
-   has_endgame_popups
-   {acc_mgr has_new_awards}}
-{func
-   enable_photos
+      playlist_perform_continue_screen
+   }
+}
+{func has_endgame_popups
+   {acc_mgr has_new_awards}
+}
+{func enable_photos
    {set $showphotos 0}
    {unless
       {'||'
@@ -23,23 +19,22 @@
          {gamemode in_mode holla_back}
          {&&
             {gamemode in_mode playlist_perform}
-            {is_active_profile_in_fitness_mode}}}
+            {is_active_profile_in_fitness_mode}
+         }
+      }
       {do
-         {if
-            {&&
-               {!
-                  {profile_mgr get_disable_photos}}
-               {>
-                  {gesture_mgr num_snapshots}
-                  0}}
+         {if {&& {! {profile_mgr get_disable_photos}} {> {gesture_mgr num_snapshots} 0}}
             {do
-               {set $showphotos 1}}}}}
-   $showphotos}
-{new
-   ChallengeResultPanel
+               {set $showphotos 1}
+            }
+         }
+      }
+   }
+   $showphotos
+}
+{new ChallengeResultPanel
    challenge_result_panel
-   (file
-      "../challenges/challenges_result.milo")
+   (file "../challenges/challenges_result.milo")
    (focus right_hand.hnl)
    (show_hand_help FALSE)
    (use_gamertag_bg TRUE)
@@ -47,116 +42,91 @@
    (player_index 0)
    (song_name '')
    (enter
-      {set
-         [song_name]
-         {meta_performer get_song}}
+      {set [song_name] {meta_performer get_song}}
       {$this refresh_album_art}
-      {set
-         [primary_player_index]
-         {hamprovider get primary_challenge_player}}
-      {set
-         [player_index]
-         [primary_player_index]}
-      {$this
-         setup_screen
-         [player_index]})
+      {set [primary_player_index] {hamprovider get primary_challenge_player}}
+      {set [player_index] [primary_player_index]}
+      {$this setup_screen [player_index]}
+   )
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (continue
-            {set
-               [player_index]
-               {-
-                  1
-                  [player_index]}}
+            {set [player_index] {- 1 [player_index]}}
             {if_else
                {&&
-                  {!=
-                     [player_index]
-                     [primary_player_index]}
+                  {!= [player_index] [primary_player_index]}
                   {{gamedata
                         getp
                         [player_index]
-                        provider}
-                     get
-                     has_valid_challenge_data}
+                        provider} get
+                     has_valid_challenge_data
+                  }
                   {==
                      {{gamedata
                            getp
                            [player_index]
-                           provider}
-                        get
-                        join_state}
-                     kJoinPlaying}}
-               {$this
-                  setup_screen
-                  [player_index]}
+                           provider} get
+                        join_state
+                     }
+                     kJoinPlaying
+                  }
+               }
+               {$this setup_screen [player_index]}
                {do
                   {challenges upload_flaunt_for_all}
-                  {ui goto_screen perform_final_results_screen}}})})
+                  {ui goto_screen perform_final_results_screen}
+               }
+            }
+         )
+      }
+   )
    (setup_screen
       ($idx)
       {do
-         ($player_provider
-            {gamedata getp $idx provider})
-         ($score
-            {$player_provider get score})
-         ($target_score
-            {$player_provider get challenge_mission_score})
+         ($player_provider {gamedata getp $idx provider})
+         ($score {$player_provider get score})
+         ($target_score {$player_provider get challenge_mission_score})
          {update_song_name song_name.lbl}
-         {if
-            {> $score $target_score}
+         {if {> $score $target_score}
             {do
-               {if
-                  {profile_mgr has_active_profile}
-                  {acc_mgr
-                     earn_accomplishment
+               {if {profile_mgr has_active_profile}
+                  {acc_mgr earn_accomplishment
                      {profile_mgr get_active_profile}
-                     acc_challenge_win}}}}
+                     acc_challenge_win
+                  }
+               }
+            }
+         }
          {challengee.lst allow_highlight FALSE}
          {challengee.lst set_selected 0 0}
-         {$this update_list $idx}})
+         {$this update_list $idx}
+      }
+   )
    (refresh_album_art
       {do
-         ($pic
-            {album_art find album_art.pic})
-         ($default_tex_file
-            {{album_art find album_generic.tex}
-               get
-               file_path})
+         ($pic {album_art find album_art.pic})
+         ($default_tex_file {{album_art find album_generic.tex} get file_path})
          {$pic set tex_file $default_tex_file}
-         {if
-            {!=
-               [song_name]
-               ''}
+         {if {!= [song_name] ''}
             {do
-               ($content_name
-                  {song_mgr
-                     content_name_from_sym
-                     [song_name]})
-               {if
-                  {'||'
-                     {==
-                        $content_name
-                        ""}
-                     {content_mgr is_mounted $content_name}}
-                  {$pic
-                     set
-                     tex_file
-                     {song_mgr
-                        album_art_path
-                        [song_name]}}}}}})}
-{new
-   HamScreen
+               ($content_name {song_mgr content_name_from_sym [song_name]})
+               {if {'||' {== $content_name ""} {content_mgr is_mounted $content_name}}
+                  {$pic set tex_file {song_mgr album_art_path [song_name]}}
+               }
+            }
+         }
+      }
+   )
+}
+{new HamScreen
    challenge_perform_result_screen
    (panels meta_game background_confirmation_panel challenge_result_panel)
    (focus challenge_result_panel)
-   (enter)}
-{new
-   HamPanel
+   (enter)
+}
+{new HamPanel
    perform_endgame_panel
-   (file
-      "perform_endgame.milo")
+   (file "perform_endgame.milo")
    (helpbar_confirm_label continue)
    (helpbar_allow_controller FALSE)
    (show_hand_help FALSE)
@@ -180,259 +150,206 @@
       {$this set is_finished FALSE}
       {$this set is_results_timed_out FALSE}
       {$this set is_photos_timed_out FALSE}
-      {$this set continue_to_next_screen FALSE})
+      {$this set continue_to_next_screen FALSE}
+   )
    (finish_load)
    (enter
       {hamprovider set ui_nav_mode results}
       ENDGAME_PANEL_COMMON_ENTER
       {meta_performer add_sink $this}
-      {mode.lbl
-         set
-         text_token
-         {sprint
-            {gamemode get gameplay_mode}
-            "_title"}}
+      {mode.lbl set text_token {sprint {gamemode get gameplay_mode} "_title"}}
       {challenges clear_flaunt_flag}
       {update_song_name song.lbl}
-      {$this
-         set
-         song_name
-         {meta_performer get_song}}
+      {$this set song_name {meta_performer get_song}}
       {$this refresh_album_art}
       {do
-         ($is_failure
-            {<
-               {$this get_num_stars}
-               3})
-         {results_provider.ep
-            set
+         ($is_failure {< {$this get_num_stars} 3})
+         {results_provider.ep set
             score
-            {'+'
-               {player_provider_1 get score}
-               {player_provider_2 get score}}}
-         {results_provider.ep
-            set
-            stars
-            {$this get_num_stars}}
-         {results_provider.ep
-            set
+            {'+' {player_provider_1 get score} {player_provider_2 get score}}
+         }
+         {results_provider.ep set stars {$this get_num_stars}}
+         {results_provider.ep set
             high_score
-            {&&
-               {meta_performer got_new_high_score}
-               {! $is_failure}}}
-         {results_provider.ep
-            set
+            {&& {meta_performer got_new_high_score} {! $is_failure}}
+         }
+         {results_provider.ep set
             best_stars
-            {&&
-               {meta_performer got_new_best_stars}
-               {! $is_failure}}}
-         {results_provider.ep
-            set
+            {&& {meta_performer got_new_best_stars} {! $is_failure}}
+         }
+         {results_provider.ep set
             no_flashcards
-            {meta_performer completed_song_with_no_flashcards}}
-         {results_provider.ep
-            set
+            {meta_performer completed_song_with_no_flashcards}
+         }
+         {results_provider.ep set
             unlocked_medium
-            {meta_performer unlocked_medium_difficulty}}
-         {results_provider.ep
-            set
+            {meta_performer unlocked_medium_difficulty}
+         }
+         {results_provider.ep set
             unlocked_expert
-            {meta_performer unlocked_expert_difficulty}}
-         {results_provider.ep
-            set
+            {meta_performer unlocked_expert_difficulty}
+         }
+         {results_provider.ep set
             unlocked_no_flashcards
-            {meta_performer unlocked_no_flashcards}}
-         {results_provider.ep
-            set
+            {meta_performer unlocked_no_flashcards}
+         }
+         {results_provider.ep set
             player1_percent_complete
-            {meta_performer get_moves_passed 0}}
-         {results_provider.ep
-            set
+            {meta_performer get_moves_passed 0}
+         }
+         {results_provider.ep set
             player2_percent_complete
-            {meta_performer get_moves_passed 1}}}
-      {set
-         $cumulative_score
+            {meta_performer get_moves_passed 1}
+         }
+      }
+      {set $cumulative_score
          {'+'
             {player_provider_1 get cumulative_score}
-            {player_provider_2 get cumulative_score}}}
+            {player_provider_2 get cumulative_score}
+         }
+      }
       {results_provider.ep set cumulative_score $cumulative_score}
       {if_else
          {'||'
             {gamemode in_mode playlist_perform}
-            {gamemode in_mode infinite_playlist_perform}}
+            {gamemode in_mode infinite_playlist_perform}
+         }
          {do
-            {playlist_time.lbl
-               set_token_fmt
+            {playlist_time.lbl set_token_fmt
                playlist_elapsed_time
-               {meta_performer get_playlist_elapsed_time_string}}}
-         {playlist_time.lbl set text_token ''}}
-      {if
-         {gamemode in_mode campaign}
+               {meta_performer get_playlist_elapsed_time_string}
+            }
+         }
+         {playlist_time.lbl set text_token ''}
+      }
+      {if {gamemode in_mode campaign}
          {trigger_camp_vo_shell_results_screen}
-         {if
-            {==
-               {meta_performer get_era}
-               era_tan_battle}
-            {tan_battle_shell.snd play}}}
+         {if {== {meta_performer get_era} era_tan_battle}
+            {tan_battle_shell.snd play}
+         }
+      }
       {print
          "perform_endgame_panel: percent_complete: P1="
          {results_provider.ep get player1_percent_complete}
          ", P2="
          {results_provider.ep get player2_percent_complete}
-         "\n"}
-      {print
-         "gameplay mode = "
-         {gamemode get_mode}
-         "\n"}
+         "\n"
+      }
+      {print "gameplay mode = " {gamemode get_mode} "\n"}
       {results.flow activate}
       {$this set is_running TRUE}
       {$this set is_photo_check_complete FALSE}
-      {if_else
-         {&&
-            {gamemode in_mode playlist_perform}
-            {!
-               {meta_performer is_last_song}}}
+      {if_else {&& {gamemode in_mode playlist_perform} {! {meta_performer is_last_song}}}
          {do
             {$this set continue_to_next_screen TRUE}
-            {$this set is_finished TRUE}}
+            {$this set is_finished TRUE}
+         }
          {do
             {$this set continue_to_next_screen FALSE}
-            {$this set is_finished FALSE}}}
+            {$this set is_finished FALSE}
+         }
+      }
       {$this set is_awards_setup_called FALSE}
-      {set
-         [debug_print_timer]
-         1.0}
-      {set
-         [crash_recovery_timer]
-         CRASH_RECOVERY_DURATION}
+      {set [debug_print_timer] 1.0}
+      {set [crash_recovery_timer] CRASH_RECOVERY_DURATION}
       {saveload_mgr autosave}
       {$this set is_saving TRUE}
-      {$this
-         set
-         use_continue
-         {{ui current_screen}
-            get
-            use_continue_panel}}
-      {if
-         [use_continue]
-         {perform_continue_panel disable}}
+      {$this set use_continue {{ui current_screen} get use_continue_panel}}
+      {if [use_continue]
+         {perform_continue_panel disable}
+      }
       {$this set is_results_timed_out FALSE}
       {$this set is_photos_timed_out FALSE}
-      {script_task
-         kTaskUISeconds
+      {script_task kTaskUISeconds
          (delay INITIAL_RESULTS_DURATION)
-         (script
-            {perform_endgame_panel set is_results_timed_out TRUE})}
-      {if
-         {gamemode is_infinite}
+         (script {perform_endgame_panel set is_results_timed_out TRUE})
+      }
+      {if {gamemode is_infinite}
          {cumulative1.grp set_showing TRUE}
          {cumulative2.grp set_showing TRUE}
-         {cumulative3.grp set_showing TRUE}}
+         {cumulative3.grp set_showing TRUE}
+      }
       {if
          {&&
             {hamprovider get is_in_party_mode}
-            {!
-               {hamprovider get is_in_pre_party_mode}}}
+            {! {hamprovider get is_in_pre_party_mode}}
+         }
          {partymode_mgr update_scores}
-         {if
-            {partymode_mgr is_showdown}
+         {if {partymode_mgr is_showdown}
             {if
                {&&
-                  {==
-                     {partymode_mgr num_enrolled_team_1}
-                     1}
-                  {==
-                     {partymode_mgr num_enrolled_team_2}
-                     1}}
-               {acc_mgr earn_accomplishment_for_all acc_1v1_throwdown}}
-            {if
-               {partymode_mgr left_team_max_wins}
-               {if_else
-                  {==
-                     {player_provider_1 get side}
-                     kSkeletonLeft}
+                  {== {partymode_mgr num_enrolled_team_1} 1}
+                  {== {partymode_mgr num_enrolled_team_2} 1}
+               }
+               {acc_mgr earn_accomplishment_for_all acc_1v1_throwdown}
+            }
+            {if {partymode_mgr left_team_max_wins}
+               {if_else {== {player_provider_1 get side} kSkeletonLeft}
                   {acc_mgr earn_accomplishment_for_player 0 acc_max_score_hit}
-                  {acc_mgr earn_accomplishment_for_player 1 acc_max_score_hit}}}
-            {if
-               {partymode_mgr right_team_max_wins}
-               {if_else
-                  {==
-                     {player_provider_1 get side}
-                     kSkeletonRight}
+                  {acc_mgr earn_accomplishment_for_player 1 acc_max_score_hit}
+               }
+            }
+            {if {partymode_mgr right_team_max_wins}
+               {if_else {== {player_provider_1 get side} kSkeletonRight}
                   {acc_mgr earn_accomplishment_for_player 0 acc_max_score_hit}
-                  {acc_mgr earn_accomplishment_for_player 1 acc_max_score_hit}}}}})
+                  {acc_mgr earn_accomplishment_for_player 1 acc_max_score_hit}
+               }
+            }
+         }
+      }
+   )
    (is_xp_overlay_done
       {'||'
-         {==
-            {xp_overlay_panel get current_rank_mgr}
-            0}
+         {== {xp_overlay_panel get current_rank_mgr} 0}
          {xp_overlay_panel get suppress_display}
-         {xp_overlay_panel is_done}})
+         {xp_overlay_panel is_done}
+      }
+   )
    (poll
-      {if
-         [is_running]
-         {-=
-            [crash_recovery_timer]
-            {taskmgr ui_delta_seconds}}
-         {if
-            {<=
-               [crash_recovery_timer]
-               0}
+      {if [is_running]
+         {-= [crash_recovery_timer] {taskmgr ui_delta_seconds}}
+         {if {<= [crash_recovery_timer] 0}
             {print
                "========> perform_endgame_panel: results.flow still running after "
                CRASH_RECOVERY_DURATION
-               " seconds! Forcing next phase.\n"}}
-         {if
-            {!
-               {results.flow is_running}}
-            {print
-               "========> perform_endgame_panel: results.flow finished.\n"}}
-         {if
-            {'||'
-               {!
-                  {results.flow is_running}}
-               {<=
-                  [crash_recovery_timer]
-                  0}}
+               " seconds! Forcing next phase.\n"
+            }
+         }
+         {if {! {results.flow is_running}}
+            {print "========> perform_endgame_panel: results.flow finished.\n"}
+         }
+         {if {'||' {! {results.flow is_running}} {<= [crash_recovery_timer] 0}}
             {$this set is_running FALSE}
-            {xp_overlay_panel start_display}}}
-      {if
-         [is_saving]
-         {if
-            {saveload_mgr is_idle}
-            {$this set is_saving FALSE}}}
+            {xp_overlay_panel start_display}
+         }
+      }
+      {if [is_saving]
+         {if {saveload_mgr is_idle}
+            {$this set is_saving FALSE}
+         }
+      }
       {if
          {&&
             [is_results_timed_out]
             {$this is_xp_overlay_done}
-            {!
-               [is_photo_check_complete]}}
-         {set
-            [is_photo_check_complete]
-            TRUE}
-         {if_else
-            {enable_photos}
+            {! [is_photo_check_complete]}
+         }
+         {set [is_photo_check_complete] TRUE}
+         {if_else {enable_photos}
             {do
                {$this reveal_photos}
                {$this set is_photos_timed_out FALSE}
-               {script_task
-                  kTaskUISeconds
+               {script_task kTaskUISeconds
                   (delay PHOTO_DISPLAY_DURATION)
-                  (script
-                     {perform_endgame_panel set is_photos_timed_out TRUE})}}
-            {set
-               [is_photos_timed_out]
-               TRUE}}}
-      {-=
-         [debug_print_timer]
-         {taskmgr ui_delta_seconds}}
-      {if
-         {<=
-            [debug_print_timer]
-            0}
-         {set
-            [debug_print_timer]
-            5.0}
+                  (script {perform_endgame_panel set is_photos_timed_out TRUE})
+               }
+            }
+            {set [is_photos_timed_out] TRUE}
+         }
+      }
+      {-= [debug_print_timer] {taskmgr ui_delta_seconds}}
+      {if {<= [debug_print_timer] 0}
+         {set [debug_print_timer] 5.0}
          {print
             "perform_endgame_panel STATUS: [is_saving]="
             [is_saving]
@@ -440,7 +357,8 @@
             [is_running]
             ", {$this is_xp_overlay_done}="
             {$this is_xp_overlay_done}
-            "\n"}
+            "\n"
+         }
          {print
             "                              [is_results_timed_out]="
             [is_results_timed_out]
@@ -448,45 +366,40 @@
             [is_photos_timed_out]
             ", {ui current_screen}="
             {ui current_screen}
-            "\n"}}
-      {if
-         {!
-            [is_finished]}
-         {set
-            $display_end
+            "\n"
+         }
+      }
+      {if {! [is_finished]}
+         {set $display_end
             {&&
-               {!
-                  [is_saving]}
-               {!
-                  [is_running]}
-               {'||'
-                  {xp_overlay_panel get suppress_display}
-                  {$this is_xp_overlay_done}}
+               {! [is_saving]}
+               {! [is_running]}
+               {'||' {xp_overlay_panel get suppress_display} {$this is_xp_overlay_done}}
                [is_results_timed_out]
                [is_photos_timed_out]
-               {!=
-                  {ui current_screen}
-                  xp_reward_screen_for_perform_endgame_screen}
-               {saveload_mgr is_idle}}}
-         {if
-            $display_end
+               {!= {ui current_screen} xp_reward_screen_for_perform_endgame_screen}
+               {saveload_mgr is_idle}
+            }
+         }
+         {if $display_end
             {$this set is_finished TRUE}
-            {if_else
-               {{ui current_screen}
-                  get
-                  use_continue_panel}
+            {if_else {{ui current_screen} get use_continue_panel}
                {perform_continue_panel enable}
-               {$this set continue_to_next_screen TRUE}}}}
-      {if
-         [continue_to_next_screen]
+               {$this set continue_to_next_screen TRUE}
+            }
+         }
+      }
+      {if [continue_to_next_screen]
          {$this set continue_to_next_screen FALSE}
-         {$this continue_next_screen}})
+         {$this continue_next_screen}
+      }
+   )
    (prepare_for_awards_display
-      {if
-         {!
-            [is_awards_setup_called]}
+      {if {! [is_awards_setup_called]}
          {fade_results.flow activate}
-         {$this set is_awards_setup_called TRUE}})
+         {$this set is_awards_setup_called TRUE}
+      }
+   )
    (exit
       {meta_performer remove_sink $this}
       {$this set is_running FALSE}
@@ -496,122 +409,81 @@
       {$this set is_results_timed_out FALSE}
       {$this set is_photos_timed_out FALSE}
       {$this set continue_to_next_screen FALSE}
-      {tan_battle_shell.snd stop})
+      {tan_battle_shell.snd stop}
+   )
    (reveal_photos
-      {set
-         $num_shot
-         {gesture_mgr num_snapshots}}
-      {print
-         "REVEAL PHOTOS : num_shot="
-         $num_shot
-         "\n"}
+      {set $num_shot {gesture_mgr num_snapshots}}
+      {print "REVEAL PHOTOS : num_shot=" $num_shot "\n"}
       {result_photoshare_photo1.mesh set showing TRUE}
       {result_photoshare_photo2.mesh set showing TRUE}
       {result_photoshare_photo3.mesh set showing TRUE}
-      {switch
-         $num_shot
+      {switch $num_shot
          (0
             {result_photoshare_photo1.mesh set showing FALSE}
             {result_photoshare_photo2.mesh set showing FALSE}
-            {result_photoshare_photo3.mesh set showing FALSE})
+            {result_photoshare_photo3.mesh set showing FALSE}
+         )
          (1
-            {result_photoshare_photo1.mat
-               set
-               diffuse_tex
-               {gesture_mgr snapshot_tex 0}}
+            {result_photoshare_photo1.mat set diffuse_tex {gesture_mgr snapshot_tex 0}}
             {result_photoshare_photo2.mesh set showing FALSE}
             {result_photoshare_photo3.mesh set showing FALSE}
-            {reveal_photos.flow activate})
+            {reveal_photos.flow activate}
+         )
          (2
-            {result_photoshare_photo1.mat
-               set
-               diffuse_tex
-               {gesture_mgr snapshot_tex 1}}
-            {result_photoshare_photo2.mat
-               set
-               diffuse_tex
-               {gesture_mgr snapshot_tex 0}}
+            {result_photoshare_photo1.mat set diffuse_tex {gesture_mgr snapshot_tex 1}}
+            {result_photoshare_photo2.mat set diffuse_tex {gesture_mgr snapshot_tex 0}}
             {result_photoshare_photo3.mesh set showing FALSE}
-            {reveal_photos.flow activate})
+            {reveal_photos.flow activate}
+         )
          {do
             {set $index_beg 0}
-            {set
-               $index_mid
-               {int
-                  {floor
-                     {/ $num_shot 2}}}}
-            {set
-               $index_end
-               {- $num_shot 1}}
-            {print
-               "  indices = "
-               $index_beg
-               ", "
-               $index_mid
-               ", "
-               $index_end
-               "\n"}
-            {result_photoshare_photo1.mat
-               set
+            {set $index_mid {int {floor {/ $num_shot 2}}}}
+            {set $index_end {- $num_shot 1}}
+            {print "  indices = " $index_beg ", " $index_mid ", " $index_end "\n"}
+            {result_photoshare_photo1.mat set
                diffuse_tex
-               {gesture_mgr snapshot_tex $index_end}}
-            {result_photoshare_photo2.mat
-               set
+               {gesture_mgr snapshot_tex $index_end}
+            }
+            {result_photoshare_photo2.mat set
                diffuse_tex
-               {gesture_mgr snapshot_tex $index_beg}}
-            {result_photoshare_photo3.mat
-               set
+               {gesture_mgr snapshot_tex $index_beg}
+            }
+            {result_photoshare_photo3.mat set
                diffuse_tex
-               {gesture_mgr snapshot_tex $index_mid}}
-            {reveal_photos.flow activate}}})
-   (get_num_stars
-      {int
-         {game_panel get num_stars}})
+               {gesture_mgr snapshot_tex $index_mid}
+            }
+            {reveal_photos.flow activate}
+         }
+      }
+   )
+   (get_num_stars {int {game_panel get num_stars}})
    (refresh_album_art
       {do
-         ($pic
-            {album_art find album_art.pic})
-         {$pic
-            set
-            tex_file
-            "ui/image/dc_logo_keep.png"}
-         {if
-            {!=
-               [song_name]
-               ''}
-            {print
-               "refresh_album_art: song="
-               [song_name]
-               "\n"}
+         ($pic {album_art find album_art.pic})
+         {$pic set tex_file "ui/image/dc_logo_keep.png"}
+         {if {!= [song_name] ''}
+            {print "refresh_album_art: song=" [song_name] "\n"}
             {do
-               ($content_name
-                  {song_mgr
-                     content_name_from_sym
-                     [song_name]})
-               {if
-                  {'||'
-                     {==
-                        $content_name
-                        ""}
-                     {content_mgr is_mounted $content_name}}
+               ($content_name {song_mgr content_name_from_sym [song_name]})
+               {if {'||' {== $content_name ""} {content_mgr is_mounted $content_name}}
                   {print
                      "                   art ="
-                     {song_mgr
-                        album_art_path
-                        [song_name]}
-                     "\n"}
-                  {$pic
-                     set
-                     tex_file
-                     {song_mgr
-                        album_art_path
-                        [song_name]}}}}}})
+                     {song_mgr album_art_path [song_name]}
+                     "\n"
+                  }
+                  {$pic set tex_file {song_mgr album_art_path [song_name]}}
+               }
+            }
+         }
+      }
+   )
    (continue_next_screen
-      {set
-         $in_fitness_playlist
+      {set $in_fitness_playlist
          {&&
             {gamemode in_mode playlist_perform}
-            {is_active_profile_in_fitness_mode}}}
+            {is_active_profile_in_fitness_mode}
+         }
+      }
       {print
          "continue_next_screen : gamemode="
          {gamemode get_mode}
@@ -625,7 +497,8 @@
          {gamemode in_mode campaign}
          ", {in_mode challenge}="
          {gamemode in_mode challenge}
-         "\n"}
+         "\n"
+      }
       {print
          "                        {in_mode playlist_perform}="
          {gamemode in_mode playlist_perform}
@@ -635,81 +508,79 @@
          $in_fitness_playlist
          ", {meta_performer is_last_song}="
          {meta_performer is_last_song}
-         "\n"}
+         "\n"
+      }
       {cond
          ($in_fitness_playlist
-            {print
-               "perform_endgame_panel:: continue_next_screen : fitness playlist\n"}
-            {if_else
-               {meta_performer is_last_song}
-               {ui
-                  goto_screen
-                  [complete_screen]}
-               {ui
-                  goto_screen
-                  {gamemode get endgame_continue_screen}}})
+            {print "perform_endgame_panel:: continue_next_screen : fitness playlist\n"}
+            {if_else {meta_performer is_last_song}
+               {ui goto_screen [complete_screen]}
+               {ui goto_screen {gamemode get endgame_continue_screen}}
+            }
+         )
          ({has_endgame_popups}
             {print
-               "perform_endgame_panel:: continue_next_screen : has_endgame_popups\n"}
-            {ui goto_screen perform_endgame_popup_between_screen})
+               "perform_endgame_panel:: continue_next_screen : has_endgame_popups\n"
+            }
+            {ui goto_screen perform_endgame_popup_between_screen}
+         )
          ({'||'
                {hamprovider get is_in_party_mode}
                {hamprovider get is_in_infinite_party_mode}}
-            {print
-               "perform_endgame_panel:: continue_next_screen : party mode\n"}
-            {ui pop_screen meta_loading_party_cleanup_screen})
+            {print "perform_endgame_panel:: continue_next_screen : party mode\n"}
+            {ui pop_screen meta_loading_party_cleanup_screen}
+         )
          ({gamemode in_mode challenge}
-            {print
-               "perform_endgame_panel:: continue_next_screen : challenge\n"}
-            {ui goto_screen challenge_perform_result_screen})
+            {print "perform_endgame_panel:: continue_next_screen : challenge\n"}
+            {ui goto_screen challenge_perform_result_screen}
+         )
          ({gamemode in_mode campaign}
-            {print
-               "perform_endgame_panel:: continue_next_screen : campaign\n"}
+            {print "perform_endgame_panel:: continue_next_screen : campaign\n"}
             {print
                "  {gamemode get endgame_continue_screen} = "
                {gamemode get endgame_continue_screen}
                ", [complete_screen] = "
                [complete_screen]
-               "\n"}
+               "\n"
+            }
             {cond
                ({==
                      {gamemode get_mode}
                      campaign_intro}
-                  {ui
-                     goto_screen
-                     {gamemode get endgame_continue_screen}})
+                  {ui goto_screen {gamemode get endgame_continue_screen}}
+               )
                ({==
                      {gamemode get_mode}
                      campaign_outro}
-                  {ui
-                     goto_screen
-                     {gamemode get endgame_continue_screen}})
-               (TRUE
-                  {ui
-                     goto_screen
-                     [complete_screen]})})
+                  {ui goto_screen {gamemode get endgame_continue_screen}}
+               )
+               (TRUE {ui goto_screen [complete_screen]})
+            }
+         )
          ({==
                {gamemode get_mode}
                playlist_perform}
-            {print
-               "perform_endgame_panel:: continue_next_screen : playlist_perform\n"}
-            {if_else
-               {meta_performer is_last_song}
+            {print "perform_endgame_panel:: continue_next_screen : playlist_perform\n"}
+            {if_else {meta_performer is_last_song}
                {ui goto_screen playlist_perform_complete_screen}
                {do
-                  {if_else
-                     {gamemode in_mode infinite_playlist_perform}
+                  {if_else {gamemode in_mode infinite_playlist_perform}
                      {ui goto_screen infinite_playlist_nextsong_screen}
-                     {ui goto_screen playlist_nextsong_screen}}}})
+                     {ui goto_screen playlist_nextsong_screen}
+                  }
+               }
+            }
+         )
          (TRUE
-            {print
-               "perform_endgame_panel:: continue_next_screen : default\n"}
-            {ui goto_screen perform_final_results_screen})})}
-{new
-   HamPanel
+            {print "perform_endgame_panel:: continue_next_screen : default\n"}
+            {ui goto_screen perform_final_results_screen}
+         )
+      }
+   )
+}
+{new HamPanel
    perform_continue_panel
-   (file
-      "../low_button.milo")
+   (file "../low_button.milo")
    (draw_after_letterbox TRUE)
    (focus right_hand.hnl)
    (hide_helpbar TRUE)
@@ -721,111 +592,78 @@
       {print
          "perform_continue_panel enter: in_ctl="
          {shell_input in_controller_mode}
-         "\n"}
-      {$this disable})
+         "\n"
+      }
+      {$this disable}
+   )
    (disable
-      {print
-         "perform_continue_panel DISABLE\n"}
-      {set
-         [is_enabled]
-         FALSE}
-      {set
-         [hide_helpbar]
-         TRUE}
-      {set
-         [helpbar_allow_controller]
-         FALSE}
+      {print "perform_continue_panel DISABLE\n"}
+      {set [is_enabled] FALSE}
+      {set [hide_helpbar] TRUE}
+      {set [helpbar_allow_controller] FALSE}
       {right_hand.hnl set showing FALSE}
-      {helpbar resync})
+      {helpbar resync}
+   )
    (enable
-      {set
-         [is_enabled]
-         TRUE}
-      {set
-         [hide_helpbar]
-         {!
-            {shell_input in_controller_mode}}}
-      {set
-         [helpbar_allow_controller]
-         TRUE}
-      {right_hand.hnl
-         set
-         showing
-         {!
-            {shell_input in_controller_mode}}}
-      {helpbar resync})
+      {set [is_enabled] TRUE}
+      {set [hide_helpbar] {! {shell_input in_controller_mode}}}
+      {set [helpbar_allow_controller] TRUE}
+      {right_hand.hnl set showing {! {shell_input in_controller_mode}}}
+      {helpbar resync}
+   )
    SELECT_RIGHT_LIST_TOKEN
    (poll SLIDE_RIGHT_LIST_ITEM)
    (NAV_SELECT_MSG
-      {print
-         "perform_continue_panel NAV "
-         $name
-         "\n"}
-      {switch
-         $name
+      {print "perform_continue_panel NAV " $name "\n"}
+      {switch $name
          (continue
-            {if_else
-               [callback_panel]
+            {if_else [callback_panel]
                {do
-                  {[callback_panel]
-                     set
-                     continue_to_next_screen
-                     TRUE}
-                  {set
-                     [callback_panel]
-                     0}}
-               {if_else
-                  {has_endgame_popups}
+                  {[callback_panel] set continue_to_next_screen TRUE}
+                  {set [callback_panel] 0}
+               }
+               {if_else {has_endgame_popups}
                   {ui goto_screen perform_endgame_popup_between_screen}
-                  {perform_endgame_panel set continue_to_next_screen TRUE}}})})
-   (controller_mode_entered
-      {right_hand.hnl set showing FALSE})
+                  {perform_endgame_panel set continue_to_next_screen TRUE}
+               }
+            }
+         )
+      }
+   )
+   (controller_mode_entered {right_hand.hnl set showing FALSE})
    (controller_mode_exited
-      {if
-         [is_enabled]
-         {right_hand.hnl set showing TRUE}})}
-{new
-   HamPanel
+      {if [is_enabled]
+         {right_hand.hnl set showing TRUE}
+      }
+   )
+}
+{new HamPanel
    infinite_playlist_nextsong_panel
-   (file
-      "playlist_nextsong.milo")
+   (file "playlist_nextsong.milo")
    (song_name '')
    (enter)
-   (update_info
-      {$this
-         set_song
-         {gamedata get song}})
+   (update_info {$this set_song {gamedata get song}})
    (set_song
       ($song)
       {$this set song_name $song}
-      {if_else
-         {!=
-            [song_name]
-            ''}
+      {if_else {!= [song_name] ''}
          {$this refresh_song_details}
-         {$this clear_song_details}}
-      {$this refresh_album_art})
+         {$this clear_song_details}
+      }
+      {$this refresh_album_art}
+   )
    (refresh_song_details
       {do
-         ($songid
-            {song_mgr
-               get_song_id
-               [song_name]})
-         {song_name.lbl
-            set_song_name
-            [song_name]}
+         ($songid {song_mgr get_song_id [song_name]})
+         {song_name.lbl set_song_name [song_name]}
          {song_name.lbl set showing TRUE}
-         {artist.lbl
-            set_artist_name
-            [song_name]}
+         {artist.lbl set_artist_name [song_name]}
          {artist.lbl set showing TRUE}
          {intensity.sdd set showing TRUE}
          {intensity.lbl set showing TRUE}
-         {intensity.sdd
-            set_level
-            {song_mgr
-               rank_tier_for_song
-               [song_name]}}})
+         {intensity.sdd set_level {song_mgr rank_tier_for_song [song_name]}}
+      }
+   )
    (clear_song_details
       {do
          {song.lbl set text_token ''}
@@ -833,460 +671,459 @@
          {artist.lbl set text_token ''}
          {intensity.sdd set showing FALSE}
          {intensity.lbl set showing FALSE}
-         {dancer.lbl set text_token ''}})
+         {dancer.lbl set text_token ''}
+      }
+   )
    (refresh_album_art
       {do
-         ($pic
-            {album_art find album_art.pic})
-         {if_else
-            {!=
-               [song_name]
-               ''}
+         ($pic {album_art find album_art.pic})
+         {if_else {!= [song_name] ''}
             {do
-               ($content_name
-                  {song_mgr
-                     content_name_from_sym
-                     [song_name]})
-               {if_else
-                  {'||'
-                     {==
-                        $content_name
-                        ""}
-                     {content_mgr is_mounted $content_name}}
-                  {$pic
-                     set
-                     tex_file
-                     {song_mgr
-                        album_art_path
-                        [song_name]}}
-                  {$pic
-                     set
-                     tex_file
-                     "ui/image/dc_logo_keep.png"}}}
-            {$pic
-               set
-               tex_file
-               "ui/image/dc_logo_keep.png"}}})
+               ($content_name {song_mgr content_name_from_sym [song_name]})
+               {if_else {'||' {== $content_name ""} {content_mgr is_mounted $content_name}}
+                  {$pic set tex_file {song_mgr album_art_path [song_name]}}
+                  {$pic set tex_file "ui/image/dc_logo_keep.png"}
+               }
+            }
+            {$pic set tex_file "ui/image/dc_logo_keep.png"}
+         }
+      }
+   )
    (set_time
       ($time)
-      {timer.lbl set_int $time})
+      {timer.lbl set_int $time}
+   )
    (show_timer
       ($show)
-      {timer.lbl set_showing $show})
+      {timer.lbl set_showing $show}
+   )
    (show_up_next_text
       ($show)
       {up_next.lbl set_showing $show}
-      {up_next_in.lbl set_showing $show})}
-{new
-   HamPanel
+      {up_next_in.lbl set_showing $show}
+   )
+}
+{new HamPanel
    infinite_playlist_skip_nextsong_panel
-   (file
-      "../low_button_skip.milo")
+   (file "../low_button_skip.milo")
    (draw_after_letterbox TRUE)
    (focus right_hand.hnl)
-   (hide_helpbar
-      {!
-         {shell_input in_controller_mode}})
+   (hide_helpbar {! {shell_input in_controller_mode}})
    (helpbar_confirm_label skip)
    (show_hand_help FALSE)
-   (enter
-      {right_hand.hnl
-         set
-         showing
-         {!
-            {shell_input in_controller_mode}}})
+   (enter {right_hand.hnl set showing {! {shell_input in_controller_mode}}})
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (ingame_skip
             {meta_performer continue_playlist}
             {infinite_playlist_nextsong_panel update_info}
-            {infinite_playlist_nextsong_screen reset_timer})})
-   (controller_mode_entered
-      {right_hand.hnl set showing FALSE})
-   (controller_mode_exited
-      {right_hand.hnl set showing TRUE})}
-{new
-   HamPanel
+            {infinite_playlist_nextsong_screen reset_timer}
+         )
+      }
+   )
+   (controller_mode_entered {right_hand.hnl set showing FALSE})
+   (controller_mode_exited {right_hand.hnl set showing TRUE})
+}
+{new HamPanel
    perform_complete_panel
-   (file
-      "perform_complete.milo")
+   (file "perform_complete.milo")
    (focus right_hand.hnl)
    (pending_practice FALSE)
    (pending_quit FALSE)
    (handle_global_commands TRUE)
    (enter
       #ifdef DEMO
+      {if {== {{$this find provider_campaign.hnp} size (nav_items)} 3}
+         {{$this find provider_campaign.hnp} remove (nav_items 1)}
+      }
+      {if {== {{$this find provider_campaign_intro_fail.hnp} size (nav_items)} 3}
+         {{$this find provider_campaign_intro_fail.hnp} remove (nav_items 1)}
+      }
+      {if {== {{$this find provider_campaign_outro_fail.hnp} size (nav_items)} 3}
+         {{$this find provider_campaign_outro_fail.hnp} remove (nav_items 1)}
+      }
       {if
          {==
-            {{$this find provider_campaign.hnp}
-               size
-               (nav_items)}
-            3}
-         {{$this find provider_campaign.hnp}
-            remove
-            (nav_items 1)}}
-      {if
-         {==
-            {{$this find provider_campaign_intro_fail.hnp}
-               size
-               (nav_items)}
-            3}
-         {{$this find provider_campaign_intro_fail.hnp}
-            remove
-            (nav_items 1)}}
-      {if
-         {==
-            {{$this find provider_campaign_outro_fail.hnp}
-               size
-               (nav_items)}
-            3}
-         {{$this find provider_campaign_outro_fail.hnp}
-            remove
-            (nav_items 1)}}
-      {if
-         {==
-            {{$this find provider_campaign_outro_fail_norehearse.hnp}
-               size
-               (nav_items)}
-            2}}
-      {if
-         {==
-            {{$this find provider_campaign_playlist.hnp}
-               size
-               (nav_items)}
-            2}}
-      {if
-         {==
-            {{$this find provider_dancebattle.hnp}
-               size
-               (nav_items)}
-            4}}
-      {if
-         {==
-            {{$this find provider_perform.hnp}
-               size
-               (nav_items)}
-            5}
-         {{$this find provider_perform.hnp}
-            remove
-            (nav_items 1)}}
-      {if
-         {==
-            {{$this find provider_playlist.hnp}
-               size
-               (nav_items)}
-            3}}
+            {{$this find provider_campaign_outro_fail_norehearse.hnp} size (nav_items)}
+            2
+         }
+      }
+      {if {== {{$this find provider_campaign_playlist.hnp} size (nav_items)} 2}
+
+      }
+      {if {== {{$this find provider_dancebattle.hnp} size (nav_items)} 4}
+
+      }
+      {if {== {{$this find provider_perform.hnp} size (nav_items)} 5}
+         {{$this find provider_perform.hnp} remove (nav_items 1)}
+      }
+      {if {== {{$this find provider_playlist.hnp} size (nav_items)} 3}
+
+      }
       #endif
       {$this set pending_practice FALSE}
       {$this set pending_quit FALSE}
       {do
-         ($provider
-            {$this
-               find
-               {{ui current_screen}
-                  get
-                  provider}})
-         {$this set_provider $provider}}
+         ($provider {$this find {{ui current_screen} get provider}})
+         {$this set_provider $provider}
+      }
       {update_song_name song.lbl}
-      {difficulty.lbl
-         set
+      {difficulty.lbl set
          text_token
          {difficulty_to_sym
-            {gamedata getp 0 difficulty}}}
+            {gamedata getp 0 difficulty}
+         }
+      }
       {encourage.grp set showing FALSE}
-      {if_else
-         {gamemode in_mode campaign}
+      {if_else {gamemode in_mode campaign}
          {do
             {practice_encourage.lbl set text_token skillz_encourage_campaign}
             {encourage.grp set showing TRUE}
-            {practice_encourage.flow activate}}
+            {practice_encourage.flow activate}
+         }
          {do
             ($stars_needed 3)
             {if
                {&&
-                  {==
-                     {gamemode get gameplay_mode}
-                     perform}
-                  {!
-                     {gamemode in_mode playlist_perform}}
-                  {<
-                     {perform_endgame_panel get_num_stars}
-                     $stars_needed}
-                  {!
-                     {is_active_profile_in_fitness_mode}}}
+                  {== {gamemode get gameplay_mode} perform}
+                  {! {gamemode in_mode playlist_perform}}
+                  {< {perform_endgame_panel get_num_stars} $stars_needed}
+                  {! {is_active_profile_in_fitness_mode}}
+               }
                {practice_encourage.lbl set text_token skillz_encourage}
                {encourage.grp set showing TRUE}
-               {practice_encourage.flow activate}}}}
-      {if
-         {meta_performer last_played_mode}
-         {gamemode
-            set_mode
-            {meta_performer last_played_mode}}}
-      {if
-         {exists gesture_mgr}
-         {gesture_mgr set_identification_enabled TRUE}}
-      {hamprovider set voice_commander_tip_lower TRUE})
+               {practice_encourage.flow activate}
+            }
+         }
+      }
+      {if {meta_performer last_played_mode}
+         {gamemode set_mode {meta_performer last_played_mode}}
+      }
+      {if {exists gesture_mgr}
+         {gesture_mgr set_identification_enabled TRUE}
+      }
+      {hamprovider set voice_commander_tip_lower TRUE}
+   )
    SELECT_RIGHT_LIST_TOKEN
    (poll SLIDE_RIGHT_LIST_ITEM)
    (enter_practice
       {meta music_stop}
       {fade_out.flow activate}
-      {meta_performer
-         generate_recommended_practice_moves
-         {hamprovider get ui_nav_player}}
-      {if_else
-         {gamemode in_mode campaign}
+      {meta_performer generate_recommended_practice_moves
+         {hamprovider get ui_nav_player}
+      }
+      {if_else {gamemode in_mode campaign}
          {gamemode set_mode campaign_practice}
-         {gamemode set_mode practice}}
-      {if
-         {meta_performer has_recommended_practice_moves}
-         {set $auto_select_practice_moves TRUE}}
+         {gamemode set_mode practice}
+      }
+      {if {meta_performer has_recommended_practice_moves}
+         {set $auto_select_practice_moves TRUE}
+      }
       {set $enter_practice_tutorial_from_pause FALSE}
-      {ui pop_screen practice_transition_screen})
+      {ui pop_screen practice_transition_screen}
+   )
    (TRANSITION_COMPLETE_MSG
-      {if_else
-         {==
-            [pending_practice]
-            TRUE}
+      {if_else {== [pending_practice] TRUE}
          {$this enter_practice}
-         {if
-            {==
-               [pending_quit]
-               TRUE}
-            {ui pop_screen meta_loading_continue_screen}}})
-   (on_restart
-      {ui goto_screen endgame_restart_screen})
+         {if {== [pending_quit] TRUE}
+            {ui pop_screen meta_loading_continue_screen}
+         }
+      }
+   )
+   (on_restart {ui goto_screen endgame_restart_screen})
    (NAV_SELECT_MSG
-      {switch
-         $name
-         (new_song
-            {ui pop_screen meta_loading_continue_screen})
+      {switch $name
+         (new_song {ui pop_screen meta_loading_continue_screen})
          (pausecommand_restart
             {meta music_stop}
             {fade_out.flow activate}
-            {{ui current_screen}
-               handle_restart_selected})
+            {{ui current_screen} handle_restart_selected}
+         )
          (practice
             {if_else
                {&&
-                  {==
-                     {player_provider_1 get player_present}
-                     TRUE}
-                  {==
-                     {player_provider_2 get player_present}
-                     TRUE}}
+                  {== {player_provider_1 get player_present} TRUE}
+                  {== {player_provider_2 get player_present} TRUE}
+               }
                {do
-                  {endgame_practice_confirm_screen
-                     set
-                     return_screen
-                     {ui current_screen}}
-                  {ui goto_screen endgame_practice_confirm_screen}}
-               {$this enter_practice}})
+                  {endgame_practice_confirm_screen set return_screen {ui current_screen}}
+                  {ui goto_screen endgame_practice_confirm_screen}
+               }
+               {$this enter_practice}
+            }
+         )
          (complete_change_difficulty
             {meta music_stop}
             {if
                {'||'
                   {gamemode in_mode playlist_perform}
-                  {gamemode in_mode infinite_playlist_perform}}
-               {meta_performer set_playlist_index 0}}
-            {ui pop_screen meta_loading_ready_screen})
+                  {gamemode in_mode infinite_playlist_perform}
+               }
+               {meta_performer set_playlist_index 0}
+            }
+            {ui pop_screen meta_loading_ready_screen}
+         )
          (complete_mode_select
             {meta music_stop}
             {if
                {'||'
                   {gamemode in_mode playlist_perform}
-                  {gamemode in_mode infinite_playlist_perform}}
-               {meta_performer set_playlist_index 0}}
-            {ui pop_screen meta_loading_choose_mode_screen})
+                  {gamemode in_mode infinite_playlist_perform}
+               }
+               {meta_performer set_playlist_index 0}
+            }
+            {ui pop_screen meta_loading_choose_mode_screen}
+         )
          (complete_restart_playlist
             {meta music_stop}
             {if
                {'||'
                   {gamemode in_mode playlist_perform}
-                  {gamemode in_mode infinite_playlist_perform}}
-               {meta_performer set_playlist_index 0}}
-            {{ui current_screen}
-               handle_restart_selected})
+                  {gamemode in_mode infinite_playlist_perform}
+               }
+               {meta_performer set_playlist_index 0}
+            }
+            {{ui current_screen} handle_restart_selected}
+         )
          (campaign_intro_fail_retry
             {meta music_stop}
             {fade_out.flow activate}
-            {{ui current_screen}
-               handle_campaign_intro_fail_retry})
+            {{ui current_screen} handle_campaign_intro_fail_retry}
+         )
          (campaign_intro_fail_abort
-            {{ui current_screen}
-               handle_campaign_intro_fail_abort})
+            {{ui current_screen} handle_campaign_intro_fail_abort}
+         )
          (campaign_intro_fail_practice
-            {{ui current_screen}
-               handle_campaign_intro_fail_practice})
+            {{ui current_screen} handle_campaign_intro_fail_practice}
+         )
          (pausecommand_quit
             {meta music_stop}
             {if
                {'||'
                   {gamemode in_mode playlist_perform}
-                  {gamemode in_mode infinite_playlist_perform}}
-               {meta_performer set_playlist_index 0}}
-            {ui pop_screen meta_loading_pause_new_song_screen})
+                  {gamemode in_mode infinite_playlist_perform}
+               }
+               {meta_performer set_playlist_index 0}
+            }
+            {ui pop_screen meta_loading_pause_new_song_screen}
+         )
          (pausecommand_mainmenu
             {meta music_stop}
             {if
                {'||'
                   {gamemode in_mode playlist_perform}
-                  {gamemode in_mode infinite_playlist_perform}}
-               {meta_performer set_playlist_index 0}}
-            {ui pop_screen meta_loading_main_screen})})
+                  {gamemode in_mode infinite_playlist_perform}
+               }
+               {meta_performer set_playlist_index 0}
+            }
+            {ui pop_screen meta_loading_main_screen}
+         )
+      }
+   )
    (set_provider
       ($provider)
-      {right_hand.hnl set_provider $provider})
+      {right_hand.hnl set_provider $provider}
+   )
    (on_voice_command
       ($command)
-      {switch
-         $command
+      {switch $command
          (start_over
             {cond
                ({>=
                      {right_hand.hnl data_index complete_restart_playlist}
                      0}
-                  {$this select_right_list_token complete_restart_playlist})
+                  {$this select_right_list_token complete_restart_playlist}
+               )
                ({>=
                      {right_hand.hnl data_index campaign_intro_fail_retry}
                      0}
-                  {$this select_right_list_token campaign_intro_fail_retry})
+                  {$this select_right_list_token campaign_intro_fail_retry}
+               )
                ({>=
                      {right_hand.hnl data_index pausecommand_finale}
                      0}
-                  {$this select_right_list_token pausecommand_finale})
+                  {$this select_right_list_token pausecommand_finale}
+               )
                ({>=
                      {right_hand.hnl data_index pausecommand_restart}
                      0}
-                  {$this select_right_list_token pausecommand_restart})})
-         {$this select_right_list_token $command}})
+                  {$this select_right_list_token pausecommand_restart}
+               )
+            }
+         )
+         {$this select_right_list_token $command}
+      }
+   )
    (on_global_voice_command
       ($command)
-      {switch
-         $command
+      {switch $command
          (hidden_global_main
-            {if_else
-               {>=
-                  0
-                  {right_hand.hnl data_index $command}}
+            {if_else {>= 0 {right_hand.hnl data_index $command}}
                {$this select_right_list_token campaign_intro_fail_abort}
-               {on_global_voice_command $command}})
-         {on_global_voice_command $command}})}
-{new
-   HamScreen
+               {on_global_voice_command $command}
+            }
+         )
+         {on_global_voice_command $command}
+      }
+   )
+}
+{new HamScreen
    perform_endgame_screen
    (panels meta_game perform_endgame_panel xp_overlay_panel)
    (focus perform_endgame_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
-      {if_else
-         {hamprovider get is_in_pre_party_mode}
+      {if_else {hamprovider get is_in_pre_party_mode}
          {perform_endgame_panel set complete_screen party_mode_choose_mode_screen}
-         {perform_endgame_panel set complete_screen perform_complete_screen}})}
-{new
-   HamScreen
+         {perform_endgame_panel set complete_screen perform_complete_screen}
+      }
+   )
+}
+{new HamScreen
    xp_reward_screen_for_perform_endgame_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel xp_reward_panel perform_continue_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      xp_reward_panel
+      perform_continue_panel
+   )
    (focus perform_continue_panel)
    (use_continue_panel FALSE)
    (has_continue_panel TRUE)
    (enter
       {perform_endgame_panel prepare_for_awards_display}
-      {voice_input_panel activate_voice_context continue_screen})
+      {voice_input_panel activate_voice_context continue_screen}
+   )
    (on_voice_command
       ($command)
-      {if
-         {perform_continue_panel get is_enabled}
-         {perform_continue_panel select_right_list_token $command}})}
-{new
-   HamScreen
+      {if {perform_continue_panel get is_enabled}
+         {perform_continue_panel select_right_list_token $command}
+      }
+   )
+}
+{new HamScreen
    playlist_perform_endgame_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel perform_continue_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      perform_continue_panel
+   )
    (focus perform_continue_panel)
    (use_continue_panel TRUE)
    (has_continue_panel TRUE)
    (enter
-      {xp_overlay_panel
-         set
-         suppress_display
-         {!
-            {meta_performer is_last_song}}}
-      {set
-         [use_continue_panel]
-         {meta_performer is_last_song}}
-      {perform_endgame_panel set complete_screen playlist_perform_complete_screen})}
-{new
-   HamScreen
+      {xp_overlay_panel set suppress_display {! {meta_performer is_last_song}}}
+      {set [use_continue_panel] {meta_performer is_last_song}}
+      {perform_endgame_panel set
+         complete_screen
+         playlist_perform_complete_screen
+      }
+   )
+}
+{new HamScreen
    fitness_perform_endgame_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel fitness_keepmoving_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      fitness_keepmoving_panel
+   )
    (focus perform_endgame_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
-      {xp_overlay_panel
-         set
-         suppress_display
-         {!
-            {meta_performer is_last_song}}}
-      {perform_endgame_panel set complete_screen playlist_perform_complete_screen})}
-{new
-   HamScreen
+      {xp_overlay_panel set suppress_display {! {meta_performer is_last_song}}}
+      {perform_endgame_panel set
+         complete_screen
+         playlist_perform_complete_screen
+      }
+   )
+}
+{new HamScreen
    dancebattle_perform_endgame_screen
    (panels meta_game perform_endgame_panel xp_overlay_panel)
    (focus perform_endgame_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
-      {if_else
-         {hamprovider get is_in_pre_party_mode}
+      {if_else {hamprovider get is_in_pre_party_mode}
          {perform_endgame_panel set complete_screen party_mode_choose_mode_screen}
-         {perform_endgame_panel set complete_screen dancebattle_perform_complete_screen}})}
-{new
-   HamScreen
+         {perform_endgame_panel set
+            complete_screen
+            dancebattle_perform_complete_screen
+         }
+      }
+   )
+}
+{new HamScreen
    perform_continue_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel perform_continue_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      perform_continue_panel
+   )
    (focus perform_continue_panel)
    (use_continue_panel TRUE)
-   (has_continue_panel TRUE)}
-{new
-   HamScreen
+   (has_continue_panel TRUE)
+}
+{new HamScreen
    playlist_perform_continue_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel fitness_keepmoving_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      fitness_keepmoving_panel
+   )
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
-      {if_else
-         {meta_performer is_last_song}
-         {if_else
-            {has_endgame_popups}
+      {if_else {meta_performer is_last_song}
+         {if_else {has_endgame_popups}
             {ui goto_screen perform_endgame_popup_between_screen}
-            {perform_endgame_panel continue_next_screen}}
+            {perform_endgame_panel continue_next_screen}
+         }
          {do
-            {if_else
-               {gamemode in_mode infinite_playlist_perform}
+            {if_else {gamemode in_mode infinite_playlist_perform}
                {ui goto_screen infinite_playlist_nextsong_screen}
-               {ui goto_screen playlist_nextsong_screen}}}})}
-{new
-   HamPanel
+               {ui goto_screen playlist_nextsong_screen}
+            }
+         }
+      }
+   )
+}
+{new HamPanel
    playlist_loading_spinner_panel
    (file perform_nextsong.milo)
-   (helpbar_allow_controller FALSE)}
-{new
-   HamScreen
+   (helpbar_allow_controller FALSE)
+}
+{new HamScreen
    playlist_nextsong_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel fitness_keepmoving_panel playlist_loading_spinner_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      fitness_keepmoving_panel
+      playlist_loading_spinner_panel
+   )
    (focus playlist_loading_spinner_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
       {meta_performer continue_playlist}
-      {ui goto_screen playlist_nextsong_preload_screen})}
-{new
-   HamScreen
+      {ui goto_screen playlist_nextsong_preload_screen}
+   )
+}
+{new HamScreen
    infinite_playlist_nextsong_screen
-   (panels meta_game infinite_playlist_nextsong_panel infinite_playlist_skip_nextsong_panel)
+   (panels
+      meta_game
+      infinite_playlist_nextsong_panel
+      infinite_playlist_skip_nextsong_panel
+   )
    (focus infinite_playlist_skip_nextsong_panel)
    (timer_time 6.0)
    (timer 0.0)
@@ -1294,325 +1131,360 @@
    (prev_timer_int 0)
    (enter
       {meta_performer continue_playlist}
-      {if_else
-         {gamemode in_mode infinite_playlist_perform}
+      {if_else {gamemode in_mode infinite_playlist_perform}
          {do
-            {infinite_playlist_nextsong_panel update_info}}
-         {ui goto_screen infinite_playlist_nextsong_preload_screen}}
-      {set
-         [timer]
-         [timer_time]}
+            {infinite_playlist_nextsong_panel update_info}
+         }
+         {ui goto_screen infinite_playlist_nextsong_preload_screen}
+      }
+      {set [timer] [timer_time]}
       {infinite_playlist_nextsong_panel show_up_next_text TRUE}
-      {infinite_playlist_nextsong_panel show_timer TRUE})
+      {infinite_playlist_nextsong_panel show_timer TRUE}
+   )
    (poll
-      {-=
-         [timer]
-         {taskmgr ui_delta_seconds}}
-      {set
-         [prev_timer_int]
-         [timer_int]}
-      {set
-         [timer_int]
-         {int
-            [timer]}}
-      {if
-         {!=
-            [prev_timer_int]
-            [timer_int]}
-         {infinite_playlist_nextsong_panel
-            set_time
-            [timer_int]}}
-      {if
-         {<=
-            [timer_int]
-            0}
+      {-= [timer] {taskmgr ui_delta_seconds}}
+      {set [prev_timer_int] [timer_int]}
+      {set [timer_int] {int [timer]}}
+      {if {!= [prev_timer_int] [timer_int]}
+         {infinite_playlist_nextsong_panel set_time [timer_int]}
+      }
+      {if {<= [timer_int] 0}
          {infinite_playlist_nextsong_panel show_timer FALSE}
          {infinite_playlist_nextsong_panel show_up_next_text FALSE}
-         {ui goto_screen infinite_playlist_nextsong_preload_screen}})
+         {ui goto_screen infinite_playlist_nextsong_preload_screen}
+      }
+   )
    (reset_timer
-      {set
-         [timer]
-         [timer_time]}
-      {set
-         [timer_int]
-         {int
-            [timer]}}
-      {infinite_playlist_nextsong_panel
-         set_time
-         [timer_int]})}
-{new
-   HamScreen
+      {set [timer] [timer_time]}
+      {set [timer_int] {int [timer]}}
+      {infinite_playlist_nextsong_panel set_time [timer_int]}
+   )
+}
+{new HamScreen
    endgame_restart_screen
    (panels meta_game)
    (enter
       {meta_performer restart}
-      {game_restart})}
-{new
-   HamScreen
+      {game_restart}
+   )
+}
+{new HamScreen
    playlist_restart_screen
    (panels meta_game perform_complete_panel playlist_loading_spinner_panel)
    (focus playlist_loading_spinner_panel)
    (provider provider_playlist.hnp)
-   (enter
-      {ui goto_screen playlist_restart_preload_screen})}
-{new
-   HamPanel
+   (enter {ui goto_screen playlist_restart_preload_screen})
+}
+{new HamPanel
    playlist_loading_panel
    (load
       {do
-         ($song
-            {meta_performer get_song})
-         {$hamdirector
-            load_song
-            {song_mgr
-               song_file_path
-               $song
-               ".milo"}
+         ($song {meta_performer get_song})
+         {$hamdirector load_song
+            {song_mgr song_file_path $song ".milo"}
             {song_mgr get_bpm $song}
             TRUE
             TRUE
-            {get_backup_dancer_type}}})
-   (is_loaded
-      {$hamdirector is_world_loaded})}
-{new
-   HamPanel
+            {get_backup_dancer_type}
+         }
+      }
+   )
+   (is_loaded {$hamdirector is_world_loaded})
+}
+{new HamPanel
    playlist_loading_game_panel
    (load
       {$hamdirector set_suppress_intro_shot TRUE}
-      {{{$hamdirector get merger}
-            dir}
-         enter}
+      {{{$hamdirector get merger} dir} enter}
       {$hamdirector set_suppress_intro_shot FALSE}
       {$hamdirector enable_facial_animation}
-      {game reload_song})
+      {game reload_song}
+   )
    (is_loaded
-      {&&
-         {game is_ready}
-         {saveload_mgr is_idle}
-         {!
-            {helpbar is_write_icon_up}}})}
-{new
-   HamScreen
+      {&& {game is_ready} {saveload_mgr is_idle} {! {helpbar is_write_icon_up}}}
+   )
+}
+{new HamScreen
    playlist_nextsong_loading_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel fitness_keepmoving_panel playlist_loading_spinner_panel playlist_loading_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      fitness_keepmoving_panel
+      playlist_loading_spinner_panel
+      playlist_loading_panel
+   )
    (focus playlist_loading_spinner_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
-   (enter
-      {ui goto_screen playlist_nextsong_loading_game_screen})}
-{new
-   HamScreen
+   (enter {ui goto_screen playlist_nextsong_loading_game_screen})
+}
+{new HamScreen
    infinite_playlist_nextsong_loading_screen
-   (panels meta_game infinite_playlist_nextsong_panel playlist_loading_spinner_panel playlist_loading_panel)
+   (panels
+      meta_game
+      infinite_playlist_nextsong_panel
+      playlist_loading_spinner_panel
+      playlist_loading_panel
+   )
    (focus playlist_loading_spinner_panel)
-   (enter
-      {ui goto_screen infinite_playlist_nextsong_loading_game_screen})}
-{new
-   HamScreen
+   (enter {ui goto_screen infinite_playlist_nextsong_loading_game_screen})
+}
+{new HamScreen
    playlist_restart_loading_screen
-   (panels meta_game perform_complete_panel playlist_loading_spinner_panel playlist_loading_panel)
+   (panels
+      meta_game
+      perform_complete_panel
+      playlist_loading_spinner_panel
+      playlist_loading_panel
+   )
    (focus playlist_loading_spinner_panel)
    (provider provider_playlist.hnp)
-   (enter
-      {ui goto_screen playlist_restart_loading_game_screen})}
-{new
-   HamScreen
+   (enter {ui goto_screen playlist_restart_loading_game_screen})
+}
+{new HamScreen
    playlist_nextsong_loading_game_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel fitness_keepmoving_panel playlist_loading_spinner_panel playlist_loading_game_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      fitness_keepmoving_panel
+      playlist_loading_spinner_panel
+      playlist_loading_game_panel
+   )
    (focus playlist_loading_spinner_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (moving_on FALSE)
-   (enter
-      {set
-         [moving_on]
-         FALSE})
+   (enter {set [moving_on] FALSE})
    (poll
-      {if
-         {&&
-            {perform_endgame_panel get is_photos_timed_out}
-            {!
-               [moving_on]}}
-         {set
-            [moving_on]
-            TRUE}
+      {if {&& {perform_endgame_panel get is_photos_timed_out} {! [moving_on]}}
+         {set [moving_on] TRUE}
          {meta music_stop}
-         {game_restart}})}
-{new
-   HamScreen
+         {game_restart}
+      }
+   )
+}
+{new HamScreen
    infinite_playlist_nextsong_loading_game_screen
-   (panels meta_game infinite_playlist_nextsong_panel playlist_loading_spinner_panel playlist_loading_game_panel)
+   (panels
+      meta_game
+      infinite_playlist_nextsong_panel
+      playlist_loading_spinner_panel
+      playlist_loading_game_panel
+   )
    (focus playlist_loading_spinner_panel)
    (enter
       {meta music_stop}
-      {game_restart})}
-{new
-   HamScreen
+      {game_restart}
+   )
+}
+{new HamScreen
    playlist_restart_loading_game_screen
-   (panels meta_game perform_complete_panel playlist_loading_spinner_panel playlist_loading_game_panel)
+   (panels
+      meta_game
+      perform_complete_panel
+      playlist_loading_spinner_panel
+      playlist_loading_game_panel
+   )
    (focus playlist_loading_spinner_panel)
    (provider provider_playlist.hnp)
-   (enter
-      {game_restart})}
-{new
-   PreloadPanel
+   (enter {game_restart})
+}
+{new PreloadPanel
    playlist_preload_panel
    PRELOAD_PANEL_COMMON
    (loading_screen '')
    (helpbar_allow_controller FALSE)
    (hide_letterbox TRUE)
-   (on_preload_ok
-      {ui
-         goto_screen
-         [loading_screen]})
-   (hide_helpbar TRUE)}
-{new
-   HamScreen
+   (on_preload_ok {ui goto_screen [loading_screen]})
+   (hide_helpbar TRUE)
+}
+{new HamScreen
    playlist_nextsong_preload_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel fitness_keepmoving_panel playlist_loading_spinner_panel playlist_preload_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      fitness_keepmoving_panel
+      playlist_loading_spinner_panel
+      playlist_preload_panel
+   )
    (focus playlist_preload_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
-      {playlist_preload_panel set loading_screen playlist_nextsong_loading_screen})}
-{new
-   HamScreen
+      {playlist_preload_panel set
+         loading_screen
+         playlist_nextsong_loading_screen
+      }
+   )
+}
+{new HamScreen
    infinite_playlist_nextsong_preload_screen
-   (panels meta_game infinite_playlist_nextsong_panel playlist_loading_spinner_panel playlist_preload_panel)
+   (panels
+      meta_game
+      infinite_playlist_nextsong_panel
+      playlist_loading_spinner_panel
+      playlist_preload_panel
+   )
    (focus playlist_preload_panel)
    (enter
-      {playlist_preload_panel set loading_screen infinite_playlist_nextsong_loading_screen})}
-{new
-   HamScreen
+      {playlist_preload_panel set
+         loading_screen
+         infinite_playlist_nextsong_loading_screen
+      }
+   )
+}
+{new HamScreen
    playlist_restart_preload_screen
-   (panels meta_game perform_complete_panel playlist_loading_spinner_panel playlist_preload_panel)
+   (panels
+      meta_game
+      perform_complete_panel
+      playlist_loading_spinner_panel
+      playlist_preload_panel
+   )
    (focus playlist_preload_panel)
    (provider provider_playlist.hnp)
    (enter
-      {playlist_preload_panel set loading_screen playlist_restart_loading_screen})}
-{new
-   HamPanel
+      {playlist_preload_panel set loading_screen playlist_restart_loading_screen}
+   )
+}
+{new HamPanel
    perform_endgame_popup_underneath
    (file empty_screen.milo)
    (current_popup none)
-   (enter
-      {set
-         [current_popup]
-         none})
+   (enter {set [current_popup] none})
    (TRANSITION_COMPLETE_MSG
-      {switch
-         [current_popup]
-         (none
-            {$this show_unlock_popup})
-         (new_unlock
-            {$this show_unlock_popup})})
+      {switch [current_popup]
+         (none {$this show_unlock_popup})
+         (new_unlock {$this show_unlock_popup})
+      }
+   )
    (show_unlock_popup
-      {if_else
-         {has_endgame_popups}
+      {if_else {has_endgame_popups}
          {do
-            ($profile
-               {acc_mgr get_profile_for_first_new_award})
-            {set
-               [current_popup]
-               new_unlock}
-            {endgame_popup_panel
-               set_popup_text
+            ($profile {acc_mgr get_profile_for_first_new_award})
+            {set [current_popup] new_unlock}
+            {endgame_popup_panel set_popup_text
                endgame_unlocked_content
                {acc_mgr get_name_for_first_new_award $profile}
-               {acc_mgr get_description_for_first_new_award $profile}}
-            {if_else
-               {acc_mgr has_art_for_first_new_award $profile}
-               {endgame_popup_panel
-                  set_popup_art
-                  {acc_mgr get_art_for_first_new_award $profile}}
-               {endgame_popup_panel clear_popup_art}}
+               {acc_mgr get_description_for_first_new_award $profile}
+            }
+            {if_else {acc_mgr has_art_for_first_new_award $profile}
+               {endgame_popup_panel set_popup_art
+                  {acc_mgr get_art_for_first_new_award $profile}
+               }
+               {endgame_popup_panel clear_popup_art}
+            }
             {acc_mgr clear_first_new_award $profile}
-            {$this show_popup}}
-         {perform_endgame_panel continue_next_screen}})
-   (show_popup
-      {ui goto_screen perform_endgame_popup_screen})}
-{new
-   HamScreen
+            {$this show_popup}
+         }
+         {perform_endgame_panel continue_next_screen}
+      }
+   )
+   (show_popup {ui goto_screen perform_endgame_popup_screen})
+}
+{new HamScreen
    perform_endgame_popup_between_screen
    (panels meta_game perform_endgame_popup_underneath)
-   (focus perform_endgame_popup_underneath)}
-{new
-   HamScreen
+   (focus perform_endgame_popup_underneath)
+}
+{new HamScreen
    perform_endgame_popup_screen
    (panels meta_game perform_endgame_popup_underneath endgame_popup_panel)
-   (focus endgame_popup_panel)}
-{new
-   HamScreen
+   (focus endgame_popup_panel)
+}
+{new HamScreen
    perform_complete_screen
    (panels meta_game background_panel perform_complete_panel)
    (focus perform_complete_panel)
    (provider provider_perform.hnp)
-   (enter
-      {voice_input_panel activate_voice_context perform_complete_screen})
-   (handle_restart_selected
-      {perform_complete_panel on_restart})}
-{new
-   HamScreen
+   (enter {voice_input_panel activate_voice_context perform_complete_screen})
+   (handle_restart_selected {perform_complete_panel on_restart})
+}
+{new HamScreen
    campaign_outro_fail_screen
    (panels meta_game background_panel perform_complete_panel)
    (focus perform_complete_panel)
    (provider
       {if_else
-         {campaign
-            get_outro_song_rehearse_allowed
-            {meta_performer get_playlist_index}}
+         {campaign get_outro_song_rehearse_allowed
+            {meta_performer get_playlist_index}
+         }
          provider_campaign_outro_fail.hnp
-         provider_campaign_outro_fail_norehearse.hnp})
+         provider_campaign_outro_fail_norehearse.hnp
+      }
+   )
    (enter
       {hamprovider set merge_moves 0}
       {game_panel set_paused TRUE}
       {game_screen set_showing FALSE}
-      {voice_input_panel activate_voice_context perform_complete_screen})
+      {voice_input_panel activate_voice_context perform_complete_screen}
+   )
    (handle_restart_selected
       {set $game_unpause_on_enter TRUE}
-      {if
-         {ui is_blacklight_mode}
-         {ui toggle_letterbox}}
+      {if {ui is_blacklight_mode}
+         {ui toggle_letterbox}
+      }
       {do
          ($fail_restart_index
-            {campaign
-               get_outro_song_fail_restart_index
-               {meta_performer get_playlist_index}})
-         {if
-            {>= $fail_restart_index 0}
-            {meta_performer set_playlist_index $fail_restart_index}}}
-      {if_else
-         {==
-            {hamprovider get gameplay_mode}
-            perform}
+            {campaign get_outro_song_fail_restart_index
+               {meta_performer get_playlist_index}
+            }
+         )
+         {if {>= $fail_restart_index 0}
+            {meta_performer set_playlist_index $fail_restart_index}
+         }
+      }
+      {if_else {== {hamprovider get gameplay_mode} perform}
          {do
             {ui goto_screen playlist_restart_preload_screen}
-            {hamprovider set merge_moves 1}}
+            {hamprovider set merge_moves 1}
+         }
          {do
-            {perform_complete_panel on_restart}}})}
-{new
-   HamScreen
+            {perform_complete_panel on_restart}
+         }
+      }
+   )
+}
+{new HamScreen
    campaign_perform_endgame_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel perform_continue_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      perform_continue_panel
+   )
    (focus perform_continue_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (enter
       {do
-         ($cur_song
-            {gamedata get song})
+         ($cur_song {gamedata get song})
          {campaign set work_it_active FALSE}
          {meta_performer award_craze_accomplishments}
          {meta_performer award_master_quest_accomplishments}
-         {if
-            !
+         {if !
             {meta_performer is_result_screen_reached $cur_song}
-            {meta_performer set_result_screen_reached $cur_song TRUE}}
-         {perform_endgame_panel set complete_screen campaign_perform_endgame_standard_exit_screen}})}
-{new
-   HamScreen
+            {meta_performer set_result_screen_reached $cur_song TRUE}
+         }
+         {perform_endgame_panel set
+            complete_screen
+            campaign_perform_endgame_standard_exit_screen
+         }
+      }
+   )
+}
+{new HamScreen
    campaign_outro_endgame_screen
-   (panels meta_game background_endgame_panel xp_overlay_panel perform_endgame_panel perform_continue_panel)
+   (panels
+      meta_game
+      background_endgame_panel
+      xp_overlay_panel
+      perform_endgame_panel
+      perform_continue_panel
+   )
    (focus perform_continue_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
@@ -1620,133 +1492,146 @@
       {campaign set work_it_active FALSE}
       {meta_performer award_craze_accomplishments}
       {meta_performer award_master_quest_accomplishments}
-      {perform_endgame_panel set complete_screen campaign_perform_endgame_standard_exit_screen}
+      {perform_endgame_panel set
+         complete_screen
+         campaign_perform_endgame_standard_exit_screen
+      }
       {hamprovider set merge_moves 0}
       {do
-         ($playlist_index
-            {meta_performer get_playlist_index})
+         ($playlist_index {meta_performer get_playlist_index})
          {cond
             ({== $playlist_index 0}
-               {handle
-                  (hamprovider tan_battle_success_1)})
+               {handle (hamprovider tan_battle_success_1)}
+            )
             ({== $playlist_index 1}
-               {handle
-                  (hamprovider tan_battle_success_2)})
+               {handle (hamprovider tan_battle_success_2)}
+            )
             ({== $playlist_index 2}
-               {handle
-                  (hamprovider tan_battle_success_3)})
+               {handle (hamprovider tan_battle_success_3)}
+            )
             ({== $playlist_index 3}
-               {handle
-                  (hamprovider tan_battle_success_4)})
+               {handle (hamprovider tan_battle_success_4)}
+            )
             ({== $playlist_index 4}
-               {handle
-                  (hamprovider tan_battle_success_5)})}})
+               {handle (hamprovider tan_battle_success_5)}
+            )
+         }
+      }
+   )
    (exit
-      {print
-         "exit campaign_outro_endgame_screen\n"}
-      {hamprovider set merge_moves 1})}
-{func
-   get_campaign_intro_endgame_continue_screen
-   {print
-      "get_campaign_intro_endgame_continue_screen\n"}
-   {if_else
-      {meta_performer is_last_song}
+      {print "exit campaign_outro_endgame_screen\n"}
+      {hamprovider set merge_moves 1}
+   )
+}
+{func get_campaign_intro_endgame_continue_screen
+   {print "get_campaign_intro_endgame_continue_screen\n"}
+   {if_else {meta_performer is_last_song}
       campaign_intro_perform_continue_screen
-      playlist_nextsong_screen}}
-{func
-   get_campaign_outro_endgame_continue_screen
-   {print
-      "get_campaign_outro_endgame_continue_screen\n"}
-   {if_else
-      {meta_performer is_last_song}
+      playlist_nextsong_screen
+   }
+}
+{func get_campaign_outro_endgame_continue_screen
+   {print "get_campaign_outro_endgame_continue_screen\n"}
+   {if_else {meta_performer is_last_song}
       campaign_perform_endgame_standard_exit_screen
-      playlist_nextsong_screen}}
-{new
-   HamPanel
+      playlist_nextsong_screen
+   }
+}
+{new HamPanel
    campaign_intro_perform_continue_panel
-   (file
-      "../low_button.milo")
+   (file "../low_button.milo")
    (draw_after_letterbox TRUE)
    (focus right_hand.hnl)
-   (hide_helpbar
-      {!
-         {shell_input in_controller_mode}})
+   (hide_helpbar {! {shell_input in_controller_mode}})
    (helpbar_confirm_label continue)
    (show_hand_help FALSE)
    (enter
-      {right_hand.hnl
-         set
-         showing
-         {!
-            {shell_input in_controller_mode}}}
-      {voice_input_panel activate_voice_context continue_screen})
+      {right_hand.hnl set showing {! {shell_input in_controller_mode}}}
+      {voice_input_panel activate_voice_context continue_screen}
+   )
    SELECT_RIGHT_LIST_TOKEN
    (poll SLIDE_RIGHT_LIST_ITEM)
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (continue
-            {if_else
-               {meta_performer is_campaign_intro_complete}
+            {if_else {meta_performer is_campaign_intro_complete}
                {do
                   {print
-                     "get_campaign_intro_endgame_continue_screen: last playlist song: PASS!\n"}
-                  {ui goto_screen campaign_perform_endgame_standard_exit_screen}}
+                     "get_campaign_intro_endgame_continue_screen: last playlist song: PASS!\n"
+                  }
+                  {ui goto_screen campaign_perform_endgame_standard_exit_screen}
+               }
                {do
                   {print
-                     "get_campaign_intro_endgame_continue_screen: last playlist song: ***FAIL***!\n"}
-                  {ui goto_screen campaign_intro_perform_retry_screen}}})})
-   (controller_mode_entered
-      {right_hand.hnl set showing FALSE})
-   (controller_mode_exited
-      {right_hand.hnl set showing TRUE})}
-{new
-   HamScreen
+                     "get_campaign_intro_endgame_continue_screen: last playlist song: ***FAIL***!\n"
+                  }
+                  {ui goto_screen campaign_intro_perform_retry_screen}
+               }
+            }
+         )
+      }
+   )
+   (controller_mode_entered {right_hand.hnl set showing FALSE})
+   (controller_mode_exited {right_hand.hnl set showing TRUE})
+}
+{new HamScreen
    campaign_intro_perform_continue_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel campaign_intro_perform_continue_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      campaign_intro_perform_continue_panel
+   )
    (focus campaign_intro_perform_continue_panel)
    (use_continue_panel FALSE)
    (has_continue_panel FALSE)
    (on_voice_command
       ($command)
-      {campaign_intro_perform_continue_panel select_right_list_token $command})}
-{new
-   HamScreen
+      {campaign_intro_perform_continue_panel select_right_list_token $command}
+   )
+}
+{new HamScreen
    campaign_perform_endgame_standard_exit_screen
    (panels meta_game)
    (enter
       {shell_input exit_controller_mode}
-      {ui pop_screen meta_loading_continue_screen})}
-{new
-   HamScreen
+      {ui pop_screen meta_loading_continue_screen}
+   )
+}
+{new HamScreen
    campaign_intro_perform_retry_screen
    (panels meta_game background_panel perform_complete_panel)
    (focus perform_complete_panel)
    (provider provider_campaign_intro_fail.hnp)
-   (enter
-      {voice_input_panel activate_voice_context perform_complete_screen})
+   (enter {voice_input_panel activate_voice_context perform_complete_screen})
    (handle_campaign_intro_fail_retry
       {print
-         "campaign_intro_perform_retry_screen: handle_campaign_intro_fail_retry\n"}
+         "campaign_intro_perform_retry_screen: handle_campaign_intro_fail_retry\n"
+      }
       {campaign set_campaign_state kCampaignStateIntroRetry}
       {shell_input exit_controller_mode}
-      {ui pop_screen meta_loading_continue_screen})
+      {ui pop_screen meta_loading_continue_screen}
+   )
    (handle_campaign_intro_fail_abort
       {print
-         "campaign_intro_perform_retry_screen: handle_campaign_intro_fail_abort\n"}
+         "campaign_intro_perform_retry_screen: handle_campaign_intro_fail_abort\n"
+      }
       {campaign set_campaign_state kCampaignStateIntroAbort}
       {campaign_intro_quit_confirm_screen set yes_action quit}
       {dialog_panel set_ok_no campaign_intro_fail_confirm_quit TRUE}
-      {ui goto_screen campaign_intro_quit_confirm_screen})
+      {ui goto_screen campaign_intro_quit_confirm_screen}
+   )
    (handle_campaign_intro_fail_practice
       {print
-         "campaign_intro_perform_retry_screen: handle_campaign_intro_fail_practice\n"}
+         "campaign_intro_perform_retry_screen: handle_campaign_intro_fail_practice\n"
+      }
       {campaign set_campaign_state kCampaignStateIntroAbort}
       {campaign_intro_quit_confirm_screen set yes_action practice}
       {dialog_panel set_ok_no campaign_intro_fail_confirm_rehearse TRUE}
-      {ui goto_screen campaign_intro_quit_confirm_screen})}
-{new
-   HamScreen
+      {ui goto_screen campaign_intro_quit_confirm_screen}
+   )
+}
+{new HamScreen
    campaign_intro_initiate_retry
    (panels meta_game)
    (enter
@@ -1754,188 +1639,180 @@
       {meta_performer repeat_current_playlist_song}
       {update_campaign_work_it_flag}
       {campaign set_campaign_state kCampaignStatePerformIt}
-      {enter_gameplay})}
-{new
-   HamScreen
+      {enter_gameplay}
+   )
+}
+{new HamScreen
    campaign_intro_initiate_abort
    (panels meta_game)
    (enter
       {shell_input exit_controller_mode}
-      {ui goto_screen main_screen})}
-{new
-   HamScreen
+      {ui goto_screen main_screen}
+   )
+}
+{new HamScreen
    campaign_intro_quit_confirm_screen
    (panels perform_complete_panel background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (yes_action '')
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (ok
             {cond
                ({==
                      [yes_action]
                      quit}
                   {hamprovider set is_in_campaign_mode FALSE}
-                  {perform_complete_panel set pending_quit TRUE})
+                  {perform_complete_panel set pending_quit TRUE}
+               )
                ({==
                      [yes_action]
                      practice}
-                  {perform_complete_panel set pending_practice TRUE})})}
-      {ui goto_screen campaign_intro_perform_retry_screen})
+                  {perform_complete_panel set pending_practice TRUE}
+               )
+            }
+         )
+      }
+      {ui goto_screen campaign_intro_perform_retry_screen}
+   )
    (on_voice_command
       ($command)
-      {dialog_panel select_right_list_token $command})}
-{new
-   HamPanel
+      {dialog_panel select_right_list_token $command}
+   )
+}
+{new HamPanel
    playlist_widget_panel
-   (file
-      "playlist_widget.milo")
+   (file "playlist_widget.milo")
    (enter
-      {screentitle.lbl
-         set_prelocalized_string
-         {meta_performer get_playlist_name_and_duration}}
+      {screentitle.lbl set_prelocalized_string
+         {meta_performer get_playlist_name_and_duration}
+      }
       {songs.lst allow_highlight FALSE}
       {meta_performer populate_playlist_song_provider songs.hnp}
-      {songs.lst set_provider songs.hnp})}
-{new
-   HamScreen
+      {songs.lst set_provider songs.hnp}
+   )
+}
+{new HamScreen
    playlist_perform_complete_screen
-   (panels meta_game background_panel perform_complete_panel fitness_info_panel playlist_widget_panel)
+   (panels
+      meta_game
+      background_panel
+      perform_complete_panel
+      fitness_info_panel
+      playlist_widget_panel
+   )
    (focus perform_complete_panel)
    (provider provider_playlist.hnp)
    (enter
-      {if_else
-         {is_active_profile_in_fitness_mode}
+      {if_else {is_active_profile_in_fitness_mode}
          {playlist_widget_panel set_showing FALSE}
-         {playlist_widget_panel set_showing TRUE}}
-      {voice_input_panel activate_voice_context perform_complete_screen})
+         {playlist_widget_panel set_showing TRUE}
+      }
+      {voice_input_panel activate_voice_context perform_complete_screen}
+   )
    (handle_restart_selected
       {meta_performer restart}
       {meta_performer start_playlist}
       {hamprovider voice_commander_help_hide}
-      {ui goto_screen playlist_restart_screen})}
-{new
-   HamScreen
+      {ui goto_screen playlist_restart_screen}
+   )
+}
+{new HamScreen
    dancebattle_perform_complete_screen
    (panels meta_game background_panel perform_complete_panel)
    (focus perform_complete_panel)
    (provider provider_dancebattle.hnp)
-   (enter
-      {voice_input_panel activate_voice_context perform_complete_screen})
-   (handle_restart_selected
-      {perform_complete_panel on_restart})}
-{new
-   HamScreen
+   (enter {voice_input_panel activate_voice_context perform_complete_screen})
+   (handle_restart_selected {perform_complete_panel on_restart})
+}
+{new HamScreen
    endgame_practice_confirm_screen
    (panels perform_complete_panel background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (return_screen '')
-   (enter
-      {dialog_panel set_ok_no confirm_practice TRUE})
+   (enter {dialog_panel set_ok_no confirm_practice TRUE})
    (NAV_SELECT_MSG
-      {switch
-         $name
-         (ok
-            {perform_complete_panel set pending_practice TRUE})}
-      {ui
-         goto_screen
-         [return_screen]})}
-{new
-   HamScreen
+      {switch $name
+         (ok {perform_complete_panel set pending_practice TRUE})
+      }
+      {ui goto_screen [return_screen]}
+   )
+}
+{new HamScreen
    endgame_finale_quit_confirm_screen
    (panels perform_complete_panel background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (return_screen '')
    (enter
       {dialog_panel set_ok_no confirm_quit_finale TRUE}
-      {voice_input_panel activate_voice_context yes_no_confirm_screen})
+      {voice_input_panel activate_voice_context yes_no_confirm_screen}
+   )
    (NAV_SELECT_MSG
-      {switch
-         $name
-         (ok
-            {perform_complete_panel set pending_quit TRUE})}
-      {ui
-         goto_screen
-         [return_screen]})
+      {switch $name
+         (ok {perform_complete_panel set pending_quit TRUE})
+      }
+      {ui goto_screen [return_screen]}
+   )
    (on_voice_command
       ($command)
-      {dialog_panel select_right_list_token $command})}
-{new
-   HamScreen
+      {dialog_panel select_right_list_token $command}
+   )
+}
+{new HamScreen
    perform_endgame_flaunt_confirm_screen
    (panels meta_game background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (okay_to_flaunt 0)
    (enter
-      {memcardmgr
-         add_sink
-         $this
-         (save_load_all_complete_msg)}
-      {player_provider_1
-         add_sink
-         $this
-         (padnum_updated)}
-      {player_provider_2
-         add_sink
-         $this
-         (padnum_updated)}
-      {set
-         [okay_to_flaunt]
-         0}
-      {$this update_dialog})
+      {memcardmgr add_sink $this (save_load_all_complete_msg)}
+      {player_provider_1 add_sink $this (padnum_updated)}
+      {player_provider_2 add_sink $this (padnum_updated)}
+      {set [okay_to_flaunt] 0}
+      {$this update_dialog}
+   )
    (exit
       {memcardmgr remove_sink $this}
       {player_provider_1 remove_sink $this padnum_updated}
-      {player_provider_2 remove_sink $this padnum_updated})
+      {player_provider_2 remove_sink $this padnum_updated}
+   )
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (ok
-            {if
-               [okay_to_flaunt]
-               {challenges upload_flaunt_for_one}})}
-      {ui goto_screen perform_final_results_screen})
+            {if [okay_to_flaunt]
+               {challenges upload_flaunt_for_one}
+            }
+         )
+      }
+      {ui goto_screen perform_final_results_screen}
+   )
    (update_dialog
-      {if_else
-         {profile_mgr has_active_profile}
+      {if_else {profile_mgr has_active_profile}
          {do
-            ($profile
-               {profile_mgr get_active_profile})
-            ($profile_name
-               {$profile get_name})
-            {if_else
-               {platform_mgr
-                  is_pad_signed_into_live
-                  {$profile get_pad_num}}
-               {if_else
-                  {!
-                     {challenges has_flaunted $profile}}
+            ($profile {profile_mgr get_active_profile})
+            ($profile_name {$profile get_name})
+            {if_else {platform_mgr is_pad_signed_into_live {$profile get_pad_num}}
+               {if_else {! {challenges has_flaunted $profile}}
                   {do
-                     {set
-                        [okay_to_flaunt]
-                        1}
-                     {dialog_panel
-                        set_ok_no
-                        (flaunt_confirm_question $profile_name)
-                        TRUE}}
-                  {dialog_panel set_ok flaunt_already_flaunted TRUE}}
-               {dialog_panel set_ok flaunt_need_to_sign_in TRUE}}}
-         {dialog_panel set_ok flaunt_noprofile TRUE}})
-   (save_load_all_complete_msg
-      {$this update_dialog})
-   (padnum_updated
-      {$this update_dialog})}
-{new
-   HamPanel
+                     {set [okay_to_flaunt] 1}
+                     {dialog_panel set_ok_no (flaunt_confirm_question $profile_name) TRUE}
+                  }
+                  {dialog_panel set_ok flaunt_already_flaunted TRUE}
+               }
+               {dialog_panel set_ok flaunt_need_to_sign_in TRUE}
+            }
+         }
+         {dialog_panel set_ok flaunt_noprofile TRUE}
+      }
+   )
+   (save_load_all_complete_msg {$this update_dialog})
+   (padnum_updated {$this update_dialog})
+}
+{new HamPanel
    perform_final_results_panel
-   (file
-      "perform_final_results.milo")
+   (file "perform_final_results.milo")
    (helpbar_confirm_label continue)
    (focus right_hand.hnl)
-   (hide_helpbar
-      {!
-         {shell_input in_controller_mode}})
+   (hide_helpbar {! {shell_input in_controller_mode}})
    (show_hand_help FALSE)
    (complete_screen '')
    (any_player_xbox_live FALSE)
@@ -1944,129 +1821,80 @@
    (ui_provider)
    (enter
       #ifdef DEMO
-      {if
-         {==
-            {{$this find provider.hnp}
-               size
-               (nav_items)}
-            3}
-         {{$this find provider.hnp}
-            remove
-            (nav_items 2)}
-         {{$this find provider.hnp}
-            remove
-            (nav_items 1)}}
-      {if
-         {==
-            {{$this find provider_no_flaunt.hnp}
-               size
-               (nav_items)}
-            2}
-         {{$this find provider_no_flaunt.hnp}
-            remove
-            (nav_items 1)}}
+      {if {== {{$this find provider.hnp} size (nav_items)} 3}
+         {{$this find provider.hnp} remove (nav_items 2)}
+         {{$this find provider.hnp} remove (nav_items 1)}
+      }
+      {if {== {{$this find provider_no_flaunt.hnp} size (nav_items)} 2}
+         {{$this find provider_no_flaunt.hnp} remove (nav_items 1)}
+      }
       #endif
       {hamprovider set ui_nav_mode title}
       ENDGAME_PANEL_COMMON_ENTER
-      {set
-         [has_xsocial_access]
-         FALSE}
-      {set
-         [added_share_photon_option]
-         FALSE}
+      {set [has_xsocial_access] FALSE}
+      {set [added_share_photon_option] FALSE}
       {platform_mgr query_xsocial_capabilities}
       {update_song_name song_no_leader.lbl}
       {update_song_name song_center_panel.lbl}
       {mode_no_leader.lbl set text_token perform_title}
-      {if_else
-         {gamemode in_mode perform FALSE}
-         {set
-            [ui_provider]
-            provider.hnp}
-         {set
-            [ui_provider]
-            provider_no_flaunt.hnp}}
-      {if
-         {gamemode in_mode dance_battle}
-         {set
-            [ui_provider]
-            provider_battle.hnp}
-         {mode_no_leader.lbl set text_token dance_battle_title}}
-      {right_hand.hnl
-         set
-         nav_provider
-         [ui_provider]}
-      {set
-         [any_player_xbox_live]
-         {profile_mgr is_any_profile_signed_into_live}}
-      {if
-         [any_player_xbox_live]
-         {script_task
-            kTaskUISeconds
+      {if_else {gamemode in_mode perform FALSE}
+         {set [ui_provider] provider.hnp}
+         {set [ui_provider] provider_no_flaunt.hnp}
+      }
+      {if {gamemode in_mode dance_battle}
+         {set [ui_provider] provider_battle.hnp}
+         {mode_no_leader.lbl set text_token dance_battle_title}
+      }
+      {right_hand.hnl set nav_provider [ui_provider]}
+      {set [any_player_xbox_live] {profile_mgr is_any_profile_signed_into_live}}
+      {if [any_player_xbox_live]
+         {script_task kTaskUISeconds
             (delay 0.1)
-            (script
-               {minileaderboard.mld
-                  update_leaderboard
-                  {gamedata get song}})}}
+            (script {minileaderboard.mld update_leaderboard {gamedata get song}})
+         }
+      }
       {do
-         ($is_failure
-            {<
-               {$this get_num_stars}
-               3})
-         {results_provider.ep
-            set
+         ($is_failure {< {$this get_num_stars} 3})
+         {results_provider.ep set
             score
-            {'+'
-               {player_provider_1 get score}
-               {player_provider_2 get score}}}
-         {results_provider.ep
-            set
-            stars
-            {$this get_num_stars}}
-         {results_provider.ep
-            set
+            {'+' {player_provider_1 get score} {player_provider_2 get score}}
+         }
+         {results_provider.ep set stars {$this get_num_stars}}
+         {results_provider.ep set
             high_score
-            {&&
-               {meta_performer got_new_high_score}
-               {! $is_failure}}}
-         {results_provider.ep
-            set
+            {&& {meta_performer got_new_high_score} {! $is_failure}}
+         }
+         {results_provider.ep set
             best_stars
-            {&&
-               {meta_performer got_new_best_stars}
-               {! $is_failure}}}
-         {results_provider.ep
-            set
+            {&& {meta_performer got_new_best_stars} {! $is_failure}}
+         }
+         {results_provider.ep set
             no_flashcards
-            {meta_performer completed_song_with_no_flashcards}}
-         {results_provider.ep
-            set
+            {meta_performer completed_song_with_no_flashcards}
+         }
+         {results_provider.ep set
             unlocked_medium
-            {meta_performer unlocked_medium_difficulty}}
-         {results_provider.ep
-            set
+            {meta_performer unlocked_medium_difficulty}
+         }
+         {results_provider.ep set
             unlocked_expert
-            {meta_performer unlocked_expert_difficulty}}
-         {results_provider.ep
-            set
+            {meta_performer unlocked_expert_difficulty}
+         }
+         {results_provider.ep set
             unlocked_no_flashcards
-            {meta_performer unlocked_no_flashcards}}
-         {results_provider.ep
-            set
+            {meta_performer unlocked_no_flashcards}
+         }
+         {results_provider.ep set
             player1_percent_complete
-            {meta_performer get_moves_passed 0}}
-         {results_provider.ep
-            set
+            {meta_performer get_moves_passed 0}
+         }
+         {results_provider.ep set
             player2_percent_complete
-            {meta_performer get_moves_passed 1}}
-         {results_provider.ep
-            set
-            cumulative_score
-            {$this get_cumulative_score}}
-         {results_provider.ep
-            set
-            any_player_xbox_live
-            [any_player_xbox_live]}}
+            {meta_performer get_moves_passed 1}
+         }
+         {results_provider.ep set cumulative_score {$this get_cumulative_score}}
+         {results_provider.ep set any_player_xbox_live [any_player_xbox_live]}
+      }
       {print
          "perform_final_results_panel: percent_complete: P1="
          {results_provider.ep get player1_percent_complete}
@@ -2074,213 +1902,174 @@
          {results_provider.ep get player2_percent_complete}
          ", any_player_xbox_live="
          {results_provider.ep get any_player_xbox_live}
-         "\n"}
+         "\n"
+      }
       {print
          "    {player_provider_1 get join_state} = "
          {player_provider_1 get join_state}
-         "\n"}
+         "\n"
+      }
       {print
          "    {player_provider_1 get side}       = "
          {player_provider_1 get side}
-         "\n"}
+         "\n"
+      }
       {print
          "    {player_provider_2 get join_state} = "
          {player_provider_2 get join_state}
-         "\n"}
+         "\n"
+      }
       {print
          "    {player_provider_2 get side}       = "
          {player_provider_2 get side}
-         "\n"}
+         "\n"
+      }
       {print
          "    {results.flow is_running}          = "
          {results.flow is_running}
-         "\n"}
+         "\n"
+      }
       {results.flow activate}
       {right_hand.hnl set showing TRUE}
-      {voice_input_panel activate_voice_context perform_final_results_screen})
+      {voice_input_panel activate_voice_context perform_final_results_screen}
+   )
    (get_cumulative_score
       {'+'
          {player_provider_1 get cumulative_score}
-         {player_provider_2 get cumulative_score}})
-   (get_num_stars
-      {int
-         {game_panel get num_stars}})
+         {player_provider_2 get cumulative_score}
+      }
+   )
+   (get_num_stars {int {game_panel get num_stars}})
    (continue_next_screen
-      {print
-         "perform_final_results_panel: <<< continue_next_screen >>>\n"}
-      {if_else
-         {meta_performer just_beat_game}
+      {print "perform_final_results_panel: <<< continue_next_screen >>>\n"}
+      {if_else {meta_performer just_beat_game}
          {ui pop_screen beat_game_screen}
-         {ui
-            goto_screen
-            [complete_screen]}})
+         {ui goto_screen [complete_screen]}
+      }
+   )
    SELECT_RIGHT_LIST_TOKEN
    (poll
       SLIDE_RIGHT_LIST_ITEM
-      {if
-         {platform_mgr poll_xsocial_capabilities}
-         {set
-            [has_xsocial_access]
-            {platform_mgr has_xsocial_photo_post}}}
+      {if {platform_mgr poll_xsocial_capabilities}
+         {set [has_xsocial_access] {platform_mgr has_xsocial_photo_post}}
+      }
       {if_else
          {&&
             {profile_mgr has_active_profile}
-            {platform_mgr
-               is_pad_signed_into_live
-               {{profile_mgr get_active_profile}
-                  get_pad_num}}
-            {==
-               [has_xsocial_access]
-               TRUE}
-            {enable_photos}}
-         {if
-            {==
-               [added_share_photon_option]
-               FALSE}
+            {platform_mgr is_pad_signed_into_live
+               {{profile_mgr get_active_profile} get_pad_num}
+            }
+            {== [has_xsocial_access] TRUE}
+            {enable_photos}
+         }
+         {if {== [added_share_photon_option] FALSE}
             {do
-               ($nav_idx
-                  {[ui_provider]
-                     size
-                     (nav_items)})
-               {[ui_provider]
-                  append_nav_item}
-               {[ui_provider]
-                  set_label
-                  $nav_idx
-                  share_photos}
-               {set
-                  [added_share_photon_option]
-                  TRUE}}}
-         {if
-            {==
-               [added_share_photon_option]
-               TRUE}
+               ($nav_idx {[ui_provider] size (nav_items)})
+               {[ui_provider] append_nav_item}
+               {[ui_provider] set_label $nav_idx share_photos}
+               {set [added_share_photon_option] TRUE}
+            }
+         }
+         {if {== [added_share_photon_option] TRUE}
             {do
-               ($nav_idx
-                  {-
-                     {[ui_provider]
-                        size
-                        (nav_items)}
-                     1})
-               {[ui_provider]
-                  remove
-                  (nav_items $nav_idx)}
-               {set
-                  [added_share_photon_option]
-                  FALSE}}}}
-      {if_else
-         {==
-            [any_player_xbox_live]
-            TRUE}
+               ($nav_idx {- {[ui_provider] size (nav_items)} 1})
+               {[ui_provider] remove (nav_items $nav_idx)}
+               {set [added_share_photon_option] FALSE}
+            }
+         }
+      }
+      {if_else {== [any_player_xbox_live] TRUE}
          {do
-            {set
-               [any_player_xbox_live]
-               {profile_mgr is_any_profile_signed_into_live}}
-            {if
-               {==
-                  [any_player_xbox_live]
-                  FALSE}
-               {results_provider.ep
-                  set
-                  any_player_xbox_live
-                  [any_player_xbox_live]}
-               {script_task
-                  kTaskUISeconds
+            {set [any_player_xbox_live] {profile_mgr is_any_profile_signed_into_live}}
+            {if {== [any_player_xbox_live] FALSE}
+               {results_provider.ep set any_player_xbox_live [any_player_xbox_live]}
+               {script_task kTaskUISeconds
                   (delay 0.1)
-                  (script
-                     {minileaderboard.mld
-                        update_leaderboard
-                        {gamedata get song}})}
-               {results.flow activate}}}
+                  (script {minileaderboard.mld update_leaderboard {gamedata get song}})
+               }
+               {results.flow activate}
+            }
+         }
          {do
-            {set
-               [any_player_xbox_live]
-               {profile_mgr is_any_profile_signed_into_live}}
-            {if
-               {==
-                  [any_player_xbox_live]
-                  TRUE}
-               {results_provider.ep
-                  set
-                  any_player_xbox_live
-                  [any_player_xbox_live]}
-               {script_task
-                  kTaskUISeconds
+            {set [any_player_xbox_live] {profile_mgr is_any_profile_signed_into_live}}
+            {if {== [any_player_xbox_live] TRUE}
+               {results_provider.ep set any_player_xbox_live [any_player_xbox_live]}
+               {script_task kTaskUISeconds
                   (delay 0.1)
-                  (script
-                     {minileaderboard.mld
-                        update_leaderboard
-                        {gamedata get song}})}
-               {results.flow activate}}}})
+                  (script {minileaderboard.mld update_leaderboard {gamedata get song}})
+               }
+               {results.flow activate}
+            }
+         }
+      }
+   )
    (NAV_SELECT_MSG
-      {print
-         "COMPONENT="
-         $component
-         ", NAME="
-         $name
-         "\n"}
-      {switch
-         $name
+      {print "COMPONENT=" $component ", NAME=" $name "\n"}
+      {switch $name
          (continue
             #ifdef DEMO
-            {if_else
-               {gamemode in_mode perform}
+            {if_else {gamemode in_mode perform}
                {ui pop_screen meta_loading_continue_screen}
-               {ui goto_screen perform_complete_screen}}
+               {ui goto_screen perform_complete_screen}
+            }
             #else
             {print
                "perform_final_results_panel: {gamemode get endgame_continue_screen}="
                {gamemode get endgame_continue_screen}
-               "\n"}
-            {if_else
-               {gamemode in_mode challenge}
+               "\n"
+            }
+            {if_else {gamemode in_mode challenge}
                {ui pop_screen meta_loading_perform_cleanup_screen}
-               {ui goto_screen perform_complete_screen}}
-            #endif)
-         (flaunt
-            {ui goto_screen perform_endgame_flaunt_confirm_screen})
+               {ui goto_screen perform_complete_screen}
+            }
+            #endif
+         )
+         (flaunt {ui goto_screen perform_endgame_flaunt_confirm_screen})
          (leaderboards
-            {leaderboards_need_to_sign_in_screen
-               set
+            {leaderboards_need_to_sign_in_screen set
                next_screen
-               {{ui current_screen}
-                  get
-                  name}}
-            {if_else
-               {profile_mgr has_active_profile}
+               {{ui current_screen} get name}
+            }
+            {if_else {profile_mgr has_active_profile}
                {do
-                  ($profile
-                     {profile_mgr get_active_profile})
-                  {if_else
-                     {platform_mgr
-                        is_pad_signed_into_live
-                        {$profile get_pad_num}}
+                  ($profile {profile_mgr get_active_profile})
+                  {if_else {platform_mgr is_pad_signed_into_live {$profile get_pad_num}}
                      {do
                         {profile_mgr set_critical_profile $profile}
-                        {ui goto_screen leaderboard_select_screen}}
-                     {ui goto_screen leaderboards_need_to_sign_in_screen}}}
-               {ui goto_screen leaderboards_need_to_sign_in_screen}})
+                        {ui goto_screen leaderboard_select_screen}
+                     }
+                     {ui goto_screen leaderboards_need_to_sign_in_screen}
+                  }
+               }
+               {ui goto_screen leaderboards_need_to_sign_in_screen}
+            }
+         )
          (share_photos
-            {endgame_photos_screen
-               set
-               back_screen
-               {{ui current_screen}
-                  get
-                  name}}
-            {ui goto_screen endgame_photos_screen})})
+            {endgame_photos_screen set back_screen {{ui current_screen} get name}}
+            {ui goto_screen endgame_photos_screen}
+         )
+      }
+   )
    (on_voice_command
       ($command)
-      {$this select_right_list_token $command})}
-{new
-   HamScreen
+      {$this select_right_list_token $command}
+   )
+}
+{new HamScreen
    perform_final_results_screen
    (panels meta_game background_endgame_panel perform_final_results_panel)
    (focus perform_final_results_panel)
-   (enter)}
-{new
-   HamScreen
+   (enter)
+}
+{new HamScreen
    fake_party_endgame_screen
-   (panels meta_game perform_endgame_panel xp_overlay_panel sync_next_party_with_rc_panel)
+   (panels
+      meta_game
+      perform_endgame_panel
+      xp_overlay_panel
+      sync_next_party_with_rc_panel
+   )
    (focus sync_next_party_with_rc_panel)
    (use_continue_panel FALSE)
-   (has_continue_panel FALSE)}
+   (has_continue_panel FALSE)
+}

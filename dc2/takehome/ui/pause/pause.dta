@@ -1,25 +1,23 @@
-#define PAUSE_PANEL_HANDLERS
-((pause
+#define PAUSE_PANEL_HANDLERS (
+   (pause
       {hamprovider set ui_nav_mode pause}
       {game_panel set_paused TRUE}
       {game_screen set_showing FALSE}
-      {if
-         {&&
-            $hamdirector
-            {$hamdirector get player_freestyle}}
-         {$hamdirector set hide_player_freestyle TRUE}})
+      {if {&& $hamdirector {$hamdirector get player_freestyle}}
+         {$hamdirector set hide_player_freestyle TRUE}
+      }
+   )
    (resume
       {hamprovider set ui_nav_mode game}
-      {if
-         {&&
-            $hamdirector
-            {$hamdirector get player_freestyle}}
-         {$hamdirector set hide_player_freestyle FALSE}}
+      {if {&& $hamdirector {$hamdirector get player_freestyle}}
+         {$hamdirector set hide_player_freestyle FALSE}
+      }
       {set $game_unpause_on_enter TRUE}
       {overshell resolve_skeletons}
-      {ui pop_screen}))
-{new
-   HamPanel
+      {ui pop_screen}
+   )
+)
+{new HamPanel
    pause_panel
    (file pause.milo)
    (focus right_hand.hnl)
@@ -27,200 +25,177 @@
    (show_back_controller_icon FALSE)
    (tertiary_token natal_troubleshooter)
    (back_token
-      {if_else
-         {shell_input in_controller_mode}
-         {symbol
-            ""}
-         natal_guide})
+      {if_else {shell_input in_controller_mode}
+         {symbol ""}
+         natal_guide
+      }
+   )
    (can_resume TRUE)
    (exit_destination exit_quit)
    (chose_quit FALSE)
    PAUSE_PANEL_HANDLERS
    (enter
-      {set
-         [chose_quit]
-         FALSE}
+      {set [chose_quit] FALSE}
       {$this pause}
-      {unless
-         {ui went_back}
-         {script_task
-            kTaskUISeconds
-            (delay 2.0e-2)
-            (script
-               {run_flow pause.flow})}}
-      {if
-         {meta_performer last_played_mode}
-         {gamemode
-            set_mode
-            {meta_performer last_played_mode}}}
+      {unless {ui went_back}
+         {script_task kTaskUISeconds (delay 2.0e-2) (script {run_flow pause.flow})}
+      }
+      {if {meta_performer last_played_mode}
+         {gamemode set_mode {meta_performer last_played_mode}}
+      }
       {$this update_skeleton_status}
-      {shell_input
-         add_sink
-         $this
-         (update_skeleton_status)}
+      {shell_input add_sink $this (update_skeleton_status)}
       {do
-         ($is_medley
-            {acc_mgr
-               is_unlockable_asset
-               {gamedata get song}})
-         {perform.hnp
-            set_enabled
-            pausecommand_practice
-            {! $is_medley}}}
-      kDataUnhandled)
+         ($is_medley {acc_mgr is_unlockable_asset {gamedata get song}})
+         {perform.hnp set_enabled pausecommand_practice {! $is_medley}}
+      }
+      kDataUnhandled
+   )
    (set_provider
       ($provider)
-      {right_hand.hnl set nav_provider $provider})
+      {right_hand.hnl set nav_provider $provider}
+   )
    (controller_mode_entered
-      {set
-         [back_token]
-         {symbol
-            ""}}
-      {helpbar resync})
+      {set [back_token] {symbol ""}}
+      {helpbar resync}
+   )
    (controller_mode_exited
-      {set
-         [back_token]
-         natal_guide}
-      {helpbar resync})
+      {set [back_token] natal_guide}
+      {helpbar resync}
+   )
    (end_game
       ($result)
-      {unless
-         [chose_quit]
-         {ui pop_screen}})
+      {unless [chose_quit]
+         {ui pop_screen}
+      }
+   )
    (exit
-      {if
-         {exists game}
-         {game never_allow_input FALSE}}
-      {shell_input remove_sink $this})
-   (poll
-      {$this update_skeleton_status})
+      {if {exists game}
+         {game never_allow_input FALSE}
+      }
+      {shell_input remove_sink $this}
+   )
+   (poll {$this update_skeleton_status})
    (get_num_players
       {do
          ($count 0)
          {if
             {>
                {gamedata getp 0 skeleton_tracking_id}
-               0}
-            {set
-               $count
-               {'+' $count 1}}}
+               0
+            }
+            {set $count {'+' $count 1}}
+         }
          {if
             {>
                {gamedata getp 1 skeleton_tracking_id}
-               0}
-            {set
-               $count
-               {'+' $count 1}}}
-         $count})
+               0
+            }
+            {set $count {'+' $count 1}}
+         }
+         $count
+      }
+   )
    (update_skeleton_status
       {do
          ($enough_skeletons
-            {if_else
-               {==
-                  {hamprovider get gameplay_mode}
-                  dance_battle}
+            {if_else {== {hamprovider get gameplay_mode} dance_battle}
                2
-               1})
+               1
+            }
+         )
          {if_else
             {'||'
-               {>=
-                  {$this get_num_players}
-                  $enough_skeletons}
-               {!
-                  {gesture_mgr pause_on_skeleton_loss}}}
+               {>= {$this get_num_players} $enough_skeletons}
+               {! {gesture_mgr pause_on_skeleton_loss}}
+            }
             {do
-               {{right_hand.hnl get nav_provider}
-                  set_enabled
-                  pausecommand_resume
-                  TRUE}
-               {if
-                  {==
-                     [can_resume]
-                     FALSE}
+               {{right_hand.hnl get nav_provider} set_enabled pausecommand_resume TRUE}
+               {if {== [can_resume] FALSE}
                   {$this set can_resume TRUE}
-                  {hide_lost_skel.flow activate}}}
+                  {hide_lost_skel.flow activate}
+               }
+            }
             {do
-               {{right_hand.hnl get nav_provider}
-                  set_enabled
-                  pausecommand_resume
-                  FALSE}
-               {if
-                  {==
-                     [can_resume]
-                     TRUE}
+               {{right_hand.hnl get nav_provider} set_enabled pausecommand_resume FALSE}
+               {if {== [can_resume] TRUE}
                   {$this set can_resume FALSE}
-                  {show_lost_skel.flow activate}}}}
-         {right_hand.hnl refresh}})
+                  {show_lost_skel.flow activate}
+               }
+            }
+         }
+         {right_hand.hnl refresh}
+      }
+   )
    (NAV_SELECT_MSG
-      {switch
-         $name
-         (pausecommand_resume
-            {pause_panel resume})
+      {switch $name
+         (pausecommand_resume {pause_panel resume})
          (pausecommand_practice
             {pause_panel set exit_destination exit_practice}
-            {ui goto_screen confirm_quit_screen})
+            {ui goto_screen confirm_quit_screen}
+         )
          (pausecommand_perform
             {pause_panel set exit_destination exit_perform}
-            {ui goto_screen confirm_quit_screen})
+            {ui goto_screen confirm_quit_screen}
+         )
          (pausecommand_dancebattle
             {pause_panel set exit_destination exit_dancebattle}
-            {ui goto_screen confirm_quit_screen})
+            {ui goto_screen confirm_quit_screen}
+         )
          (pausecommand_change_difficulty
-            {{gamemode get ingame_seldiff_screen}
-               set
+            {{gamemode get ingame_seldiff_screen} set
                back_screen
-               {gamemode get pause_screen}}
-            {ui
-               goto_screen
-               {gamemode get ingame_seldiff_screen}})
+               {gamemode get pause_screen}
+            }
+            {ui goto_screen {gamemode get ingame_seldiff_screen}}
+         )
          (pausecommand_restart
             {pause_panel set exit_destination exit_restart}
-            {ui goto_screen confirm_quit_screen})
+            {ui goto_screen confirm_quit_screen}
+         )
          (pausecommand_quit
             {pause_panel set exit_destination exit_quit}
-            {ui goto_screen confirm_quit_screen})
+            {ui goto_screen confirm_quit_screen}
+         )
          (pausecommand_skip
-            {if
-               {gamemode in_mode playlist_perform}
+            {if {gamemode in_mode playlist_perform}
                {game_panel end_game kQuit}
                {do
-                  ($player1_provider
-                     {gamedata getp 0 provider})
-                  ($player2_provider
-                     {gamedata getp 1 provider})
+                  ($player1_provider {gamedata getp 0 provider})
+                  ($player2_provider {gamedata getp 1 provider})
                   {$player1_provider set score 0}
-                  {$player1_provider set score 0}}
+                  {$player1_provider set score 0}
+               }
                {game_panel set score 0}
                {meta_performer trigger_song_completion 0 0}
                {meta_performer advance_song 0}
                {meta_performer handle_skipped_song}
-               {ui goto_screen win_transition_screen}})
-         (natal_guide
-            {gesture_mgr show_gesture_guide})
-         (natal_troubleshooter
-            {gesture_mgr show_gesture_troubleshooter})})
+               {ui goto_screen win_transition_screen}
+            }
+         )
+         (natal_guide {gesture_mgr show_gesture_guide})
+         (natal_troubleshooter {gesture_mgr show_gesture_troubleshooter})
+      }
+   )
    (on_restart
       {meta_performer handle_song_restart}
-      {game_panel end_game kRestart})
+      {game_panel end_game kRestart}
+   )
    (on_quit
-      {set
-         [chose_quit]
-         TRUE}
-      {switch
-         [exit_destination]
+      {set [chose_quit] TRUE}
+      {switch [exit_destination]
          (exit_quit
             {game_panel end_game kQuit}
-            {ui pop_screen meta_loading_pause_new_song_screen})
-         (exit_restart
-            {$this on_restart})
-         (exit_practice
-            {$pause_screen handle_practice_selected})
-         (exit_perform
-            {$pause_screen handle_perform_selected})
-         (exit_dancebattle
-            {$pause_screen handle_dancebattle_selected})})}
-{new
-   HamScreen
+            {ui pop_screen meta_loading_pause_new_song_screen}
+         )
+         (exit_restart {$this on_restart})
+         (exit_practice {$pause_screen handle_practice_selected})
+         (exit_perform {$pause_screen handle_perform_selected})
+         (exit_dancebattle {$pause_screen handle_dancebattle_selected})
+      }
+   )
+}
+{new HamScreen
    perform_pause_screen
    (panels background_panel pause_panel)
    (focus pause_panel)
@@ -229,193 +204,160 @@
       {set $pause_screen $this}
       {if_else
          {&&
-            {==
-               {player_provider_1 get join_state}
-               kJoinPlaying}
-            {==
-               {player_provider_2 get join_state}
-               kJoinPlaying}}
-         {pause_panel
-            set_provider
-            {pause_panel find perform_2p.hnp}}
-         {pause_panel
-            set_provider
-            {pause_panel find perform.hnp}}}
-      {pause_panel update_skeleton_status})
+            {== {player_provider_1 get join_state} kJoinPlaying}
+            {== {player_provider_2 get join_state} kJoinPlaying}
+         }
+         {pause_panel set_provider {pause_panel find perform_2p.hnp}}
+         {pause_panel set_provider {pause_panel find perform.hnp}}
+      }
+      {pause_panel update_skeleton_status}
+   )
    (handle_dancebattle_selected
       {gamemode set_mode dance_battle}
-      {{gamemode get ingame_seldiff_screen}
-         set
-         back_screen
-         perform_pause_screen}
-      {ui
-         goto_screen
-         {gamemode get ingame_seldiff_screen}})
+      {{gamemode get ingame_seldiff_screen} set back_screen perform_pause_screen}
+      {ui goto_screen {gamemode get ingame_seldiff_screen}}
+   )
    (handle_practice_selected
       {gamemode set_mode practice}
-      {{gamemode get ingame_seldiff_screen}
-         set
-         back_screen
-         perform_pause_screen}
-      {ui
-         goto_screen
-         {gamemode get ingame_seldiff_screen}})}
-{new
-   HamScreen
+      {{gamemode get ingame_seldiff_screen} set back_screen perform_pause_screen}
+      {ui goto_screen {gamemode get ingame_seldiff_screen}}
+   )
+}
+{new HamScreen
    practice_pause_screen
    (panels background_panel pause_panel)
    (focus pause_panel)
    (scroll_sfx FALSE)
    (enter
       {set $pause_screen $this}
-      {pause_panel
-         set_provider
-         {pause_panel find practice.hnp}}
-      {pause_panel update_skeleton_status})
+      {pause_panel set_provider {pause_panel find practice.hnp}}
+      {pause_panel update_skeleton_status}
+   )
    (handle_dancebattle_selected
       {gamemode set_mode dance_battle}
-      {{gamemode get ingame_seldiff_screen}
-         set
+      {{gamemode get ingame_seldiff_screen} set
          back_screen
-         practice_pause_screen}
-      {ui
-         goto_screen
-         {gamemode get ingame_seldiff_screen}})
+         practice_pause_screen
+      }
+      {ui goto_screen {gamemode get ingame_seldiff_screen}}
+   )
    (handle_perform_selected
       {gamemode set_mode perform}
-      {{gamemode get ingame_seldiff_screen}
-         set
+      {{gamemode get ingame_seldiff_screen} set
          back_screen
-         practice_pause_screen}
-      {ui
-         goto_screen
-         {gamemode get ingame_seldiff_screen}})}
-{new
-   HamScreen
+         practice_pause_screen
+      }
+      {ui goto_screen {gamemode get ingame_seldiff_screen}}
+   )
+}
+{new HamScreen
    playlist_perform_pause_screen
    (panels background_panel pause_panel)
    (focus pause_panel)
    (scroll_sfx FALSE)
    (enter
       {set $pause_screen $this}
-      {pause_panel
-         set_provider
-         {pause_panel find playlist_perform.hnp}}
-      {pause_panel update_skeleton_status})}
-{new
-   HamScreen
+      {pause_panel set_provider {pause_panel find playlist_perform.hnp}}
+      {pause_panel update_skeleton_status}
+   )
+}
+{new HamScreen
    campaign_perform_pause_screen
    (panels background_panel pause_panel)
    (focus pause_panel)
    (scroll_sfx FALSE)
    (enter
       {set $pause_screen $this}
-      {if_else
-         {meta_performer has_playlist}
-         {pause_panel
-            set_provider
-            {pause_panel find campaign_perform_playlist.hnp}}
+      {if_else {meta_performer has_playlist}
+         {pause_panel set_provider {pause_panel find campaign_perform_playlist.hnp}}
          {if_else
             {&&
-               {==
-                  {player_provider_1 get join_state}
-                  kJoinPlaying}
-               {==
-                  {player_provider_2 get join_state}
-                  kJoinPlaying}}
-            {pause_panel
-               set_provider
-               {pause_panel find campaign_perform_2p.hnp}}
-            {pause_panel
-               set_provider
-               {pause_panel find campaign_perform.hnp}}}}
-      {pause_panel update_skeleton_status})
+               {== {player_provider_1 get join_state} kJoinPlaying}
+               {== {player_provider_2 get join_state} kJoinPlaying}
+            }
+            {pause_panel set_provider {pause_panel find campaign_perform_2p.hnp}}
+            {pause_panel set_provider {pause_panel find campaign_perform.hnp}}
+         }
+      }
+      {pause_panel update_skeleton_status}
+   )
    (handle_practice_selected
       {gamemode set_mode campaign_practice}
-      {pause_panel on_restart})}
-{new
-   HamScreen
+      {pause_panel on_restart}
+   )
+}
+{new HamScreen
    campaign_practice_pause_screen
    (panels background_panel pause_panel)
    (focus pause_panel)
    (scroll_sfx FALSE)
    (enter
       {set $pause_screen $this}
-      {pause_panel
-         set_provider
-         {pause_panel find campaign_practice.hnp}}
-      {pause_panel update_skeleton_status})
+      {pause_panel set_provider {pause_panel find campaign_practice.hnp}}
+      {pause_panel update_skeleton_status}
+   )
    (handle_perform_selected
       {gamemode set_mode campaign_perform}
-      {pause_panel on_restart})}
-{new
-   HamScreen
+      {pause_panel on_restart}
+   )
+}
+{new HamScreen
    dancebattle_pause_screen
    (panels background_panel pause_panel)
    (focus pause_panel)
    (scroll_sfx FALSE)
    (handle_perform_selected
       {gamemode set_mode perform}
-      {{gamemode get ingame_seldiff_screen}
-         set
+      {{gamemode get ingame_seldiff_screen} set
          back_screen
-         dancebattle_pause_screen}
-      {ui
-         goto_screen
-         {gamemode get ingame_seldiff_screen}})
+         dancebattle_pause_screen
+      }
+      {ui goto_screen {gamemode get ingame_seldiff_screen}}
+   )
    (handle_practice_selected
       {gamemode set_mode practice}
-      {{gamemode get ingame_seldiff_screen}
-         set
+      {{gamemode get ingame_seldiff_screen} set
          back_screen
-         dancebattle_pause_screen}
-      {ui
-         goto_screen
-         {gamemode get ingame_seldiff_screen}})
+         dancebattle_pause_screen
+      }
+      {ui goto_screen {gamemode get ingame_seldiff_screen}}
+   )
    (enter
       {set $pause_screen $this}
-      {pause_panel
-         set_provider
-         {pause_panel find dance_battle.hnp}}
-      {pause_panel update_skeleton_status})}
-#define CONFIRM_QUIT_HANDLERS
-((panels background_panel dialog_panel)
+      {pause_panel set_provider {pause_panel find dance_battle.hnp}}
+      {pause_panel update_skeleton_status}
+   )
+}
+#define CONFIRM_QUIT_HANDLERS (
+   (panels background_panel dialog_panel)
    (focus dialog_panel)
-   (helpbar
-      ((confirm helpbar_confirm)))
-   (is_restart
-      {==
-         {pause_panel get exit_destination}
-         exit_restart}))
-{new
-   HamScreen
+   (helpbar ((confirm helpbar_confirm)))
+   (is_restart {== {pause_panel get exit_destination} exit_restart})
+)
+{new HamScreen
    confirm_quit_screen
    CONFIRM_QUIT_HANDLERS
    (enter
-      {if_else
-         {$this is_restart}
+      {if_else {$this is_restart}
          {dialog_panel set_yesno confirm_restart}
-         {dialog_panel set_yesno confirm_quit}})
+         {dialog_panel set_yesno confirm_quit}
+      }
+   )
    (handle_select_msg
       ($name)
-      {switch
-         $name
-         (yes
-            {pause_panel on_quit})
-         (no
-            {ui
-               go_back_screen
-               {gamemode get pause_screen}})})
+      {switch $name
+         (yes {pause_panel on_quit})
+         (no {ui go_back_screen {gamemode get pause_screen}})
+      }
+   )
    (NAV_SELECT_MSG
-      {if
-         {'||'
-            {== $name no}
-            {!
-               {$this is_restart}}}
-         {$this handle_select_msg $name}})
+      {if {'||' {== $name no} {! {$this is_restart}}}
+         {$this handle_select_msg $name}
+      }
+   )
    (NAV_SELECT_DONE_MSG
-      {if
-         {&&
-            {== $name yes}
-            {$this is_restart}}
-         {$this handle_select_msg $name}})}
+      {if {&& {== $name yes} {$this is_restart}}
+         {$this handle_select_msg $name}
+      }
+   )
+}

@@ -1,292 +1,249 @@
-{new
-   UIPanel
+{new UIPanel
    friendlist_panel
-   (file
-      "friendlist_dialog_wii.milo")
+   (file "friendlist_dialog_wii.milo")
    (focus friendlist.lst)
    (friendlist_pos 0)
    (show_pending FALSE)
    (enter
-      {if
-         {==
-            {server is_connected}
-            TRUE}
-         {friendcode.lbl
-            set_localized
-            {platform_mgr get_friend_code}}}
+      {if {== {server is_connected} TRUE}
+         {friendcode.lbl set_localized {platform_mgr get_friend_code}}
+      }
       {platform_mgr add_sink $this}
       #ifdef HX_WII
       {platform_mgr allow_add_friend TRUE}
       #endif
-      {set
-         [show_pending]
-         FALSE}
+      {set [show_pending] FALSE}
       {$this enumerate}
-      {set
-         [selected_friend]
-         FALSE})
-   (TRANSITION_COMPLETE_MSG
-      {$this enumerate})
+      {set [selected_friend] FALSE}
+   )
+   (TRANSITION_COMPLETE_MSG {$this enumerate})
    (BUTTON_DOWN_MSG
-      {switch
-         $action
+      {switch $action
          (kAction_Confirm
-            {if_else
-               {==
-                  {friendlist.lst selected_pos}
-                  0}
-               {if
-                  {==
-                     {friends_provider can_add_friend}
-                     TRUE}
-                  {ui push_screen add_friend_screen}}
+            {if_else {== {friendlist.lst selected_pos} 0}
+               {if {== {friends_provider can_add_friend} TRUE}
+                  {ui push_screen add_friend_screen}
+               }
                {do
-                  {remove_friend_dialog
-                     set
+                  {remove_friend_dialog set
                      friend_id
-                     {friends_provider
-                        get_friend_id
-                        {friendlist.lst selected_pos}}}
-                  {ui push_screen remove_friend_dialog}}})
-         (kAction_Cancel
-            {ui goto_screen main_community_screen})
+                     {friends_provider get_friend_id {friendlist.lst selected_pos}}
+                  }
+                  {ui push_screen remove_friend_dialog}
+               }
+            }
+         )
+         (kAction_Cancel {ui goto_screen main_community_screen})
          (kAction_ViewModify
-            {set
-               [show_pending]
-               {!
-                  [show_pending]}}
-            {$this enumerate})
-         kDataUnhandled})
+            {set [show_pending] {! [show_pending]}}
+            {$this enumerate}
+         )
+         kDataUnhandled
+      }
+   )
    (enumerate
-      {if_else
-         [show_pending]
+      {if_else [show_pending]
          {do
             {type_label.lbl set text_token friend_list_pending}
-            {friends_provider enumerate_pending}}
+            {friends_provider enumerate_pending}
+         }
          {do
             {type_label.lbl set text_token friend_list_current}
-            {friends_provider enumerate_friends}}}
-      {if_else
-         [show_pending]
+            {friends_provider enumerate_friends}
+         }
+      }
+      {if_else [show_pending]
          {helpbar view_modify wii_hb_showcurrent}
-         {helpbar view_modify wii_hb_showpending}}
+         {helpbar view_modify wii_hb_showpending}
+      }
       {helpbar cancel helpbar_cancel}
       {friendlist.lst set_provider friends_provider}
-      {$this update})
+      {$this update}
+   )
    (update
-      {set
-         [friendlist_pos]
-         {friendlist.lst selected_pos}}
-      {if_else
-         {==
-            [friendlist_pos]
-            0}
+      {set [friendlist_pos] {friendlist.lst selected_pos}}
+      {if_else {== [friendlist_pos] 0}
          {helpbar confirm helpbar_select}
-         {helpbar confirm wii_hb_removefriend}})
-   (SCROLL_MSG
-      {$this update})
+         {helpbar confirm wii_hb_removefriend}
+      }
+   )
+   (SCROLL_MSG {$this update})
    (platform_mgr_op_complete
       ($success)
-      {friendlist.lst set_provider friends_provider})
+      {friendlist.lst set_provider friends_provider}
+   )
    (exit
       {input_mgr set_user ''}
       {platform_mgr remove_sink $this}
-      {friends_provider cleanup})}
-{new
-   BandScreen
+      {friends_provider cleanup}
+   )
+}
+{new BandScreen
    friendlist_screen
    (panels meta movie_panel options_background_panel friendlist_panel)
    (helpbar
-      ((cancel helpbar_cancel)
+      (
+         (cancel helpbar_cancel)
          (confirm helpbar_select)
-         (view_modify wii_hb_showpending)))
+         (view_modify wii_hb_showpending)
+      )
+   )
    (focus friendlist_panel)
-   (back main_community_screen)}
-{new
-   UIPanel
+   (back main_community_screen)
+}
+{new UIPanel
    add_friend_panel
-   (file
-      "add_friendcode_wii.milo")
+   (file "add_friendcode_wii.milo")
    (focus FriendCode.lbl)
-   (helpbar
-      (helpbar_back helpbar_select))
+   (helpbar (helpbar_back helpbar_select))
    (name_label FriendCode.lbl)
    (name_active TRUE)
    (back_button_exits TRUE)
    (randomize_button '')
    (back_button '')
-   (new_code
-      "")
+   (new_code "")
    (bad_code FALSE)
    NAMING_PANEL_HANDLERS
    (enter
       {platform_mgr add_sink $this}
-      {set
-         [numbers_only]
-         TRUE}
-      {set
-         [for_friendcode]
-         TRUE}
+      {set [numbers_only] TRUE}
+      {set [for_friendcode] TRUE}
       {$this init_name}
       {$this update_name}
-      {set
-         [bad_code]
-         FALSE})
+      {set [bad_code] FALSE}
+   )
    (accept_name
       {cond
          ({platform_mgr
                is_your_key
                {$this get_name}}
             {platform_mgr remove_sink $this}
-            {add_friend_panel
-               set
-               new_code
-               {$this get_name}}
+            {add_friend_panel set new_code {$this get_name}}
             {add_friend_panel set bad_code TRUE}
-            {ui goto_screen entering_own_key_dialog})
+            {ui goto_screen entering_own_key_dialog}
+         )
          ({friends_provider
                does_friend_exist
                {$this get_name}}
             {platform_mgr remove_sink $this}
             {add_friend_panel set bad_code FALSE}
-            {ui goto_screen invalid_friendcode_dialog})
+            {ui goto_screen invalid_friendcode_dialog}
+         )
          ({platform_mgr
                check_friend_code
                {$this get_name}}
             {$this stop_naming}
             {add_friend_panel set bad_code FALSE}
-            {platform_mgr
-               add_friend
-               {$this get_name}})
+            {platform_mgr add_friend {$this get_name}}
+         )
          (TRUE
             {platform_mgr remove_sink $this}
-            {add_friend_panel
-               set
-               new_code
-               {$this get_name}}
+            {add_friend_panel set new_code {$this get_name}}
             {add_friend_panel set bad_code TRUE}
-            {ui goto_screen invalid_friendcode_dialog})})
+            {ui goto_screen invalid_friendcode_dialog}
+         )
+      }
+   )
    (cancel_name
       {ui pop_screen}
       {platform_mgr remove_sink $this}
-      {$this stop_naming})
+      {$this stop_naming}
+   )
    (platform_mgr_op_complete
       ($success)
       {do
          {platform_mgr remove_sink $this}
-         {if
-            {==
-               {server is_connected}
-               TRUE}
-            {if_else
-               $success
+         {if {== {server is_connected} TRUE}
+            {if_else $success
                {ui goto_screen friend_registered_dialog}
-               {ui goto_screen friend_error_screen}}}})
-   (on_exit
-      {platform_mgr remove_sink $this})}
-{new
-   BandScreen
+               {ui goto_screen friend_error_screen}
+            }
+         }
+      }
+   )
+   (on_exit {platform_mgr remove_sink $this})
+}
+{new BandScreen
    add_friend_screen
    (panels add_friend_panel)
    (helpbar
-      ((cancel helpbar_cancel)
-         (confirm helpbar_confirm)))
+      (
+         (cancel helpbar_cancel)
+         (confirm helpbar_confirm)
+      )
+   )
    (focus add_friend_panel)
-   (back friendlist_screen)}
-{new
-   UIPanel
+   (back friendlist_screen)
+}
+{new UIPanel
    add_nickname_panel
-   (file
-      "add_nickname_wii.milo")
+   (file "add_nickname_wii.milo")
    (focus Nickname.lbl)
-   (helpbar
-      (helpbar_back helpbar_select))
+   (helpbar (helpbar_back helpbar_select))
    (name_label Nickname.lbl)
    (name_active TRUE)
    (back_button_exits TRUE)
    (randomize_button '')
    (back_button '')
-   (friendcode
-      "")
+   (friendcode "")
    (friendlist_pos 0)
    (for_edit_only FALSE)
-   (friend_name
-      "")
+   (friend_name "")
    NAMING_PANEL_HANDLERS
    (enter
       {$this init_name}
-      {$this update_name})
+      {$this update_name}
+   )
    (accept_name
-      {if_else
-         {==
-            {platform_mgr
-               check_profane
-               {$this get_name}}
-            TRUE}
+      {if_else {== {platform_mgr check_profane {$this get_name}} TRUE}
          {do
-            {set
-               [friend_name]
-               {$this get_name}}
+            {set [friend_name] {$this get_name}}
             {$this init_name}
             {$this update_name}
-            {ui goto_screen nickname_error_screen}}
+            {ui goto_screen nickname_error_screen}
+         }
          {do
-            {if_else
-               {==
-                  [for_edit_only]
-                  TRUE}
-               {platform_mgr
-                  change_friend_nickname
-                  [friendlist_pos]
-                  {$this get_name}}
-               {platform_mgr
-                  add_friend
-                  [friendcode]
-                  {$this get_name}}}
-            {friend_options_panel
-               set
-               friend_name
-               {$this get_name}}
-            {remove_friend_dialog
-               set
-               friend_name
-               {$this get_name}}
-            {print
-               "add_nickname_panel nickname value: "
-               {$this get_name}
-               "\n"}
+            {if_else {== [for_edit_only] TRUE}
+               {platform_mgr change_friend_nickname [friendlist_pos] {$this get_name}}
+               {platform_mgr add_friend [friendcode] {$this get_name}}
+            }
+            {friend_options_panel set friend_name {$this get_name}}
+            {remove_friend_dialog set friend_name {$this get_name}}
+            {print "add_nickname_panel nickname value: " {$this get_name} "\n"}
             {$this stop_naming}
-            {if_else
-               {==
-                  [for_edit_only]
-                  TRUE}
+            {if_else {== [for_edit_only] TRUE}
                {do
-                  {set
-                     [for_edit_only]
-                     FALSE}
-                  {ui goto_screen friend_options_screen}}
-               {ui goto_screen friend_registered_dialog}}}})
+                  {set [for_edit_only] FALSE}
+                  {ui goto_screen friend_options_screen}
+               }
+               {ui goto_screen friend_registered_dialog}
+            }
+         }
+      }
+   )
    (cancel_name
       {$this stop_naming}
-      {ui goto_screen friendlist_screen})}
-{new
-   BandScreen
+      {ui goto_screen friendlist_screen}
+   )
+}
+{new BandScreen
    add_nickname_screen
    (panels add_nickname_panel)
    (helpbar
-      ((cancel helpbar_cancel)
-         (confirm helpbar_confirm)))
+      (
+         (cancel helpbar_cancel)
+         (confirm helpbar_confirm)
+      )
+   )
    (focus add_nickname_panel)
    (back friendlist_screen)
-   (allow_remote_exit TRUE)}
-{new
-   UIPanel
+   (allow_remote_exit TRUE)
+}
+{new UIPanel
    set_username_panel
-   (file
-      "set_username_wii.milo")
+   (file "set_username_wii.milo")
    (focus Username.lbl)
-   (helpbar
-      (helpbar_back helpbar_select))
+   (helpbar (helpbar_back helpbar_select))
    (name_label Username.lbl)
    (name_active TRUE)
    (back_button_exits TRUE)
@@ -299,140 +256,122 @@
    (no_username_msg FALSE)
    NAMING_PANEL_HANDLERS
    (enter
-      {set
-         [checking]
-         FALSE}
-      {set
-         [for_rock_central]
-         TRUE}
+      {set [checking] FALSE}
+      {set [for_rock_central] TRUE}
       {$this init_name}
-      {$this update_name})
+      {$this update_name}
+   )
    (accept_name
-      {if_else
-         {!
-            {platform_mgr
-               check_profane
-               {$this get_name}}}
+      {if_else {! {platform_mgr check_profane {$this get_name}}}
          {do
             {$this init_name}
             {$this update_name}
-            {ui goto_screen username_net_error_screen}}
-         {set
-            [checking]
-            TRUE}})
+            {ui goto_screen username_net_error_screen}
+         }
+         {set [checking] TRUE}
+      }
+   )
    (poll
-      {if
-         [checking]
-         {switch
-            {platform_mgr finish_profane}
+      {if [checking]
+         {switch {platform_mgr finish_profane}
             (-1
-               {set
-                  [checking]
-                  FALSE}
+               {set [checking] FALSE}
                {$this init_name}
                {$this update_name}
-               {ui goto_screen username_net_error_screen})
+               {ui goto_screen username_net_error_screen}
+            )
             (1
-               {set
-                  [checking]
-                  FALSE}
-               {profile_mgr
-                  set_username
-                  {$this get_name}}
+               {set [checking] FALSE}
+               {profile_mgr set_username {$this get_name}}
                {platform_mgr send_netfinished}
                {$this stop_naming}
-               {ui goto_screen network_start_screen})
+               {ui goto_screen network_start_screen}
+            )
             (2
-               {set
-                  [checking]
-                  FALSE}
-               {set
-                  [username]
-                  {$this get_name}}
+               {set [checking] FALSE}
+               {set [username] {$this get_name}}
                {$this init_name}
                {$this update_name}
-               {ui goto_screen username_error_screen})}})
+               {ui goto_screen username_error_screen}
+            )
+         }
+      }
+   )
    (cancel_name
       {$this stop_naming}
-      {if_else
-         {==
-            {network_start_continue_panel get strict}
-            TRUE}
+      {if_else {== {network_start_continue_panel get strict} TRUE}
          {ui pop_screen}
          {do
-            {set
-               [no_username_msg]
-               TRUE}
-            {ui goto_screen network_warning_screen}}})
+            {set [no_username_msg] TRUE}
+            {ui goto_screen network_warning_screen}
+         }
+      }
+   )
    (button_press
-      {if
-         {==
-            [checking]
-            FALSE}
-         {print
-            "button_press called\n"}
-         {ui goto_screen username_net_error_screen}})
-   (on_exit)}
-{new
-   BandScreen
+      {if {== [checking] FALSE}
+         {print "button_press called\n"}
+         {ui goto_screen username_net_error_screen}
+      }
+   )
+   (on_exit)
+}
+{new BandScreen
    set_username_screen
    (panels set_username_panel)
    (helpbar
-      ((cancel helpbar_cancel)
-         (confirm helpbar_confirm)))
+      (
+         (cancel helpbar_cancel)
+         (confirm helpbar_confirm)
+      )
+   )
    (focus set_username_panel)
-   (allow_remote_exit TRUE)}
-{new
-   UIPanel
+   (allow_remote_exit TRUE)
+}
+{new UIPanel
    friend_options_panel
-   (file
-      "friend_options_wii.milo")
+   (file "friend_options_wii.milo")
    (focus opt1.btn)
-   (helpbar
-      (helpbar_back helpbar_select))
-   (friend_name
-      "")
+   (helpbar (helpbar_back helpbar_select))
+   (friend_name "")
    (friendlist_pos 0)
    (enter
-      {print
-         "friend_options_panel nickname value: "
-         [friend_name]
-         "\n"}
-      {friendname.lbl
-         set_localized
-         [friend_name]})
+      {print "friend_options_panel nickname value: " [friend_name] "\n"}
+      {friendname.lbl set_localized [friend_name]}
+   )
    (update)
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (opt1.btn
-            {print
-               "button 1 select\n"}
-            {friends_provider
-               invite_friend
-               [friendlist_pos]}
-            {ui goto_screen invited_to_game_dialog})
+            {print "button 1 select\n"}
+            {friends_provider invite_friend [friendlist_pos]}
+            {ui goto_screen invited_to_game_dialog}
+         )
          (opt2.btn
-            {print
-               "button 2 select\n"}
+            {print "button 2 select\n"}
             {add_nickname_panel set for_edit_only TRUE}
-            {ui goto_screen add_nickname_screen})
+            {ui goto_screen add_nickname_screen}
+         )
          (opt3.btn
-            {print
-               "button 3 select\n"}
-            {ui goto_screen remove_friend_dialog})})}
-{new
-   BandScreen
+            {print "button 3 select\n"}
+            {ui goto_screen remove_friend_dialog}
+         )
+      }
+   )
+}
+{new BandScreen
    friend_options_screen
    (panels meta options_background_panel friend_options_panel)
    (helpbar
-      ((cancel helpbar_cancel)
-         (confirm helpbar_confirm)))
+      (
+         (cancel helpbar_cancel)
+         (confirm helpbar_confirm)
+      )
+   )
    (focus friend_options_panel)
    (back friendlist_screen)
-   (allow_remote_exit TRUE)}
-{new
-   BandScreen
+   (allow_remote_exit TRUE)
+}
+{new BandScreen
    remove_friend_dialog
    (panels dialog_panel)
    (focus dialog_panel)
@@ -440,158 +379,135 @@
    (chosen FALSE)
    (enter
       {platform_mgr add_sink $this}
-      {dialog_panel
-         set_yesno
-         {sprintf
-            {localize remove_friend_dialog_local}
-            [friend_id]}
-         no.btn}
-      {set
-         [chosen]
-         FALSE})
-   (exit
-      {platform_mgr remove_sink $this})
+      {dialog_panel set_yesno
+         {sprintf {localize remove_friend_dialog_local} [friend_id]}
+         no.btn
+      }
+      {set [chosen] FALSE}
+   )
+   (exit {platform_mgr remove_sink $this})
    (SELECT_MSG
-      {if
-         {!
-            [chosen]}
-         {set
-            [chosen]
-            TRUE}
-         {switch
-            $component
-            (yes.btn
-               {platform_mgr
-                  remove_friend
-                  [friend_id]})
-            (no.btn
-               {ui pop_screen})}}
-      TRUE)
+      {if {! [chosen]}
+         {set [chosen] TRUE}
+         {switch $component
+            (yes.btn {platform_mgr remove_friend [friend_id]})
+            (no.btn {ui pop_screen})
+         }
+      }
+      TRUE
+   )
    (platform_mgr_op_complete
       ($success)
-      {if_else
-         $success
+      {if_else $success
          {ui pop_screen}
-         {ui goto_screen friend_error_screen}})}
-{new
-   BandScreen
+         {ui goto_screen friend_error_screen}
+      }
+   )
+}
+{new BandScreen
    friend_registered_dialog
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize friend_registered_dialog_local}})
+   (enter {dialog_panel set_ok {localize friend_registered_dialog_local}})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui pop_screen})})}
-{new
-   BandScreen
+      {switch $component
+         (ok.btn {ui pop_screen})
+      }
+   )
+}
+{new BandScreen
    invalid_friendcode_dialog
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize invalid_friendcode_local}})
+   (enter {dialog_panel set_ok {localize invalid_friendcode_local}})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui goto_screen add_friend_screen})})}
-{new
-   BandScreen
+      {switch $component
+         (ok.btn {ui goto_screen add_friend_screen})
+      }
+   )
+}
+{new BandScreen
    invited_to_game_dialog
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
-      {dialog_panel
-         set_ok
+      {dialog_panel set_ok
          {sprintf
             {localize invited_to_game_local}
-            {friend_options_panel get friend_name}}})
+            {friend_options_panel get friend_name}
+         }
+      }
+   )
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui goto_screen friendlist_screen})})}
-{new
-   BandScreen
+      {switch $component
+         (ok.btn {ui goto_screen friendlist_screen})
+      }
+   )
+}
+{new BandScreen
    username_info_screen
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize username_info}})
+   (enter {dialog_panel set_ok {localize username_info}})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui goto_screen set_username_screen})})}
-{new
-   BandScreen
+      {switch $component
+         (ok.btn {ui goto_screen set_username_screen})
+      }
+   )
+}
+{new BandScreen
    username_error_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
-      {dialog_panel
-         set_ok
-         {sprintf
-            {localize username_profane}
-            {set_username_panel get username}}})
+      {dialog_panel set_ok
+         {sprintf {localize username_profane} {set_username_panel get username}}
+      }
+   )
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui goto_screen set_username_screen})})}
-{new
-   BandScreen
+      {switch $component
+         (ok.btn {ui goto_screen set_username_screen})
+      }
+   )
+}
+{new BandScreen
    username_net_error_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
       {platform_mgr close_nintendo_connection}
-      {dialog_panel
-         set_ok
-         {localize username_net_error}})
+      {dialog_panel set_ok {localize username_net_error}}
+   )
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (ok.btn
-            {if_else
-               {==
-                  {network_start_continue_panel get strict}
-                  TRUE}
+            {if_else {== {network_start_continue_panel get strict} TRUE}
                {ui pop_screen}
-               {ui goto_screen network_warning_screen}})})}
-{new
-   BandScreen
+               {ui goto_screen network_warning_screen}
+            }
+         )
+      }
+   )
+}
+{new BandScreen
    friend_error_screen
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize friend_error_local}})
+   (enter {dialog_panel set_ok {localize friend_error_local}})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui pop_screen})})}
-{new
-   BandScreen
+      {switch $component
+         (ok.btn {ui pop_screen})
+      }
+   )
+}
+{new BandScreen
    entering_own_key_dialog
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize entering_own_key_local}})
+   (enter {dialog_panel set_ok {localize entering_own_key_local}})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui goto_screen add_friend_screen})})}
+      {switch $component
+         (ok.btn {ui goto_screen add_friend_screen})
+      }
+   )
+}

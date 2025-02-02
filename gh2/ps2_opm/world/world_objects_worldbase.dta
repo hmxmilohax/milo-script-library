@@ -1,509 +1,352 @@
-#define WIN_CAMERA_DELAY
-(1.75)
-#define LIGHTER_SHOT_DURATION
-(5)
-#define WORLD_OBJECT_BASE
-((editor
-      (multiplayer
-         bool
-         (help
-            "Is this a multiplayer venue"))
+#define WIN_CAMERA_DELAY (1.75)
+#define LIGHTER_SHOT_DURATION (5)
+#define WORLD_OBJECT_BASE (
+   (editor
+      (multiplayer bool (help "Is this a multiplayer venue"))
       (encore_support
          bool
-         (help
-            "Does this venue have special encore intro/outro?")))
+         (help "Does this venue have special encore intro/outro?")
+      )
+   )
    (multiplayer FALSE)
    (encore_support FALSE)
    (camera_solo FALSE)
    (camera_beat 0)
    (camera_bars_left 0)
    (preset_bars_left 0)
-   (lighting_adjectives
-      ())
+   (lighting_adjectives ())
    (ignored_last_light_change FALSE)
    (did_lighter_cam FALSE)
    (excitement_level kExcitementOkay)
    (last_excitement_level -1)
    (enter
-      {set
-         [did_lighter_cam]
-         FALSE}
-      {if_else
-         {exists game}
+      {set [did_lighter_cam] FALSE}
+      {if_else {exists game}
          {do
             {game add_sink $this}
-            {$this
-               set_lighting
-               INTRO
-               ()}
-            {if_else
-               {game multiplayer}
-               {handle
-                  ($this set_multiplayer)}
-               {handle
-                  ($this set_singleplayer)}}}
+            {$this set_lighting INTRO ()}
+            {if_else {game multiplayer}
+               {handle ($this set_multiplayer)}
+               {handle ($this set_singleplayer)}
+            }
+         }
          {do
-            {if_else
-               [multiplayer]
-               {handle
-                  ($this set_multiplayer)}
-               {handle
-                  ($this set_singleplayer)}}}}
-      {if
-         {exists band_shadow1.mesh}
-         {band_shadow1.mesh
-            set_showing
-            {'||'
-               {exists singer}
-               {exists keyboard}}}}
-      {set
-         [ignored_last_light_change]
-         FALSE})
-   (exit
-      {handle
-         (game remove_sink $this)})
+            {if_else [multiplayer]
+               {handle ($this set_multiplayer)}
+               {handle ($this set_singleplayer)}
+            }
+         }
+      }
+      {if {exists band_shadow1.mesh}
+         {band_shadow1.mesh set_showing {'||' {exists singer} {exists keyboard}}}
+      }
+      {set [ignored_last_light_change] FALSE}
+   )
+   (exit {handle (game remove_sink $this)})
    (intro_start
       ($fast $encore)
       {$this reset_camera}
-      {set
-         [camera_bars_left]
-         6}
-      {set
-         [preset_bars_left]
-         100}
+      {set [camera_bars_left] 6}
+      {set [preset_bars_left] 100}
       {do
          ($category
-            {if_else $encore INTRO_ENCORE INTRO})
+            {if_else $encore
+               INTRO_ENCORE
+               INTRO
+            }
+         )
          {$this pick_shot $category}
-         {$this
-            set_lighting
-            $category
-            [lighting_adjectives]}}
-      {if
-         $encore
-         {if_else
-            $fast
-            {handle
-               ($this skip_encore_fx)}
-            {handle
-               ($this play_encore_fx)}}}
-      kDataUnhandled)
+         {$this set_lighting $category [lighting_adjectives]}
+      }
+      {if $encore
+         {if_else $fast
+            {handle ($this skip_encore_fx)}
+            {handle ($this play_encore_fx)}
+         }
+      }
+      kDataUnhandled
+   )
    (intro_skip
       {$this reset_camera}
-      {set
-         [camera_bars_left]
-         0}
-      {set
-         [preset_bars_left]
-         100}
+      {set [camera_bars_left] 0}
+      {set [preset_bars_left] 100}
       {$this check_camera_shot}
-      {$this
-         set_lighting
-         INTRO
-         [lighting_adjectives]}
-      kDataUnhandled)
+      {$this set_lighting INTRO [lighting_adjectives]}
+      kDataUnhandled
+   )
    (beat
-      {set
-         [camera_beat]
-         $beat}
-      {if
-         {world current_shot}
-         {if
-            {!
-               {{world current_shot}
-                  check_shot}}
-            {$this pick_new_shot}}})
+      {set [camera_beat] $beat}
+      {if {world current_shot}
+         {if {! {{world current_shot} check_shot}}
+            {$this pick_new_shot}
+         }
+      }
+   )
    (downbeat
-      {if
-         [camera_bars_left]
-         {set
-            [camera_bars_left]
-            {-
-               [camera_bars_left]
-               1}}}
-      {if
-         {!
-            {player0 in_star_mode}}
-         {$this check_camera_shot}}
-      {if
-         [preset_bars_left]
-         {set
-            [preset_bars_left]
-            {-
-               [preset_bars_left]
-               1}}}
-      {if
-         {<=
-            [preset_bars_left]
-            0}
-         {set
-            [preset_bars_left]
-            {$this get_preset_duration}}}
-      kDataUnhandled)
+      {if [camera_bars_left]
+         {set [camera_bars_left] {- [camera_bars_left] 1}}
+      }
+      {if {! {player0 in_star_mode}}
+         {$this check_camera_shot}
+      }
+      {if [preset_bars_left]
+         {set [preset_bars_left] {- [preset_bars_left] 1}}
+      }
+      {if {<= [preset_bars_left] 0}
+         {set [preset_bars_left] {$this get_preset_duration}}
+      }
+      kDataUnhandled
+   )
    (excitement
       ($excitement_level)
-      {set
-         [last_excitement_level]
-         [excitement_level]}
-      {set
-         [excitement_level]
-         $excitement_level}
-      {$this
-         set_excitement
-         [excitement_level]}
-      {switch
-         $excitement_level
-         ((kExcitementBoot)
-            {handle
-               ($this excitement_boot)})
-         ((kExcitementBad)
-            {handle
-               ($this excitement_bad)})
-         ((kExcitementOkay)
-            {handle
-               ($this excitement_okay)})
-         ((kExcitementGreat)
-            {handle
-               ($this excitement_great)})
-         ((kExcitementPeak)
-            {handle
-               ($this excitement_peak)})}
-      kDataUnhandled)
+      {set [last_excitement_level] [excitement_level]}
+      {set [excitement_level] $excitement_level}
+      {$this set_excitement [excitement_level]}
+      {switch $excitement_level
+         (
+            (kExcitementBoot)
+            {handle ($this excitement_boot)}
+         )
+         (
+            (kExcitementBad)
+            {handle ($this excitement_bad)}
+         )
+         (
+            (kExcitementOkay)
+            {handle ($this excitement_okay)}
+         )
+         (
+            (kExcitementGreat)
+            {handle ($this excitement_great)}
+         )
+         (
+            (kExcitementPeak)
+            {handle ($this excitement_peak)}
+         )
+      }
+      kDataUnhandled
+   )
    (game_won
       ($encore)
-      {set
-         $encore
-         {&&
-            $encore
-            [encore_support]}}
+      {set $encore {&& $encore [encore_support]}}
       {do
          ($category
-            {if_else $encore WIN_ENCORE WIN})
-         {set
-            [camera_bars_left]
-            100}
-         {set
-            [preset_bars_left]
-            100}
-         {new
-            ScriptTask
+            {if_else $encore
+               WIN_ENCORE
+               WIN
+            }
+         )
+         {set [camera_bars_left] 100}
+         {set [preset_bars_left] 100}
+         {new ScriptTask
             (delay WIN_CAMERA_DELAY)
             (units kTaskSeconds)
-            (script
-               {$this pick_shot $category})}
-         {$this
-            set_lighting
-            $category
-            [lighting_adjectives]}}
-      {if
-         $encore
-         {handle
-            ($this play_encore_fx)}}
-      kDataUnhandled)
+            (script {$this pick_shot $category})
+         }
+         {$this set_lighting $category [lighting_adjectives]}
+      }
+      {if $encore
+         {handle ($this play_encore_fx)}
+      }
+      kDataUnhandled
+   )
    (game_lost
-      {set
-         [camera_bars_left]
-         100}
-      {set
-         [preset_bars_left]
-         100}
+      {set [camera_bars_left] 100}
+      {set [preset_bars_left] 100}
       {$this pick_shot LOSE}
-      {$this
-         set_lighting
-         LOSE
-         [lighting_adjectives]}
-      kDataUnhandled)
+      {$this set_lighting LOSE [lighting_adjectives]}
+      kDataUnhandled
+   )
    (one_bar_to
-      {if
-         {>
-            [camera_beat]
-            0}
-         {set
-            [camera_solo]
-            {switch
-               $upcoming_section
-               ((solo)
-                  TRUE)
-               ((verse chorus)
-                  FALSE)}}
-         {set
-            [camera_bars_left]
-            {$this get_shot_duration}}
-         {$this pick_new_shot}}
+      {if {> [camera_beat] 0}
+         {set [camera_solo]
+            {switch $upcoming_section
+               ((solo) TRUE)
+               ((verse chorus) FALSE)
+            }
+         }
+         {set [camera_bars_left] {$this get_shot_duration}}
+         {$this pick_new_shot}
+      }
       {do
          ($sections)
-         {switch
-            $upcoming_section
-            ((verse)
-               {set
-                  $sections
-                  (VERSE VERSECHORUS VERSECHORUSSOLO)})
-            ((chorus)
-               {set
-                  $sections
-                  (CHORUS VERSECHORUS VERSECHORUSSOLO)})
-            ((solo)
-               {set
-                  $sections
-                  (SOLO VERSECHORUSSOLO)})}
-         {$this
-            set_lighting
-            $sections
-            [lighting_adjectives]}
-         {set
-            [preset_bars_left]
-            {$this get_preset_duration}}})
+         {switch $upcoming_section
+            (
+               (verse)
+               {set $sections (VERSE VERSECHORUS VERSECHORUSSOLO)}
+            )
+            (
+               (chorus)
+               {set $sections (CHORUS VERSECHORUS VERSECHORUSSOLO)}
+            )
+            (
+               (solo)
+               {set $sections (SOLO VERSECHORUSSOLO)}
+            )
+         }
+         {$this set_lighting $sections [lighting_adjectives]}
+         {set [preset_bars_left] {$this get_preset_duration}}
+      }
+   )
    (lighting
       ($adjective_list)
-      {set
-         [lighting_adjectives]
-         $adjective_list}
-      {set
-         [preset_bars_left]
-         {$this get_preset_duration}}
-      {$this
-         set_lighting
-         ()
-         $adjective_list})
+      {set [lighting_adjectives] $adjective_list}
+      {set [preset_bars_left] {$this get_preset_duration}}
+      {$this set_lighting () $adjective_list}
+   )
    (do_lighting_next_keyframe
       {if_else
          {'||'
-            {>=
-               [excitement_level]
-               kExcitementGreat}
-            {==
-               [ignored_last_light_change]
-               TRUE}}
+            {>= [excitement_level] kExcitementGreat}
+            {== [ignored_last_light_change] TRUE}
+         }
          {do
             {$this lighting_next_keyframe}
-            {set
-               [ignored_last_light_change]
-               FALSE}}
-         {set
-            [ignored_last_light_change]
-            TRUE}})
+            {set [ignored_last_light_change] FALSE}
+         }
+         {set [ignored_last_light_change] TRUE}
+      }
+   )
    (do_lighting_prev_keyframe
       {if_else
          {'||'
-            {>=
-               [excitement_level]
-               kExcitementGreat}
-            {==
-               [ignored_last_light_change]
-               TRUE}}
+            {>= [excitement_level] kExcitementGreat}
+            {== [ignored_last_light_change] TRUE}
+         }
          {do
             {$this lighting_prev_keyframe}
-            {set
-               [ignored_last_light_change]
-               FALSE}}
-         {set
-            [ignored_last_light_change]
-            TRUE}})
+            {set [ignored_last_light_change] FALSE}
+         }
+         {set [ignored_last_light_change] TRUE}
+      }
+   )
    (do_lighting_first_keyframe
       {if_else
          {'||'
-            {>=
-               [excitement_level]
-               kExcitementGreat}
-            {==
-               [ignored_last_light_change]
-               TRUE}}
+            {>= [excitement_level] kExcitementGreat}
+            {== [ignored_last_light_change] TRUE}
+         }
          {do
             {$this lighting_first_keyframe}
-            {set
-               [ignored_last_light_change]
-               FALSE}}
-         {set
-            [ignored_last_light_change]
-            TRUE}})
+            {set [ignored_last_light_change] FALSE}
+         }
+         {set [ignored_last_light_change] TRUE}
+      }
+   )
    (get_preset_duration
       {do
-         ($durations
-            {find
-               [light_durations]
-               [excitement_level]})
-         {random_int
-            {elem $durations 1}
-            {elem $durations 2}}})
+         ($durations {find [light_durations] [excitement_level]})
+         {random_int {elem $durations 1} {elem $durations 2}}
+      }
+   )
    (pick_regular_camera_shot
       {do
-         ($filter
-            ())
+         ($filter ())
          {resize $filter 0}
-         {if_else
-            {world current_shot}
-            {set
-               $prev_facing
-               {{world current_shot}
-                  get
-                  facing}}
-            {set
-               $prev_facing
-               {world get intro_camera_facing}}}
-         {if_else
-            {world current_shot}
-            {set
-               $prev_distance
-               {{world current_shot}
-                  get
-                  distance}}
-            {set
-               $prev_distance
-               {world get intro_camera_distance}}}
-         {if_else
-            {== $prev_facing left}
-            {push_back
-               $filter
-               (facing
-                  (right null))}
-            {if
-               {== $prev_facing right}
-               {push_back
-                  $filter
-                  (facing
-                     (left null))}}}
-         {if_else
-            {== $prev_distance far}
-            {push_back
-               $filter
-               (distance
-                  (null near far closeup))}
-            {if
-               {== $prev_distance behind}
-               {push_back
-                  $filter
-                  (distance
-                     (null near closeup behind))}}}
-         {push_back
-            $filter
-            (solo
-               (ok never))}
-         {if
-            {<=
-               {world get excitement_level}
-               1}
-            {push_back
-               $filter
-               (low_excitement_ok TRUE)}}
-         {if
-            {guitarist0 actually_walking}
-            {push_back
-               $filter
-               (walk_ok TRUE)}}
-         {if
-            {guitarist0 playing_starpower}
-            {push_back
-               $filter
-               (starpower_ok TRUE)}}
-         {push_back
-            $filter
-            (special FALSE)}
-         {$this
-            pick_shot
-            ()
-            $filter}})
+         {if_else {world current_shot}
+            {set $prev_facing {{world current_shot} get facing}}
+            {set $prev_facing {world get intro_camera_facing}}
+         }
+         {if_else {world current_shot}
+            {set $prev_distance {{world current_shot} get distance}}
+            {set $prev_distance {world get intro_camera_distance}}
+         }
+         {if_else {== $prev_facing left}
+            {push_back $filter (facing (right null))}
+            {if {== $prev_facing right}
+               {push_back $filter (facing (left null))}
+            }
+         }
+         {if_else {== $prev_distance far}
+            {push_back $filter (distance (null near far closeup))}
+            {if {== $prev_distance behind}
+               {push_back $filter (distance (null near closeup behind))}
+            }
+         }
+         {push_back $filter (solo (ok never))}
+         {if {<= {world get excitement_level} 1}
+            {push_back $filter (low_excitement_ok TRUE)}
+         }
+         {if {guitarist0 actually_walking}
+            {push_back $filter (walk_ok TRUE)}
+         }
+         {if {guitarist0 playing_starpower}
+            {push_back $filter (starpower_ok TRUE)}
+         }
+         {push_back $filter (special FALSE)}
+         {$this pick_shot () $filter}
+      }
+   )
    (pick_solo_camera_shot
       {do
-         ($filter
-            ())
-         {if
-            {<=
-               {world get excitement_level}
-               1}
-            {push_back
-               $filter
-               (low_excitement_ok TRUE)}}
-         {if
-            {guitarist0 actually_walking}
-            {push_back
-               $filter
-               (walk_ok TRUE)}}
-         {if
-            {guitarist0 playing_starpower}
-            {push_back
-               $filter
-               (starpower_ok TRUE)}}
-         {push_back
-            $filter
-            (solo
-               (ok only))}
-         {push_back
-            $filter
-            (special FALSE)}
-         {$this
-            pick_shot
-            ()
-            $filter}})
+         ($filter ())
+         {if {<= {world get excitement_level} 1}
+            {push_back $filter (low_excitement_ok TRUE)}
+         }
+         {if {guitarist0 actually_walking}
+            {push_back $filter (walk_ok TRUE)}
+         }
+         {if {guitarist0 playing_starpower}
+            {push_back $filter (starpower_ok TRUE)}
+         }
+         {push_back $filter (solo (ok only))}
+         {push_back $filter (special FALSE)}
+         {$this pick_shot () $filter}
+      }
+   )
    (pick_new_shot
-      {if_else
-         [camera_solo]
+      {if_else [camera_solo]
          {$this pick_solo_camera_shot}
-         {$this pick_regular_camera_shot}})
+         {$this pick_regular_camera_shot}
+      }
+   )
    (get_shot_duration
       {do
          ($durations
-            {find
-               {world get camera_durations}
-               {world get excitement_level}})
-         {random_int
-            {elem $durations 1}
-            {elem $durations 2}}})
+            {find {world get camera_durations} {world get excitement_level}}
+         )
+         {random_int {elem $durations 1} {elem $durations 2}}
+      }
+   )
    (check_camera_shot
-      {if
-         {<=
-            [camera_bars_left]
-            0}
-         {set
-            [camera_bars_left]
-            {$this get_shot_duration}}
-         {$this pick_new_shot}})
+      {if {<= [camera_bars_left] 0}
+         {set [camera_bars_left] {$this get_shot_duration}}
+         {$this pick_new_shot}
+      }
+   )
    (pick_lighter_shot
-      {if
-         {!
-            {game multiplayer}}
-         {if
-            {!
-               [did_lighter_cam]}
-            {set
-               [camera_bars_left]
-               LIGHTER_SHOT_DURATION}
-            {set
-               [did_lighter_cam]
-               TRUE}
-            {$this pick_shot LIGHTER}}})
+      {if {! {game multiplayer}}
+         {if {! [did_lighter_cam]}
+            {set [camera_bars_left] LIGHTER_SHOT_DURATION}
+            {set [did_lighter_cam] TRUE}
+            {$this pick_shot LIGHTER}
+         }
+      }
+   )
    (band_jump
-      {if_else
-         {>
-            [excitement_level]
-            kExcitementBad}
+      {if_else {> [excitement_level] kExcitementBad}
          {do
-            {set
-               [camera_bars_left]
-               4}
-            {$this
-               pick_shot
-               ()
-               ((jump_ok TRUE))}
-            kDataUnhandled}
-         {do 0}})
+            {set [camera_bars_left] 4}
+            {$this pick_shot () ((jump_ok TRUE))}
+            kDataUnhandled
+         }
+         {do
+            0
+         }
+      }
+   )
    (force_pick_shot
-      {set
-         [camera_bars_left]
-         {$this get_shot_duration}}
-      {$this pick_new_shot})
+      {set [camera_bars_left] {$this get_shot_duration}}
+      {$this pick_new_shot}
+   )
    (do_force_shot
       ($shot)
-      {set
-         [camera_bars_left]
-         {$this get_shot_duration}}
-      {$this force_shot $shot})
+      {set [camera_bars_left] {$this get_shot_duration}}
+      {$this force_shot $shot}
+   )
    (reset_camera
-      {set
-         [did_lighter_cam]
-         FALSE}
-      {set
-         [camera_beat]
-         0}
-      {set
-         [camera_solo]
-         FALSE}))
+      {set [did_lighter_cam] FALSE}
+      {set [camera_beat] 0}
+      {set [camera_solo] FALSE}
+   )
+)

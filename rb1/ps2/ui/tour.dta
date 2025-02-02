@@ -1,13 +1,13 @@
 #ifdef TOUR_LOGGING
-   #define TOUR_LOGVER (1)       ;; what version of the log are we on
-   #define TOUR_BALANCE_MAJORVER (0) ;; major balance version
-   #define TOUR_BALANCE_MINORVER (1) ;; minor balance version
+#define TOUR_LOGVER (1) ;; what version of the log are we on
+#define TOUR_BALANCE_MAJORVER (0) ;; major balance version
+#define TOUR_BALANCE_MINORVER (1) ;; minor balance version
 #endif
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; tour backgrounds
-{new WorldMapPanel tour_world_bg_panel
+{new WorldMapPanel
+   tour_world_bg_panel
    (file world/tour_worldmap.milo)
    (zoomed FALSE)
    (town boston)
@@ -15,44 +15,80 @@
    (playing_town_loop FALSE)
 
    (enter
-      {set [zoomed] FALSE}
-      {set [town] {{tour performer} town}}
-      {set [venue] {{tour performer} venue}}
-      
+      {set
+         [zoomed]
+         FALSE
+      }
+      {set
+         [town]
+         {
+            {tour performer}
+            town
+         }
+      }
+      {set
+         [venue]
+         {
+            {tour performer}
+            venue
+         }
+      }
+
       {meta music_stop}
       {synth play bwt_spaceamb.cue}
-      
-      {set [playing_town_loop] FALSE}
+
+      {set
+         [playing_town_loop]
+         FALSE
+      }
    )
-   
+
    (exit
       {synth stop bwt_spaceamb.cue}
       {synth stop bwt_cityamb.cue}
       {meta music_start}
    )
-   
-   (play_town_loop ($play)
+
+   (play_town_loop
+      ($play)
       {if_else $play
-         {unless [playing_town_loop]
+         {unless
+            [playing_town_loop]
             {synth play bwt_cityamb.cue}
          }
          {synth stop bwt_cityamb.cue}
       }
-      {set [playing_town_loop] $play}
+      {set
+         [playing_town_loop]
+         $play
+      }
    )
 
    (update
-      {$this sync [town] [venue] [zoomed]}
+      {$this sync
+         [town]
+         [venue]
+         [zoomed]
+      }
    )
 
    (zoom_in
-      {set [zoomed] TRUE}
+      {set
+         [zoomed]
+         TRUE
+      }
       {$this update}
    )
-   
+
    (zoom_out
-      {set [zoomed] FALSE}
-      {set [venue] ''} ; kill venue animation
+      {set
+         [zoomed]
+         FALSE
+      }
+      {set
+         [venue]
+         ''
+      } ; kill venue animation
       {$this update}
    )
 
@@ -60,31 +96,62 @@
    ; "private" handlers
 
    (zoom_in_impl
-      {zoom.grp animate (dest {zoom.grp end_frame})}
+      {zoom.grp animate
+         (dest
+            {zoom.grp end_frame}
+         )
+      }
    )
 
    (zoom_out_impl
-      {zoom.grp animate (dest 0)}
+      {zoom.grp animate
+         (dest 0)
+      }
    )
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; common tour hints
-#define TOUR_HINT_PANEL_HANDLERS
-(
+#define TOUR_HINT_PANEL_HANDLERS (
    LIMIT_TO_LEADER_SESSION
    (force_exit TRUE)
 
    (BUTTON_DOWN_MSG
-      {if {== $button kPad_X} 
-         {{tour hint} advance} ; go to next hint
+      {if
+         {== $button kPad_X}
+         {
+            {tour hint}
+            advance
+         } ; go to next hint
          {synth play button_select}
          {ui goto_screen
             {cond
-               ({tour hint} {{tour hint} get screen})
-               ({gamemode is_solo} tour_solo_event_screen)
-               ({{tour performer} can_leave_hometown} tour_band_town_screen)
-               ({{tour performer} can_leave_home_venue} tour_band_venue_screen)
+               (
+                  {tour hint}
+                  {
+                     {tour hint}
+                     get
+                     screen
+                  }
+               )
+               (
+                  {gamemode is_solo}
+                  tour_solo_event_screen
+               )
+               (
+                  {
+                     {tour performer}
+                     can_leave_hometown
+                  }
+                  tour_band_town_screen
+               )
+               (
+                  {
+                     {tour performer}
+                     can_leave_home_venue
+                  }
+                  tour_band_venue_screen
+               )
                (TRUE tour_band_event_screen)
             }
             TRUE ; force it
@@ -96,39 +163,78 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; tour logging
 
-{func log_tour ($system $data)
-#ifdef TOUR_LOGGING
+{func log_tour
+   ($system $data)
+   #ifdef TOUR_LOGGING
    {$log_tour print $system " | " $data "\n"}
 }
 
-{do ($filename)
-   {if_else {using_cd}
-      {set $filename {sprintf "log_tour_%i.txt" {get_date_time}}}
+{do
+   ($filename)
+   {if_else
+      {using_cd}
+      {set $filename
+         {sprintf
+            "log_tour_%i.txt"
+            {get_date_time}
+         }
+      }
       {set $filename "log_tour.txt"}
    }
-   {set $log_tour {new File $filename}}
+   {set $log_tour
+      {new File $filename}
+   }
 }
 
-{log_tour "INIT    " {sprintf "Initialising logging, rev: %d" TOUR_LOGVER}}
-{log_tour "INIT    " {sprintf "Metagame balance, rev: %d.%d" TOUR_BALANCE_MAJORVER TOUR_BALANCE_MINORVER}}
-{set $tour_cycle 0    
-#endif
+{log_tour
+   "INIT    "
+   {sprintf "Initialising logging, rev: %d" TOUR_LOGVER}
+}
+{log_tour
+   "INIT    "
+   {sprintf
+      "Metagame balance, rev: %d.%d"
+      TOUR_BALANCE_MAJORVER
+      TOUR_BALANCE_MINORVER
+   }
+}
+{set $tour_cycle
+   0
+   #endif
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Common Tour Gig guide
-#define TOUR_EVENT_PANEL_HANDLERS
-(
+#define TOUR_EVENT_PANEL_HANDLERS (
    (confirm_event
-      {log_tour "EVENT " {{tour event} event_token}}
+      {log_tour
+         "EVENT "
+         {
+            {tour event}
+            event_token
+         }
+      }
       ; choose any random songs now that everything else has been resolved
-      {{tour performer} set_random_songs}
+      {
+         {tour performer}
+         set_random_songs
+      }
       ; initialize game
-      {game set_song  {{tour performer} next_song}}
-      {game set_venue {tour venue_variant}}
-      
+      {game set_song
+         {
+            {tour performer}
+            next_song
+         }
+      }
+      {game set_venue
+         {tour venue_variant}
+      }
+
       ; we can start loading up the vocalist prefab now
-      {session_mgr send_to_all (gamecfg load_all_chars) TRUE}
+      {session_mgr send_to_all
+         (gamecfg load_all_chars)
+         TRUE
+      }
       {gamecfg load_all_chars}
    )
 )

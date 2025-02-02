@@ -1,16 +1,11 @@
-{new
-   MainMenuPanel
+{new MainMenuPanel
    main_panel
-   (file
-      "main.milo")
+   (file "main.milo")
    (focus right_hand.hnl)
    (back_token back)
    (allow_voice_control TRUE)
    (enter
-      {platform_mgr
-         add_sink
-         $this
-         (connection_status_changed)}
+      {platform_mgr add_sink $this (connection_status_changed)}
       {profile_mgr clear_critical_profile}
       {depth_buffer enable_alert_feed}
       {meta music_start}
@@ -19,53 +14,45 @@
       {song_offer_provider clear_saved_highlight}
       {gamemode set_mode init}
       {$this setup_messages motd.lbl}
-      {handle
-         (hamprovider voice_commander_help)}
+      {handle (hamprovider voice_commander_help)}
       {content_mgr start_refresh}
       #ifdef MS_BETA_BUILD
-      {{right_hand.hnl get nav_provider}
-         set_enabled
-         store
-         FALSE}
-      #endif)
-   (exit
-      {platform_mgr remove_sink $this connection_status_changed})
+      {{right_hand.hnl get nav_provider} set_enabled store FALSE}
+      #endif
+   )
+   (exit {platform_mgr remove_sink $this connection_status_changed})
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (gameplay
             {gamemode set_mode init}
-            {ui goto_screen song_select_screen})
+            {ui goto_screen song_select_screen}
+         )
          (campaign
             {gamemode set_mode campaign}
-            {goto_screen_with_critical_profile campaign_diffselect_screen})
-         (fitness_mode
-            {ui goto_screen fitness_screen})
-         (options
-            {ui goto_screen options_screen})
+            {goto_screen_with_critical_profile campaign_diffselect_screen}
+         )
+         (fitness_mode {ui goto_screen fitness_screen})
+         (options {ui goto_screen options_screen})
          (store
-            {if_else
-               {profile_mgr has_active_profile}
+            {if_else {profile_mgr has_active_profile}
                {do
-                  ($profile
-                     {profile_mgr get_active_profile})
-                  {if_else
-                     {platform_mgr
-                        is_pad_signed_into_live
-                        {$profile get_pad_num}}
+                  ($profile {profile_mgr get_active_profile})
+                  {if_else {platform_mgr is_pad_signed_into_live {$profile get_pad_num}}
                      {do
                         {profile_mgr set_critical_profile $profile}
-                        {ui goto_screen store_main_screen}}
-                     {ui goto_screen show_offers_need_to_sign_in_screen}}}
-               {ui goto_screen show_offers_need_to_sign_in_screen}})
-         (back
-            {ui
-               go_back_screen
-               {{ui current_screen}
-                  get
-                  back}})})}
-{new
-   HamScreen
+                        {ui goto_screen store_main_screen}
+                     }
+                     {ui goto_screen show_offers_need_to_sign_in_screen}
+                  }
+               }
+               {ui goto_screen show_offers_need_to_sign_in_screen}
+            }
+         )
+         (back {ui go_back_screen {{ui current_screen} get back}})
+      }
+   )
+}
+{new HamScreen
    main_screen
    (focus main_panel)
    (panels meta background_panel main_panel)
@@ -74,121 +61,104 @@
       {profile_mgr purge_old_data}
       {if
          {&&
-            {!
-               {ui_event_mgr has_active_transition_event}}
-            {!
-               {ui in_transition}}
-            {==
-               {ui current_screen}
-               $this}}
-         {saveload_mgr autosave}}
-      kDataUnhandled)}
-{new
-   HamPanel
+            {! {ui_event_mgr has_active_transition_event}}
+            {! {ui in_transition}}
+            {== {ui current_screen} $this}
+         }
+         {saveload_mgr autosave}
+      }
+      kDataUnhandled
+   )
+}
+{new HamPanel
    main_gameplay_panel
-   (file
-      "main_gameplay.milo")
+   (file "main_gameplay.milo")
    (focus right_hand.hnl)
    (back_token back)
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (quickplay
             {gamemode set_mode init}
-            {ui goto_screen song_select_screen})
+            {ui goto_screen song_select_screen}
+         )
          (campaign
             {gamemode set_mode campaign}
-            {ui goto_screen campaign_diffselect_screen})
-         (back
-            {ui
-               go_back_screen
-               {{ui current_screen}
-                  get
-                  back}})})}
-{new
-   HamScreen
+            {ui goto_screen campaign_diffselect_screen}
+         )
+         (back {ui go_back_screen {{ui current_screen} get back}})
+      }
+   )
+}
+{new HamScreen
    main_gameplay_screen
    (focus main_gameplay_panel)
    (panels meta background_panel main_gameplay_panel)
-   (back main_screen)}
-{new
-   MoviePanel
+   (back main_screen)
+}
+{new MoviePanel
    attract_movie_panel
    (preload FALSE)
    (loop FALSE)
    (audio TRUE)
    (videos attract)
    (movie_done
-      {if
-         {==
-            {ui current_screen}
-            attract_screen}
-         {ui
-            goto_screen
-            {{ui current_screen}
-               get
-               next_screen}}})}
-{new
-   HamScreen
+      {if {== {ui current_screen} attract_screen}
+         {ui goto_screen {{ui current_screen} get next_screen}}
+      }
+   )
+}
+{new HamScreen
    attract_screen
    (panels meta attract_movie_panel movie_overlay_panel)
    (focus movie_overlay_panel)
    (next_screen autosave_warning_screen)
-   (skip_selected
-      {ui goto_screen autosave_warning_screen})}
-{new
-   HamScreen
+   (skip_selected {ui goto_screen autosave_warning_screen})
+}
+{new HamScreen
    show_offers_need_to_sign_in_screen
    (panels meta background_panel dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel set_ok show_offers_need_to_sign_in})
-   (NAV_SELECT_MSG
-      {ui goto_screen main_screen})}
-{func
-   goto_screen_with_critical_profile
+   (enter {dialog_panel set_ok show_offers_need_to_sign_in})
+   (NAV_SELECT_MSG {ui goto_screen main_screen})
+}
+{func goto_screen_with_critical_profile
    ($target_screen)
    {choose_profile_panel set next_screen $target_screen}
-   {ui goto_screen choose_profile_screen}}
-{new
-   ChooseProfilePanel
+   {ui goto_screen choose_profile_screen}
+}
+{new ChooseProfilePanel
    choose_profile_panel
-   (file
-      "..\\title\\choose_profile.milo")
+   (file "..\\title\\choose_profile.milo")
    (focus right_hand.hnl)
    (next_screen '')
    (back_token back)
-   (enter
-      {right_hand.hnl set_provider $this})
-   (refresh_ui
-      {right_hand.hnl refresh})
+   (enter {right_hand.hnl set_provider $this})
+   (refresh_ui {right_hand.hnl refresh})
    (NAV_SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (right_hand.hnl
-            {if_else
-               {$this profile_selected $index}
+            {if_else {$this profile_selected $index}
                {do
-                  ($profile
-                     {$this get_profile $index})
+                  ($profile {$this get_profile $index})
                   {profile_mgr set_critical_profile $profile}
-                  {ui
-                     goto_screen
-                     [next_screen]}}
+                  {ui goto_screen [next_screen]}
+               }
                {do
-                  {$this show_signin}}})
+                  {$this show_signin}
+               }
+            }
+         )
          (left_hand.hnl
-            {switch
-               $name
-               (back
-                  {ui
-                     go_back_screen
-                     {{ui current_screen}
-                        get
-                        back}})})})}
-{new
-   HamScreen
+            {switch $name
+               (back {ui go_back_screen {{ui current_screen} get back}})
+            }
+         )
+      }
+   )
+}
+{new HamScreen
    choose_profile_screen
    (panels meta background_panel choose_profile_panel)
    (focus choose_profile_panel)
-   (back main_screen)}
+   (back main_screen)
+}

@@ -1,176 +1,110 @@
-{func
-   CheckShouldAutogenKeys
-   {set
-      [working_track]
-      "PART KEYS"}
-   {set
-      $conflicting_text_events
-      ("[play]"
+{func CheckShouldAutogenKeys
+   {set [working_track] "PART KEYS"}
+   {set $conflicting_text_events
+      (
+         "[play]"
          "[idle]"
          "[idle_realtime]"
          "[idle_intense]"
          "[mellow]"
-         "[intense]")}
-   {if
-      [force_autogen]
-      {foreach
-         $text
-         $conflicting_text_events
-         {$this remove_text $text}}
-      {set
-         [working_track]
-         "PART KEYS_ANIM_RH"}
-      {foreach_int
-         $i
-         kNote_C2
-         {'+' kNote_C4 1}
-         {$this remove_notes $i}}
-      {set
-         [working_track]
-         "PART KEYS"}}
+         "[intense]"
+      )
+   }
+   {if [force_autogen]
+      {foreach $text $conflicting_text_events
+         {$this remove_text $text}
+      }
+      {set [working_track] "PART KEYS_ANIM_RH"}
+      {foreach_int $i kNote_C2 {'+' kNote_C4 1}
+         {$this remove_notes $i}
+      }
+      {set [working_track] "PART KEYS"}
+   }
    {set $should_autogen 1}
-   {unless
-      [force_autogen]
-      {$this
-         foreach_textevent
-         $text
+   {unless [force_autogen]
+      {$this foreach_textevent $text
          $tick
-         {if
-            {find_elem $conflicting_text_events $text}
-            {set $should_autogen 0}}}
-      {set
-         [working_track]
-         "PART KEYS_ANIM_RH"}
-      {$this
-         foreach_midievent
-         kNote_C2
+         {if {find_elem $conflicting_text_events $text}
+            {set $should_autogen 0}
+         }
+      }
+      {set [working_track] "PART KEYS_ANIM_RH"}
+      {$this foreach_midievent kNote_C2
          kNote_C4
          $pitch
          $tick
          $state
-         {set $should_autogen 0}}
-      {set
-         [working_track]
-         "PART KEYS"}}
-   $should_autogen}
-{func
-   DoAutogen_Keys
-   {print
-      "MIDI Compiler: Autogenerating PART KEYS animations...\n"}
-   {set
-      [working_track]
-      "PART KEYS"}
+         {set $should_autogen 0}
+      }
+      {set [working_track] "PART KEYS"}
+   }
+   $should_autogen
+}
+{func DoAutogen_Keys
+   {print "MIDI Compiler: Autogenerating PART KEYS animations...\n"}
+   {set [working_track] "PART KEYS"}
    {set $last_off -1}
    {set $last_on -1}
-   {$this
-      foreach_midievent
-      kNote_C6
+   {$this foreach_midievent kNote_C6
       kNote_E6
       $pitch
       $tick
       $state
-      {if_else
-         {&&
-            {>= $pitch kNote_C6}
-            {<= $pitch kNote_E6}}
-         {if_else
-            $state
+      {if_else {&& {>= $pitch kNote_C6} {<= $pitch kNote_E6}}
+         {if_else $state
             {if
                {&&
-                  {!
-                     {== $last_on $tick}}
-                  {'||'
-                     {< $last_off 0}
-                     {>
-                        {- $tick $last_off}
-                        2880}}}
-               {if_else
-                  {>= $last_off 0}
-                  {$this
-                     add_midi_text
-                     "[idle]"
-                     {'+' $last_off 120}}
-                  {if
-                     {>
-                        {- $tick 120}
-                        $music_start}
-                     {$this
-                        add_midi_text
-                        "[idle]"
-                        $music_start}}}
-               {$this
-                  add_midi_text
-                  "[play]"
-                  {- $tick 120}}
-               {set $last_on $tick}}
-            {set $last_off $tick}}
-         {if
-            {== $pitch kNote_G6}
-            {if_else
-               $state
-               {$this
-                  add_midi_text
-                  "[play_solo]"
-                  $tick}
-               {$this
-                  add_midi_text
-                  "[play]"
-                  $tick}}}}}
-   {if
-      {> $last_off -1}
-      {if
-         {<
-            {'+' $last_off 120}
-            $end}
-         {if_else
-            {>=
-               {'+' $last_off 120}
-               $music_end}
-            {$this
-               add_midi_text
-               "[idle_realtime]"
-               {'+' $last_off 120}}
+                  {! {== $last_on $tick}}
+                  {'||' {< $last_off 0} {> {- $tick $last_off} 2880}}
+               }
+               {if_else {>= $last_off 0}
+                  {$this add_midi_text "[idle]" {'+' $last_off 120}}
+                  {if {> {- $tick 120} $music_start}
+                     {$this add_midi_text "[idle]" $music_start}
+                  }
+               }
+               {$this add_midi_text "[play]" {- $tick 120}}
+               {set $last_on $tick}
+            }
+            {set $last_off $tick}
+         }
+         {if {== $pitch kNote_G6}
+            {if_else $state
+               {$this add_midi_text "[play_solo]" $tick}
+               {$this add_midi_text "[play]" $tick}
+            }
+         }
+      }
+   }
+   {if {> $last_off -1}
+      {if {< {'+' $last_off 120} $end}
+         {if_else {>= {'+' $last_off 120} $music_end}
+            {$this add_midi_text "[idle_realtime]" {'+' $last_off 120}}
             {do
-               {$this
-                  add_midi_text
-                  "[idle]"
-                  {'+' $last_off 120}}
-               {$this
-                  add_midi_text
-                  "[idle_realtime]"
-                  $music_end}}}}}
-   {set
-      [working_track]
-      "PART REAL_KEYS_X"}
-   {set
-      $notesToCopy
-      {array 0}}
-   {$this
-      foreach_midievent
-      kNote_C2
+               {$this add_midi_text "[idle]" {'+' $last_off 120}}
+               {$this add_midi_text "[idle_realtime]" $music_end}
+            }
+         }
+      }
+   }
+   {set [working_track] "PART REAL_KEYS_X"}
+   {set $notesToCopy {array 0}}
+   {$this foreach_midievent kNote_C2
       kNote_C4
       $pitch
       $tick
       $state
-      {if_else
-         $state
+      {if_else $state
          {do
-            {set $on_tick $tick}}
+            {set $on_tick $tick}
+         }
          {do
-            {push_back
-               $notesToCopy
-               {array
-                  ($pitch
-                     $on_tick
-                     {- $tick $on_tick})}}}}}
-   {set
-      [working_track]
-      "PART KEYS_ANIM_RH"}
-   {foreach
-      $noteArr
-      $notesToCopy
-      {$this
-         add_midi_note
-         {elem $noteArr 0}
-         {elem $noteArr 1}
-         {elem $noteArr 2}}}}
+            {push_back $notesToCopy {array ($pitch $on_tick {- $tick $on_tick})}}
+         }
+      }
+   }
+   {set [working_track] "PART KEYS_ANIM_RH"}
+   {foreach $noteArr $notesToCopy
+      {$this add_midi_note {elem $noteArr 0} {elem $noteArr 1} {elem $noteArr 2}}
+   }
+}

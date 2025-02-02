@@ -1,128 +1,85 @@
-{func
-   DoAutogen_GuitarBass
-   {set
-      $conflicting_text_events
-      ("[play]"
+{func DoAutogen_GuitarBass
+   {set $conflicting_text_events
+      (
+         "[play]"
          "[idle]"
          "[idle_realtime]"
          "[idle_intense]"
          "[mellow]"
          "[intense]"
-         "[play_solo]")}
+         "[play_solo]"
+      )
+   }
    {do
-      ($track_names
-         ("PART GUITAR"
-            "PART BASS"))
-      {foreach
-         $track_name
-         $track_names
-         {set
-            [working_track]
-            $track_name}
-         {if
-            [force_autogen]
-            {foreach
-               $text
-               $conflicting_text_events
-               {$this remove_text $text}}}
+      ($track_names ("PART GUITAR" "PART BASS"))
+      {foreach $track_name $track_names
+         {set [working_track] $track_name}
+         {if [force_autogen]
+            {foreach $text $conflicting_text_events
+               {$this remove_text $text}
+            }
+         }
          {set $should_autogen 1}
-         {unless
-            [force_autogen]
-            {$this
-               foreach_textevent
-               $text
+         {unless [force_autogen]
+            {$this foreach_textevent $text
                $tick
-               {if
-                  {find_elem $conflicting_text_events $text}
-                  {set $should_autogen 0}}}}
-         {if_else
-            $should_autogen
+               {if {find_elem $conflicting_text_events $text}
+                  {set $should_autogen 0}
+               }
+            }
+         }
+         {if_else $should_autogen
             {do
-               {print
-                  "MIDI Compiler: Autogenerating "
-                  $track_name
-                  " animations...\n"}
+               {print "MIDI Compiler: Autogenerating " $track_name " animations...\n"}
                {set $last_off -1}
                {set $last_on -1}
-               {$this
-                  foreach_midievent
-                  kNote_C6
+               {$this foreach_midievent kNote_C6
                   kNote_G6
                   $pitch
                   $tick
                   $state
-                  {if_else
-                     {&&
-                        {>= $pitch kNote_C6}
-                        {<= $pitch kNote_E6}}
-                     {if_else
-                        $state
+                  {if_else {&& {>= $pitch kNote_C6} {<= $pitch kNote_E6}}
+                     {if_else $state
                         {if
                            {&&
-                              {!
-                                 {== $last_on $tick}}
-                              {'||'
-                                 {< $last_off 0}
-                                 {>
-                                    {- $tick $last_off}
-                                    2880}}}
-                           {if_else
-                              {>= $last_off 0}
-                              {$this
-                                 add_midi_text
-                                 "[idle]"
-                                 {'+' $last_off 120}}
-                              {if
-                                 {>
-                                    {- $tick 120}
-                                    $music_start}
-                                 {$this
-                                    add_midi_text
-                                    "[idle]"
-                                    $music_start}}}
-                           {$this
-                              add_midi_text
-                              "[play]"
-                              {- $tick 120}}
-                           {set $last_on $tick}}
-                        {set $last_off $tick}}
-                     {if
-                        {== $pitch kNote_G6}
-                        {if_else
-                           $state
-                           {$this
-                              add_midi_text
-                              "[play_solo]"
-                              $tick}
-                           {$this
-                              add_midi_text
-                              "[play]"
-                              $tick}}}}}
-               {if
-                  {> $last_off -1}
-                  {if
-                     {<
-                        {'+' $last_off 120}
-                        $end}
-                     {if_else
-                        {>=
-                           {'+' $last_off 120}
-                           $music_end}
-                        {$this
-                           add_midi_text
-                           "[idle_realtime]"
-                           {'+' $last_off 120}}
+                              {! {== $last_on $tick}}
+                              {'||' {< $last_off 0} {> {- $tick $last_off} 2880}}
+                           }
+                           {if_else {>= $last_off 0}
+                              {$this add_midi_text "[idle]" {'+' $last_off 120}}
+                              {if {> {- $tick 120} $music_start}
+                                 {$this add_midi_text "[idle]" $music_start}
+                              }
+                           }
+                           {$this add_midi_text "[play]" {- $tick 120}}
+                           {set $last_on $tick}
+                        }
+                        {set $last_off $tick}
+                     }
+                     {if {== $pitch kNote_G6}
+                        {if_else $state
+                           {$this add_midi_text "[play_solo]" $tick}
+                           {$this add_midi_text "[play]" $tick}
+                        }
+                     }
+                  }
+               }
+               {if {> $last_off -1}
+                  {if {< {'+' $last_off 120} $end}
+                     {if_else {>= {'+' $last_off 120} $music_end}
+                        {$this add_midi_text "[idle_realtime]" {'+' $last_off 120}}
                         {do
-                           {$this
-                              add_midi_text
-                              "[idle]"
-                              {'+' $last_off 120}}
-                           {$this
-                              add_midi_text
-                              "[idle_realtime]"
-                              $music_end}}}}}}
+                           {$this add_midi_text "[idle]" {'+' $last_off 120}}
+                           {$this add_midi_text "[idle_realtime]" $music_end}
+                        }
+                     }
+                  }
+               }
+            }
             {do
-               {print
-                  "MIDI Compiler: Skipping '"
-                  $track_name
-                  "' autogen...\n"}}}}}}
+               {print "MIDI Compiler: Skipping '" $track_name "' autogen...\n"}
+            }
+         }
+      }
+   }
+}

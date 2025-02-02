@@ -1,95 +1,81 @@
-#define SET_UP_GAMERTAG
-({if_else
-      {input_mgr has_user}
+#define SET_UP_GAMERTAG (
+   {if_else {input_mgr has_user}
       {do
-         ($user
-            {input_mgr get_user})
-         ($pad_num
-            {$user get_pad_num})
-         {if
-            {$this exists bg_name.mesh}
-            {bg_name.mesh set_showing TRUE}}
+         ($user {input_mgr get_user})
+         ($pad_num {$user get_pad_num})
+         {if {$this exists bg_name.mesh}
+            {bg_name.mesh set_showing TRUE}
+         }
          {gamertag.lbl set_showing TRUE}
-         {gamertag.lbl set_user_name $pad_num}}
+         {gamertag.lbl set_user_name $pad_num}
+      }
       {do
          {gamertag.lbl set_showing FALSE}
-         {if
-            {$this exists bg_name.mesh}
-            {bg_name.mesh set_showing FALSE}}}})
-#define COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT
-({if
-      {$this get signin_change_waiting}
+         {if {$this exists bg_name.mesh}
+            {bg_name.mesh set_showing FALSE}
+         }
+      }
+   }
+)
+#define COMMON_TRANSITION_HANDLERS_FOR_SIGN_OUT (
+   {if {$this get signin_change_waiting}
       {$this set signin_change_waiting FALSE}
-      {$this process_signin_change}})
-#define ENTER_HANDLER_FOR_SIGNOUT
-({platform_mgr
-      add_sink
-      $this
-      (signin_changed)})
-#define EXIT_HANDLER_FOR_SIGNOUT
-({platform_mgr remove_sink $this signin_changed})
-#define SIGNIN_CHANGE_HANDLER_FOR_SIGNOUT
-({ui_event_mgr
-      trigger_event
-      sign_out
-      (dummy init kLocalUserSignedOut)})
-{new
-   BandScreen
+      {$this process_signin_change}
+   }
+)
+#define ENTER_HANDLER_FOR_SIGNOUT ({platform_mgr add_sink $this (signin_changed)})
+#define EXIT_HANDLER_FOR_SIGNOUT ({platform_mgr remove_sink $this signin_changed})
+#define SIGNIN_CHANGE_HANDLER_FOR_SIGNOUT ({ui_event_mgr trigger_event sign_out (dummy init kLocalUserSignedOut)})
+{new BandScreen
    option_profile_change_warning_screen
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel set_ok shell_change_profile_warning})
+   (enter {dialog_panel set_ok shell_change_profile_warning})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui sync_screen MAIN_MENU_RETURN_SCREEN 0})})}
-{func
-   warn_no_signin_goto_screen
+      {switch $component
+         (ok.btn {ui sync_screen MAIN_MENU_RETURN_SCREEN 0})
+      }
+   )
+}
+{func warn_no_signin_goto_screen
    ($screen $user)
    {if_else
       {&&
          {platform_mgr is_user_signed_in $user}
-         {!
-            {platform_mgr is_user_a_guest $user}}}
+         {! {platform_mgr is_user_a_guest $user}}
+      }
       {ui goto_screen $screen}
       {do
          {warn_no_signin_screen set text_token warn_active_options_not_signed_in}
          {warn_no_signin_screen set destination_screen $screen}
-         {ui push_screen warn_no_signin_screen}}}
-   {input_mgr set_user $user}}
-{new
-   BandScreen
+         {ui push_screen warn_no_signin_screen}
+      }
+   }
+   {input_mgr set_user $user}
+}
+{new BandScreen
    warn_no_signin_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (destination_screen '')
    (text_token '')
    (enter
-      {platform_mgr
-         add_sink
-         $this
-         (signin_changed)}
-      {dialog_panel
-         set_ok
+      {platform_mgr add_sink $this (signin_changed)}
+      {dialog_panel set_ok
          ({warn_no_signin_screen get text_token}
-            {platform_mgr
-               get_name
-               {{input_mgr get_user}
-                  get_pad_num}})}
-      {helpbar
-         set_config
-         ((confirm helpbar_continue))})
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
+            {platform_mgr get_name {{input_mgr get_user} get_pad_num}}
+         )
+      }
+      {helpbar set_config ((confirm helpbar_continue))}
+   )
+   (exit {platform_mgr remove_sink $this signin_changed})
    (SIGNIN_CHANGED_MSG
       {ui pop_screen}
-      {input_mgr clear_user})
+      {input_mgr clear_user}
+   )
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui
-               pop_screen
-               [destination_screen]})})}
+      {switch $component
+         (ok.btn {ui pop_screen [destination_screen]})
+      }
+   )
+}

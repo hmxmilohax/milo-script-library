@@ -6,256 +6,187 @@
       {set $practice_options_up FALSE}
       {practice_options.hnl add_sink $this}
       {left_hand.hnl add_sink $this}
-      {if
-         {&&
-            {exists speech_mgr}
-            {==
-               {gamemode get gameplay_mode}
-               practice}}
+      {if {&& {exists speech_mgr} {== {gamemode get gameplay_mode} practice}}
          {speech_mgr add_sink $this}
-         {speech_mgr set_rule bid boombox_cmd TRUE}})
+         {speech_mgr set_rule bid boombox_cmd TRUE}
+      }
+   )
    (exit
       {set $practice_options_up FALSE}
       {practice_options.hnl remove_sink $this}
       {left_hand.hnl remove_sink $this}
-      {if
-         {exists speech_mgr}
+      {if {exists speech_mgr}
          {speech_mgr set_rule bid boombox_cmd FALSE}
-         {speech_mgr set_rule bid menu FALSE}})
+         {speech_mgr set_rule bid menu FALSE}
+      }
+   )
    (NAV_SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (practice_options.hnl
             {$this select_menu $name}
-            {handle
-               (hamprovider hide_practice_options)})
-         (left_hand.hnl
-            {handle
-               (hamprovider hide_practice_options)})})
+            {handle (hamprovider hide_practice_options)}
+         )
+         (left_hand.hnl {handle (hamprovider hide_practice_options)})
+      }
+   )
    (select_menu
       ($name)
       {do
          ($did_action FALSE)
-         {if
-            {&&
-               {exists game_panel}
-               {==
-                  {hamprovider get skills_mode}
-                  learn}}
-            {switch
-               $name
-               (ingame_slowmo
-                  {set
-                     $did_action
-                     {game_panel on_slow_down}})
-               (ingame_speedup
-                  {set
-                     $did_action
-                     {game_panel on_speed_up}})
-               (ingame_skip
-                  {set
-                     $did_action
-                     {game_panel on_skip}})
-               (ingame_previous
-                  {set
-                     $did_action
-                     {game_panel on_previous}})
-               (ingame_video
-                  {set
-                     $did_action
-                     {game_panel on_video_replay}})
-               (ingame_video_stop
-                  {set
-                     $did_action
-                     {game_panel cancel_video_replay}})}
-            {handle
-               (game_panel update_control_state)}}
-         $did_action})
+         {if {&& {exists game_panel} {== {hamprovider get skills_mode} learn}}
+            {switch $name
+               (ingame_slowmo {set $did_action {game_panel on_slow_down}})
+               (ingame_speedup {set $did_action {game_panel on_speed_up}})
+               (ingame_skip {set $did_action {game_panel on_skip}})
+               (ingame_previous {set $did_action {game_panel on_previous}})
+               (ingame_video {set $did_action {game_panel on_video_replay}})
+               (ingame_video_stop {set $did_action {game_panel cancel_video_replay}})
+            }
+            {handle (game_panel update_control_state)}
+         }
+         $did_action
+      }
+   )
    (hear_voice_command
       ($name)
       {do
          ($did_action FALSE)
-         {if
-            {==
-               [queued_voice_command]
-               none}
-            {set
-               $did_action
-               {$this select_menu $name}}
-            {if
-               $did_action
-               {set
-                  [queued_voice_command]
-                  $name}
-               {handle
-                  (hamprovider show_voice_prompt)}
-               {voice_prompt.lbl set_token_fmt heard_voice_command_fmt $name}}}
-         $did_action})
-   (execute_voice_command
-      {set
-         [queued_voice_command]
-         none})
+         {if {== [queued_voice_command] none}
+            {set $did_action {$this select_menu $name}}
+            {if $did_action
+               {set [queued_voice_command] $name}
+               {handle (hamprovider show_voice_prompt)}
+               {voice_prompt.lbl set_token_fmt heard_voice_command_fmt $name}
+            }
+         }
+         $did_action
+      }
+   )
+   (execute_voice_command {set [queued_voice_command] none})
    (SPEECH_RECO_MSG
       {if
          {&&
             {>= $confidence 0.2}
-            {==
-               {ui focus_panel}
-               game_panel}
-            {==
-               {game_panel get type}
-               practice}
+            {== {ui focus_panel} game_panel}
+            {== {game_panel get type} practice}
             {'||'
-               {!=
-                  {game_panel get step_index}
-                  -1}
-               {==
-                  [queued_voice_command]
-                  ingame_previous}}}
-         {if_else
-            {<
-               {size $tags}
-               1}
+               {!= {game_panel get step_index} -1}
+               {== [queued_voice_command] ingame_previous}
+            }
+         }
+         {if_else {< {size $tags} 1}
             {do
-               {notify
-                  "No semantic tags in speech reco msg!"}}
+               {notify "No semantic tags in speech reco msg!"}
+            }
             {do
                ($did_action FALSE)
-               {switch
-                  {elem $tags 0}
+               {switch {elem $tags 0}
                   (boombox
-                     {if
-                        {! $practice_options_up}
-                        {handle
-                           (hamprovider show_practice_options)}
-                        {set $did_action TRUE}})
+                     {if {! $practice_options_up}
+                        {handle (hamprovider show_practice_options)}
+                        {set $did_action TRUE}
+                     }
+                  )
                   (cancel)
                   {do
-                     {if_else
-                        $practice_options_up
+                     {if_else $practice_options_up
                         {do
-                           {if_else
-                              {==
-                                 {elem $tags 0}
-                                 close}
+                           {if_else {== {elem $tags 0} close}
                               {set $did_action TRUE}
-                              {set
-                                 $did_action
-                                 {$this
-                                    select_menu
-                                    {elem $tags 0}}}}
-                           {if
-                              $did_action
-                              {handle
-                                 (hamprovider hide_practice_options)}}}
+                              {set $did_action {$this select_menu {elem $tags 0}}}
+                           }
+                           {if $did_action
+                              {handle (hamprovider hide_practice_options)}
+                           }
+                        }
                         {do
                            ($slow)
-                           {set
-                              $slow
-                              {handle_ret
-                                 (game_panel is_slow)}}
+                           {set $slow {handle_ret (game_panel is_slow)}}
                            {if
                               {&&
-                                 {'||'
-                                    {!=
-                                       {elem $tags 0}
-                                       ingame_slowmo}
-                                    {! $slow}}
-                                 {'||'
-                                    {!=
-                                       {elem $tags 0}
-                                       ingame_speedup}
-                                    $slow}
-                                 {!=
-                                    {elem $tags 0}
-                                    close}
-                                 {==
-                                    {hamprovider get skills_mode}
-                                    learn}}
-                              {set
-                                 $did_action
-                                 {$this
-                                    hear_voice_command
-                                    {elem $tags 0}}}}}}}}
-               {if
-                  $did_action
-                  {handle
-                     (hamprovider microphone_activity)}}}}})
+                                 {'||' {!= {elem $tags 0} ingame_slowmo} {! $slow}}
+                                 {'||' {!= {elem $tags 0} ingame_speedup} $slow}
+                                 {!= {elem $tags 0} close}
+                                 {== {hamprovider get skills_mode} learn}
+                              }
+                              {set $did_action {$this hear_voice_command {elem $tags 0}}}
+                           }
+                        }
+                     }
+                  }
+               }
+               {if $did_action
+                  {handle (hamprovider microphone_activity)}
+               }
+            }
+         }
+      }
+   )
    (on_show
       {set $practice_options_up TRUE}
       {practice_options.hnl enable_navigation}
       {practice_options.hnl play_enter_anim}
       {left_hand.hnl enable_navigation}
       {left_hand.hnl play_enter_anim}
-      {if
-         {exists speech_mgr}
+      {if {exists speech_mgr}
          {speech_mgr set_rule bid boombox_cmd TRUE}
-         {speech_mgr set_rule bid menu TRUE}}
-      {if
-         {exists game_panel}
-         {handle
-            (game_panel on_practice_options_show)}
+         {speech_mgr set_rule bid menu TRUE}
+      }
+      {if {exists game_panel}
+         {handle (game_panel on_practice_options_show)}
          {do
             ($video_replay)
-            {set
-               $video_replay
-               {handle_ret
-                  (game_panel in_video_replay_flow)}}
-            {if
-               {!= $video_replay kDataUnhandled}
-               {practice_options.pop set_video_replay $video_replay}}}
+            {set $video_replay {handle_ret (game_panel in_video_replay_flow)}}
+            {if {!= $video_replay kDataUnhandled}
+               {practice_options.pop set_video_replay $video_replay}
+            }
+         }
          {do
             ($slow)
-            {set
-               $slow
-               {handle_ret
-                  (game_panel is_slow)}}
-            {if
-               {!= $slow kDataUnhandled}
-               {practice_options.pop set_slow $slow}}}}
-      {$this refresh})
+            {set $slow {handle_ret (game_panel is_slow)}}
+            {if {!= $slow kDataUnhandled}
+               {practice_options.pop set_slow $slow}
+            }
+         }
+      }
+      {$this refresh}
+   )
    (on_hide
       {set $practice_options_up FALSE}
       {practice_options.hnl disable_navigation}
       {left_hand.hnl disable_navigation}
-      {if
-         {exists speech_mgr}
+      {if {exists speech_mgr}
          {speech_mgr set_rule bid boombox_cmd TRUE}
-         {speech_mgr set_rule bid menu FALSE}})
+         {speech_mgr set_rule bid menu FALSE}
+      }
+   )
    (disable_previous
       ($disabled)
-      {practice_options.pop set disable_previous $disabled})
-   (refresh
-      {practice_options.hnl refresh})
+      {practice_options.pop set disable_previous $disabled}
+   )
+   (refresh {practice_options.hnl refresh})
    (start_recording
       {recording.lbl set showing TRUE}
-      {handle
-         (hamprovider video_record_start)}
-      {skeleton_extent_tracker
-         start_tracking
-         {gamedata getp 0 skeleton_tracking_id}})
+      {handle (hamprovider video_record_start)}
+      {skeleton_extent_tracker start_tracking
+         {gamedata getp 0 skeleton_tracking_id}
+      }
+   )
    (stop_recording
       {recording.lbl set showing FALSE}
-      {handle
-         (hamprovider video_record_end)}
-      {skeleton_extent_tracker stop_tracking})
+      {handle (hamprovider video_record_end)}
+      {skeleton_extent_tracker stop_tracking}
+   )
    (start_playback
-      {handle
-         (hamprovider video_playback_start)}
-      {skeleton_extent_tracker
-         apply_to_mesh_verts
-         {{$hamdirector get cur_world}
-            find
-            video_playback.mesh
-            FALSE}
-         FALSE}
-      {skeleton_extent_tracker
-         apply_to_mesh_verts
-         {{$hamdirector get cur_world}
-            find
-            video_playback_reflect.mesh
-            FALSE}
-         TRUE})
-   (stop_playback
-      {handle
-         (hamprovider video_playback_end)}))
+      {handle (hamprovider video_playback_start)}
+      {skeleton_extent_tracker apply_to_mesh_verts
+         {{$hamdirector get cur_world} find video_playback.mesh FALSE}
+         FALSE
+      }
+      {skeleton_extent_tracker apply_to_mesh_verts
+         {{$hamdirector get cur_world} find video_playback_reflect.mesh FALSE}
+         TRUE
+      }
+   )
+   (stop_playback {handle (hamprovider video_playback_end)})
+)

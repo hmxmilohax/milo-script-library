@@ -1,49 +1,35 @@
-#define CSCDM_STATE_LOADING
-(1)
-#define CSCDM_STATE_DANCE
-(2)
-#define CSCDM_STATE_SCORE
-(3)
-#define CSCDM_STATE_GAME_OVER
-(4)
-#define CSCDM_MOVE_DETECT_THRESHHOLD
-(0.75)
+#define CSCDM_STATE_LOADING (1)
+#define CSCDM_STATE_DANCE (2)
+#define CSCDM_STATE_SCORE (3)
+#define CSCDM_STATE_GAME_OVER (4)
+#define CSCDM_MOVE_DETECT_THRESHHOLD (0.75)
 (cascade_microgame_scriptobj
    #include performance.dta
    (row_count 3)
    (col_count 4)
-   (score_curve
-      "")
+   (score_curve "")
    (col_offset 200)
    (row_offset -105)
    (col0_pos -285)
    (row0_pos 42)
    (move_dir)
-   (cheat_moves
-      (""
-         ""))
+   (cheat_moves ("" ""))
    (panel_dir)
-   (card_set
-      ())
+   (card_set ())
    (beat_round)
    (on_measure)
-   (mg_move_list
-      ())
-   (ham_moves
-      ())
+   (mg_move_list ())
+   (ham_moves ())
    (do_detection FALSE)
    (play_state CSCDM_STATE_LOADING)
-   (dancers
-      (0 1))
+   (dancers (0 1))
    (rounds 0)
    (state_beats)
    (player_scores_hidden)
    (title_hidden)
-   (player_scores
-      (0 0))
+   (player_scores (0 0))
    (game_is_over FALSE)
-   (move_colors
-      (0 1 2 3 4 5))
+   (move_colors (0 1 2 3 4 5))
    (music_start_beat 0)
    (music_end_beat 0)
    (play_start_beat 0)
@@ -51,602 +37,414 @@
    (log_cat 1)
    (log
       ($category $array)
-      {if
-         {&
-            $category
-            [log_cat]}
-         {print
-            "cascade_microgame_scriptobj:"}
-         {foreach
-            $element
-            $array
-            {print $element}}
-         {print
-            "\n"}})
+      {if {& $category [log_cat]}
+         {print "cascade_microgame_scriptobj:"}
+         {foreach $element $array
+            {print $element}
+         }
+         {print "\n"}
+      }
+   )
    (force_the_postproc_and_set_the_game_stage
       {do
-         ($postproc
-            "")
-         {[panel_dir]
-            iterate
-            PostProc
-            $pp
-            {set $postproc $pp}}
-         {if
-            $postproc
+         ($postproc "")
+         {[panel_dir] iterate PostProc $pp {set $postproc $pp}}
+         {if $postproc
             {$hamdirector set force_postproc $postproc}
             {$hamdirector set force_postproc_blend 0}
-            {$hamdirector set force_postproc_blend_rate 1}}
-         {{$hamdirector get_world}
-            set
-            explicit_postproc
-            FALSE}}
-      {hamprovider set game_stage cascade})
+            {$hamdirector set force_postproc_blend_rate 1}
+         }
+         {{$hamdirector get_world} set explicit_postproc FALSE}
+      }
+      {hamprovider set game_stage cascade}
+   )
    (send_score_to_hamprovider
       ($player_index $score)
       {do
-         ($old_score
-            {elem
-               [player_scores]
-               $player_index})
+         ($old_score {elem [player_scores] $player_index})
          ($message
-            {if_else
-               {== $player_index 0}
+            {if_else {== $player_index 0}
                setup_0_alert
-               setup_1_alert})
-         {script_task
-            kTaskSeconds
+               setup_1_alert
+            }
+         )
+         {script_task kTaskSeconds
             (delay 1.2)
             (script
-               {if
-                  {==
-                     {hamprovider get ui_nav_mode}
-                     game}
+               {if {== {hamprovider get ui_nav_mode} game}
                   {handle
-                     (hamprovider
-                        $message
-                        free4all
-                        {localize_separated_int $score})}})}})
+                     (hamprovider $message free4all {localize_separated_int $score})
+                  }
+               }
+            )
+         }
+      }
+   )
    (award_omg_scores
       {do
          ($score_delta
             {-
-               {{gamedata getp 0 provider}
-                  get
-                  score}
-               {{gamedata getp 1 provider}
-                  get
-                  score}})
-         ($previous_winner
-            {cond
-               ({> $score_delta 0}
-                  0)
-               ({< $score_delta 0}
-                  1)
-               (TRUE -1)})
-         ($cur_winner -1)
-         {foreach_int
-            $i
-            0
-            {gamedata max_players}
-            {do
-               ($provider
-                  {gamedata getp $i provider})
-               {$provider
-                  set
+               {{gamedata getp 0 provider} get
                   score
-                  {'+'
-                     {$provider get score}
-                     {elem
-                        [player_scores]
-                        $i}}}}}
-         {set
-            $score_delta
+               }
+               {{gamedata getp 1 provider} get
+                  score
+               }
+            }
+         )
+         ($previous_winner
+            {cond ({> $score_delta 0} 0) ({< $score_delta 0} 1) (TRUE -1)}
+         )
+         ($cur_winner -1)
+         {foreach_int $i 0 {gamedata max_players}
+            {do
+               ($provider {gamedata getp $i provider})
+               {$provider set score {'+' {$provider get score} {elem [player_scores] $i}}}
+            }
+         }
+         {set $score_delta
             {-
-               {{gamedata getp 0 provider}
-                  get
-                  score}
-               {{gamedata getp 1 provider}
-                  get
-                  score}}}
-         {set
-            $cur_winner
-            {cond
-               ({> $score_delta 0}
-                  0)
-               ({< $score_delta 0}
-                  1)
-               (TRUE -1)}}
+               {{gamedata getp 0 provider} get
+                  score
+               }
+               {{gamedata getp 1 provider} get
+                  score
+               }
+            }
+         }
+         {set $cur_winner
+            {cond ({> $score_delta 0} 0) ({< $score_delta 0} 1) (TRUE -1)}
+         }
          {cond
             ({&&
                   {== $previous_winner 1}
                   {== $cur_winner 0}}
-               {acc_mgr earn_accomplishment_for_player 0 acc_dance_battle_behind})
+               {acc_mgr earn_accomplishment_for_player 0 acc_dance_battle_behind}
+            )
             ({&&
                   {== $previous_winner 0}
                   {== $cur_winner 1}}
-               {acc_mgr earn_accomplishment_for_player 1 acc_dance_battle_behind})}
-         {$this
-            run_flow
-            "display_scores.flow"}})
+               {acc_mgr earn_accomplishment_for_player 1 acc_dance_battle_behind}
+            )
+         }
+         {$this run_flow "display_scores.flow"}
+      }
+   )
    (hide_hud_and_play_vo
-      {foreach_int
-         $i
-         0
-         {gamedata max_players}
-         {handle
-            ({gamedata getp $i provider}
-               hide_hud
-               TRUE)}}
-      {$hud_panel play nar_omg})
+      {foreach_int $i 0 {gamedata max_players}
+         {handle ({gamedata getp $i provider} hide_hud TRUE)}
+      }
+      {$hud_panel play nar_omg}
+   )
    (hide
       the
       venue
-      {if
-         {&&
-            $hamdirector
-            {$hamdirector get cur_world}}
-         {{$hamdirector get cur_world}
-            set_showing
-            FALSE}})
+      {if {&& $hamdirector {$hamdirector get cur_world}}
+         {{$hamdirector get cur_world} set_showing FALSE}
+      }
+   )
    (on_ui_nav_mode_change
       {do
-         ($ui_nav_mode
-            {hamprovider get ui_nav_mode})
-         {switch
-            $ui_nav_mode
+         ($ui_nav_mode {hamprovider get ui_nav_mode})
+         {switch $ui_nav_mode
             (game
                {handle
                   (hamprovider
                      setup_0_alert
                      free4all
-                     {localize_separated_int
-                        {elem
-                           [player_scores]
-                           0}})}
+                     {localize_separated_int {elem [player_scores] 0}}
+                  )
+               }
                {handle
                   (hamprovider
                      setup_1_alert
                      free4all
-                     {localize_separated_int
-                        {elem
-                           [player_scores]
-                           1}})})
+                     {localize_separated_int {elem [player_scores] 1}}
+                  )
+               }
+            )
             {handle
-               (hamprovider
-                  setup_0_alert
-                  none
-                  "")}
+               (hamprovider setup_0_alert none "")
+            }
             {handle
-               (hamprovider
-                  setup_1_alert
-                  none
-                  "")}}})
+               (hamprovider setup_1_alert none "")
+            }
+         }
+      }
+   )
    (tell_someone_they_won
-      {if
-         {!=
-            {elem
-               [player_scores]
-               0}
-            {elem
-               [player_scores]
-               1}}
+      {if {!= {elem [player_scores] 0} {elem [player_scores] 1}}
          {do
             ($winning_idx
-               {if_else
-                  {>
-                     {elem
-                        [player_scores]
-                        0}
-                     {elem
-                        [player_scores]
-                        1}}
+               {if_else {> {elem [player_scores] 0} {elem [player_scores] 1}}
                   0
-                  1})
+                  1
+               }
+            )
             {handle
-               (hamprovider
-                  nar_play_crew_vo
-                  omg_win
-                  {gamedata getp $winning_idx crew})}}})
+               (hamprovider nar_play_crew_vo omg_win {gamedata getp $winning_idx crew})
+            }
+         }
+      }
+   )
    (enter
-      ($music_start_measure $music_end_measure $play_start_measure $play_end_measure)
-      {set
-         [move_dir]
-         {$hud_panel get moves_dir}}
-      {set
-         [music_start_beat]
-         {'*' 4 $music_start_measure}}
-      {set
-         [music_end_beat]
-         {'*' 4 $music_end_measure}}
-      {set
-         [play_start_beat]
-         {'*' 4 $play_start_measure}}
-      {set
-         [play_end_beat]
-         {'*' 4 $play_end_measure}}
-      {set
-         [game_is_over]
-         FALSE}
-      {set
-         [rounds]
-         0}
-      {$this
-         log
-         1
-         ("enter")}
-      {$this
-         log
-         1
-         ("music start "
-            [music_start_beat])}
-      {$this
-         log
-         1
-         ("music end "
-            [music_end_beat])}
-      {$this
-         log
-         1
-         ("play start "
-            [play_start_beat])}
-      {$this
-         log
-         1
-         ("play end "
-            [play_end_beat])}
-      {$this
-         log
+      ($music_start_measure
+         $music_end_measure
+         $play_start_measure
+         $play_end_measure
+      )
+      {set [move_dir] {$hud_panel get moves_dir}}
+      {set [music_start_beat] {'*' 4 $music_start_measure}}
+      {set [music_end_beat] {'*' 4 $music_end_measure}}
+      {set [play_start_beat] {'*' 4 $play_start_measure}}
+      {set [play_end_beat] {'*' 4 $play_end_measure}}
+      {set [game_is_over] FALSE}
+      {set [rounds] 0}
+      {$this log 1 ("enter")}
+      {$this log 1 ("music start " [music_start_beat])}
+      {$this log 1 ("music end " [music_end_beat])}
+      {$this log 1 ("play start " [play_start_beat])}
+      {$this log 1 ("play end " [play_end_beat])}
+      {$this log
          2
-         ("player 0 on side "
-            {{gamedata getp 0 provider}
-               get
-               side})}
-      {$this
-         log
+         (
+            "player 0 on side "
+            {{gamedata getp 0 provider} get
+               side
+            }
+         )
+      }
+      {$this log
          2
-         ("player 1 on side "
-            {{gamedata getp 1 provider}
-               get
-               side})}
-      {master
-         add_sink
+         (
+            "player 1 on side "
+            {{gamedata getp 1 provider} get
+               side
+            }
+         )
+      }
+      {master add_sink $this (beat)}
+      {hamprovider add_sink
          $this
-         (beat)}
-      {hamprovider
-         add_sink
-         $this
-         ((post_move_finished on_post_move_finished)
+         (
+            (post_move_finished on_post_move_finished)
             (post_sides_switched on_side_moved)
-            (on_ui_nav_mode_change on_ui_nav_mode_change))
+            (on_ui_nav_mode_change on_ui_nav_mode_change)
+         )
          kSinkModeHandle
-         FALSE}
+         FALSE
+      }
       {hamprovider set game_stage cascade}
-      {set
-         [panel_dir]
-         {find_obj $hud_panel twelve_card_hud}}
-      {set
-         [score_curve]
-         {find_obj
-            [panel_dir]
-            score_curve.anim}}
-      {resize
-         [ham_moves]
-         0}
-      {set
-         [play_state]
-         CSCDM_STATE_LOADING}
-      {set
-         [do_detection]
-         FALSE}
+      {set [panel_dir] {find_obj $hud_panel twelve_card_hud}}
+      {set [score_curve] {find_obj [panel_dir] score_curve.anim}}
+      {resize [ham_moves] 0}
+      {set [play_state] CSCDM_STATE_LOADING}
+      {set [do_detection] FALSE}
       {$this clear_cheat_moves}
-      {resize
-         [mg_move_list]
-         0}
-      {resize
-         [card_set]
-         0}
-      {resize
-         [move_colors]
-         0}
-      {foreach_int
-         $i
-         0
-         [max_cards_per_move]
-         {push_back
-            [move_colors]
-            $i}}
+      {resize [mg_move_list] 0}
+      {resize [card_set] 0}
+      {resize [move_colors] 0}
+      {foreach_int $i 0 [max_cards_per_move]
+         {push_back [move_colors] $i}
+      }
       {$this init_cards}
       {$this enter_state_loading}
-      {set_elem
-         [player_scores]
-         0
-         0}
-      {set_elem
-         [player_scores]
-         1
-         0}
+      {set_elem [player_scores] 0 0}
+      {set_elem [player_scores] 1 0}
       {$this set_score 1 0}
       {$this set_score 0 0}
-      {$this force_the_postproc_and_set_the_game_stage})
+      {$this force_the_postproc_and_set_the_game_stage}
+   )
    (exit
       {hamprovider set game_stage playing}
-      {[move_dir]
-         disable_all_detectors}
+      {[move_dir] disable_all_detectors}
       {handle
-         (hamprovider
-            setup_0_alert
-            none
-            "")}
+         (hamprovider setup_0_alert none "")
+      }
       {handle
-         (hamprovider
-            setup_1_alert
-            none
-            "")}
-      {{$hamdirector get_world}
-         set
-         explicit_postproc
-         TRUE}
-      {handle
-         ($hamdirector on_performance_change)}
-      {meta_performer
-         send_omg_score_datapoint
-         {elem
-            [player_scores]
-            0}
-         {elem
-            [player_scores]
-            1}}
-      {foreach_int
-         $i
-         0
-         {gamedata max_players}
+         (hamprovider setup_1_alert none "")
+      }
+      {{$hamdirector get_world} set explicit_postproc TRUE}
+      {handle ($hamdirector on_performance_change)}
+      {meta_performer send_omg_score_datapoint
+         {elem [player_scores] 0}
+         {elem [player_scores] 1}
+      }
+      {foreach_int $i 0 {gamedata max_players}
          {do
-            ($provider
-               {gamedata getp $i provider})
-            {$provider
-               set
-               score
-               {'+'
-                  {$provider get score}
-                  {elem
-                     [player_scores]
-                     $i}}}}}
+            ($provider {gamedata getp $i provider})
+            {$provider set score {'+' {$provider get score} {elem [player_scores] $i}}}
+         }
+      }
       {hamprovider remove_sink $this}
       {master remove_sink $this}
-      {$this
-         run_flow
-         [panel_dir]
-         reset.flow}
-      {foreach_int
-         $i
-         0
-         {gamedata max_players}
-         {handle
-            ({gamedata getp $i provider}
-               show_hud
-               TRUE)}}
-      {$this
-         log
-         1
-         ("exit"
-            ",beat="
-            [beat_round])})
+      {$this run_flow [panel_dir] reset.flow}
+      {foreach_int $i 0 {gamedata max_players}
+         {handle ({gamedata getp $i provider} show_hud TRUE)}
+      }
+      {$this log 1 ("exit" ",beat=" [beat_round])}
+   )
    (poll
-      {$this
-         log
-         0
-         ("poll")}
-      {if
-         {&&
-            [do_detection]
-            {==
-               [play_state]
-               CSCDM_STATE_DANCE}}
+      {$this log 0 ("poll")}
+      {if {&& [do_detection] {== [play_state] CSCDM_STATE_DANCE}}
          {do
             ($raw_detection_val 0)
             ($normalized_result 0)
             ($dancer)
             ($ham_move)
             ($card)
-            ($highest_scoring_move
-               (NULL NULL))
-            ($highest_scoring_move_result
-               (0 0))
+            ($highest_scoring_move (NULL NULL))
+            ($highest_scoring_move_result (0 0))
             ($confus 0)
             ($adj_res 0)
             {set_elem $highest_scoring_move_result 0 0}
             {set_elem $highest_scoring_move_result 1 0}
-            {foreach
-               $ham_move
-               [ham_moves]
-               {foreach
-                  $dancer
-                  [dancers]
-                  {set
-                     $raw_detection_val
-                     {[move_dir]
-                        active_detector_result
-                        $dancer
-                        $ham_move}}
-                  {set
-                     $normalized_result
-                     {detect_frac_to_rating_frac $raw_detection_val $ham_move}}
-                  {if
-                     [score_curve]
-                     {set
-                        $normalized_result
-                        {[score_curve]
-                           value_from_frame
+            {foreach $ham_move [ham_moves]
+               {foreach $dancer [dancers]
+                  {set $raw_detection_val
+                     {[move_dir] active_detector_result $dancer $ham_move}
+                  }
+                  {set $normalized_result
+                     {detect_frac_to_rating_frac $raw_detection_val $ham_move}
+                  }
+                  {if [score_curve]
+                     {set $normalized_result
+                        {[score_curve] value_from_frame
                            [panel_dir]
                            (some_value)
-                           $normalized_result}}}
-                  {if
-                     {>
-                        $normalized_result
-                        {elem $highest_scoring_move_result $dancer}}
+                           $normalized_result
+                        }
+                     }
+                  }
+                  {if {> $normalized_result {elem $highest_scoring_move_result $dancer}}
                      {set_elem $highest_scoring_move_result $dancer $normalized_result}
-                     {set_elem $highest_scoring_move $dancer $ham_move}}}}
-            {foreach
-               $ham_move
-               [ham_moves]
-               {set
-                  $confus
-                  {if_else
-                     $ham_move
-                     {$ham_move
-                        confusability_with_move_data_array
-                        [ham_moves]}
-                     0.5}}
-               {foreach
-                  $dancer
-                  [dancers]
-                  {set
-                     $raw_detection_val
-                     {[move_dir]
-                        active_detector_result
-                        $dancer
-                        $ham_move}}
-                  {set
-                     $normalized_result
-                     {detect_frac_to_rating_frac $raw_detection_val $ham_move}}
-                  {if
-                     [score_curve]
-                     {set
-                        $normalized_result
-                        {[score_curve]
-                           value_from_frame
+                     {set_elem $highest_scoring_move $dancer $ham_move}
+                  }
+               }
+            }
+            {foreach $ham_move [ham_moves]
+               {set $confus
+                  {if_else $ham_move
+                     {$ham_move confusability_with_move_data_array [ham_moves]}
+                     0.5
+                  }
+               }
+               {foreach $dancer [dancers]
+                  {set $raw_detection_val
+                     {[move_dir] active_detector_result $dancer $ham_move}
+                  }
+                  {set $normalized_result
+                     {detect_frac_to_rating_frac $raw_detection_val $ham_move}
+                  }
+                  {if [score_curve]
+                     {set $normalized_result
+                        {[score_curve] value_from_frame
                            [panel_dir]
                            (some_value)
-                           $normalized_result}}}
-                  {set
-                     $adj_res
-                     {if_else
-                        $ham_move
-                        {$ham_move adjust_normalized_percent_to_confusability $normalized_result $confus}
-                        0}}
-                  {foreach
-                     $card
-                     [card_set]
-                     {if
-                        {==
-                           {$card get move}
-                           $ham_move}
-                        {if_else
-                           {<
-                              {elem $highest_scoring_move_result $dancer}
-                              $confus}
-                           {$card
-                              update_feedback
-                              {$this get_is_right_player $dancer}
-                              $adj_res}
-                           {if_else
-                              {==
-                                 $ham_move
-                                 {elem $highest_scoring_move $dancer}}
-                              {$card
-                                 update_feedback
-                                 {$this get_is_right_player $dancer}
-                                 $adj_res}
-                              {$card
-                                 update_feedback
-                                 {$this get_is_right_player $dancer}
-                                 0}}}}}}}}})
-   (on_post_move_finished
-      {$this check_scoring})
+                           $normalized_result
+                        }
+                     }
+                  }
+                  {set $adj_res
+                     {if_else $ham_move
+                        {$ham_move adjust_normalized_percent_to_confusability
+                           $normalized_result
+                           $confus
+                        }
+                        0
+                     }
+                  }
+                  {foreach $card [card_set]
+                     {if {== {$card get move} $ham_move}
+                        {if_else {< {elem $highest_scoring_move_result $dancer} $confus}
+                           {$card update_feedback {$this get_is_right_player $dancer} $adj_res}
+                           {if_else {== $ham_move {elem $highest_scoring_move $dancer}}
+                              {$card update_feedback {$this get_is_right_player $dancer} $adj_res}
+                              {$card update_feedback {$this get_is_right_player $dancer} 0}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   )
+   (on_post_move_finished {$this check_scoring})
    (on_side_moved
-      {$this
-         log
+      {$this log 2 ("on_side_moved:" {taskmgr beat})}
+      {$this log
          2
-         ("on_side_moved:"
-            {taskmgr beat})}
-      {$this
-         log
+         (
+            "player 0 on side "
+            {{gamedata getp 0 provider} get
+               side
+            }
+         )
+      }
+      {$this log
          2
-         ("player 0 on side "
-            {{gamedata getp 0 provider}
-               get
-               side})}
-      {$this
-         log
-         2
-         ("player 1 on side "
-            {{gamedata getp 1 provider}
-               get
-               side})})
-   (row_pos
-      ($row))
+         (
+            "player 1 on side "
+            {{gamedata getp 1 provider} get
+               side
+            }
+         )
+      }
+   )
+   (row_pos ($row))
    (position_card
       ($card)
       {do
-         ($z
-            {'+'
-               [row0_pos]
-               {'*'
-                  [row_offset]
-                  {$card get row}}})
-         {$card set_local_pos 0 0 $z}})
+         ($z {'+' [row0_pos] {'*' [row_offset] {$card get row}}})
+         {$card set_local_pos 0 0 $z}
+      }
+   )
    (get_is_right_player
       ($player_index)
       {do
          ($result
-            {==
-               kSkeletonRight
-               {{gamedata getp $player_index provider}
-                  get
-                  side}})
-         {if_else
-            $result
-            {$this
-               log
-               2
-               ("player "
-                  $player_index
-                  " is on right")}
-            {$this
-               log
-               2
-               ("player "
-                  $player_index
-                  " is not on right")}}
-         $result})
+            {== kSkeletonRight
+               {{gamedata getp $player_index provider} get
+                  side
+               }
+            }
+         )
+         {if_else $result
+            {$this log 2 ("player " $player_index " is on right")}
+            {$this log 2 ("player " $player_index " is not on right")}
+         }
+         $result
+      }
+   )
    (set_score
       ($player_index $score)
-      {if_else
-         {$this get_is_right_player $player_index}
+      {if_else {$this get_is_right_player $player_index}
          {{find_obj
                [panel_dir]
-               rightscore.lbl}
-            set_token_fmt
-            {localize_separated_int $score}}
+               rightscore.lbl} set_token_fmt
+            {localize_separated_int $score}
+         }
          {{find_obj
                [panel_dir]
-               leftscore.lbl}
-            set_token_fmt
-            {localize_separated_int $score}}})
+               leftscore.lbl} set_token_fmt
+            {localize_separated_int $score}
+         }
+      }
+   )
    (get_score
       ($dancer $move_variant $rating)
       {do
          ($difficulty)
          ($row)
          ($score)
-         {set
-            $difficulty
-            {movemgr get_move_difficulty $move_variant}}
-         {set
-            $row
-            {elem
-               [cascade_performance_score_chart]
-               $difficulty}}
-         {set
-            $score
-            {elem
-               $row
-               {rating_state_to_index $rating}}}
-         {$this
-            log
+         {set $difficulty {movemgr get_move_difficulty $move_variant}}
+         {set $row {elem [cascade_performance_score_chart] $difficulty}}
+         {set $score {elem $row {rating_state_to_index $rating}}}
+         {$this log
             0
-            ("get_score"
+            (
+               "get_score"
                ", mv="
                $move_variant
                ", diff="
@@ -654,109 +452,77 @@
                ", score="
                $score
                ", dancer="
-               $dancer)}
-         $score})
+               $dancer
+            )
+         }
+         $score
+      }
+   )
    (other_dancer
       ($dancer)
-      {- 1 $dancer})
+      {- 1 $dancer}
+   )
    (cheat_move
       ($dancer)
       {do
          ($move_variant)
-         ($move_variant_choices
-            ())
-         {if
-            {==
-               [play_state]
-               CSCDM_STATE_DANCE}
-            {if
-               {!
-                  {elem
-                     [cheat_moves]
-                     $dancer}}
+         ($move_variant_choices ())
+         {if {== [play_state] CSCDM_STATE_DANCE}
+            {if {! {elem [cheat_moves] $dancer}}
                {resize $move_variant_choices 0}
-               {foreach
-                  $card
-                  [card_set]
-                  {if
-                     {!
-                        {$card get scored}}
-                     {set
-                        $move_variant
-                        {$card get move_variant}}
+               {foreach $card [card_set]
+                  {if {! {$card get scored}}
+                     {set $move_variant {$card get move_variant}}
                      {if
                         {&&
-                           {!
-                              {==
-                                 {elem
-                                    [cheat_moves]
-                                    {$this other_dancer $dancer}}
-                                 $move_variant}}
-                           {!
-                              {contains $move_variant_choices $move_variant}}}
-                        {push_back $move_variant_choices $move_variant}}}}
-               {if
-                  {size $move_variant_choices}
-                  {set
-                     $move_variant
-                     {random_elem $move_variant_choices}}
-                  {set_elem
-                     [cheat_moves]
-                     $dancer
-                     $move_variant}
-                  {$this
-                     log
+                           {! {== {elem [cheat_moves] {$this other_dancer $dancer}} $move_variant}}
+                           {! {contains $move_variant_choices $move_variant}}
+                        }
+                        {push_back $move_variant_choices $move_variant}
+                     }
+                  }
+               }
+               {if {size $move_variant_choices}
+                  {set $move_variant {random_elem $move_variant_choices}}
+                  {set_elem [cheat_moves] $dancer $move_variant}
+                  {$this log
                      0
-                     ("add cheat move:"
-                        $move_variant
-                        ", for player:"
-                        $dancer)}}}}})
+                     ("add cheat move:" $move_variant ", for player:" $dancer)
+                  }
+               }
+            }
+         }
+      }
+   )
    (clear_cheat_moves
-      {set_elem
-         [cheat_moves]
-         0
-         ""}
-      {set_elem
-         [cheat_moves]
-         1
-         ""})
+      {set_elem [cheat_moves] 0 ""}
+      {set_elem [cheat_moves] 1 ""}
+   )
    (run_flow
       ($dir $flow_name)
       {do
-         ($flow
-            {find_obj $dir $flow_name})
-         {if_else
-            $flow
+         ($flow {find_obj $dir $flow_name})
+         {if_else $flow
             {$flow activate}
-            {$this
-               log
-               2
-               ("flow not found: "
-                  $flow_name)}}})
+            {$this log 2 ("flow not found: " $flow_name)}
+         }
+      }
+   )
    (hm2mv
       ($ham_move)
       {do
-         ($move_variant
-            "")
+         ($move_variant "")
          ($card)
-         {foreach
-            $card
-            [card_set]
-            {if
-               {==
-                  $ham_move
-                  {$card get move}}
-               {set
-                  $move_variant
-                  {$card get move_variant}}}}
-         $move_variant})
+         {foreach $card [card_set]
+            {if {== $ham_move {$card get move}}
+               {set $move_variant {$card get move_variant}}
+            }
+         }
+         $move_variant
+      }
+   )
    (check_scoring
-      {if
-         {&&
-            [do_detection]
-            {==
-               [play_state]
-               CSCDM_STATE_DANCE}}
+      {if {&& [do_detection] {== [play_state] CSCDM_STATE_DANCE}}
          {do
             ($raw_detection_val 0)
             ($normalized_result 0)
@@ -766,39 +532,31 @@
             ($passed FALSE)
             ($rating)
             ($score)
-            {foreach
-               $ham_move
-               [ham_moves]
-               {foreach
-                  $dancer
-                  [dancers]
-                  {set
-                     $raw_detection_val
-                     {[move_dir]
-                        last_detector_result
-                        $dancer
-                        $ham_move}}
-                  {set
-                     $normalized_result
-                     {if_else
-                        $ham_move
+            {foreach $ham_move [ham_moves]
+               {foreach $dancer [dancers]
+                  {set $raw_detection_val
+                     {[move_dir] last_detector_result $dancer $ham_move}
+                  }
+                  {set $normalized_result
+                     {if_else $ham_move
                         {detect_frac_to_rating_frac $raw_detection_val $ham_move}
-                        0.0}}
-                  {if
-                     [score_curve]
-                     {set
-                        $normalized_result
-                        {[score_curve]
-                           value_from_frame
+                        0.0
+                     }
+                  }
+                  {if [score_curve]
+                     {set $normalized_result
+                        {[score_curve] value_from_frame
                            [panel_dir]
                            (some_value)
-                           $normalized_result}}}
-                  {if
-                     {> $normalized_result 0.0}
-                     {$this
-                        log
+                           $normalized_result
+                        }
+                     }
+                  }
+                  {if {> $normalized_result 0.0}
+                     {$this log
                         0
-                        ("check_scoring"
+                        (
+                           "check_scoring"
                            ", dancer="
                            $dancer
                            ", move="
@@ -806,408 +564,230 @@
                            ", mv="
                            {$this hm2mv $ham_move}
                            ", score="
-                           $normalized_result)}}
-                  {if
-                     {> $normalized_result CSCDM_MOVE_DETECT_THRESHHOLD}
+                           $normalized_result
+                        )
+                     }
+                  }
+                  {if {> $normalized_result CSCDM_MOVE_DETECT_THRESHHOLD}
                      {set $passed TRUE}
-                     {foreach
-                        $card
-                        [card_set]
-                        {if
-                           {==
-                              {$card get move}
-                              $ham_move}
-                           {if
-                              {'||'
-                                 {!
-                                    {$card get scored}}
-                                 {<
-                                    {$card get result}
-                                    $normalized_result}}
-                              {set
-                                 $rating
-                                 {detect_frac_to_rating $raw_detection_val $ham_move}}
-                              {set
-                                 $score
-                                 {$this
-                                    get_score
-                                    $dancer
-                                    {$card get move_variant}
-                                    $rating}}
-                              {$card set_score $dancer $score $normalized_result}}}}}}}
-            {if
-               {! $passed}
+                     {foreach $card [card_set]
+                        {if {== {$card get move} $ham_move}
+                           {if {'||' {! {$card get scored}} {< {$card get result} $normalized_result}}
+                              {set $rating {detect_frac_to_rating $raw_detection_val $ham_move}}
+                              {set $score
+                                 {$this get_score $dancer {$card get move_variant} $rating}
+                              }
+                              {$card set_score $dancer $score $normalized_result}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+            {if {! $passed}
                {do
                   ($move_variant)
                   ($dancer)
-                  {foreach_int
-                     $dancer
-                     0
-                     {size
-                        [cheat_moves]}
-                     {set
-                        $move_variant
-                        {elem
-                           [cheat_moves]
-                           $dancer}}
-                     {if
-                        $move_variant
-                        {foreach
-                           $card
-                           [card_set]
-                           {if
-                              {==
-                                 {$card get move_variant}
-                                 $move_variant}
+                  {foreach_int $dancer 0 {size [cheat_moves]}
+                     {set $move_variant {elem [cheat_moves] $dancer}}
+                     {if $move_variant
+                        {foreach $card [card_set]
+                           {if {== {$card get move_variant} $move_variant}
                               {set $rating move_awesome}
-                              {set
-                                 $score
-                                 {$this
-                                    get_score
-                                    $dancer
-                                    {$card get move_variant}
-                                    $rating}}
-                              {$card set_score $dancer $score 0.9}}}}}}}
+                              {set $score
+                                 {$this get_score $dancer {$card get move_variant} $rating}
+                              }
+                              {$card set_score $dancer $score 0.9}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
             {$this clear_cheat_moves}
-            {$this disable_card_detection}}})
+            {$this disable_card_detection}
+         }
+      }
+   )
    (beat
-      {'++'
-         [state_beats]}
-      {if
-         {<
-            {round
-               {taskmgr beat}}
-            [beat_round]}
-         {$this
-            log
-            0
-            ("beat looped, reset detection")}
-         {game reset_detection}}
-      {set
-         [beat_round]
-         {round
-            {taskmgr beat}}}
-      {set
-         [on_measure]
-         {mod
-            [state_beats]
-            4}}
-      {$this
-         log
+      {'++' [state_beats]}
+      {if {< {round {taskmgr beat}} [beat_round]}
+         {$this log 0 ("beat looped, reset detection")}
+         {game reset_detection}
+      }
+      {set [beat_round] {round {taskmgr beat}}}
+      {set [on_measure] {mod [state_beats] 4}}
+      {$this log
          2
-         ("on_beat "
-            [beat_round]
-            ", on_measure "
-            [on_measure])}
-      {switch
-         [play_state]
-         (CSCDM_STATE_LOADING
-            {$this process_state_loading})
-         (CSCDM_STATE_DANCE
-            {$this process_state_dance})
-         (CSCDM_STATE_SCORE
-            {$this process_state_score})
-         (CSCDM_STATE_GAME_OVER
-            {$this process_state_game_over})})
+         ("on_beat " [beat_round] ", on_measure " [on_measure])
+      }
+      {switch [play_state]
+         (CSCDM_STATE_LOADING {$this process_state_loading})
+         (CSCDM_STATE_DANCE {$this process_state_dance})
+         (CSCDM_STATE_SCORE {$this process_state_score})
+         (CSCDM_STATE_GAME_OVER {$this process_state_game_over})
+      }
+   )
    (enter_state_loading
-      {set
-         [play_state]
-         CSCDM_STATE_LOADING}
-      {set
-         [beat_round]
-         {round
-            {taskmgr beat}}}
-      {set
-         [player_scores_hidden]
-         FALSE}
-      {set
-         [title_hidden]
-         FALSE}
+      {set [play_state] CSCDM_STATE_LOADING}
+      {set [beat_round] {round {taskmgr beat}}}
+      {set [player_scores_hidden] FALSE}
+      {set [title_hidden] FALSE}
       {do
-         ($measure_beat
-            {mod
-               [beat_round]
-               4})
-         ($beats_until_next_measure
-            {mod
-               {- 4 $measure_beat}
-               4})
-         {set
-            [state_beats]
-            {- 0 $beats_until_next_measure}}}
-      {$this
-         log
+         ($measure_beat {mod [beat_round] 4})
+         ($beats_until_next_measure {mod {- 4 $measure_beat} 4})
+         {set [state_beats] {- 0 $beats_until_next_measure}}
+      }
+      {$this log
          1
-         ("enter state loading"
+         (
+            "enter state loading"
             ", beat="
             [beat_round]
             ", state beat="
-            [state_beats])}
-      {if
-         {>
-            1
-            [rounds]}
-         {[panel_dir]
-            set
-            title_token
-            {symbol cscd_title}}
-         {$this
-            run_flow
-            [panel_dir]
-            "activate.flow"}}
-      {{find_obj
-            [panel_dir]
-            beat.anim}
-         animate
-         (loop 0 3840)}
-      {$this
-         update_move_set
-         ()})
+            [state_beats]
+         )
+      }
+      {if {> 1 [rounds]}
+         {[panel_dir] set title_token {symbol cscd_title}}
+         {$this run_flow [panel_dir] "activate.flow"}
+      }
+      {{find_obj [panel_dir] beat.anim} animate (loop 0 3840)}
+      {$this update_move_set ()}
+   )
    (process_state_loading
-      {if
-         {==
-            0
-            [rounds]}
-         {if
-            {==
-               [state_beats]
-               1}
-            {$this hide_hud_and_play_vo}}
-         {if
-            {&&
-               {!
-                  [title_hidden]}
-               {<=
-                  3
-                  [state_beats]}}
-            {set
-               [title_hidden]
-               TRUE}
-            {$this
-               run_flow
-               [panel_dir]
-               hide_title.flow}}}
-      {if
-         {$hamdirector is_world_loaded}
-         {if
-            {>=
-               [beat_round]
-               {-
-                  [play_start_beat]
-                  2}}
-            {if
-               {==
-                  3
-                  {mod
-                     [state_beats]
-                     4}}
-               {$this
-                  log
-                  1
-                  ("loading, show cards"
-                     ", beat="
-                     [state_beats])}
+      {if {== 0 [rounds]}
+         {if {== [state_beats] 1}
+            {$this hide_hud_and_play_vo}
+         }
+         {if {&& {! [title_hidden]} {<= 3 [state_beats]}}
+            {set [title_hidden] TRUE}
+            {$this run_flow [panel_dir] hide_title.flow}
+         }
+      }
+      {if {$hamdirector is_world_loaded}
+         {if {>= [beat_round] {- [play_start_beat] 2}}
+            {if {== 3 {mod [state_beats] 4}}
+               {$this log 1 ("loading, show cards" ", beat=" [state_beats])}
                {game reset_detection}
                {$this reset_cards}
-               {$this
-                  run_flow
-                  [panel_dir]
-                  cascade_show_cards.flow}}
-            {if
-               {==
-                  0
-                  {mod
-                     [state_beats]
-                     4}}
-               {$this
-                  log
-                  1
-                  ("loading enter dance "
-                     ", measure="
-                     {/
-                        [beat_round]
-                        4})}
-               {$this enter_state_dance}}}})
+               {$this run_flow [panel_dir] cascade_show_cards.flow}
+            }
+            {if {== 0 {mod [state_beats] 4}}
+               {$this log 1 ("loading enter dance " ", measure=" {/ [beat_round] 4})}
+               {$this enter_state_dance}
+            }
+         }
+      }
+   )
    (enter_state_dance
-      {$this
-         log
-         0
-         ("enter_state_dance"
-            ", beat="
-            {round
-               {taskmgr beat}})}
-      {set
-         [play_state]
-         CSCDM_STATE_DANCE}
-      {set
-         [do_detection]
-         FALSE}
+      {$this log 0 ("enter_state_dance" ", beat=" {round {taskmgr beat}})}
+      {set [play_state] CSCDM_STATE_DANCE}
+      {set [do_detection] FALSE}
       {do
-         ($measure_beat
-            {mod
-               {round
-                  {taskmgr beat}}
-               4})
-         ($beats_until_next_measure
-            {mod
-               {- 4 $measure_beat}
-               4})
-         {set
-            [state_beats]
-            {- 0 $beats_until_next_measure}}}
-      {set
-         [do_detection]
-         TRUE}
+         ($measure_beat {mod {round {taskmgr beat}} 4})
+         ($beats_until_next_measure {mod {- 4 $measure_beat} 4})
+         {set [state_beats] {- 0 $beats_until_next_measure}}
+      }
+      {set [do_detection] TRUE}
       {$this process_state_dance}
-      {handle
-         (hamprovider cascade_start)})
+      {handle (hamprovider cascade_start)}
+   )
    (process_state_dance
       {do
-         ($measure_beat
-            {mod
-               [state_beats]
-               4})
-         {if_else
-            {<=
-               [beat_round]
-               [play_end_beat]}
-            {switch
-               $measure_beat
+         ($measure_beat {mod [state_beats] 4})
+         {if_else {<= [beat_round] [play_end_beat]}
+            {switch $measure_beat
                (1
-                  {$this
-                     log
-                     0
-                     ("dance beat 1")}
-                  {$this poof_cards_out})
+                  {$this log 0 ("dance beat 1")}
+                  {$this poof_cards_out}
+               )
                (2
-                  {$this
-                     log
-                     0
-                     ("dance beat 2")}
+                  {$this log 0 ("dance beat 2")}
                   {$this show_card_scores}
-                  {$this replace_moves})
+                  {$this replace_moves}
+               )
                (3
-                  {$this
-                     log
-                     0
-                     ("dance beat 3")}
+                  {$this log 0 ("dance beat 3")}
                   {$this reset_cards}
-                  {$this poof_cards_in})
-               (0
-                  {$this
-                     log
-                     0
-                     ("dance beat 4")})}
+                  {$this poof_cards_in}
+               )
+               (0 {$this log 0 ("dance beat 4")})
+            }
             {do
-               {$this enter_state_game_over}}}})
+               {$this enter_state_game_over}
+            }
+         }
+      }
+   )
    (dump_ham_move_list
-      {$this
-         log
-         0
-         ("dump_ham_move_list")}
-      {foreach
-         $ham_move
-         [ham_moves]
-         {$this
-            log
-            0
-            ("ham_move="
-               {$ham_move display_name})}})
+      {$this log 0 ("dump_ham_move_list")}
+      {foreach $ham_move [ham_moves]
+         {$this log 0 ("ham_move=" {$ham_move display_name})}
+      }
+   )
    (disable_card_detection
       {do
          ($ham_move)
-         {foreach
-            $card
-            [card_set]
-            {if
-               {$card get scored}
-               {if
-                  {!
-                     {contains
-                        [move_colors]
-                        {$card get move_color}}}
-                  {push_back
-                     [move_colors]
-                     {$card get move_color}}}
+         {foreach $card [card_set]
+            {if {$card get scored}
+               {if {! {contains [move_colors] {$card get move_color}}}
+                  {push_back [move_colors] {$card get move_color}}
+               }
                {$card disable_move}
-               {set
-                  $ham_move
-                  {$card get move}}
-               {if
-                  {&&
-                     $ham_move
-                     {contains
-                        [ham_moves]
-                        $ham_move}}
-                  {[move_dir]
-                     disable_detector
-                     $ham_move}
-                  {remove_elem
-                     [ham_moves]
-                     $ham_move}
-                  {$this
-                     log
+               {set $ham_move {$card get move}}
+               {if {&& $ham_move {contains [ham_moves] $ham_move}}
+                  {[move_dir] disable_detector $ham_move}
+                  {remove_elem [ham_moves] $ham_move}
+                  {$this log
                      0
-                     ("disable_card_detection remove ham move "
-                        {$ham_move display_name})}
-                  {$this dump_ham_move_list}}}}})
+                     ("disable_card_detection remove ham move " {$ham_move display_name})
+                  }
+                  {$this dump_ham_move_list}
+               }
+            }
+         }
+      }
+   )
    (replace_moves
       {do
-         ($scored_moves
-            ())
+         ($scored_moves ())
          ($mv)
          {resize $scored_moves 0}
-         {foreach
-            $card
-            [card_set]
-            {if
-               {$card get scored}
-               {set
-                  $mv
-                  {$card get move_variant}}
-               {if
-                  {!
-                     {contains $scored_moves $mv}}
-                  {push_back $scored_moves $mv}}}}
-         {if
-            {size $scored_moves}
-            {$this update_move_set $scored_moves}}})
+         {foreach $card [card_set]
+            {if {$card get scored}
+               {set $mv {$card get move_variant}}
+               {if {! {contains $scored_moves $mv}}
+                  {push_back $scored_moves $mv}
+               }
+            }
+         }
+         {if {size $scored_moves}
+            {$this update_move_set $scored_moves}
+         }
+      }
+   )
    (show_card_scores
       {do
-         ($scores
-            (0 0))
-         ($cards_scored
-            (0 0))
+         ($scores (0 0))
+         ($cards_scored (0 0))
          ($dancer)
          {set_elem $scores 0 0}
          {set_elem $scores 1 0}
          {set_elem $cards_scored 0 0}
          {set_elem $cards_scored 1 0}
-         {foreach
-            $card
-            [card_set]
-            {if
-               {$card get scored}
+         {foreach $card [card_set]
+            {if {$card get scored}
                {$card show_score}
-               {set
-                  $dancer
-                  {$card get dancer}}
-               {set_elem
-                  $scores
-                  $dancer
-                  {'+'
-                     {$card get score}
-                     {elem $scores $dancer}}}
-               {set_elem
-                  $cards_scored
-                  $dancer
-                  {'+'
-                     1
-                     {elem $cards_scored $dancer}}}}}
-         {$this
-            log
+               {set $dancer {$card get dancer}}
+               {set_elem $scores $dancer {'+' {$card get score} {elem $scores $dancer}}}
+               {set_elem $cards_scored $dancer {'+' 1 {elem $cards_scored $dancer}}}
+            }
+         }
+         {$this log
             0
-            ("show_card_scores"
+            (
+               "show_card_scores"
                ", p1="
                {elem $scores 0}
                ", p1cards="
@@ -1215,300 +795,185 @@
                ", p2="
                {elem $scores 1}
                ", p2cards="
-               {elem $cards_scored 1})}
-         {foreach
-            $dancer
-            [dancers]
-            {if
-               {elem $scores $dancer}
+               {elem $cards_scored 1}
+            )
+         }
+         {foreach $dancer [dancers]
+            {if {elem $scores $dancer}
                {set_elem
                   [player_scores]
                   $dancer
-                  {'+'
-                     {elem $scores $dancer}
-                     {elem
-                        [player_scores]
-                        $dancer}}}
-               {$this
-                  set_score
-                  $dancer
-                  {elem
-                     [player_scores]
-                     $dancer}}}}})
+                  {'+' {elem $scores $dancer} {elem [player_scores] $dancer}}
+               }
+               {$this set_score $dancer {elem [player_scores] $dancer}}
+            }
+         }
+      }
+   )
    (poof_cards_out
       {do
          ($poof_count 0)
-         {foreach
-            $card
-            [card_set]
-            {if
-               {$card get scored}
+         {foreach $card [card_set]
+            {if {$card get scored}
                {$card poof_out}
-               {'++' $poof_count}}}
-         {if
-            $poof_count
-            {handle
-               (hamprovider cascade_capture $poof_count)}}})
+               {'++' $poof_count}
+            }
+         }
+         {if $poof_count
+            {handle (hamprovider cascade_capture $poof_count)}
+         }
+      }
+   )
    (poof_cards_in
       {do
          ($col)
          ($card)
          ($poofed_card)
          ($row 0)
-         ($poofed
-            ())
-         ($unpoofed
-            ())
-         {foreach_int
-            $col
-            0
-            [col_count]
+         ($poofed ())
+         ($unpoofed ())
+         {foreach_int $col 0 [col_count]
             {resize $poofed 0}
             {resize $unpoofed 0}
-            {foreach
-               $card
-               [card_set]
-               {if
-                  {==
-                     $col
-                     {$card get col}}
-                  {if_else
-                     {$card get poofed}
+            {foreach $card [card_set]
+               {if {== $col {$card get col}}
+                  {if_else {$card get poofed}
                      {push_back $poofed $card}
-                     {push_back $unpoofed $card}}}}
-            {if
-               {size $poofed}
-               {foreach
-                  $card
-                  $unpoofed
-                  {set
-                     $row
-                     {$card get row_cur}}
-                  {foreach
-                     $poofed_card
-                     $poofed
-                     {if
-                        {>
-                           {$poofed_card get row_cur}
-                           {$card get row_cur}}
-                        {'++' $row}}}
-                  {$card set row_next $row}}
-               {set $row 0}
-               {foreach
-                  $card
-                  $poofed
+                     {push_back $unpoofed $card}
+                  }
+               }
+            }
+            {if {size $poofed}
+               {foreach $card $unpoofed
+                  {set $row {$card get row_cur}}
+                  {foreach $poofed_card $poofed
+                     {if {> {$poofed_card get row_cur} {$card get row_cur}}
+                        {'++' $row}
+                     }
+                  }
                   {$card set row_next $row}
-                  {'++' $row}}}}}
-      {foreach
-         $card
-         [card_set]
-         {$card drop}})
+               }
+               {set $row 0}
+               {foreach $card $poofed
+                  {$card set row_next $row}
+                  {'++' $row}
+               }
+            }
+         }
+      }
+      {foreach $card [card_set]
+         {$card drop}
+      }
+   )
    (enter_state_game_over
-      {set
-         [play_state]
-         CSCDM_STATE_GAME_OVER}
-      {set
-         [state_beats]
-         0}
-      {$this
-         log
-         1
-         ("enter state game over"
-            ", beat="
-            [beat_round])}
-      {$this
-         run_flow
-         [panel_dir]
-         hide_cards.flow}
+      {set [play_state] CSCDM_STATE_GAME_OVER}
+      {set [state_beats] 0}
+      {$this log 1 ("enter state game over" ", beat=" [beat_round])}
+      {$this run_flow [panel_dir] hide_cards.flow}
       {do
-         ($diff
-            {-
-               {elem
-                  [player_scores]
-                  0}
-               {elem
-                  [player_scores]
-                  1}})
+         ($diff {- {elem [player_scores] 0} {elem [player_scores] 1}})
          {cond
             ({< 0 $diff}
-               {if_else
-                  {$this get_is_right_player 0}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_right_player.flow}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_left_player.flow}})
+               {if_else {$this get_is_right_player 0}
+                  {$this run_flow [panel_dir] victory_right_player.flow}
+                  {$this run_flow [panel_dir] victory_left_player.flow}
+               }
+            )
             ({> 0 $diff}
-               {if_else
-                  {$this get_is_right_player 1}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_right_player.flow}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_left_player.flow}})
+               {if_else {$this get_is_right_player 1}
+                  {$this run_flow [panel_dir] victory_right_player.flow}
+                  {$this run_flow [panel_dir] victory_left_player.flow}
+               }
+            )
             ({== 0 $diff}
-               {$this
-                  run_flow
-                  [panel_dir]
-                  victory_none.flow})}})
+               {$this run_flow [panel_dir] victory_none.flow}
+            )
+         }
+      }
+   )
    (process_state_game_over
-      {if
-         {==
-            [show_game_over_beats]
-            [state_beats]}
-         {if
-            {!
-               [game_is_over]}
-            {set
-               [game_is_over]
-               TRUE}
-            {$this
-               log
-               2
-               ("game is over")}}})
+      {if {== [show_game_over_beats] [state_beats]}
+         {if {! [game_is_over]}
+            {set [game_is_over] TRUE}
+            {$this log 2 ("game is over")}
+         }
+      }
+   )
    (card_index_from_rc
       ($row $col)
-      {'+'
-         $col
-         {'*'
-            $row
-            [col_count]}})
+      {'+' $col {'*' $row [col_count]}}
+   )
    (card_col_from_index
       ($index)
-      {mod
-         $index
-         [col_count]})
+      {mod $index [col_count]}
+   )
    (card_row_from_index
       ($index)
-      {int
-         {/
-            $index
-            [col_count]}})
+      {int {/ $index [col_count]}}
+   )
    (init_cards
       {do
          ($card)
-         {foreach_int
-            $row
-            0
-            [row_count]
-            {foreach_int
-               $col
-               0
-               [col_count]
-               {set
-                  $card
+         {foreach_int $row 0 [row_count]
+            {foreach_int $col 0 [col_count]
+               {set $card
                   {find_obj
                      [panel_dir]
-                     {sprintf
-                        "flashcard%d%d"
-                        $row
-                        $col}}}
-               {push_back
-                  [card_set]
-                  $card}
-               {$card init $row $col TRUE}}}})
+                     {sprintf "flashcard%d%d" $row $col}
+                  }
+               }
+               {push_back [card_set] $card}
+               {$card init $row $col TRUE}
+            }
+         }
+      }
+   )
    (dump_list
       ($list $title)
-      {$this
-         log
-         1
-         ($title
-            ":")}
+      {$this log 1 ($title ":")}
       {print_array $list}
-      {print
-         "\n"})
+      {print "\n"}
+   )
    (dump_cards
       {do
          ($card)
-         {foreach_int
-            $row
-            0
-            [row_count]
-            {foreach_int
-               $col
-               0
-               [col_count]
-               {set
-                  $card
-                  ""}
-               {foreach
-                  $c
-                  [card_set]
-                  {if
-                     {&&
-                        {==
-                           $row
-                           {$c get row_cur}}
-                        {==
-                           $col
-                           {$c get col}}}
-                     {if_else
-                        $card
+         {foreach_int $row 0 [row_count]
+            {foreach_int $col 0 [col_count]
+               {set $card ""}
+               {foreach $c [card_set]
+                  {if {&& {== $row {$c get row_cur}} {== $col {$c get col}}}
+                     {if_else $card
                         {do
-                           {print
-                              "ERROR: multiple cards at ["
-                              $row
-                              "]["
-                              $col
-                              "]\n"}
-                           {break}}
-                        {set $card $c}}}}
-               {print
-                  {$card get name}
-                  "["
-                  $row
-                  "]["
-                  $col
-                  "]"}
-               {if_else
-                  {==
-                     $col
-                     {-
-                        [col_count]
-                        1}}
-                  {print
-                     "\n"}
-                  {print
-                     " "}}}}})
+                           {print "ERROR: multiple cards at [" $row "][" $col "]\n"}
+                           {break}
+                        }
+                        {set $card $c}
+                     }
+                  }
+               }
+               {print {$card get name} "[" $row "][" $col "]"}
+               {if_else {== $col {- [col_count] 1}}
+                  {print "\n"}
+                  {print " "}
+               }
+            }
+         }
+      }
+   )
    (update_move_set
       ($scored_moves)
-      {$this
-         log
-         1
-         ("update_move_set scored_list:")}
+      {$this log 1 ("update_move_set scored_list:")}
       {print_array $scored_moves}
-      {print
-         "\n"}
-      {$this
-         log
-         1
-         ("update_move_set old list:")}
-      {print_array
-         [mg_move_list]}
-      {print
-         "\n"}
-      {mini_game_mgr
-         refresh_move_list
-         $scored_moves
-         [mg_move_list]}
-      {$this
-         dump_list
-         [mg_move_list]
-         "mg_move_list"}
-      {$this
-         log
-         1
-         ("update_move_set new list:")}
-      {print_array
-         [mg_move_list]}
-      {print
-         "\n"})
+      {print "\n"}
+      {$this log 1 ("update_move_set old list:")}
+      {print_array [mg_move_list]}
+      {print "\n"}
+      {mini_game_mgr refresh_move_list $scored_moves [mg_move_list]}
+      {$this dump_list [mg_move_list] "mg_move_list"}
+      {$this log 1 ("update_move_set new list:")}
+      {print_array [mg_move_list]}
+      {print "\n"}
+   )
    (get_move_color
       ($move_variant)
       {do
@@ -1516,124 +981,83 @@
          ($color 0)
          ($found FALSE)
          {set $found FALSE}
-         {foreach
-            $card
-            [card_set]
-            {if
-               {&&
-                  {$card get move_variant}
-                  {!
-                     {$card get scored}}}
-               {if
-                  {==
-                     $move_variant
-                     {$card get move_variant}}
+         {foreach $card [card_set]
+            {if {&& {$card get move_variant} {! {$card get scored}}}
+               {if {== $move_variant {$card get move_variant}}
                   {set $found TRUE}
-                  {set
-                     $color
-                     {$card get move_color}}}}}
-         {if
-            {! $found}
-            {if
-               {==
-                  0
-                  {size
-                     [move_colors]}}
-               {$this
-                  log
-                  1
-                  ("get_move_color: NO MORE COLORS")}}
-            {set
-               $color
-               {elem
-                  [move_colors]
-                  0}}
-            {remove_elem
-               [move_colors]
-               $color}}
-         $color})
+                  {set $color {$card get move_color}}
+               }
+            }
+         }
+         {if {! $found}
+            {if {== 0 {size [move_colors]}}
+               {$this log 1 ("get_move_color: NO MORE COLORS")}
+            }
+            {set $color {elem [move_colors] 0}}
+            {remove_elem [move_colors] $color}
+         }
+         $color
+      }
+   )
    (card_count
       ($move_variant)
       {do
          ($card)
          ($count)
          {set $count 0}
-         {foreach
-            $card
-            [card_set]
-            {if
-               {==
-                  $move_variant
-                  {$card get move_variant}}
-               {'++' $count}}}
-         $count})
+         {foreach $card [card_set]
+            {if {== $move_variant {$card get move_variant}}
+               {'++' $count}
+            }
+         }
+         $count
+      }
+   )
    (get_random_move_variant
       {do
          ($card)
          ($mv)
          ($count)
-         {set
-            $count
-            [max_cards_per_move]}
-         {while
-            {<=
-               [max_cards_per_move]
-               $count}
-            {set
-               $mv
-               {random_elem
-                  [mg_move_list]}}
-            {set
-               $count
-               {$this card_count $mv}}}
-         $mv})
+         {set $count [max_cards_per_move]}
+         {while {<= [max_cards_per_move] $count}
+            {set $mv {random_elem [mg_move_list]}}
+            {set $count {$this card_count $mv}}
+         }
+         $mv
+      }
+   )
    (reset_cards
       {do
          ($idx 0)
          ($move_variant)
          ($ham_move)
          ($color_index 0)
-         {$this
-            log
-            0
-            ("reset_cards new list:")}
+         {$this log 0 ("reset_cards new list:")}
          {set $card_replaced FALSE}
-         {foreach
-            $card
-            [card_set]
-            {if
-               {'||'
-                  {$card get scored}
-                  {!
-                     {$card get move}}}
-               {set
-                  $move_variant
-                  {$this get_random_move_variant}}
-               {set
-                  $color_index
-                  {$this get_move_color $move_variant}}
-               {$card set_move $move_variant $color_index}}
-            {set
-               $ham_move
-               {$card get move}}
-            {if
-               {!
-                  {contains
-                     [ham_moves]
-                     $ham_move}}
-               {push_back
-                  [ham_moves]
-                  $ham_move}
-               {[move_dir]
-                  enable_detector
-                  $ham_move}
-               {$this
-                  log
+         {foreach $card [card_set]
+            {if {'||' {$card get scored} {! {$card get move}}}
+               {set $move_variant {$this get_random_move_variant}}
+               {set $color_index {$this get_move_color $move_variant}}
+               {$card set_move $move_variant $color_index}
+            }
+            {set $ham_move {$card get move}}
+            {if {! {contains [ham_moves] $ham_move}}
+               {push_back [ham_moves] $ham_move}
+               {[move_dir] enable_detector $ham_move}
+               {$this log
                   0
-                  ("reset_cards add ham move"
+                  (
+                     "reset_cards add ham move"
                      ", ham_move="
                      {$ham_move display_name}
                      ", mv="
-                     {$card get move_variant})}
-               {$this dump_ham_move_list}}}}))
+                     {$card get move_variant}
+                  )
+               }
+               {$this dump_ham_move_list}
+            }
+         }
+      }
+   )
+)
 #merge ..\..\config\cascade_microgame_config.dta

@@ -1,136 +1,108 @@
-#define COMMON_ERROR_HANDLERS
-(COMMON_DIALOG_PANEL_HANDLERS
-   (helpbar
-      ((confirm helpbar_select))))
+#define COMMON_ERROR_HANDLERS (COMMON_DIALOG_PANEL_HANDLERS (helpbar ((confirm helpbar_select))))
 (INVITE_ACCEPTED_MSG
    {cond
       ($expired
          {passive_messages_panel queue_message error_invite_expired}
          #ifdef HX_WII
          {accepting_invite_panel set is_expired TRUE}
-         #endif)
+         #endif
+      )
       (TRUE
          #ifndef HX_PS3
-         #ifndef HX_WII
-         {main_panel set invited_user_pad $pad_num}
-         #endif
+            #ifndef HX_WII
+            {main_panel set invited_user_pad $pad_num}
+            #endif
          #endif
          {finding_panel set_joining_pads_from_session}
-         {ui_event_mgr trigger_event invite_accepted})})
-#define COMMON_PAD_LOST
-((init_text
+         {ui_event_mgr trigger_event invite_accepted}
+      )
+   }
+)
+#define COMMON_PAD_LOST (
+   (init_text
       ($user $none_token $controller_token $quit_token)
       {do
-         ($pad_num
-            {$user get_pad_num})
-         ($name
-            {$user get_player_name})
-         ($controller
-            {$user get_controller_sym})
-         {unless
-            {== $controller none}
-            {set
-               $controller
-               {localize
-                  {sprint
-                     $controller
-                     "_pad_lost"}}}}
-         {$this
-            set_custom
+         ($pad_num {$user get_pad_num})
+         ($name {$user get_player_name})
+         ($controller {$user get_controller_sym})
+         {unless {== $controller none}
+            {set $controller {localize {sprint $controller "_pad_lost"}}}
+         }
+         {$this set_custom
             #ifndef HX_WII
-            {if_else
-               {== $controller none}
-               ($none_token
-                  $name
-                  {'+' $pad_num 1})
+            {if_else {== $controller none}
+               ($none_token $name {'+' $pad_num 1})
                ($controller_token
-                  {if_else
-                     {'||'
-                        {==
-                           {system_language}
-                           eng}
-                        {==
-                           {system_language}
-                           fre}}
+                  {if_else {'||' {== {system_language} eng} {== {system_language} fre}}
                      $name
-                     $controller}
-                  {if_else
-                     {'||'
-                        {==
-                           {system_language}
-                           eng}
-                        {==
-                           {system_language}
-                           fre}}
                      $controller
-                     $name}
-                  {'+' $pad_num 1})}
+                  }
+                  {if_else {'||' {== {system_language} eng} {== {system_language} fre}}
+                     $controller
+                     $name
+                  }
+                  {'+' $pad_num 1}
+               )
+            }
             #else
-            {if_else
-               {== $controller none}
+            {if_else {== $controller none}
                ($none_token $name)
                ($controller_token
-                  {if_else
-                     {'||'
-                        {==
-                           {system_language}
-                           eng}
-                        {==
-                           {system_language}
-                           fre}}
+                  {if_else {'||' {== {system_language} eng} {== {system_language} fre}}
                      $name
-                     $controller}
-                  {if_else
-                     {'||'
-                        {==
-                           {system_language}
-                           eng}
-                        {==
-                           {system_language}
-                           fre}}
                      $controller
-                     $name})}
+                  }
+                  {if_else {'||' {== {system_language} eng} {== {system_language} fre}}
+                     $controller
+                     $name
+                  }
+               )
+            }
             #endif
             continue
             $quit_token
-            opt1.btn}}))
+            opt1.btn
+         }
+      }
+   )
+)
 (ui_event_mgr
    (dialog_events
       (error_message
          COMMON_ERROR_HANDLERS
          (init
             ($token)
-            {$this set_ok $token})
-         (SELECT_DONE_MSG
-            {ui_event_mgr dismiss_event}))
+            {$this set_ok $token}
+         )
+         (SELECT_DONE_MSG {ui_event_mgr dismiss_event})
+      )
       (disband_error
          COMMON_ERROR_HANDLERS
          (init
             ($error)
-            {$this
-               set_ok
-               {switch
-                  $error
+            {$this set_ok
+               {switch $error
                   (kLoneH2H error_lone_h2h)
                   (kLoneH2HRanked error_lone_h2h_win)
                   (kNoLeader error_no_leader)
                   (kKicked error_kicked)
-                  (kBadConfiguration error_bad_configuration)}})
-         (SELECT_DONE_MSG
-            {ui_event_mgr dismiss_event}))
+                  (kBadConfiguration error_bad_configuration)
+               }
+            }
+         )
+         (SELECT_DONE_MSG {ui_event_mgr dismiss_event})
+      )
       (submit_error
          COMMON_ERROR_HANDLERS
-         (init
-            {$this set_ok submit_error_local})
-         (SELECT_DONE_MSG
-            {ui_event_mgr dismiss_event}))
+         (init {$this set_ok submit_error_local})
+         (SELECT_DONE_MSG {ui_event_mgr dismiss_event})
+      )
       (pad_lost
          COMMON_ERROR_HANDLERS
          COMMON_PAD_LOST
          (init
             ($user)
-            {$this
-               init_text
+            {$this init_text
                $user
                #ifndef HX_WII
                error_pad_lost_none
@@ -140,43 +112,49 @@
                error_pad_lost_none_wii
                error_pad_lost_wii
                error_return_to_main_wii
-               #endif})
+               #endif
+            }
+         )
          (SELECT_MSG
-            {switch
-               $component
-               (opt2.btn
-                  {ui_event_mgr trigger_event quit_early})})
+            {switch $component
+               (opt2.btn {ui_event_mgr trigger_event quit_early})
+            }
+         )
          (SELECT_DONE_MSG
-            {switch
-               $component
+            {switch $component
                (opt1.btn
                   {$this dismiss_if_controllers_valid}
-                  {helpbar update_icons})})
+                  {helpbar update_icons}
+               )
+            }
+         )
          (dismiss_if_controllers_valid
             {do
                #ifndef HX_WII
-               ($invalid_user
-                  {input_mgr get_user_with_invalid_controller})
+               ($invalid_user {input_mgr get_user_with_invalid_controller})
                #else
-               ($invalid_user
-                  {input_mgr get_user_with_invalid_controller TRUE})
+               ($invalid_user {input_mgr get_user_with_invalid_controller TRUE})
                #endif
-               {if_else
-                  $invalid_user
+               {if_else $invalid_user
                   {do
                      {feedback.anim animate}
-                     {$this init $invalid_user}}
-                  {ui_event_mgr dismiss_event}}})
+                     {$this init $invalid_user}
+                  }
+                  {ui_event_mgr dismiss_event}
+               }
+            }
+         )
          (input_limit_changed
             {$this dismiss_if_controllers_valid}
-            {helpbar update_icons}))
+            {helpbar update_icons}
+         )
+      )
       (matchmaking_pad_lost
          COMMON_ERROR_HANDLERS
          COMMON_PAD_LOST
          (init
             ($user)
-            {$this
-               init_text
+            {$this init_text
                $user
                #ifndef HX_WII
                error_matchmaking_pad_lost_none
@@ -185,318 +163,280 @@
                error_matchmaking_pad_lost_none_wii
                error_matchmaking_pad_lost_wii
                #endif
-               error_abandon_session})
+               error_abandon_session
+            }
+         )
          (SELECT_DONE_MSG
-            {if_else
-               {== $component opt1.btn}
+            {if_else {== $component opt1.btn}
                {do
-                  ($invalid_user
-                     {matchmaking_screen get_user_with_invalid_controller})
-                  {if_else
-                     $invalid_user
+                  ($invalid_user {matchmaking_screen get_user_with_invalid_controller})
+                  {if_else $invalid_user
                      {$this init $invalid_user}
-                     {ui_event_mgr dismiss_event}}}
-               {matchmaking_screen abandon_session}}))
+                     {ui_event_mgr dismiss_event}
+                  }
+               }
+               {matchmaking_screen abandon_session}
+            }
+         )
+      )
       (remote_exit
          COMMON_ERROR_HANDLERS
-         (enter
-            {synth play button_back})
-         (init
-            {$this set_yesno error_confirm_remote_exit no.btn})
+         (enter {synth play button_back})
+         (init {$this set_yesno error_confirm_remote_exit no.btn})
          (SELECT_MSG
-            {if
-               {== $component yes.btn}
-               {ui_event_mgr trigger_event quit_early}})
+            {if {== $component yes.btn}
+               {ui_event_mgr trigger_event quit_early}
+            }
+         )
          (SELECT_DONE_MSG
-            {if
-               {!= $component yes.btn}
+            {if {!= $component yes.btn}
                {ui_event_mgr dismiss_event}
-               {helpbar update_icons}})
+               {helpbar update_icons}
+            }
+         )
          (input_limit_changed
-            {unless
-               {input_mgr allow_remote_exit}
-               {ui_event_mgr dismiss_event}})))
+            {unless {input_mgr allow_remote_exit}
+               {ui_event_mgr dismiss_event}
+            }
+         )
+      )
+   )
    (transition_events
       (disband
          (next_screen meta_loading_uisink_default_screen)
-         (destination_screen
-            {meta_loading_uisink_default_screen get next_screen})
+         (destination_screen {meta_loading_uisink_default_screen get next_screen})
          (init
             ($error_reason)
-            {unless
-               {== $error_reason kAbandoned}
-               {ui_event_mgr
-                  trigger_event
-                  disband_error
-                  (dummy init $error_reason)}}))
+            {unless {== $error_reason kAbandoned}
+               {ui_event_mgr trigger_event disband_error (dummy init $error_reason)}
+            }
+         )
+      )
       (leaderboard_error
          (next_screen meta_loading_leaderboard_error_screen)
          (destination_screen
-            {meta_loading_leaderboard_error_screen get next_screen})
+            {meta_loading_leaderboard_error_screen get next_screen}
+         )
          (init
-            {ui_event_mgr
-               trigger_event
+            {ui_event_mgr trigger_event
                error_message
-               (dummy init error_lost_leaderboards)}))
+               (dummy init error_lost_leaderboards)
+            }
+         )
+      )
       (invite_accepted
          (next_screen meta_loading_finding_screen)
-         (destination_screen
-            {meta_loading_finding_screen get next_screen})
-         (init
-            {forfeit_ranked_game}))
+         (destination_screen {meta_loading_finding_screen get next_screen})
+         (init {forfeit_ranked_game})
+      )
       (storage_changed
          (next_screen meta_loading_uisink_default_screen)
-         (destination_screen
-            {meta_loading_uisink_default_screen get next_screen})
+         (destination_screen {meta_loading_uisink_default_screen get next_screen})
          (init
-            {ui_event_mgr
-               trigger_event
+            {ui_event_mgr trigger_event
                error_message
-               (dummy init error_storage_devices_changed)}))
+               (dummy init error_storage_devices_changed)
+            }
+         )
+      )
       (data_error
          (next_screen meta_loading_uisink_default_screen)
-         (destination_screen
-            {meta_loading_uisink_default_screen get next_screen})
-         ($failmsg
-            "")
+         (destination_screen {meta_loading_uisink_default_screen get next_screen})
+         ($failmsg "")
          #ifdef HX_WII
          (init
             ($data $info_str)
-            {if_else
-               {==
-                  {content_mgr get_dlc_failed}
-                  TRUE}
+            {if_else {== {content_mgr get_dlc_failed} TRUE}
                {do
-                  ($error
-                     {content_mgr get_last_result})
-                  {switch
-                     $error
-                     (kOpMissingCard
-                        {set $failmsg dlc_backup_nosdcard})
-                     (kOpCorruptData
-                        {set
-                           $failmsg
-                           (dlc_restore_corrupt_name $data)})
-                     (kOpCorruptCard
-                        {set
-                           $failmsg
-                           (dlc_restore_corrupt_name $data)})
-                     (kOpOutOfDate
-                        {set
-                           $failmsg
-                           (dlc_restore_outofdate $data $data)})
-                     (kOpNoLicense
-                        {set
-                           $failmsg
-                           (dlc_restore_nolicense $data $data)})
-                     (kOpIncompatibleCard
-                        {set $failmsg dlc_restore_incompatible})
-                     (kOpCorruptContent
-                        {set $failmsg dlc_restore_corrupt_content})
-                     (kOpFail
-                        {set
-                           $failmsg
-                           (dlc_restore_failed_name $data)})
-                     {set
-                        $failmsg
-                        (dlc_restore_failed_name $data)}}
+                  ($error {content_mgr get_last_result})
+                  {switch $error
+                     (kOpMissingCard {set $failmsg dlc_backup_nosdcard})
+                     (kOpCorruptData {set $failmsg (dlc_restore_corrupt_name $data)})
+                     (kOpCorruptCard {set $failmsg (dlc_restore_corrupt_name $data)})
+                     (kOpOutOfDate {set $failmsg (dlc_restore_outofdate $data $data)})
+                     (kOpNoLicense {set $failmsg (dlc_restore_nolicense $data $data)})
+                     (kOpIncompatibleCard {set $failmsg dlc_restore_incompatible})
+                     (kOpCorruptContent {set $failmsg dlc_restore_corrupt_content})
+                     (kOpFail {set $failmsg (dlc_restore_failed_name $data)})
+                     {set $failmsg (dlc_restore_failed_name $data)}
+                  }
                   {content_mgr set_dlc_failed FALSE}
-                  {ui_event_mgr
-                     trigger_event
-                     error_message
-                     (dummy init $failmsg)}}
-               {ui_event_mgr
-                  trigger_event
+                  {ui_event_mgr trigger_event error_message (dummy init $failmsg)}
+               }
+               {ui_event_mgr trigger_event
                   error_message
                   (dummy
                      init
-                     {if_else
-                        $data
+                     {if_else $data
                         (error_corrupt_song_data $info_str)
-                        error_lost_song_data})}})
+                        error_lost_song_data
+                     }
+                  )
+               }
+            }
+         )
          #else
          (init
             ($corrupt $info_str)
-            {ui_event_mgr
-               trigger_event
+            {ui_event_mgr trigger_event
                error_message
                (dummy
                   init
-                  {if_else
-                     $corrupt
+                  {if_else $corrupt
                      (error_corrupt_song_data $info_str)
-                     error_lost_song_data})})
-         #endif)
+                     error_lost_song_data
+                  }
+               )
+            }
+         )
+         #endif
+      )
       (lost_connection
          (next_screen meta_loading_uisink_lost_connection_screen)
          (destination_screen
-            {meta_loading_uisink_lost_connection_screen get next_screen})
+            {meta_loading_uisink_lost_connection_screen get next_screen}
+         )
          (init
             ($reason)
             {set $error_lost_server error_lost_server}
             {set $error_lost_connection error_lost_connection}
             #ifdef HX_WII
-            {set
-               $last_result
-               {platform_mgr last_dwc_error}}
-            {set
-               $dwcResultServer
-               {server get_dwc_error}}
-            {set
-               $dns_result
-               {platform_mgr last_dns_error}}
-            {if
-               {'||'
-                  {== $reason kLostServer}
-                  {== $reason kLostConnection}}
+            {set $last_result {platform_mgr last_dwc_error}}
+            {set $dwcResultServer {server get_dwc_error}}
+            {set $dns_result {platform_mgr last_dns_error}}
+            {if {'||' {== $reason kLostServer} {== $reason kLostConnection}}
                {do
-                  {if_else
-                     {== $dns_result 4}
-                     {set
-                        $error_lost_server
-                        {platform_mgr get_dwc_error_string $dns_result}}
-                     {if_else
-                        {> $dwcResultServer 20000}
-                        {set
-                           $error_lost_server
-                           {platform_mgr get_dwc_error_string $dwcResultServer}}
-                        {if
-                           {> $last_result 20000}
-                           {set
-                              $error_lost_server
-                              {platform_mgr get_dwc_error_string $last_result}}}}}}}
+                  {if_else {== $dns_result 4}
+                     {set $error_lost_server {platform_mgr get_dwc_error_string $dns_result}}
+                     {if_else {> $dwcResultServer 20000}
+                        {set $error_lost_server
+                           {platform_mgr get_dwc_error_string $dwcResultServer}
+                        }
+                        {if {> $last_result 20000}
+                           {set $error_lost_server {platform_mgr get_dwc_error_string $last_result}}
+                        }
+                     }
+                  }
+               }
+            }
             {platform_mgr clear_dwc_error}
             {server clear_dwc_error}
             {main_popup_swapper set dest main_screen}
             #endif
-            {handle
-               (input_mgr session_busy)}
+            {handle (input_mgr session_busy)}
             {forfeit_ranked_game}
-            {ui_event_mgr
-               trigger_event
+            {ui_event_mgr trigger_event
                error_message
                (dummy
                   init
-                  {switch
-                     $reason
+                  {switch $reason
                      (kLostConnection $error_lost_server)
                      (kLostServer $error_lost_server)
-                     (kEthernetUnplugged error_ethernet_unplugged)})}))
+                     (kEthernetUnplugged error_ethernet_unplugged)
+                  }
+               )
+            }
+         )
+      )
       (sign_out
          (next_screen meta_loading_signout_screen)
-         (destination_screen
-            {meta_loading_signout_screen get next_screen})
+         (destination_screen {meta_loading_signout_screen get next_screen})
          (init
             ($reason)
             {forfeit_ranked_game}
-            {ui_event_mgr
-               trigger_event
+            {ui_event_mgr trigger_event
                error_message
                (dummy
                   init
-                  {switch
-                     $reason
+                  {switch $reason
                      (kLocalUserSignedOut error_local_user_signed_out)
                      (kBandOwnerSignedOut error_band_owner_signed_out)
-                     (kProfileOwnerSignedOut error_profile_owner_signed_out)})}))
+                     (kProfileOwnerSignedOut error_profile_owner_signed_out)
+                  }
+               )
+            }
+         )
+      )
       (disc_error
          (next_screen meta_loading_uisink_lost_connection_screen)
          (destination_screen
-            {meta_loading_uisink_lost_connection_screen get next_screen})
+            {meta_loading_uisink_lost_connection_screen get next_screen}
+         )
          (init
             {forfeit_ranked_game}
             #ifndef HX_WII
-            {ui_event_mgr
-               trigger_event
-               error_message
-               (dummy init error_disc)}
+            {ui_event_mgr trigger_event error_message (dummy init error_disc)}
             #else
             {net_sync disable}
-            {ui_event_mgr
-               trigger_event
-               error_message
-               (dummy init error_lost_server)}
-            #endif))
+            {ui_event_mgr trigger_event error_message (dummy init error_lost_server)}
+            #endif
+         )
+      )
       (store_load_failed
          (next_screen meta_loading_uisink_default_screen)
-         (destination_screen
-            {meta_loading_uisink_default_screen get next_screen})
+         (destination_screen {meta_loading_uisink_default_screen get next_screen})
          (init
             ($error)
             {set $store_error_live_server store_error_live_server}
             #ifdef HX_WII
             {set $store_genericerror store_genericerror}
-            {if
-               {== $error kStoreErrorLiveServer}
+            {if {== $error kStoreErrorLiveServer}
                {do
-                  ($nhttp_result
-                     {platform_mgr last_nhttp_error})
-                  ($last_result
-                     {platform_mgr last_saved_dwc_error})
-                  ($result
-                     {platform_mgr last_dwc_error})
-                  {if_else
-                     {== $nhttp_result 4}
-                     {set
-                        $store_error_live_server
-                        {platform_mgr get_store_error_string $nhttp_result}}
-                     {if_else
-                        {> $result 0}
-                        {set
-                           $store_error_live_server
-                           {platform_mgr get_store_error_string $result}}
+                  ($nhttp_result {platform_mgr last_nhttp_error})
+                  ($last_result {platform_mgr last_saved_dwc_error})
+                  ($result {platform_mgr last_dwc_error})
+                  {if_else {== $nhttp_result 4}
+                     {set $store_error_live_server
+                        {platform_mgr get_store_error_string $nhttp_result}
+                     }
+                     {if_else {> $result 0}
+                        {set $store_error_live_server
+                           {platform_mgr get_store_error_string $result}
+                        }
                         {do
-                           {if
-                              {> $last_result 0}
-                              {set
-                                 $store_error_live_server
-                                 {platform_mgr get_store_error_string $last_result}}}}}}}}
-            {if
-               {== $error kStoreErrorEcommerce}
+                           {if {> $last_result 0}
+                              {set $store_error_live_server
+                                 {platform_mgr get_store_error_string $last_result}
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+            {if {== $error kStoreErrorEcommerce}
                {do
-                  ($code
-                     {commerce_mgr commerce_error_code})
-                  {if_else
-                     {== $code 0}
+                  ($code {commerce_mgr commerce_error_code})
+                  {if_else {== $code 0}
                      {set $store_genericerror error_lost_server}
                      {do
                         {if_else
                            {'||'
                               {== $code 204013}
-                              {&&
-                                 {> $code 204900}
-                                 {< $code 204918}}
-                              {&&
-                                 {> $code 204960}
-                                 {< $code 204964}}
-                              {&&
-                                 {> $code 204964}
-                                 {< $code 204974}}
-                              {&&
-                                 {> $code 207900}
-                                 {< $code 207918}}
-                              {&&
-                                 {> $code 207900}
-                                 {< $code 207918}}
-                              {&&
-                                 {> $code 499999}
-                                 {< $code 600000}}}
-                           {set
-                              $store_genericerror
-                              (store_disconnect_error_code
-                                 {commerce_mgr commerce_error_code})}
-                           {set
-                              $store_genericerror
-                              (store_genericerror
-                                 {commerce_mgr commerce_error_code})}}}}}}
+                              {&& {> $code 204900} {< $code 204918}}
+                              {&& {> $code 204960} {< $code 204964}}
+                              {&& {> $code 204964} {< $code 204974}}
+                              {&& {> $code 207900} {< $code 207918}}
+                              {&& {> $code 207900} {< $code 207918}}
+                              {&& {> $code 499999} {< $code 600000}}
+                           }
+                           {set $store_genericerror
+                              (store_disconnect_error_code {commerce_mgr commerce_error_code})
+                           }
+                           {set $store_genericerror
+                              (store_genericerror {commerce_mgr commerce_error_code})
+                           }
+                        }
+                     }
+                  }
+               }
+            }
             #endif
-            {ui_event_mgr
-               trigger_event
+            {ui_event_mgr trigger_event
                error_message
                (dummy
                   init
-                  {switch
-                     $error
+                  {switch $error
                      (kStoreErrorNoContent store_error_no_content)
                      #ifdef HX_WII
                      (kStoreErrorCacheNoSpace store_cfgneedblocks)
@@ -510,35 +450,37 @@
                      (kStoreErrorLiveServer $store_error_live_server)
                      (kStoreErrorStoreServer store_error_store_server)
                      (kStoreErrorSignedOut store_error_signed_out)
-                     (kStoreErrorNoMetadata store_error_no_metadata)})}))
+                     (kStoreErrorNoMetadata store_error_no_metadata)
+                  }
+               )
+            }
+         )
+      )
       (finding_error
-         (next_screen
-            {finding_panel back_screen})
-         (destination_screen
-            {finding_panel back_screen})
+         (next_screen {finding_panel back_screen})
+         (destination_screen {finding_panel back_screen})
          (init
             ($error_token)
-            {ui_event_mgr
-               trigger_event
-               error_message
-               (dummy init $error_token)}))
+            {ui_event_mgr trigger_event error_message (dummy init $error_token)}
+         )
+      )
       (quit_early
          (next_screen meta_loading_main_screen)
-         (destination_screen
-            {meta_loading_main_screen get next_screen})
-         (init
-            {forfeit_ranked_game}))
+         (destination_screen {meta_loading_main_screen get next_screen})
+         (init {forfeit_ranked_game})
+      )
       (forfeit
          (next_screen meta_loading_matchmaking_screen)
-         (destination_screen
-            {meta_loading_matchmaking_screen get next_screen})
-         (init
-            {forfeit_ranked_game}))
+         (destination_screen {meta_loading_matchmaking_screen get next_screen})
+         (init {forfeit_ranked_game})
+      )
       (quit_to_main
          (next_screen meta_loading_main_screen)
-         (destination_screen
-            {meta_loading_main_screen get next_screen}))
+         (destination_screen {meta_loading_main_screen get next_screen})
+      )
       (find_new_opponent
          (next_screen meta_loading_finding_screen)
-         (destination_screen
-            {meta_loading_finding_screen get next_screen}))))
+         (destination_screen {meta_loading_finding_screen get next_screen})
+      )
+   )
+)

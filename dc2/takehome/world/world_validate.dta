@@ -1,307 +1,218 @@
-#define WORLD_OBJECT_VALIDATE
-((validate_cameras
+#define WORLD_OBJECT_VALIDATE (
+   (validate_cameras
       {set $cameras.validating TRUE}
-      {$this
-         iterate
+      {$this iterate
          HamCamShot
          $shot
-         {if
-            {!=
-               {$shot get category}
-               TEST_CAM}
-            {$this validate_shot $shot}}}
+         {if {!= {$shot get category} TEST_CAM}
+            {$this validate_shot $shot}
+         }
+      }
       {do
-         ($err
-            {sprint
-               {path_name $this}
-               " no HamCamShot:"})
-         ($camera.cats
-            {array 0})
-         {foreach
-            $category
-            (REQUIRED_CAM_CATS INTRO_CAM_CATS OUTRO_CAM_CATS)
-            {foreach_int
-               $i
-               0
-               {macro_size $category}
-               {push_back
-                  $camera.cats
-                  {macro_elem $category $i}}}}
-         {foreach
-            $check.cat
-            $camera.cats
-            {$this check_camera $check.cat $err}}}
-      {set $cameras.validating FALSE})
+         ($err {sprint {path_name $this} " no HamCamShot:"})
+         ($camera.cats {array 0})
+         {foreach $category (REQUIRED_CAM_CATS INTRO_CAM_CATS OUTRO_CAM_CATS)
+            {foreach_int $i 0 {macro_size $category}
+               {push_back $camera.cats {macro_elem $category $i}}
+            }
+         }
+         {foreach $check.cat $camera.cats
+            {$this check_camera $check.cat $err}
+         }
+      }
+      {set $cameras.validating FALSE}
+   )
    (validate_shot
       ($shot)
-      {if
-         {!=
-            {$shot get_type}
-            ham}
-         {notify
-            {path_name $shot}
-            " is not type ham!"}}
+      {if {!= {$shot get_type} ham}
+         {notify {path_name $shot} " is not type ham!"}
+      }
       {do
-         ($next_shots
-            {$shot list_all_next_shots})
-         {foreach_int
-            $i
-            0
-            {size $next_shots}
-            {set
-               $next
-               {elem $next_shots $i}}
-            {foreach_int
-               $i
-               0
-               {$next
-                  size
-                  (targets)}
-               {unless
-                  {$next
-                     get
-                     (targets $i teleport)}
-                  {foreach_int
-                     $j
-                     0
-                     {$shot
-                        size
-                        (targets)}
+         ($next_shots {$shot list_all_next_shots})
+         {foreach_int $i 0 {size $next_shots}
+            {set $next {elem $next_shots $i}}
+            {foreach_int $i 0 {$next size (targets)}
+               {unless {$next get (targets $i teleport)}
+                  {foreach_int $j 0 {$shot size (targets)}
                      {if
                         {&&
-                           {==
-                              {$next
-                                 get
-                                 (targets $i target)}
-                              {$shot
-                                 get
-                                 (targets $j target)}}
-                           {$shot
-                              get
-                              (targets $j return)}}
+                           {== {$next get (targets $i target)} {$shot get (targets $j target)}}
+                           {$shot get (targets $j return)}
+                        }
                         {notify
                            {path_name $next}
                            " target "
-                           {$next
-                              get
-                              (targets $i target)}
+                           {$next get (targets $i target)}
                            " does not teleport, and is a next shot of "
                            $shot
-                           " which has return true which will mess up the shot, return should be false"}}}}}
-            {if
-               {!=
-                  {$next get category}
-                  NEXT_SHOT}
+                           " which has return true which will mess up the shot, return should be false"
+                        }
+                     }
+                  }
+               }
+            }
+            {if {!= {$next get category} NEXT_SHOT}
                {notify
                   {path_name $next}
                   " is a next shot of "
                   $shot
-                  ", must have category NEXT_SHOT"}}
-            {if
-               {!=
-                  0
-                  {$next
-                     size
-                     (master_anims)}}
+                  ", must have category NEXT_SHOT"
+               }
+            }
+            {if {!= 0 {$next size (master_anims)}}
                {notify
                   {path_name $next}
                   " is a next shot of "
                   $shot
-                  ", must not have master anims"}}}}
-      {foreach_int
-         $j
-         0
-         {$shot
-            size
-            (master_anims)}
-         {foreach_int
-            $k
-            0
-            {$shot
-               size
-               (anims)}
+                  ", must not have master anims"
+               }
+            }
+         }
+      }
+      {foreach_int $j 0 {$shot size (master_anims)}
+         {foreach_int $k 0 {$shot size (anims)}
             {do
-               ($anim
-                  {$shot
-                     get
-                     (anims $k)})
-               {if
-                  {&&
-                     $anim
-                     {==
-                        $anim
-                        {$shot
-                           get
-                           (master_anims $j)}}}
+               ($anim {$shot get (anims $k)})
+               {if {&& $anim {== $anim {$shot get (master_anims $j)}}}
                   {notify
                      {path_name $shot}
                      " has anim "
                      $anim
-                     " in both master_anims and anims.  Must be in only one."}}}}}
+                     " in both master_anims and anims.  Must be in only one."
+                  }
+               }
+            }
+         }
+      }
       {do
-         ($cat
-            {$shot get category})
+         ($cat {$shot get category})
          {if
             {find_elem
                (INTRO_VENUE INTRO_OVER LOSE WIN OUTRO_MULTI)
-               $cat}
-            {if
-               {!=
-                  {$shot get rate}
-                  k30_fps}
-               {notify
-                  {path_name $shot}
-                  " category "
-                  $cat
-                  " must have units of seconds"}}}}
-      {if
-         {==
-            {$shot duration}
-            0}
-         {notify
-            {path_name $shot}
-            " has zero duration!"}}
-      {if
-         {has_substr
-            {$shot get source_file}
-            "shared"}
+               $cat
+            }
+            {if {!= {$shot get rate} k30_fps}
+               {notify {path_name $shot} " category " $cat " must have units of seconds"}
+            }
+         }
+      }
+      {if {== {$shot duration} 0}
+         {notify {path_name $shot} " has zero duration!"}
+      }
+      {if {has_substr {$shot get source_file} "shared"}
          {do
             ($hamcamxfm FALSE)
-            {$shot
-               iterate_refs
+            {$shot iterate_refs
                $ref
-               {if
-                  {&&
-                     $ref
-                     {$ref is_a HamCamTransform}}
-                  {set $hamcamxfm TRUE}}}
-            {if
-               {! $hamcamxfm}
+               {if {&& $ref {$ref is_a HamCamTransform}}
+                  {set $hamcamxfm TRUE}
+               }
+            }
+            {if {! $hamcamxfm}
                {notify
                   "In "
                   {path_name $this}
                   ", "
                   {path_name $shot}
-                  " is not set in a HamCamTransform"}}}}
+                  " is not set in a HamCamTransform"
+               }
+            }
+         }
+      }
       {if
          {&&
-            {has_any_substr
-               {tolower
-                  {$shot get name}}
-               ("area1"
-                  "area2"
-                  "practice")}
-            {$shot get use_depth_of_field}}
-         {notify
-            {path_name $shot}
-            " is a gameplay shot which uses depth of field."}})
+            {has_any_substr {tolower {$shot get name}} ("area1" "area2" "practice")}
+            {$shot get use_depth_of_field}
+         }
+         {notify {path_name $shot} " is a gameplay shot which uses depth of field."}
+      }
+   )
    (check_camera
       ($cat $err)
-      {if_else
-         {has_any_substr
-            $check.cat
-            ("WIN_HIGH"
-               "WIN_MED"
-               "WIN_LOW")}
-         {foreach
-            $facing
-            (((player_flag
-                     (kHamPlayerOff kHamPlayer0)))
-               ((player_flag
-                     (kHamPlayerOff kHamPlayer1))))
+      {if_else {has_any_substr $check.cat ("WIN_HIGH" "WIN_MED" "WIN_LOW")}
+         {foreach $facing
+            (
+               ((player_flag (kHamPlayerOff kHamPlayer0)))
+               ((player_flag (kHamPlayerOff kHamPlayer1)))
+            )
             {if
                {!
-                  {$this find_shot $cat $facing}}
-               {notify
-                  $err
-                  " Category: "
-                  $check.cat
-                  " Facing: "
-                  $facing}}}
-         {if_else
-            {has_substr
-               $check.cat
-               "CAMP_"}
+                  {$this find_shot $cat $facing}
+               }
+               {notify $err " Category: " $check.cat " Facing: " $facing}
+            }
+         }
+         {if_else {has_substr $check.cat "CAMP_"}
             {$this check_campaign_camshot $cat $err}
-            {if
-               {!
-                  {$this find_shot $check.cat}}
-               {notify
-                  $err
-                  " Category: "
-                  $check.cat}}}})
+            {if {! {$this find_shot $check.cat}}
+               {notify $err " Category: " $check.cat}
+            }
+         }
+      }
+   )
    (check_campaign_camshot
       ($cat $err)
       {do
          ($venue_cams
-            ((beachfront
-                  (CAMP_INTRO_CREW01 WIN_CAMP_CREW01 LOSE_CAMP_EMILIA LOSE_CAMP_BODIE))
-               (subway
-                  (CAMP_INTRO_CREW02 WIN_CAMP_CREW02 LOSE_CAMP_MO LOSE_CAMP_GLITCH))
+            (
+               (beachfront
+                  (CAMP_INTRO_CREW01 WIN_CAMP_CREW01 LOSE_CAMP_EMILIA LOSE_CAMP_BODIE)
+               )
+               (subway (CAMP_INTRO_CREW02 WIN_CAMP_CREW02 LOSE_CAMP_MO LOSE_CAMP_GLITCH))
                (minigolf
-                  (CAMP_INTRO_CREW03 WIN_CAMP_CREW03 LOSE_CAMP_TAYE LOSE_CAMP_LILT))
+                  (CAMP_INTRO_CREW03 WIN_CAMP_CREW03 LOSE_CAMP_TAYE LOSE_CAMP_LILT)
+               )
                (yacht
-                  (CAMP_INTRO_CREW04 WIN_CAMP_CREW04 LOSE_CAMP_AUBREY LOSE_CAMP_ANGEL))
+                  (CAMP_INTRO_CREW04 WIN_CAMP_CREW04 LOSE_CAMP_AUBREY LOSE_CAMP_ANGEL)
+               )
                (skyscraper
-                  (CAMP_INTRO_CREW05 WIN_CAMP_CREW05 LOSE_CAMP_JARYN LOSE_CAMP_KERITH))
+                  (CAMP_INTRO_CREW05 WIN_CAMP_CREW05 LOSE_CAMP_JARYN LOSE_CAMP_KERITH)
+               )
                (mountainbase
-                  (CAMP_INTRO_CREW06 WIN_CAMP_CREW06_1 WIN_CAMP_CREW06_2 WIN_CAMP_CREW06_3 WIN_CAMP_CREW06_4 WIN_CAMP_CREW06_5 LOSE_CAMP_ROBOTA LOSE_CAMP_ROBOTB))))
+                  (CAMP_INTRO_CREW06
+                     WIN_CAMP_CREW06_1
+                     WIN_CAMP_CREW06_2
+                     WIN_CAMP_CREW06_3
+                     WIN_CAMP_CREW06_4
+                     WIN_CAMP_CREW06_5
+                     LOSE_CAMP_ROBOTA
+                     LOSE_CAMP_ROBOTB
+                  )
+               )
+            )
+         )
          ($venue_list)
          ($venue)
          ($cats)
          ($ok TRUE)
-         ($shot_found
-            {$this find_shot $cat})
-         {foreach_int
-            $i
-            0
-            {size $venue_cams}
+         ($shot_found {$this find_shot $cat})
+         {foreach_int $i 0 {size $venue_cams}
             {do
-               ($venue_list
-                  {elem $venue_cams $i})
-               ($venue
-                  {elem $venue_list 0})
+               ($venue_list {elem $venue_cams $i})
+               ($venue {elem $venue_list 0})
                ($venue_match
                   {&&
-                     {has_substr
-                        {path_name $dir}
-                        $venue}
-                     {!
-                        {has_substr
-                           {path_name $dir}
-                           "mountainbasesun"}}})
-               ($cats
-                  {elem $venue_list 1})
-               ($cat_match
-                  {contains $cats $cat})
-               {if
-                  $cat_match
-                  {if
-                     {&&
-                        $venue_match
-                        {! $shot_found}}
-                     {!
-                        {has_substr
-                           {path_name $dir}
-                           $venue}}
-                     {notify
-                        $err
-                        " Category: "
-                        $check.cat}}
-                  {if
-                     {&&
-                        {! $venue_match}
-                        $shot_found}
-                     {!
-                        {has_substr
-                           {path_name $dir}
-                           $venue}}
+                     {has_substr {path_name $dir} $venue}
+                     {! {has_substr {path_name $dir} "mountainbasesun"}}
+                  }
+               )
+               ($cats {elem $venue_list 1})
+               ($cat_match {contains $cats $cat})
+               {if $cat_match
+                  {if {&& $venue_match {! $shot_found}}
+                     {! {has_substr {path_name $dir} $venue}}
+                     {notify $err " Category: " $check.cat}
+                  }
+                  {if {&& {! $venue_match} $shot_found}
+                     {! {has_substr {path_name $dir} $venue}}
                      {do
-                        ($err2
-                           {sprint
-                              {path_name $this}
-                              " HamCamShot not needed:"})
-                        {notify
-                           $err2
-                           " Category: "
-                           $check.cat}}}}}}}))
+                        ($err2 {sprint {path_name $this} " HamCamShot not needed:"})
+                        {notify $err2 " Category: " $check.cat}
+                     }
+                  }
+               }
+            }
+         }
+      }
+   )
+)

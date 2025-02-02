@@ -1,264 +1,271 @@
-{func
-   try_next_nag
-   {set
-      $curr_nag_screen
-      {{profile_mgr get_active_profile}
-         nag}}
+{func try_next_nag
+   {set $curr_nag_screen {{profile_mgr get_active_profile} nag}}
    {pre_redeem_code_nag_screen check_nags_tried $curr_nag_screen}
-   {print
-      "----- trying next nag - curr nag is "
-      $curr_nag_screen
-      "\n"}
-   {{profile_mgr get_active_profile}
-      complete_current_nag
-      FALSE}
-   {set
-      $next_nag_screen
-      {{profile_mgr get_active_profile}
-         nag}}
-   {print
-      "----- trying next nag - next nag is "
-      $next_nag_screen
-      "\n"}
-   {if_else
-      {pre_redeem_code_nag_screen check_nags_tried $next_nag_screen}
+   {print "----- trying next nag - curr nag is " $curr_nag_screen "\n"}
+   {{profile_mgr get_active_profile} complete_current_nag FALSE}
+   {set $next_nag_screen {{profile_mgr get_active_profile} nag}}
+   {print "----- trying next nag - next nag is " $next_nag_screen "\n"}
+   {if_else {pre_redeem_code_nag_screen check_nags_tried $next_nag_screen}
       {ui goto_screen main_screen}
-      {ui goto_screen $next_nag_screen}}}
-{new
-   HamScreen
+      {ui goto_screen $next_nag_screen}
+   }
+}
+{new HamScreen
    pre_redeem_code_nag_screen
-   (panels meta background_panel empty_postproc_panel wait_for_saveload_panel title_panel tutorial_nav_panel)
+   (panels
+      meta
+      background_panel
+      empty_postproc_panel
+      wait_for_saveload_panel
+      title_panel
+      tutorial_nav_panel
+   )
    (focus wait_for_saveload_panel)
-   (nags_tried
-      ())
+   (nags_tried ())
    (enter
       {if_else
          {!
-            {platform_mgr
-               is_pad_signed_into_live
-               {{profile_mgr get_active_profile}
-                  get_pad_num}}}
+            {platform_mgr is_pad_signed_into_live
+               {{profile_mgr get_active_profile} get_pad_num}
+            }
+         }
          {try_next_nag}
-         {ui goto_screen redeem_code_nag_screen}})
+         {ui goto_screen redeem_code_nag_screen}
+      }
+   )
    (check_nags_tried
       ($nag)
-      {if_else
-         {find_elem
-            [nags_tried]
-            $nag}
-         {do TRUE}
+      {if_else {find_elem [nags_tried] $nag}
          {do
-            {print
-               "----- adding "
-               $nag
-               " to list of tried nags\n"}
-            {push_back
-               [nags_tried]
-               $nag}
-            FALSE}})}
-{new
-   HamScreen
+            TRUE
+         }
+         {do
+            {print "----- adding " $nag " to list of tried nags\n"}
+            {push_back [nags_tried] $nag}
+            FALSE
+         }
+      }
+   )
+}
+{new HamScreen
    redeem_code_nag_screen
    (panels meta background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (enter
-      {dialog_panel set_custom_ok_no_later nag_redeem_code ok no later TRUE})
-   (exit
-      {voice_input_panel activate_voice_context ''})
+      {dialog_panel set_custom_ok_no_later nag_redeem_code ok no later TRUE}
+   )
+   (exit {voice_input_panel activate_voice_context ''})
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (ok
-            {if_else
-               {profile_mgr has_active_profile_no_override}
+            {if_else {profile_mgr has_active_profile_no_override}
                {do
-                  ($profile
-                     {profile_mgr get_active_profile_no_override})
-                  {if_else
-                     {platform_mgr
-                        is_pad_signed_into_live
-                        {$profile get_pad_num}}
+                  ($profile {profile_mgr get_active_profile_no_override})
+                  {if_else {platform_mgr is_pad_signed_into_live {$profile get_pad_num}}
                      {do
                         {profile_mgr set_critical_profile $profile}
                         {store_loading_screen set redirect_to_code_redemption TRUE}
-                        {ui goto_screen store_loading_screen}}
-                     {ui goto_screen main_screen}}}
-               {ui goto_screen main_screen}})
+                        {ui goto_screen store_loading_screen}
+                     }
+                     {ui goto_screen main_screen}
+                  }
+               }
+               {ui goto_screen main_screen}
+            }
+         )
          (later
-            {{profile_mgr get_active_profile}
-               complete_current_nag
-               FALSE}
-            {ui goto_screen main_screen})
+            {{profile_mgr get_active_profile} complete_current_nag FALSE}
+            {ui goto_screen main_screen}
+         )
          (no
-            {{profile_mgr get_active_profile}
-               complete_current_nag
-               TRUE}
-            {ui goto_screen main_screen})})
+            {{profile_mgr get_active_profile} complete_current_nag TRUE}
+            {ui goto_screen main_screen}
+         )
+      }
+   )
    (on_voice_command
       ($command)
-      {dialog_panel on_voice_command $command})}
-{new
-   HamScreen
+      {dialog_panel on_voice_command $command}
+   )
+}
+{new HamScreen
    pre_facebook_nag_screen
-   (panels meta background_panel empty_postproc_panel wait_for_saveload_panel title_panel tutorial_nav_panel)
+   (panels
+      meta
+      background_panel
+      empty_postproc_panel
+      wait_for_saveload_panel
+      title_panel
+      tutorial_nav_panel
+   )
    (focus wait_for_saveload_panel)
    (timeout_timer -1.0)
    (timeout_time 1.0)
    (enter
-      {print
-         "calling {platform_mgr query_xsocial_capabilities}\n"}
+      {print "calling {platform_mgr query_xsocial_capabilities}\n"}
       {platform_mgr query_xsocial_capabilities}
-      {set
-         [timeout_timer]
-         [timeout_time]})
+      {set [timeout_timer] [timeout_time]}
+   )
    (poll
-      {if
-         {!
-            {ui in_transition}}
-         {if_else
-            {platform_mgr poll_xsocial_capabilities}
+      {if {! {ui in_transition}}
+         {if_else {platform_mgr poll_xsocial_capabilities}
             {do
-               {print
-                  "{platform_mgr poll_xsocial_capabilities} returned TRUE\n"}
-               {if_else
-                  {platform_mgr has_xsocial_link_post}
+               {print "{platform_mgr poll_xsocial_capabilities} returned TRUE\n"}
+               {if_else {platform_mgr has_xsocial_link_post}
                   {do
-                     {print
-                        "{platform_mgr has_xsocial_link_post} returned TRUE\n"}
+                     {print "{platform_mgr has_xsocial_link_post} returned TRUE\n"}
                      {if_else
                         {!
-                           {platform_mgr
-                              is_pad_signed_into_live
-                              {{profile_mgr get_active_profile}
-                                 get_pad_num}}}
+                           {platform_mgr is_pad_signed_into_live
+                              {{profile_mgr get_active_profile} get_pad_num}
+                           }
+                        }
                         {try_next_nag}
-                        {ui goto_screen facebook_nag_screen}}}
+                        {ui goto_screen facebook_nag_screen}
+                     }
+                  }
                   {do
-                     {print
-                        "{platform_mgr has_xsocial_link_post} returned FALSE\n"}
-                     {try_next_nag}}}}
+                     {print "{platform_mgr has_xsocial_link_post} returned FALSE\n"}
+                     {try_next_nag}
+                  }
+               }
+            }
             {do
-               {-=
-                  [timeout_timer]
-                  {taskmgr ui_delta_seconds}}
-               {if
-                  {<=
-                     [timeout_timer]
-                     0}
-                  {print
-                     "----- giving up on facebook nag because we timed out!\n"}
-                  {ui goto_screen main_screen}}}}})}
-{new
-   HamPanel
+               {-= [timeout_timer] {taskmgr ui_delta_seconds}}
+               {if {<= [timeout_timer] 0}
+                  {print "----- giving up on facebook nag because we timed out!\n"}
+                  {ui goto_screen main_screen}
+               }
+            }
+         }
+      }
+   )
+}
+{new HamPanel
    facebook_nag_screen_disclaimer_panel
-   (file
-      "../dialog_fb_info.milo")}
-{new
-   HamScreen
+   (file "../dialog_fb_info.milo")
+}
+{new HamScreen
    facebook_nag_screen
-   (panels meta background_confirmation_panel dialog_panel facebook_nag_screen_disclaimer_panel)
+   (panels
+      meta
+      background_confirmation_panel
+      dialog_panel
+      facebook_nag_screen_disclaimer_panel
+   )
    (focus dialog_panel)
    (enter
-      {dialog_panel set_custom_ok_no_later nag_facebook_link ok no later TRUE})
-   (exit
-      {voice_input_panel activate_voice_context ''})
+      {dialog_panel set_custom_ok_no_later nag_facebook_link ok no later TRUE}
+   )
+   (exit {voice_input_panel activate_voice_context ''})
    (NAV_SELECT_MSG
-      {switch
-         $name
-         (ok
-            {ui goto_screen facebook_nag_post_screen})
+      {switch $name
+         (ok {ui goto_screen facebook_nag_post_screen})
          (later
-            {{profile_mgr get_active_profile}
-               complete_current_nag
-               FALSE}
-            {ui goto_screen main_screen})
+            {{profile_mgr get_active_profile} complete_current_nag FALSE}
+            {ui goto_screen main_screen}
+         )
          (no
-            {{profile_mgr get_active_profile}
-               complete_current_nag
-               TRUE}
-            {ui goto_screen main_screen})})
+            {{profile_mgr get_active_profile} complete_current_nag TRUE}
+            {ui goto_screen main_screen}
+         )
+      }
+   )
    (on_voice_command
       ($command)
-      {dialog_panel on_voice_command $command})}
-{new
-   KinectSharePanel
+      {dialog_panel on_voice_command $command}
+   )
+}
+{new KinectSharePanel
    facebook_nag_post_panel
-   (file
-      "nag.milo")
-   (enter
-      {$this set texture preview.tex})
+   (file "nag.milo")
+   (enter {$this set texture preview.tex})
    (upload_complete
       ($msg)
-      {if
-         {profile_mgr has_active_profile}
+      {if {profile_mgr has_active_profile}
          {do
-            ($profile
-               {profile_mgr get_active_profile})
-            {$profile complete_current_nag TRUE}}}
+            ($profile {profile_mgr get_active_profile})
+            {$profile complete_current_nag TRUE}
+         }
+      }
       {facebook_nag_complete_screen set msg_token $msg}
-      {ui goto_screen facebook_nag_complete_screen})
+      {ui goto_screen facebook_nag_complete_screen}
+   )
    (upload_cancelled
       ($msg)
-      {ui goto_screen main_screen})}
-{new
-   HamScreen
+      {ui goto_screen main_screen}
+   )
+}
+{new HamScreen
    facebook_nag_post_screen
-   (panels meta facebook_nag_post_panel background_confirmation_panel dialog_panel)
+   (panels
+      meta
+      facebook_nag_post_panel
+      background_confirmation_panel
+      dialog_panel
+   )
    (focus facebook_nag_post_panel)
-   (enter
-      {$this post_link})
-   (exit
-      {$this cleanup})}
-{new
-   HamScreen
+   (enter {$this post_link})
+   (exit {$this cleanup})
+}
+{new HamScreen
    facebook_nag_complete_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (msg_token '')
-   (enter
-      {dialog_panel
-         set_ok
-         [msg_token]
-         TRUE})
-   (NAV_SELECT_MSG
-      {ui goto_screen main_screen})}
-{new
-   HamScreen
+   (enter {dialog_panel set_ok [msg_token] TRUE})
+   (NAV_SELECT_MSG {ui goto_screen main_screen})
+}
+{new HamScreen
    pre_mobile_app_nag_screen
-   (panels meta background_panel empty_postproc_panel wait_for_saveload_panel title_panel tutorial_nav_panel)
+   (panels
+      meta
+      background_panel
+      empty_postproc_panel
+      wait_for_saveload_panel
+      title_panel
+      tutorial_nav_panel
+   )
    (focus wait_for_saveload_panel)
    (enter
-      {if_else
-         {platform_mgr is_smart_glass_connected}
+      {if_else {platform_mgr is_smart_glass_connected}
          {ui goto_screen main_screen}
-         {ui goto_screen mobile_app_nag_screen}})}
-{new
-   HamScreen
+         {ui goto_screen mobile_app_nag_screen}
+      }
+   )
+}
+{new HamScreen
    mobile_app_nag_screen
    (panels meta background_confirmation_panel dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel set_ok_no nag_mobile_app TRUE})
-   (exit
-      {voice_input_panel activate_voice_context ''})
+   (enter {dialog_panel set_ok_no nag_mobile_app TRUE})
+   (exit {voice_input_panel activate_voice_context ''})
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (ok
-            {{profile_mgr get_active_profile}
-               complete_current_nag
-               FALSE}
-            {ui goto_screen main_screen})
+            {{profile_mgr get_active_profile} complete_current_nag FALSE}
+            {ui goto_screen main_screen}
+         )
          (no
-            {{profile_mgr get_active_profile}
-               complete_current_nag
-               TRUE}
-            {ui goto_screen main_screen})})
+            {{profile_mgr get_active_profile} complete_current_nag TRUE}
+            {ui goto_screen main_screen}
+         )
+      }
+   )
    (on_voice_command
       ($command)
-      {dialog_panel on_voice_command $command})}
-{new
-   HamScreen
+      {dialog_panel on_voice_command $command}
+   )
+}
+{new HamScreen
    show_next_nag_screen
-   (panels meta background_panel empty_postproc_panel wait_for_saveload_panel title_panel tutorial_nav_panel)
-   (focus wait_for_saveload_panel)}
+   (panels
+      meta
+      background_panel
+      empty_postproc_panel
+      wait_for_saveload_panel
+      title_panel
+      tutorial_nav_panel
+   )
+   (focus wait_for_saveload_panel)
+}

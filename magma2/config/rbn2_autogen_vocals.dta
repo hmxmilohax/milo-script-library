@@ -1,11 +1,8 @@
-{func
-   CheckShouldAutogenVocals
-   {set
-      [working_track]
-      "PART VOCALS"}
-   {set
-      $conflicting_text_events
-      ("[play]"
+{func CheckShouldAutogenVocals
+   {set [working_track] "PART VOCALS"}
+   {set $conflicting_text_events
+      (
+         "[play]"
          "[idle]"
          "[idle_realtime]"
          "[idle_intense]"
@@ -16,118 +13,79 @@
          "[clap_start]"
          "[clap_end]"
          "[cowbell_start]"
-         "[cowbell_end]")}
-   {if
-      [force_autogen]
-      {foreach
-         $text
-         $conflicting_text_events
-         {$this remove_text $text}}}
+         "[cowbell_end]"
+      )
+   }
+   {if [force_autogen]
+      {foreach $text $conflicting_text_events
+         {$this remove_text $text}
+      }
+   }
    {set $should_autogen 1}
-   {unless
-      [force_autogen]
-      {$this
-         foreach_textevent
-         $text
+   {unless [force_autogen]
+      {$this foreach_textevent $text
          $tick
-         {if
-            {find_elem $conflicting_text_events $text}
-            {set $should_autogen 0}}}}
-   $should_autogen}
-{func
-   DoAutogen_Vocals
-   {print
-      "MIDI Compiler: Autogenerating PART VOCALS animations...\n"}
-   {set
-      $vocal_percussion_type
-      {$this vocal_percussion_type}}
-   {if
-      {==
-         $vocal_percussion_type
-         "handclap"}
-      {set
-         $vocal_percussion_type
-         "clap"}}
+         {if {find_elem $conflicting_text_events $text}
+            {set $should_autogen 0}
+         }
+      }
+   }
+   $should_autogen
+}
+{func DoAutogen_Vocals
+   {print "MIDI Compiler: Autogenerating PART VOCALS animations...\n"}
+   {set $vocal_percussion_type {$this vocal_percussion_type}}
+   {if {== $vocal_percussion_type "handclap"}
+      {set $vocal_percussion_type "clap"}
+   }
    {do
       ($last_tick -1)
       ($last_off -1)
       ($in_tambourine FALSE)
-      {$this
-         foreach_midievent
-         kNote_C1
+      {$this foreach_midievent kNote_C1
          kNote_Cs6
          $pitch
          $tick
          $state
-         {if_else
-            {'||'
-               {== $pitch kNote_C6}
-               {== $pitch kNote_Cs6}}
-            {if
-               {! $in_tambourine}
-               {$this
-                  add_midi_text
-                  {sprintf
-                     "[%s_start]"
-                     $vocal_percussion_type}
-                  {- $tick 120}}
-               {set $in_tambourine TRUE}}
-            {if
-               $in_tambourine
-               {$this
-                  add_midi_text
-                  {sprintf
-                     "[%s_end]"
-                     $vocal_percussion_type}
-                  {'+' $last_off 120}}
-               {set $in_tambourine FALSE}}}
-         {if_else
-            $state
-            {if
-               {'||'
-                  {< $last_off 0}
-                  {>
-                     {- $tick $last_off}
-                     2880}}
-               {if_else
-                  {>= $last_off 0}
-                  {$this
-                     add_midi_text
-                     "[idle]"
-                     {'+' $last_off 120}}
-                  {if
-                     {>
-                        {- $tick 120}
-                        $music_start}
-                     {$this
-                        add_midi_text
-                        "[idle]"
-                        $music_start}}}
-               {$this
-                  add_midi_text
-                  "[play]"
-                  {- $tick 120}}}
-            {set $last_off $tick}}}
-      {if
-         {> $last_off -1}
-         {if
-            {<
-               {'+' $last_off 120}
-               $end}
-            {if_else
-               {>=
+         {if_else {'||' {== $pitch kNote_C6} {== $pitch kNote_Cs6}}
+            {if {! $in_tambourine}
+               {$this add_midi_text
+                  {sprintf "[%s_start]" $vocal_percussion_type}
+                  {- $tick 120}
+               }
+               {set $in_tambourine TRUE}
+            }
+            {if $in_tambourine
+               {$this add_midi_text
+                  {sprintf "[%s_end]" $vocal_percussion_type}
                   {'+' $last_off 120}
-                  $music_end}
-               {$this
-                  add_midi_text
-                  "[idle_realtime]"
-                  {'+' $last_off 120}}
+               }
+               {set $in_tambourine FALSE}
+            }
+         }
+         {if_else $state
+            {if {'||' {< $last_off 0} {> {- $tick $last_off} 2880}}
+               {if_else {>= $last_off 0}
+                  {$this add_midi_text "[idle]" {'+' $last_off 120}}
+                  {if {> {- $tick 120} $music_start}
+                     {$this add_midi_text "[idle]" $music_start}
+                  }
+               }
+               {$this add_midi_text "[play]" {- $tick 120}}
+            }
+            {set $last_off $tick}
+         }
+      }
+      {if {> $last_off -1}
+         {if {< {'+' $last_off 120} $end}
+            {if_else {>= {'+' $last_off 120} $music_end}
+               {$this add_midi_text "[idle_realtime]" {'+' $last_off 120}}
                {do
-                  {$this
-                     add_midi_text
-                     "[idle]"
-                     {'+' $last_off 120}}
-                  {$this
-                     add_midi_text
-                     "[idle_realtime]"
-                     $music_end}}}}}}}
+                  {$this add_midi_text "[idle]" {'+' $last_off 120}}
+                  {$this add_midi_text "[idle_realtime]" $music_end}
+               }
+            }
+         }
+      }
+   }
+}

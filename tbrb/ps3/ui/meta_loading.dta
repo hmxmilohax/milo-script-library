@@ -1,282 +1,242 @@
-{new
-   UIPanel
+{new UIPanel
    meta_loading
    (file meta_loading.milo)
    (enter
       {game_screen set mic_removed_mid_setlist FALSE}
-      {synth stop_all_sfx TRUE})}
-#define kMetaLoading_Inactive
-(0)
-#define kMetaLoading_Entered
-(1)
-#define kMetaLoading_AutoSaving
-(2)
-#define kMetaLoading_PostAutoSave
-(3)
-#define kMetaLoading_Leaving
-(4)
-#define META_LOADING_SCREEN_HANDLERS
-((panels
+      {synth stop_all_sfx TRUE}
+   )
+}
+#define kMetaLoading_Inactive (0)
+#define kMetaLoading_Entered (1)
+#define kMetaLoading_AutoSaving (2)
+#define kMetaLoading_PostAutoSave (3)
+#define kMetaLoading_Leaving (4)
+#define META_LOADING_SCREEN_HANDLERS (
+   (panels
       meta_loading
       (meta
          (active FALSE)
-         (always_load FALSE)))
+         (always_load FALSE)
+      )
+   )
    (block_event
       ($event)
       {&&
-         {!=
-            [state]
-            kMetaLoading_PostAutoSave}
-         {!=
-            [state]
-            kMetaLoading_Leaving}})
+         {!= [state] kMetaLoading_PostAutoSave}
+         {!= [state] kMetaLoading_Leaving}
+      }
+   )
    (state kMetaLoading_Inactive)
    (old_limit kLimitNone)
    (TRANSITION_COMPLETE_MSG
-      {if
-         {==
-            [state]
-            kMetaLoading_Inactive}
-         {memcardmgr
-            add_sink
-            $this
-            (save_load_all_complete_msg)}
-         {ui_event_mgr
-            add_sink
-            $this
-            (event_dialog_dismiss)}
+      {if {== [state] kMetaLoading_Inactive}
+         {memcardmgr add_sink $this (save_load_all_complete_msg)}
+         {ui_event_mgr add_sink $this (event_dialog_dismiss)}
          {net_sync set_ui_state kNetUI_MetaLoadingPreSave}
-         {set
-            [old_limit]
-            {input_mgr get_limit}}
+         {set [old_limit] {input_mgr get_limit}}
          {input_mgr set_limit kLimitNone}
          {rnd set_in_game FALSE}
-         {set
-            [state]
-            kMetaLoading_Entered}})
+         {set [state] kMetaLoading_Entered}
+      }
+   )
    (exit
       {memcardmgr remove_sink $this save_load_all_complete_msg}
       {ui_event_mgr remove_sink $this event_dialog_dismiss}
-      {set
-         [state]
-         kMetaLoading_Inactive}
-      {if
-         {!= old_limit kLimitNone}
-         {input_mgr
-            set_limit
-            [old_limit]}})
+      {set [state] kMetaLoading_Inactive}
+      {if {!= old_limit kLimitNone}
+         {input_mgr set_limit [old_limit]}
+      }
+   )
    (set_up_helpbar
-      {if
-         {exists show_remote_exit_timer}
-         {delete show_remote_exit_timer}}
-      {script_task
-         kTaskUISeconds
+      {if {exists show_remote_exit_timer}
+         {delete show_remote_exit_timer}
+      }
+      {script_task kTaskUISeconds
          (delay 1.0)
          (name show_remote_exit_timer)
-         (script
-            {$this maybe_show_remote_exit})})
+         (script {$this maybe_show_remote_exit})
+      }
+   )
    (maybe_show_remote_exit
-      {if
-         {input_mgr allow_remote_exit}
-         {helpbar
-            set_config
-            ((cancel helpbar_back))}})
+      {if {input_mgr allow_remote_exit}
+         {helpbar set_config ((cancel helpbar_back))}
+      }
+   )
    (save_load_all_complete_msg
       {net_sync set_ui_state kNetUI_MetaLoadingPostSave}
-      {set
-         [state]
-         kMetaLoading_PostAutoSave}
-      {$this set_up_helpbar})
-   (event_dialog_dismiss
-      {$this set_up_helpbar})
+      {set [state] kMetaLoading_PostAutoSave}
+      {$this set_up_helpbar}
+   )
+   (event_dialog_dismiss {$this set_up_helpbar})
    (check_advance
       {do
          ($ready TRUE)
-         {user_mgr
-            foreach_user
-            $user
+         {user_mgr foreach_user $user
             {if
                {&&
                   {session has_user $user}
-                  {!=
-                     {$user get_net_ui_state}
-                     kNetUI_MetaLoadingPostSave}
-                  {!
-                     {gamemode get ranked}}
-                  {!
-                     {ui_event_mgr has_active_transition_event}}}
-               {set $ready FALSE}}}
-         {if
-            $ready
-            {set
-               [state]
-               kMetaLoading_Leaving}
-            {ui
-               sync_screen
-               [next_screen]
-               0}}})
+                  {!= {$user get_net_ui_state} kNetUI_MetaLoadingPostSave}
+                  {! {gamemode get ranked}}
+                  {! {ui_event_mgr has_active_transition_event}}
+               }
+               {set $ready FALSE}
+            }
+         }
+         {if $ready
+            {set [state] kMetaLoading_Leaving}
+            {ui sync_screen [next_screen] 0}
+         }
+      }
+   )
    (poll
-      {if
-         {==
-            [state]
-            kMetaLoading_Entered}
+      {if {== [state] kMetaLoading_Entered}
          {if
             {&&
                {ui_event_mgr has_active_transition_event}
-               {ui_event_mgr is_transition_event_started}}
+               {ui_event_mgr is_transition_event_started}
+            }
             {session clear}
-            {story clear_performer}}
-         {if
-            [goto_practice_mode]
+            {story clear_performer}
+         }
+         {if [goto_practice_mode]
             {do
-               ($song
-                  {meta_performer song})
+               ($song {meta_performer song})
                {gamemode set_mode practice}
                {main_panel setup_menu_for_current_mode}
-               {meta_performer set_song $song}}}
+               {meta_performer set_song $song}
+            }
+         }
          {ui set_disband_status kDisbandsEnabled}
-         {if_else
-            {==
-               {ui_event_mgr current_event}
-               invite_accepted}
+         {if_else {== {ui_event_mgr current_event} invite_accepted}
             {do
                {ui set_invite_accepted TRUE}
-               {finding_panel
-                  set_joining_user
-                  {user_mgr
-                     get_user_from_pad_num
-                     {main_panel get invited_user_pad}}}
-               {gamemode
-                  set_mode
-                  {{session_searcher get_last_invite_result}
-                     get_mode_name}}
-               {main_panel setup_menu_for_current_mode}}
-            {ui set_invite_accepted FALSE}}
+               {finding_panel set_joining_user
+                  {user_mgr get_user_from_pad_num {main_panel get invited_user_pad}}
+               }
+               {gamemode set_mode
+                  {{session_searcher get_last_invite_result} get_mode_name}
+               }
+               {main_panel setup_menu_for_current_mode}
+            }
+            {ui set_invite_accepted FALSE}
+         }
          {gamecfg set_active_roster FALSE}
-         {set
-            [state]
-            kMetaLoading_AutoSaving}
+         {set [state] kMetaLoading_AutoSaving}
          {save_screen set is_meta_loading TRUE}
-         {autosave}}
-      {if
-         {==
-            [state]
-            kMetaLoading_PostAutoSave}
-         {$this check_advance}}))
-{new
-   BandScreen
+         {autosave}
+      }
+      {if {== [state] kMetaLoading_PostAutoSave}
+         {$this check_advance}
+      }
+   )
+)
+{new BandScreen
    meta_loading_continue_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
    (next_screen
-      {if_else
-         {&&
-            {gamemode in_mode h2h}
-            {==
-               {gamemode get ranked}
-               TRUE}}
+      {if_else {&& {gamemode in_mode h2h} {== {gamemode get ranked} TRUE}}
          h2h_ranked_preload_screen
-         {if_else
-            {gamemode in_mode story}
+         {if_else {gamemode in_mode story}
             {get_story_destination_screen story_chapter_screen}
-            song_select_screen}})}
-{new
-   BandScreen
+            song_select_screen
+         }
+      }
+   )
+}
+{new BandScreen
    meta_loading_main_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
    (next_screen
-      {if_else
-         {gamemode in_mode drum_trainer}
+      {if_else {gamemode in_mode drum_trainer}
          MAIN_MENU_RETURN_SCREEN
-         {gamemode get main_screen}})}
-{new
-   BandScreen
+         {gamemode get main_screen}
+      }
+   )
+}
+{new BandScreen
    meta_loading_tutorial_menu_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen tutorial_level_menu_screen)}
-{new
-   BandScreen
+   (next_screen tutorial_level_menu_screen)
+}
+{new BandScreen
    meta_loading_pause_new_section_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen practice_preloading_screen)}
-{new
-   BandScreen
+   (next_screen practice_preloading_screen)
+}
+{new BandScreen
    meta_loading_pause_new_song_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
    (next_screen
-      {if_else
-         {gamemode in_mode story}
+      {if_else {gamemode in_mode story}
          {get_story_destination_screen story_chapter_screen}
-         song_select_screen})}
-{new
-   BandScreen
+         song_select_screen
+      }
+   )
+}
+{new BandScreen
    meta_loading_ready_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen
-      {gamemode get ready_screen})}
-{new
-   BandScreen
+   (next_screen {gamemode get ready_screen})
+}
+{new BandScreen
    meta_loading_practice_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode TRUE)
-   (next_screen practice_preloading_screen)}
-{new
-   BandScreen
+   (next_screen practice_preloading_screen)
+}
+{new BandScreen
    meta_loading_signout_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen
-      {gamemode get uisink_signout_screen})}
-{new
-   BandScreen
+   (next_screen {gamemode get uisink_signout_screen})
+}
+{new BandScreen
    meta_loading_finding_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen finding_screen)}
-{new
-   BandScreen
+   (next_screen finding_screen)
+}
+{new BandScreen
    meta_loading_matchmaking_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen
-      {gamemode get matchmaking_screen})}
-{new
-   BandScreen
+   (next_screen {gamemode get matchmaking_screen})
+}
+{new BandScreen
    meta_loading_uisink_default_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen
-      {gamemode get uisink_default_screen})}
-{new
-   BandScreen
+   (next_screen {gamemode get uisink_default_screen})
+}
+{new BandScreen
    meta_loading_uisink_lost_connection_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen
-      {gamemode get uisink_lost_connection_screen})}
-{new
-   BandScreen
+   (next_screen {gamemode get uisink_lost_connection_screen})
+}
+{new BandScreen
    meta_loading_leaderboard_error_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen
-      {leaderboards_netwatcher_panel get return_screen_in_progress})}
-{new
-   BandScreen
+   (next_screen {leaderboards_netwatcher_panel get return_screen_in_progress})
+}
+{new BandScreen
    meta_loading_return_to_story_hub_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen story_hub_screen)}
+   (next_screen story_hub_screen)
+}
 #ifndef _SHIP
-{new
-   BandScreen
+{new BandScreen
    meta_loading_return_to_frame_rate_screen
    META_LOADING_SCREEN_HANDLERS
    (goto_practice_mode FALSE)
-   (next_screen frame_rate_screen)}
+   (next_screen frame_rate_screen)
+}
 #endif

@@ -2,28 +2,48 @@
    (types
       (ending_bonus
          (editor
-            (start script (script {$this start}) (help "Start the ending bonus."))
-            (reset script (script {$this reset}) (help "Reset the ending bonus."))
-            (success script (script {$this success}) (help "Plays success.trig at the end of the bonus."))
-            (failure script (script {$this coda_end}) (help "Plays failure.trig at the end of the bonus.")) 
-            (score int (post_sync {$this set_score [score]}) (help "Ending bonus score."))
+            (start
+               script
+               (script {$this start})
+               (help "Start the ending bonus.")
+            )
+            (reset
+               script
+               (script {$this reset})
+               (help "Reset the ending bonus.")
+            )
+            (success
+               script
+               (script {$this success})
+               (help "Plays success.trig at the end of the bonus.")
+            )
+            (failure
+               script
+               (script {$this coda_end})
+               (help "Plays failure.trig at the end of the bonus.")
+            )
+            (score
+               int
+               (post_sync {$this set_score [score]})
+               (help "Ending bonus score.")
+            )
             (unison_start script (script {$this unison_start}))
             (unison_end script (script {$this unison_end}))
             (unison_succeed script (script {$this unison_succeed}))
          )
-         
+
          ; current score
          (score 0)
-         
+
          ; Flag indicates we're currently playing the success
          (awarding TRUE)
-         
+
          (start
             {reset.trig trigger}
             {set [awarding] FALSE}
             {$this set_score 0}
             {start.trig trigger}
-            
+
             {if_else $edit_mode
                {do
                   ; show all the icons
@@ -35,30 +55,31 @@
                {$this setup_ending}
             }
          )
-         
-         (reset
-            {reset.trig trigger}
-         )
-         
+
+         (reset {reset.trig trigger})
+
          (success
             {set [awarding] TRUE}
             {success.trig trigger}
          )
-         
-         (player_success ($player)
+
+         (player_success
+            ($player)
             {{sprintf "%s.anim" {$player instrument}} animate}
          )
-         
+
          ; not using this anymore
-         (lose_bonus ($blame)
+         (lose_bonus
+            ($blame)
             ;{lose_bonus.trig trigger}
 
             ; play the blame animation
             ;{{$this find {sprintf "blame_%s.mnm" $blame}} animate}
          )
-         
+
          (coda_end
-            {script_task kTaskSeconds (delay 2)
+            {script_task kTaskSeconds
+               (delay 2)
                (script
                   {if {! [awarding]}
                      {failure.trig trigger}
@@ -66,46 +87,46 @@
                )
             }
          )
-         
+
          (unison_start
             {reset.trig trigger}
             {unison_start.trig trigger}
             {$this setup_unison}
          )
-         
-         (unison_end
-            {unison_end.trig trigger}
-         )
-         
+
+         (unison_end {unison_end.trig trigger})
+
          (unison_succeed
             ; unison_succeed.trig also sets all icon animations to 1 (white)
             ; this fixes a bug where icons wern't turning white on single note unison sections
             {unison_succeed.trig trigger}
          )
-         
-         (set_score ($in_val)
+
+         (set_score
+            ($in_val)
             ; only update the score if we're not playing the award animation   
-            {if {! [awarding]} 
+            {if {! [awarding]}
                {if {|| $edit_mode {!= $in_val [score]}}
                   {set [score] $in_val}
                   {score.txt set_text {sprintf "%s" {fmt_score [score]}}}
                }
             }
          )
-         
+
          (hide_icons
             {guitar.lbl set_showing FALSE}
             {bass.lbl set_showing FALSE}
             {vocals.lbl set_showing FALSE}
             {drum.lbl set_showing FALSE}
          )
-         
+
          ; Arrange the icons for the ending bonus
          (setup_ending
             {$this hide_icons} ; start out hiding all icons
             {if {&& {exists gamemode} {gamemode is_band_arrangement}}
-               {do ($bre_instrument_list {game get_instrument_track_order})
-                   ($vocalist_playing FALSE)
+               {do
+                  ($bre_instrument_list {game get_instrument_track_order})
+                  ($vocalist_playing FALSE)
 
                   ; bre_instrument_list will have all but the vocalist
                   ; if the vocalist is indeed playing, so we need to add
@@ -117,7 +138,7 @@
                         {set $vocalist_playing TRUE}
                      }
                   }
-                  
+
                   {if $vocalist_playing
                      ; insert the vocalist in the list depending on how many track
                      ; players there are
@@ -128,7 +149,7 @@
                         (3 {insert_elem $bre_instrument_list 2 vocals})
                      }
                   }
-                  
+
                   {if_else {<= {size $bre_instrument_list} 1}
                      {$this hide_icons}
                      {$this set_icon_order $bre_instrument_list}
@@ -136,12 +157,13 @@
                }
             }
          )
-         
+
          ; Arrange the icons for unison phrase
          (setup_unison
             {if {! $edit_mode}
                {$this hide_icons} ; start out hiding all icons
-               {do ($unison_instrument_list {game get_instrument_track_order})
+               {do
+                  ($unison_instrument_list {game get_instrument_track_order})
                   ; start the unison instrument list with the track order
 
                   ; find all enabled players, exclude the vocalist
@@ -151,32 +173,29 @@
                         {remove_elem $unison_instrument_list {$player instrument}}
                      }
                   }
-                  
+
                   {$this set_icon_order $unison_instrument_list}
                }
             }
          )
-         
-         
+
          ; set the order of the icons with the list supplied (guitar bass vocals)
-         (set_icon_order ($icon_order)
+         (set_icon_order
+            ($icon_order)
             {$this hide_icons}
-            {do ($icon) ($icon_width 1.5)
+            {do
+               ($icon)
+               ($icon_width 1.5)
                {foreach_int $i 0 {size $icon_order}
                   {set $icon {object {sprint {elem $icon_order $i} ".lbl"}}}
                   {$icon set_showing TRUE}
                   ; set up this guy's center
-                  {$icon set_local_pos 
-                     {- 
-                        {* $i $icon_width} 
-                        {/
-                           {* {- {size $icon_order} 1} $icon_width}
-                           2
-                        }
-                     }
-                     0 0
+                  {$icon set_local_pos
+                     {- {* $i $icon_width} {/ {* {- {size $icon_order} 1} $icon_width} 2}}
+                     0
+                     0
                   }
-               }    
+               }
             }
          )
       )

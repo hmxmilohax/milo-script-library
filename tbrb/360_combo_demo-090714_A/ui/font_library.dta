@@ -1,308 +1,181 @@
-#define FONT_DTA
-("ui/ui_fonts.dta")
-#define FONT_RESOURCE_DIRECTORY
-("resource/")
+#define FONT_DTA ("ui/ui_fonts.dta")
+#define FONT_RESOURCE_DIRECTORY ("resource/")
 (font_library
    (editor
       (export_labeldir
          object
          (class UILabelDir)
-         (help
-            "LabelDir to export"))
-      (export
-         script
-         (script
-            {$this
-               export
-               [export_labeldir]}))
-      (export_all
-         script
-         (script
-            {$this export_all}))
-      (export_anim
-         script
-         (script
-            {$this export_anim})))
-   (export_labeldir
-      "")
+         (help "LabelDir to export")
+      )
+      (export script (script {$this export [export_labeldir]}))
+      (export_all script (script {$this export_all}))
+      (export_anim script (script {$this export_anim}))
+   )
+   (export_labeldir "")
    (post_import
       ($textobj)
-      {if
-         $textobj
+      {if $textobj
          {do
-            ($basename
-               {basename
-                  {$textobj name}})
-            ($label_dir
-               {new UILabelDir})
-            {$label_dir
-               set_name
-               {sprint
-                  $basename
-                  ".dir"}
-               $this}
-            {$label_dir set text_obj $textobj}}})
+            ($basename {basename {$textobj name}})
+            ($label_dir {new UILabelDir})
+            {$label_dir set_name {sprint $basename ".dir"} $this}
+            {$label_dir set text_obj $textobj}
+         }
+      }
+   )
    (checkout_file
       ($filename)
-      {if_else
-         {exists milo}
+      {if_else {exists milo}
          {do
-            ($success
-               {milo p4_checkout $filename})
-            {if
-               {! $success}
-               {notify
-                  "Check out failed! "
-                  $filename}}
-            $success}
-         FALSE})
+            ($success {milo p4_checkout $filename})
+            {if {! $success}
+               {notify "Check out failed! " $filename}
+            }
+            $success
+         }
+         FALSE
+      }
+   )
    (export
       ($labeldir)
-      {if
-         {&&
-            $labeldir
-            {exists milo}}
+      {if {&& $labeldir {exists milo}}
          {do
-            ($file_data
-               {read_file FONT_DTA})
-            ($basename
-               {basename
-                  {$labeldir name}})
-            ($milo_filename
-               {sprint
-                  FONT_RESOURCE_DIRECTORY
-                  $basename
-                  ".milo"})
+            ($file_data {read_file FONT_DTA})
+            ($basename {basename {$labeldir name}})
+            ($milo_filename {sprint FONT_RESOURCE_DIRECTORY $basename ".milo"})
             ($found_in_dta FALSE)
             ($success TRUE)
-            {foreach
-               $entry
-               $file_data
-               {if
-                  {==
-                     {elem $entry 0}
-                     $basename}
+            {foreach $entry $file_data
+               {if {== {elem $entry 0} $basename}
                   {set $found_in_dta TRUE}
-                  {set
-                     $milo_filename
-                     {elem
-                        {find $entry resource_file}
-                        1}}}}
+                  {set $milo_filename {elem {find $entry resource_file} 1}}
+               }
+            }
             {tolower $milo_filename}
-            {if
-               {! $found_in_dta}
+            {if {! $found_in_dta}
                {do
-                  ($entry
-                     ())
-                  ($resource
-                     ())
+                  ($entry ())
+                  ($resource ())
                   {resize $entry 0}
                   {resize $resource 0}
                   {insert_elem $resource 0 resource_file}
                   {insert_elem $resource 1 $milo_filename}
-                  {insert_elem
-                     $entry
-                     0
-                     {symbol $basename}}
+                  {insert_elem $entry 0 {symbol $basename}}
                   {insert_elem $entry 1 $resource}
-                  {insert_elem
-                     $file_data
-                     {size $file_data}
-                     $entry}
-                  {if_else
-                     {$this checkout_file FONT_DTA}
+                  {insert_elem $file_data {size $file_data} $entry}
+                  {if_else {$this checkout_file FONT_DTA}
                      {write_file FONT_DTA $file_data}
-                     {set $success FALSE}}}}
-            {if
-               $success
+                     {set $success FALSE}
+                  }
+               }
+            }
+            {if $success
                {do
-                  ($obj
-                     "")
-                  ($font
-                     "")
-                  ($mat
-                     "")
-                  ($tex
-                     "")
-                  ($objlist
-                     ())
+                  ($obj "")
+                  ($font "")
+                  ($mat "")
+                  ($tex "")
+                  ($objlist ())
                   {resize $objlist 0}
-                  {set
-                     $obj
-                     {$labeldir get alt_focus_font}}
-                  {if
-                     $obj
+                  {set $obj {$labeldir get alt_focus_font}}
+                  {if $obj
                      {push_back $objlist $obj}
-                     {set
-                        $obj
-                        {$obj get mat}}
+                     {set $obj {$obj get mat}}
                      {push_back $objlist $obj}
-                     {set
-                        $obj
-                        {$obj get diffuse_tex}}
-                     {push_back $objlist $obj}}
-                  {set
-                     $obj
-                     {$labeldir get text_obj}}
-                  {if_else
-                     $obj
+                     {set $obj {$obj get diffuse_tex}}
                      {push_back $objlist $obj}
-                     {notify
-                        "There is no text_obj for "
-                        $labeldir
-                        ". Unable to export"}}
-                  {if
-                     $obj
-                     {set
-                        $font
-                        {$obj get font}}
-                     {if_else
-                        $font
+                  }
+                  {set $obj {$labeldir get text_obj}}
+                  {if_else $obj
+                     {push_back $objlist $obj}
+                     {notify "There is no text_obj for " $labeldir ". Unable to export"}
+                  }
+                  {if $obj
+                     {set $font {$obj get font}}
+                     {if_else $font
                         {push_back $objlist $font}
-                        {notify
-                           "There is no font for "
-                           $obj
-                           ". Unable to export"}}}
-                  {if
-                     $font
-                     {set
-                        $mat
-                        {$font get mat}}
-                     {if_else
-                        $mat
+                        {notify "There is no font for " $obj ". Unable to export"}
+                     }
+                  }
+                  {if $font
+                     {set $mat {$font get mat}}
+                     {if_else $mat
                         {push_back $objlist $mat}
-                        {notify
-                           "There is no material for "
-                           $font
-                           ". Unable to export"}}}
-                  {if
-                     $mat
-                     {set
-                        $tex
-                        {$mat get diffuse_tex}}
-                     {if_else
-                        $tex
+                        {notify "There is no material for " $font ". Unable to export"}
+                     }
+                  }
+                  {if $mat
+                     {set $tex {$mat get diffuse_tex}}
+                     {if_else $tex
                         {push_back $objlist $tex}
-                        {notify
-                           "There is no texture for "
-                           $mat
-                           ". Unable to export"}}}
-                  {set
-                     $obj
-                     {$labeldir get focus_anim}}
-                  {if
-                     $obj
-                     {$obj
-                        foreach_target
-                        "Text"
+                        {notify "There is no texture for " $mat ". Unable to export"}
+                     }
+                  }
+                  {set $obj {$labeldir get focus_anim}}
+                  {if $obj
+                     {$obj foreach_target "Text"
                         $txt_target
-                        {$obj
-                           replace_target
-                           $txt_target
-                           {$labeldir get text_obj}}}
-                     {$obj
-                        foreach_target
-                        "Mat"
+                        {$obj replace_target $txt_target {$labeldir get text_obj}}
+                     }
+                     {$obj foreach_target "Mat"
                         $mat_target
-                        {$obj
-                           replace_target
+                        {$obj replace_target
                            $mat_target
-                           {{{$labeldir get text_obj}
-                                 get
-                                 font}
-                              get
-                              mat}}}
-                     {push_back $objlist $obj}}
-                  {set
-                     $obj
-                     {$labeldir get pulse_anim}}
-                  {if
-                     $obj
-                     {$obj
-                        foreach_target
-                        "Text"
+                           {{{$labeldir get text_obj} get font} get mat}
+                        }
+                     }
+                     {push_back $objlist $obj}
+                  }
+                  {set $obj {$labeldir get pulse_anim}}
+                  {if $obj
+                     {$obj foreach_target "Text"
                         $txt_target
-                        {$obj
-                           replace_target
-                           $txt_target
-                           {$labeldir get text_obj}}}
-                     {$obj
-                        foreach_target
-                        "Mat"
+                        {$obj replace_target $txt_target {$labeldir get text_obj}}
+                     }
+                     {$obj foreach_target "Mat"
                         $mat_target
-                        {$obj
-                           replace_target
+                        {$obj replace_target
                            $mat_target
-                           {{{$labeldir get text_obj}
-                                 get
-                                 font}
-                              get
-                              mat}}}
-                     {push_back $objlist $obj}}
-                  {foreach
-                     $elem
-                     $objlist
-                     {if
-                        $elem
-                        {$elem
-                           set_name
-                           {$elem name}
-                           $labeldir}}}
+                           {{{$labeldir get text_obj} get font} get mat}
+                        }
+                     }
+                     {push_back $objlist $obj}
+                  }
+                  {foreach $elem $objlist
+                     {if $elem
+                        {$elem set_name {$elem name} $labeldir}
+                     }
+                  }
                   {$labeldir sync_objects}
-                  {while
-                     {>
-                        {$labeldir
-                           size
-                           (subdirs)}
-                        0}
-                     {$labeldir
-                        remove
-                        (subdirs 0)}}
-                  {foreach
-                     $subdir
-                     {$this get_array subdirs}
-                     {$labeldir
-                        insert
-                        (subdirs 0)
-                        $subdir}}
-                  {$labeldir
-                     perforce_save
-                     {sprint
-                        "ui/"
-                        $milo_filename}
-                     TRUE}
-                  {while
-                     {>
-                        {$labeldir
-                           size
-                           (subdirs)}
-                        0}
-                     {$labeldir
-                        remove
-                        (subdirs 0)}}
-                  {foreach
-                     $elem
-                     $objlist
-                     {if
-                        $elem
-                        {$elem
-                           set_name
-                           {$elem name}
-                           $this}}}
-                  {$this sync_objects}}}}})
-   (export_all
-      {$this
-         iterate
-         UILabelDir
-         $labelDir
-         {$this export $labelDir}})
+                  {while {> {$labeldir size (subdirs)} 0}
+                     {$labeldir remove (subdirs 0)}
+                  }
+                  {foreach $subdir {$this get_array subdirs}
+                     {$labeldir insert (subdirs 0) $subdir}
+                  }
+                  {$labeldir perforce_save {sprint "ui/" $milo_filename} TRUE}
+                  {while {> {$labeldir size (subdirs)} 0}
+                     {$labeldir remove (subdirs 0)}
+                  }
+                  {foreach $elem $objlist
+                     {if $elem
+                        {$elem set_name {$elem name} $this}
+                     }
+                  }
+                  {$this sync_objects}
+               }
+            }
+         }
+      }
+   )
+   (export_all {$this iterate UILabelDir $labelDir {$this export $labelDir}})
    (export_anim
-      {$this
-         iterate
+      {$this iterate
          UILabelDir
          $labelDir
-         {if
-            {'||'
-               {$labelDir get focus_anim}
-               {$labelDir get pulse_anim}}
-            {$this export $labelDir}}}))
+         {if {'||' {$labelDir get focus_anim} {$labelDir get pulse_anim}}
+            {$this export $labelDir}
+         }
+      }
+   )
+)

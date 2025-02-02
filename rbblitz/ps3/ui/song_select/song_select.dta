@@ -1,8 +1,6 @@
-{new
-   SongSelectPanel
+{new SongSelectPanel
    song_select_panel
-   (file
-      "song_select.milo")
+   (file "song_select.milo")
    (focus songs.lst)
    (mini_lb_mode kLeaderboardMode_Friend)
    (should_skip_intro FALSE)
@@ -10,514 +8,434 @@
    (held_buttons)
    (enter
       {$this set mini_lb_mode kLeaderboardMode_Friend}
-      {if
-         {!
-            [should_skip_intro]}
+      {if {! [should_skip_intro]}
          {do
-            ($current_song_id
-               {$this get_current_song_id})
+            ($current_song_id {$this get_current_song_id})
             {$this sort_song_list}
-            {songs.lst
-               set_provider
-               {$this get_songs_provider}}
+            {songs.lst set_provider {$this get_songs_provider}}
             {saveload_mgr autosave}
-            {if_else
-               {== kSongID_Invalid $current_song_id}
+            {if_else {== kSongID_Invalid $current_song_id}
                {songs.lst set_selected 0}
                {do
-                  ($last_song_pos
-                     {{$this get_songs_provider}
-                        get_position
-                        $current_song_id})
-                  {songs.lst set_selected $last_song_pos}}}
-            {mini_leaders.lst
-               set_provider
-               {$this get_mini_leaderboard_provider}}
+                  ($last_song_pos {{$this get_songs_provider} get_position $current_song_id})
+                  {songs.lst set_selected $last_song_pos}
+               }
+            }
+            {mini_leaders.lst set_provider {$this get_mini_leaderboard_provider}}
             {shortcuts.grp set_showing FALSE}
             {$this set_focus songs.lst}
-            {$this update_current_song}}})
-   (get_current_album_tex
-      {{album_art find album.mat}
-         get
-         diffuse_tex})
+            {$this update_current_song}
+         }
+      }
+   )
+   (get_current_album_tex {{album_art find album.mat} get diffuse_tex})
    (show_shortcuts
       {shortcuts.grp set_showing TRUE}
       {$this set_focus shortcuts.lst}
-      {$this
-         set_shortcut_data
-         {{$this get_songs_provider}
-            get_shortcut_array}}
+      {$this set_shortcut_data {{$this get_songs_provider} get_shortcut_array}}
       {$this apply_shortcut_provider shortcuts.lst}
-      {if_else
-         {$this
-            is_play_random_song
-            {songs.lst selected_pos}}
+      {if_else {$this is_play_random_song {songs.lst selected_pos}}
          {shortcuts.lst set_selected 0}
-         {shortcuts.lst
-            set_selected
-            {{$this get_songs_provider}
-               pos_to_shortcut
-               {songs.lst selected_pos}}}})
+         {shortcuts.lst set_selected
+            {{$this get_songs_provider} pos_to_shortcut {songs.lst selected_pos}}
+         }
+      }
+   )
    (sort_song_list
       {do
-         ($current_sort
-            {$this get_current_sort})
+         ($current_sort {$this get_current_sort})
          {$this sort_list_by_type $current_sort}
-         {{$this get_songs_provider}
-            build_list
-            {find $syscfg song_sort groupings $current_sort}}
+         {{$this get_songs_provider} build_list
+            {find $syscfg song_sort groupings $current_sort}
+         }
          {songs.lst refresh}
          {sorting.lbl set_token_fmt song_sort_str $current_sort}
-         {$this update_current_song}})
+         {$this update_current_song}
+      }
+   )
    (on_leaderboard_failed
       {if
          {&&
-            {!
-               {rock_central is_login_blocked}}
-            {user_mgr is_participating_user_online}}
-         {leaderboard_mode.ep set display_state unavailable}})
+            {! {rock_central is_login_blocked}}
+            {user_mgr is_participating_user_online}
+         }
+         {leaderboard_mode.ep set display_state unavailable}
+      }
+   )
    (on_mini_leaderboards_updated
       ($lb_mode)
       {$this set mini_lb_mode $lb_mode}
       {mini_leaders.lst refresh}
-      {if_else
-         {>
-            {mini_leaders.lst num_data}
-            0}
+      {if_else {> {mini_leaders.lst num_data} 0}
          {do
             {leaderboard_mode.ep set display_state visible}
-            {{$this get_mini_leaderboard}
-               set_highlight_by_online_id
+            {{$this get_mini_leaderboard} set_highlight_by_online_id
                mini_leaders.lst
-               song_select_panel}
-            {if_else
-               {== $lb_mode kLeaderboardMode_Friend}
+               song_select_panel
+            }
+            {if_else {== $lb_mode kLeaderboardMode_Friend}
                {lb_title.lbl set text_token friend_rank}
-               {lb_title.lbl set text_token global_rank}}}
-         {leaderboard_mode.ep set display_state empty}})
+               {lb_title.lbl set text_token global_rank}
+            }
+         }
+         {leaderboard_mode.ep set display_state empty}
+      }
+   )
    (on_return_from_song_leaderboard
       {do
-         ($songs_provider
-            {$this get_songs_provider})
-         ($selected_song
-            {$songs_provider
-               get_metadata
-               {songs.lst selected_pos}})
-         {if
-            $selected_song
-            {$this
-               start_preview_audio
-               {$selected_song short_name}}}})
+         ($songs_provider {$this get_songs_provider})
+         ($selected_song {$songs_provider get_metadata {songs.lst selected_pos}})
+         {if $selected_song
+            {$this start_preview_audio {$selected_song short_name}}
+         }
+      }
+   )
    (update_current_song
       {do
-         ($songs_provider
-            {$this get_songs_provider})
-         ($selected_song
-            {$songs_provider
-               get_metadata
-               {songs.lst selected_pos}})
-         {{$this get_mini_leaderboard}
-            cancel_current_request}
-         {if_else
-            $selected_song
+         ($songs_provider {$this get_songs_provider})
+         ($selected_song {$songs_provider get_metadata {songs.lst selected_pos}})
+         {{$this get_mini_leaderboard} cancel_current_request}
+         {if_else $selected_song
             {do
-               ($tier
-                  {song_mgr
-                     rank_tier_for_song
-                     {$selected_song id}
-                     band})
-               ($idd
-                  "diff_meter_rnd")
-               ($content_name
-                  {song_mgr
-                     content_name
-                     {$selected_song id}})
+               ($tier {song_mgr rank_tier_for_song {$selected_song id} band})
+               ($idd "diff_meter_rnd")
+               ($content_name {song_mgr content_name {$selected_song id}})
                {diff_meter_rnd set_showing TRUE}
                {$this set_current_song $selected_song}
-               {$this
-                  update_album_art
-                  {$selected_song id}}
+               {$this update_album_art {$selected_song id}}
                {artist.lbl set_artist_name_from_metadata $selected_song}
                {album.lbl set_album_name $selected_song}
-               {genre_year.lbl
-                  set_token_fmt
+               {genre_year.lbl set_token_fmt
                   genre_year
                   {$selected_song genre_loc}
-                  {$selected_song year_released}}
+                  {$selected_song year_released}
+               }
                {$this set_inst_difficulty $idd $tier}
-               {if_else
-                  {'||'
-                     {content_mgr is_mounted $content_name}
-                     {$selected_song is_on_disc}}
-                  {$this
-                     start_preview_audio
-                     {song_mgr
-                        get_short_name_from_song_id
-                        {$selected_song id}}}
+               {if_else {'||' {content_mgr is_mounted $content_name} {$selected_song is_on_disc}}
+                  {$this start_preview_audio
+                     {song_mgr get_short_name_from_song_id {$selected_song id}}
+                  }
                   {do
                      {song_preview stop}
-                     {shell_music_panel set_mute_state TRUE}}}
-               {if_else
-                  {user_mgr is_participating_user_online}
+                     {shell_music_panel set_mute_state TRUE}
+                  }
+               }
+               {if_else {user_mgr is_participating_user_online}
                   {do
                      {leaderboard_mode.ep set display_state loading}
                      {mini_leaders.lst refresh}
-                     {InlineHelp.ihp set_action_token kAction_ShellOption inline_help_leaderboards}}
+                     {InlineHelp.ihp set_action_token
+                        kAction_ShellOption
+                        inline_help_leaderboards
+                     }
+                  }
                   {do
                      {leaderboard_mode.ep set display_state hidden}
-                     {InlineHelp.ihp clear_action_token kAction_ShellOption}}}}
+                     {InlineHelp.ihp clear_action_token kAction_ShellOption}
+                  }
+               }
+            }
             {do
-               ($mesh
-                  {album_art find album.mesh})
+               ($mesh {album_art find album.mesh})
                {diff_meter_rnd set_showing FALSE}
                {$mesh set showing FALSE}
                {$this clear_current_song}
                {artist.lbl set_token_fmt play_random_song}
-               {album.lbl
-                  set_token_fmt
-                  ""}
-               {genre_year.lbl
-                  set_token_fmt
-                  ""}
+               {album.lbl set_token_fmt ""}
+               {genre_year.lbl set_token_fmt ""}
                {$this stop_preview_audio}
                {leaderboard_mode.ep set display_state hidden}
-               {InlineHelp.ihp clear_action_token kAction_ShellOption}}}})
-   (content_read_failure
-      {$this stop_preview_audio})
+               {InlineHelp.ihp clear_action_token kAction_ShellOption}
+            }
+         }
+      }
+   )
+   (content_read_failure {$this stop_preview_audio})
    (mount_current_content
       ($song_id)
       #ifndef HX_PS3
       {do
-         ($content_name
-            {song_mgr content_name $song_id})
-         {if
-            {!=
-               $content_name
-               ""}
-            {content_mgr mount_content $content_name}}}
-      #endif)
+         ($content_name {song_mgr content_name $song_id})
+         {if {!= $content_name ""}
+            {content_mgr mount_content $content_name}
+         }
+      }
+      #endif
+   )
    (mounting_finished
       {do
-         ($songs_provider
-            {$this get_songs_provider})
-         ($selected_song
-            {$songs_provider
-               get_metadata
-               {songs.lst selected_pos}})
-         {if
-            $selected_song
-            {$this
-               update_album_art
-               {$selected_song id}}
+         ($songs_provider {$this get_songs_provider})
+         ($selected_song {$songs_provider get_metadata {songs.lst selected_pos}})
+         {if $selected_song
+            {$this update_album_art {$selected_song id}}
             {artist.lbl set_artist_name_from_metadata $selected_song}
             {album.lbl set_album_name $selected_song}
-            {genre_year.lbl
-               set_token_fmt
+            {genre_year.lbl set_token_fmt
                genre_year
                {$selected_song genre_loc}
-               {$selected_song year_released}}
-            {$this
-               start_preview_audio
-               {$selected_song short_name}}}})
+               {$selected_song year_released}
+            }
+            {$this start_preview_audio {$selected_song short_name}}
+         }
+      }
+   )
    (mounting_failed
       ($content_name)
       {do
-         ($songs_provider
-            {$this get_songs_provider})
-         ($selected_song
-            {$songs_provider
-               get_metadata
-               {songs.lst selected_pos}})
-         ($selected_content_name
-            {song_mgr
-               content_name
-               {$selected_song id}})
-         {if
-            {== $content_name $selected_content_name}
-            {$this stop_preview_audio}}})
+         ($songs_provider {$this get_songs_provider})
+         ($selected_song {$songs_provider get_metadata {songs.lst selected_pos}})
+         ($selected_content_name {song_mgr content_name {$selected_song id}})
+         {if {== $content_name $selected_content_name}
+            {$this stop_preview_audio}
+         }
+      }
+   )
    (update_album_art
       ($song_id)
       {do
-         ($content_name
-            {song_mgr content_name $song_id})
-         {if_else
-            {'||'
-               {==
-                  $content_name
-                  ""}
-               {content_mgr is_mounted $content_name}}
+         ($content_name {song_mgr content_name $song_id})
+         {if_else {'||' {== $content_name ""} {content_mgr is_mounted $content_name}}
             {do
-               ($pic
-                  {album_art find album_art.pic})
-               ($mesh
-                  {album_art find album.mesh})
-               {$pic
-                  set
-                  tex_file
-                  {song_mgr get_album_art_path $song_id}}
-               {$mesh set showing TRUE}}
+               ($pic {album_art find album_art.pic})
+               ($mesh {album_art find album.mesh})
+               {$pic set tex_file {song_mgr get_album_art_path $song_id}}
+               {$mesh set showing TRUE}
+            }
             {do
-               ($mesh
-                  {album_art find album.mesh})
-               {$mesh set showing FALSE}}}})
+               ($mesh {album_art find album.mesh})
+               {$mesh set showing FALSE}
+            }
+         }
+      }
+   )
    (stop_preview_audio
       {song_preview stop}
-      {shell_music_panel set_mute_state FALSE})
+      {shell_music_panel set_mute_state FALSE}
+   )
    (start_preview_audio
       ($name)
       {song_preview start $name}
-      {shell_music_panel set_mute_state TRUE})
+      {shell_music_panel set_mute_state TRUE}
+   )
    (SCROLL_MSG
-      {if
-         {==
-            {$this focus_name}
-            songs.lst}
+      {if {== {$this focus_name} songs.lst}
          {$this update_current_song}
-         {$this set mini_lb_mode kLeaderboardMode_Friend}})
+         {$this set mini_lb_mode kLeaderboardMode_Friend}
+      }
+   )
    (SELECT_MSG
-      {if_else
-         {== $component songs.lst}
-         {if_else
-            {trial_mgr get_trial_mode}
+      {if_else {== $component songs.lst}
+         {if_else {trial_mgr get_trial_mode}
             {do
-               {if_else
-                  {$this
-                     is_play_random_song
-                     {songs.lst selected_pos}}
-                  {{ui current_screen}
-                     show_upsell}
+               {if_else {$this is_play_random_song {songs.lst selected_pos}}
+                  {{ui current_screen} show_upsell}
                   {do
                      ($meta_data
-                        {{$this get_songs_provider}
-                           get_metadata
-                           {songs.lst selected_pos}})
-                     {if_else
-                        {!
-                           {$meta_data trial_song}}
-                        {{ui current_screen}
-                           show_upsell}
+                        {{$this get_songs_provider} get_metadata {songs.lst selected_pos}}
+                     )
+                     {if_else {! {$meta_data trial_song}}
+                        {{ui current_screen} show_upsell}
                         {do
-                           {loading_screen
-                              set_song
-                              {{$this get_songs_provider}
-                                 get_metadata
-                                 {songs.lst selected_pos}}}
-                           {$this
-                              mount_current_content
-                              {{{$this get_songs_provider}
-                                    get_metadata
-                                    {songs.lst selected_pos}}
-                                 id}}
-                           {{ui current_screen}
-                              song_chosen
-                              $user}}}}}}
+                           {loading_screen set_song
+                              {{$this get_songs_provider} get_metadata {songs.lst selected_pos}}
+                           }
+                           {$this mount_current_content
+                              {{{$this get_songs_provider} get_metadata {songs.lst selected_pos}} id}
+                           }
+                           {{ui current_screen} song_chosen $user}
+                        }
+                     }
+                  }
+               }
+            }
             {do
-               {if_else
-                  {$this
-                     is_play_random_song
-                     {songs.lst selected_pos}}
+               {if_else {$this is_play_random_song {songs.lst selected_pos}}
                   {do
-                     ($song
-                        {$this play_random_song})
+                     ($song {$this play_random_song})
                      {loading_screen set_song $song}
                      #ifndef HX_PS3
-                     {$this
-                        mount_current_content
-                        {$song id}}
-                     #endif}
+                     {$this mount_current_content {$song id}}
+                     #endif
+                  }
                   {do
-                     {loading_screen
-                        set_song
-                        {{$this get_songs_provider}
-                           get_metadata
-                           {songs.lst selected_pos}}}
-                     {$this
-                        mount_current_content
-                        {{{$this get_songs_provider}
-                              get_metadata
-                              {songs.lst selected_pos}}
-                           id}}}}
-               {{ui current_screen}
-                  song_chosen
-                  $user}}}
+                     {loading_screen set_song
+                        {{$this get_songs_provider} get_metadata {songs.lst selected_pos}}
+                     }
+                     {$this mount_current_content
+                        {{{$this get_songs_provider} get_metadata {songs.lst selected_pos}} id}
+                     }
+                  }
+               }
+               {{ui current_screen} song_chosen $user}
+            }
+         }
          {do
-            {songs.lst
-               set_selected
-               {{$this get_songs_provider}
-                  shortcut_to_pos
-                  {shortcuts.lst selected_sym}}}
+            {songs.lst set_selected
+               {{$this get_songs_provider} shortcut_to_pos {shortcuts.lst selected_sym}}
+            }
             {shortcuts.grp set_showing FALSE}
             {$this set_focus songs.lst}
-            {$this update_current_song}}})
+            {$this update_current_song}
+         }
+      }
+   )
    (BUTTON_DOWN_MSG
-      {if_else
-         {{song_select_panel find shortcuts.grp}
-            showing}
-         {switch
-            $action
+      {if_else {{song_select_panel find shortcuts.grp} showing}
+         {switch $action
             (kAction_Cancel
                {do
-                  {song_select_panel
-                     set_focus
-                     {song_select_panel find songs.lst}}
-                  {{song_select_panel find shortcuts.grp}
-                     set_showing
-                     FALSE}})
-            kDataUnhandled}
-         {switch
-            $action
-            (kAction_Cancel
-               {ui goto_screen splash_screen})
+                  {song_select_panel set_focus {song_select_panel find songs.lst}}
+                  {{song_select_panel find shortcuts.grp} set_showing FALSE}
+               }
+            )
+            kDataUnhandled
+         }
+         {switch $action
+            (kAction_Cancel {ui goto_screen splash_screen})
             (kAction_ShellOption
                {do
-                  ($cur_song
-                     {$this get_current_song})
-                  {if
-                     {&&
-                        {user_mgr is_participating_user_online}
-                        $cur_song}
+                  ($cur_song {$this get_current_song})
+                  {if {&& {user_mgr is_participating_user_online} $cur_song}
                      {$this stop_preview_audio}
-                     {song_leaderboard_panel
-                        init_leaderboard_metadata
+                     {song_leaderboard_panel init_leaderboard_metadata
                         {$this get_current_album_tex}
                         {$cur_song title}
                         {$cur_song artist}
                         {$cur_song genre_token}
                         {$cur_song year_released}
-                        {$cur_song is_cover}}
-                     {song_leaderboard_panel
-                        set_leaderboard_song
-                        {$cur_song id}}
-                     {song_leaderboard_panel
-                        commit_leaderboard_transition
-                        [mini_lb_mode]}
-                     {song_leaderboard_panel go_to_leaderboard $this my_songs}}})
+                        {$cur_song is_cover}
+                     }
+                     {song_leaderboard_panel set_leaderboard_song {$cur_song id}}
+                     {song_leaderboard_panel commit_leaderboard_transition [mini_lb_mode]}
+                     {song_leaderboard_panel go_to_leaderboard $this my_songs}
+                  }
+               }
+            )
             (kAction_PageDown
                {if
                   {'||'
                      {rock_central is_login_blocked}
-                     {user_mgr is_participating_user_online}}
-                  {data_mine_mgr
-                     add_event
-                     enter_store
-                     (("from_screen"
-                           "song_select"))}
-                  {transition_to
-                     {store_menu_screen get which_store_screen}}
-                  {{background_panel find arrow_rt.flow}
-                     activate}})
+                     {user_mgr is_participating_user_online}
+                  }
+                  {data_mine_mgr add_event enter_store (("from_screen" "song_select"))}
+                  {transition_to {store_menu_screen get which_store_screen}}
+                  {{background_panel find arrow_rt.flow} activate}
+               }
+            )
             (kAction_PageUp
                {if
                   {'||'
                      {rock_central is_login_blocked}
-                     {user_mgr is_participating_user_online}}
+                     {user_mgr is_participating_user_online}
+                  }
                   {transition_to recommendation_screen}
-                  {{background_panel find arrow_lt.flow}
-                     activate}})
+                  {{background_panel find arrow_lt.flow} activate}
+               }
+            )
             (kAction_ViewModify
                {do
-                  ($before_sort_song_id
-                     {$this get_current_song_id})
+                  ($before_sort_song_id {$this get_current_song_id})
                   {$this sort_list_cycle}
-                  {data_mine_mgr
-                     add_event
+                  {data_mine_mgr add_event
                      change_sort_method
-                     (("which_sort_type"
-                           {$this get_current_sort}))}
-                  {{$this get_songs_provider}
-                     build_list
-                     {find
-                        $syscfg
-                        song_sort
-                        groupings
-                        {$this get_current_sort}}}
+                     (("which_sort_type" {$this get_current_sort}))
+                  }
+                  {{$this get_songs_provider} build_list
+                     {find $syscfg song_sort groupings {$this get_current_sort}}
+                  }
                   {songs.lst refresh}
-                  {sorting.lbl
-                     set_token_fmt
-                     song_sort_str
-                     {$this get_current_sort}}
-                  {if_else
-                     {== kSongID_Invalid $before_sort_song_id}
+                  {sorting.lbl set_token_fmt song_sort_str {$this get_current_sort}}
+                  {if_else {== kSongID_Invalid $before_sort_song_id}
                      {songs.lst set_selected 0}
                      {do
                         ($last_song_pos
-                           {{$this get_songs_provider}
-                              get_position
-                              $before_sort_song_id})
-                        {songs.lst set_selected $last_song_pos}}}})
+                           {{$this get_songs_provider} get_position $before_sort_song_id}
+                        )
+                        {songs.lst set_selected $last_song_pos}
+                     }
+                  }
+               }
+            )
             (kAction_Start
                {options_screen set back_screen song_select_screen}
-               {ui goto_screen options_screen})
-            (kAction_Option
-               {$this show_shortcuts})
-            kDataUnhandled}})}
-{new
-   UIScreen
+               {ui goto_screen options_screen}
+            )
+            (kAction_Option {$this show_shortcuts})
+            kDataUnhandled
+         }
+      }
+   )
+}
+{new UIScreen
    song_select_screen
-   (panels shell_music_panel background_panel menu_cache_panel song_select_panel song_leaderboard_panel upsell_panel error_popup_panel)
+   (panels
+      shell_music_panel
+      background_panel
+      menu_cache_panel
+      song_select_panel
+      song_leaderboard_panel
+      upsell_panel
+      error_popup_panel
+   )
    (focus song_select_panel)
    (header_index 1)
    SCREEN_CONTENT_REFRESH
    (enter
-      {background_panel
-         jump_to_header
-         [header_index]}
-      {background_panel
-         set_offline_mode_headers
-         {!
-            {user_mgr is_participating_user_online}}}
+      {background_panel jump_to_header [header_index]}
+      {background_panel set_offline_mode_headers
+         {! {user_mgr is_participating_user_online}}
+      }
       {song_select_panel set_showing TRUE}
-      {{background_panel find MainMenu.grp}
-         set_showing
-         TRUE}
+      {{background_panel find MainMenu.grp} set_showing TRUE}
       {song_leaderboard_panel set_showing FALSE}
-      {{background_panel find Leaderboards.grp}
-         set_showing
-         FALSE}
+      {{background_panel find Leaderboards.grp} set_showing FALSE}
       {$this enter_choose_song_state}
       {shell_sfx set_interceptor $this}
-      {update_participating_user_presence CONTEXT_PRESENCE_RP_EXPLORING_MENU})
+      {update_participating_user_presence CONTEXT_PRESENCE_RP_EXPLORING_MENU}
+   )
    (exit
       {song_select_panel stop_preview_audio}
       {shell_sfx clear_interceptor}
-      {{background_panel find MainMenu.grp}
-         set_showing
-         TRUE}
-      {{background_panel find Leaderboards.grp}
-         set_showing
-         FALSE})
+      {{background_panel find MainMenu.grp} set_showing TRUE}
+      {{background_panel find Leaderboards.grp} set_showing FALSE}
+   )
    (on_select_msg
-      {if_else
-         {==
-            {$this focus_panel}
-            difficulty_select_panel}
+      {if_else {== {$this focus_panel} difficulty_select_panel}
          TRUE
-         kDataUnhandled})
-   (enter_choose_song_state
-      {$this set_focus_panel song_select_panel})
-   (fake_powerups
-      (none none none))
+         kDataUnhandled
+      }
+   )
+   (enter_choose_song_state {$this set_focus_panel song_select_panel})
+   (fake_powerups (none none none))
    (song_chosen
       ($user)
       {if_else
          {'||'
             {rock_central is_login_blocked}
-            {user_mgr is_participating_user_online}}
+            {user_mgr is_participating_user_online}
+         }
          {ui goto_screen powerup_select_screen}
          {do
-            {loading_screen
-               set_equipped_powerups
-               {$this fake_powerups}}
+            {loading_screen set_equipped_powerups {$this fake_powerups}}
             {$user set_difficulty kDifficultyExpert}
             {shell_sfx play_splash}
             {loading_screen set wait_for_button_press TRUE}
-            {ui goto_screen loading_screen}}})
+            {ui goto_screen loading_screen}
+         }
+      }
+   )
    (show_upsell
-      {upsell_panel set_options upsell_title_songlist upsell_text_songlist offer_trial_upgrade}
+      {upsell_panel set_options
+         upsell_title_songlist
+         upsell_text_songlist
+         offer_trial_upgrade
+      }
       {upsell_panel set_showing TRUE}
-      {{upsell_panel find enter.flow}
-         activate}
-      {$this set_focus_panel upsell_panel})
+      {{upsell_panel find enter.flow} activate}
+      {$this set_focus_panel upsell_panel}
+   )
    (hide_upsell
       {upsell_panel set_showing FALSE}
-      {$this set_focus_panel song_select_panel})}
+      {$this set_focus_panel song_select_panel}
+   )
+}

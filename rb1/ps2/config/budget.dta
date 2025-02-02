@@ -5,12 +5,10 @@
 
 ; "worst case" songs used for track budget
 (songs
-  
    #include ../songs/songs_debug.dta
 )
 
 (tests
-
    ("16th note runs"
       (song runs_16s)
       (players drum bass guitar vocals)
@@ -25,9 +23,10 @@
       (start 7680)
       (end 11520)
       (worst TRUE)
-      
+
       (init
-         {script_task kTaskBeats (delay 3)
+         {script_task kTaskBeats
+            (delay 3)
             (script
                ; give everyone juice
                {beatmatch foreach_active_player $p
@@ -35,7 +34,8 @@
                }
             )
          }
-         {script_task kTaskBeats (delay 12)
+         {script_task kTaskBeats
+            (delay 12)
             (script
                ; Deploy
                {beatmatch foreach_active_player $p
@@ -45,13 +45,13 @@
          }
       )
    )
-   
-    ("Sustains"
-       (song sustains)
-       (players drum bass guitar vocals)
-       (start 7680)
-       (end 11520)
-       (worst TRUE)
+
+   ("Sustains"
+      (song sustains)
+      (players drum bass guitar vocals)
+      (start 7680)
+      (end 11520)
+      (worst TRUE)
    )
 )
 
@@ -59,28 +59,21 @@
 (log_file {sprint "track_budget_log.txt"})
 
 ; so we hear about downbeats
-(beatmatcher
-   (callbacks
-      (downbeat {handle (track_budget downbeat)})
-   )
-)
+(beatmatcher (callbacks (downbeat {handle (track_budget downbeat)})))
 
 (ui
    (init
       #include ../ui/init.dta
-   
-      {new BudgetScreen track_budget
+
+      {new BudgetScreen
+         track_budget
          (panels game coop_track_panel)
          (test_panel coop_track_panel)
-         (frame_inc 0.016)  ; frame increment, in seconds
-                  
-         (enter
-            {game add_sink $this downbeat}
-         )
-         
-         (exit
-            {game remove_sink $this}
-         )
+         (frame_inc 0.016) ; frame increment, in seconds
+
+         (enter {game add_sink $this downbeat})
+
+         (exit {game remove_sink $this})
 
          (downbeat
             {beatmatch foreach_active_player $player
@@ -93,53 +86,47 @@
             }
          )
       }
-      
+
       ; stops game after test, but keeps game panel loaded so we can calculate
       ; track panel's memory usage
-      {new UIScreen stop_budget
-         (panels game)       
+      {new UIScreen
+         stop_budget
+         (panels game)
          (memory FALSE) ; flag to let us know when physical memory is accurate
-         
-         (enter
-            {set [memory] FALSE}
-         )                 
-         
-         (TRANSITION_COMPLETE_MSG
-            {set [memory] TRUE}
-         )
-         
+
+         (enter {set [memory] FALSE})
+
+         (TRANSITION_COMPLETE_MSG {set [memory] TRUE})
+
          (poll
             {if [memory]
                {set [memory] FALSE}
                {track_budget end_test}
                {ui goto_screen start_budget}
             }
-         ) 
+         )
       }
-               
+
       ; starts game for each test
-      {new UIScreen start_budget
+      {new UIScreen
+         start_budget
          (panels)
          (TRANSITION_COMPLETE_MSG
             {track_budget next_test}
             {ui goto_screen track_budget}
          )
       }
-      
+
       {set $fake_controllers TRUE}
       {set $skip_intro TRUE}
-                 
+
       ; make it so
       {ui goto_screen start_budget}
    )
 )
 
-(synth
-   (mute TRUE)
-)
+(synth (mute TRUE))
 
-(rnd
-   (force_hd TRUE)
-)
+(rnd (force_hd TRUE))
 
 #merge band.dta

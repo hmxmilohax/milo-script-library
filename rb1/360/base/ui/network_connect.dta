@@ -1,163 +1,148 @@
-{func
-   goto_after_network_connect
+{func goto_after_network_connect
    ($dest $strict)
    #ifdef HX_PS3
    {band_ui_sink set_block_mode kBlockSessionBusy}
-   {if_else
-      {&&
-         {!
-            {platform_mgr is_ethernet_cable_connected}}
-         {! $strict}}
+   {if_else {&& {! {platform_mgr is_ethernet_cable_connected}} {! $strict}}
       {finish_network_goto $dest FALSE}
-      {if_else
-         {platform_mgr has_online_privilege -1}
+      {if_else {platform_mgr has_online_privilege -1}
          {do
             {network_start_panel set destination $dest}
             {network_start_panel set strict $strict}
-            {ui push_screen network_start_screen}}
+            {ui push_screen network_start_screen}
+         }
          {do
             {no_online_privilege_screen set destination $dest}
             {no_online_privilege_screen set strict $strict}
-            {ui push_screen no_online_privilege_screen}}}}
+            {ui push_screen no_online_privilege_screen}
+         }
+      }
+   }
    #else
    {ui goto_screen $dest}
-   #endif}
-{func
-   cancel_network_goto
+   #endif
+}
+{func cancel_network_goto
    {band_ui_sink set_block_mode kBlockNone}
    {gamemode set_mode init}
    {session clear}
-   {ui pop_screen}}
-{func
-   finish_network_goto
+   {ui pop_screen}
+}
+{func finish_network_goto
    ($destination $pop)
    {band_ui_sink set_block_mode kBlockNone}
-   {if_else
-      $pop
+   {if_else $pop
       {ui pop_screen $destination}
-      {ui goto_screen $destination}}}
-{new
-   UIPanel
+      {ui goto_screen $destination}
+   }
+}
+{new UIPanel
    network_start_panel
    (destination '')
    (strict FALSE)
    (TRANSITION_COMPLETE_MSG
       {platform_mgr add_sink $this}
-      {platform_mgr run_net_start_utility})
+      {platform_mgr run_net_start_utility}
+   )
    (net_start_utility_finished
       ($connected)
       {platform_mgr remove_sink $this}
-      {if_else
-         $connected
-         {if_else
-            {&&
-               [strict]
-               {!
-                  {server is_connected}}}
+      {if_else $connected
+         {if_else {&& [strict] {! {server is_connected}}}
             {do
-               {server_connect_panel
-                  set
-                  destination
-                  [destination]}
-               {ui goto_screen server_connect_screen}}
-            {finish_network_goto
-               [destination]
-               TRUE}}
-         {if_else
-            [strict]
+               {server_connect_panel set destination [destination]}
+               {ui goto_screen server_connect_screen}
+            }
+            {finish_network_goto [destination] TRUE}
+         }
+         {if_else [strict]
             {cancel_network_goto}
             {do
-               {network_warning_screen
-                  set
-                  destination
-                  [destination]}
-               {ui goto_screen network_warning_screen}}}})}
-{new
-   UIScreen
+               {network_warning_screen set destination [destination]}
+               {ui goto_screen network_warning_screen}
+            }
+         }
+      }
+   )
+}
+{new UIScreen
    network_start_screen
    (panels network_start_panel)
-   (focus network_start_panel)}
-{new
-   UIPanel
+   (focus network_start_panel)
+}
+{new UIPanel
    server_connect_panel
    (file server_message.milo)
    (destination '')
    (TRANSITION_COMPLETE_MSG
       {server add_sink $this server_status_changed}
-      {set $waiting_for_server TRUE})
-   (exit
-      {server remove_sink $this server_status_changed})
+      {set $waiting_for_server TRUE}
+   )
+   (exit {server remove_sink $this server_status_changed})
    (server_status_changed
       ($connected)
-      {if
-         {&&
-            {! $connected}
-            $waiting_for_server}
-         {$this cancel_goto}})
+      {if {&& {! $connected} $waiting_for_server}
+         {$this cancel_goto}
+      }
+   )
    (cancel_goto
       {set $waiting_for_server FALSE}
-      {cancel_network_goto})
+      {cancel_network_goto}
+   )
    (poll
-      {if
-         $waiting_for_server
-         {unless
-            {platform_mgr is_connected}
-            {$this cancel_goto}}
-         {switch
-            {rock_central state}
+      {if $waiting_for_server
+         {unless {platform_mgr is_connected}
+            {$this cancel_goto}
+         }
+         {switch {rock_central state}
             (kRCOnline
                {set $waiting_for_server FALSE}
-               {finish_network_goto
-                  [destination]
-                  TRUE})}})}
-{new
-   UIScreen
+               {finish_network_goto [destination] TRUE}
+            )
+         }
+      }
+   )
+}
+{new UIScreen
    server_connect_screen
    (panels server_connect_panel)
-   (focus server_connect_panel)}
-{new
-   UIScreen
+   (focus server_connect_panel)
+}
+{new UIScreen
    network_warning_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (destination '')
    (enter
-      {dialog_panel
-         set_yesno
-         {localize_token
-            {gamemode get cannot_connect_warning}}
-         yes.btn})
+      {dialog_panel set_yesno
+         {localize_token {gamemode get cannot_connect_warning}}
+         yes.btn
+      }
+   )
    (SELECT_START_MSG
-      {switch
-         $component
-         (yes.btn
-            {finish_network_goto
-               [destination]
-               TRUE})
-         (no.btn
-            {cancel_network_goto})}
-      kDataUnhandled)}
-{new
-   UIScreen
+      {switch $component
+         (yes.btn {finish_network_goto [destination] TRUE})
+         (no.btn {cancel_network_goto})
+      }
+      kDataUnhandled
+   )
+}
+{new UIScreen
    no_online_privilege_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (destination '')
    (strict FALSE)
    (enter
-      {if_else
-         [strict]
-         {dialog_panel
-            set_ok
-            {localize_token privileges_restricted_strict}}
-         {dialog_panel
-            set_ok
-            {localize_token privileges_restricted_lenient}}})
+      {if_else [strict]
+         {dialog_panel set_ok {localize_token privileges_restricted_strict}}
+         {dialog_panel set_ok {localize_token privileges_restricted_lenient}}
+      }
+   )
    (SELECT_START_MSG
-      {if_else
-         [strict]
+      {if_else [strict]
          {cancel_network_goto}
-         {finish_network_goto
-            [destination]
-            TRUE}}
-      kDataUnhandled)}
+         {finish_network_goto [destination] TRUE}
+      }
+      kDataUnhandled
+   )
+}

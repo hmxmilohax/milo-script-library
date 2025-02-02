@@ -1,354 +1,320 @@
-{func
-   demo_disable_main
+{func demo_disable_main
    ($button)
    {main_panel
-      {if_else $demo_lock disable enable}
-      {main_panel find_button $button}}}
-{func
-   setup_game
+      {if_else $demo_lock
+         disable
+         enable
+      }
+      {main_panel find_button $button}
+   }
+}
+{func setup_game
    ($song $venue $player_list)
    {do
       ($i 0)
       ($slot_index 0)
-      {foreach
-         $player
-         $player_list
-         {if_else
-            {== 0 $i}
-            {session
-               reset
-               {user_mgr get_user_from_pad_num 0}
-               FALSE}
-            {session
-               add_local_user
-               {user_mgr get_user_from_pad_num $i}}}
+      {foreach $player $player_list
+         {if_else {== 0 $i}
+            {session reset {user_mgr get_user_from_pad_num 0} FALSE}
+            {session add_local_user {user_mgr get_user_from_pad_num $i}}
+         }
          {do
-            ($user
-               {user_mgr get_user_from_pad_num $i})
-            ($track
-               {elem $player 0})
+            ($user {user_mgr get_user_from_pad_num $i})
+            ($track {elem $player 0})
             {$user set_track_type $track}
-            {$user
-               set_controller_type
-               {switch
-                  {$user get_track_type}
+            {$user set_controller_type
+               {switch {$user get_track_type}
                   (kTrackDrum kControllerDrum)
-                  ((kTrackGuitar kTrackBass)
-                     kControllerGuitar)
+                  ((kTrackGuitar kTrackBass) kControllerGuitar)
                   (kTrackVocals kControllerVocals)
-                  kControllerNone}}
-            {$user
-               set_difficulty
-               {elem $player 1}}
-            {$user
-               set
+                  kControllerNone
+               }
+            }
+            {$user set_difficulty {elem $player 1}}
+            {$user set
                autoplay
-               {if_else
-                  {>
-                     {size $player}
-                     2}
+               {if_else {> {size $player} 2}
                   {elem $player 2}
-                  FALSE}}}
-         {'++' $i}}
-      {if
-         {!= $venue ''}
-         {meta_performer set_venue $venue}}
+                  FALSE
+               }
+            }
+         }
+         {'++' $i}
+      }
+      {if {!= $venue ''}
+         {meta_performer set_venue $venue}
+      }
       {meta_performer set_song $song}
-      {session_mgr
-         set_leader_user
-         {user_mgr get_user_from_pad_num 0}}
-      {gamecfg auto_assign_missing_slots}}}
-{func
-   are_enough_mics_connected
+      {session_mgr set_leader_user {user_mgr get_user_from_pad_num 0}}
+      {gamecfg auto_assign_missing_slots}
+   }
+}
+{func are_enough_mics_connected
    {do
       ($enable_resume TRUE)
-      {user_mgr
-         foreach_local_user
-         $user
-         {if
-            {&&
-               {$user is_participating}
-               {==
-                  {$user get_track_sym}
-                  vocals}}
-            {if
-               {==
-                  {synth num_connected_mics}
-                  0}
-               {set $enable_resume FALSE}}
+      {user_mgr foreach_local_user $user
+         {if {&& {$user is_participating} {== {$user get_track_sym} vocals}}
+            {if {== {synth num_connected_mics} 0}
+               {set $enable_resume FALSE}
+            }
             {if
                {&&
                   {'||'
                      {gamemode in_mode h2h_score_duel_local}
-                     {gamemode in_mode h2h_tug_of_war_local}}
-                  {<
-                     {synth num_connected_mics}
-                     2}}
-               {set $enable_resume FALSE}}
+                     {gamemode in_mode h2h_tug_of_war_local}
+                  }
+                  {< {synth num_connected_mics} 2}
+               }
+               {set $enable_resume FALSE}
+            }
             {if
                {&&
                   {gamemode in_mode tutorial_vocals}
-                  {!=
-                     {{gamemode get main_panel}
-                        get_client_mic_id}
-                     -1}}
-               {set
-                  $enable_resume
-                  {!=
-                     {{gamemode get main_panel}
-                        get_mic_id}
-                     -1}}}}}
-      $enable_resume}}
-{func
-   participating_vocalist_exists
+                  {!= {{gamemode get main_panel} get_client_mic_id} -1}
+               }
+               {set $enable_resume {!= {{gamemode get main_panel} get_mic_id} -1}}
+            }
+         }
+      }
+      $enable_resume
+   }
+}
+{func participating_vocalist_exists
    {do
       ($vocalist_exists FALSE)
-      {user_mgr
-         foreach_local_user
-         $user
-         {if
-            {&&
-               {$user is_participating}
-               {==
-                  {$user get_track_sym}
-                  vocals}}
-            {set $vocalist_exists TRUE}}}
-      $vocalist_exists}}
-{func
-   game_restart
+      {user_mgr foreach_local_user $user
+         {if {&& {$user is_participating} {== {$user get_track_sym} vocals}}
+            {set $vocalist_exists TRUE}
+         }
+      }
+      $vocalist_exists
+   }
+}
+{func game_restart
    {net_sync disable}
    {if_else
       {&&
          {ui current_screen}
-         {!=
-            {ui current_screen}
-            {gamemode get game_screen}}}
+         {!= {ui current_screen} {gamemode get game_screen}}
+      }
       {ui goto_screen restart_sync_audio_net_screen}
-      {ui push_screen restart_sync_audio_net_screen}}
-   {game clear_draw_glitch}}
-{func
-   set_all_hud_showing
+      {ui push_screen restart_sync_audio_net_screen}
+   }
+   {game clear_draw_glitch}
+}
+{func set_all_hud_showing
    ($show)
-   {{get_track_panel}
-      set_showing
-      $show}}
-{func
-   reset_all_callbacks
-   {func hopo_callback}
-   {func swingAtHopo_callback}
-   {func whammy_start_callback}
-   {func whammy_end_callback}
-   {func star_phrase_miss_callback}
-   {func star_phrase_captured_callback}
-   {func star_use_begin_callback}
-   {func star_use_end_callback}
-   {func hopo_hit}}
+   {{get_track_panel} set_showing $show}
+}
+{func reset_all_callbacks
+   {func hopo_callback
+
+   }
+   {func swingAtHopo_callback
+
+   }
+   {func whammy_start_callback
+
+   }
+   {func whammy_end_callback
+
+   }
+   {func star_phrase_miss_callback
+
+   }
+   {func star_phrase_captured_callback
+
+   }
+   {func star_use_begin_callback
+
+   }
+   {func star_use_end_callback
+
+   }
+   {func hopo_hit
+
+   }
+}
 {reset_all_callbacks}
-{func
-   player_pan
+{func player_pan
    ($user)
-   {if_else
-      {game multiplayer}
+   {if_else {game multiplayer}
       {elem
          (-0.5 0.5 -0.5 0.5)
-         {$user get_slot_num}}
-      0}}
-{func
-   play_game_seq
+         {$user get_slot_num}
+      }
+      0
+   }
+}
+{func play_game_seq
    ($sfx)
-   {synth play $sfx}}
-{func
-   play_game_seq_player
+   {synth play $sfx}
+}
+{func play_game_seq_player
    ($sfx_single $sfx_multi $user)
    {do
       ($sfx
-         {if_else
-            {game multiplayer}
+         {if_else {game multiplayer}
             $sfx_multi
-            $sfx_single})
-      {synth
-         play
-         $sfx
-         (pan
-            {player_pan $user})}}}
-{func
-   play_instr_ctlr_sfx
+            $sfx_single
+         }
+      )
+      {synth play $sfx (pan {player_pan $user})}
+   }
+}
+{func play_instr_ctlr_sfx
    ($ct $sfx $playOverNet)
    {do
       ($full_sfx
-         {if_else
-            {== $ct none}
+         {if_else {== $ct none}
             $sfx
-            {sprint
-               $sfx
-               "_"
-               $ct}})
+            {sprint $sfx "_" $ct}
+         }
+      )
       {synth play $full_sfx}
       {if
          {&&
             $playOverNet
+            {'||' {net_sync is_enabled} {== $playOverNet 2}}
+            {! {ui_event_mgr has_active_dialog_event}}
             {'||'
-               {net_sync is_enabled}
-               {== $playOverNet 2}}
-            {!
-               {ui_event_mgr has_active_dialog_event}}
-            {'||'
-               {!
-                  {{ui current_screen}
-                     has
-                     (send_net_sfx)}}
-               {{ui current_screen}
-                  get
-                  send_net_sfx}}}
-         {session
-            send_msg_to_all
-            {'`'
-               (synth
-                  play
-                  {',' $full_sfx})}
-            kNetReliable}}}}
-{func
-   play_instr_sfx
+               {! {{ui current_screen} has (send_net_sfx)}}
+               {{ui current_screen} get send_net_sfx}
+            }
+         }
+         {session send_msg_to_all {'`' (synth play {',' $full_sfx})} kNetReliable}
+      }
+   }
+}
+{func play_instr_sfx
    ($user $sfx)
-   {play_instr_sfx_impl $user $sfx TRUE}}
-{func
-   play_instr_sfx_local
+   {play_instr_sfx_impl $user $sfx TRUE}
+}
+{func play_instr_sfx_local
    ($user $sfx)
-   {play_instr_sfx_impl $user $sfx FALSE}}
-{func
-   play_instr_sfx_force_net
+   {play_instr_sfx_impl $user $sfx FALSE}
+}
+{func play_instr_sfx_force_net
    ($user $sfx)
-   {play_instr_sfx_impl $user $sfx 2}}
-{func
-   play_instr_sfx_impl
+   {play_instr_sfx_impl $user $sfx 2}
+}
+{func play_instr_sfx_impl
    ($user $sfx $playOverNet)
    {do
       ($ct
-         {if_else
-            $user
-            {if_else
-               {$user is_local}
+         {if_else $user
+            {if_else {$user is_local}
                {$user connected_controller_sym}
-               {$user get_controller_sym}}
-            none})
-      {play_instr_ctlr_sfx $ct $sfx $playOverNet}}}
-{func
-   update_story_display
-   {ui
-      foreach_screen
-      $s
-      {$s
-         foreach_panel
-         $p
-         {if
-            {$p is_up}
-            {handle
-               ($p refresh)}}}}}
-{func
-   update_meta_performer
-   {ui
-      foreach_screen
-      $s
-      {$s
-         foreach_panel
-         $p
-         {if
-            {$p is_up}
-            {handle
-               ($p update_meta_performer)}}}}}
-{func
-   missing_slot_to_track_sym
+               {$user get_controller_sym}
+            }
+            none
+         }
+      )
+      {play_instr_ctlr_sfx $ct $sfx $playOverNet}
+   }
+}
+{func update_story_display
+   {ui foreach_screen $s
+      {$s foreach_panel $p
+         {if {$p is_up}
+            {handle ($p refresh)}
+         }
+      }
+   }
+}
+{func update_meta_performer
+   {ui foreach_screen $s
+      {$s foreach_panel $p
+         {if {$p is_up}
+            {handle ($p update_meta_performer)}
+         }
+      }
+   }
+}
+{func missing_slot_to_track_sym
    ($slot)
-   {if_else
-      {== kGameSlotGuitar1 $slot}
+   {if_else {== kGameSlotGuitar1 $slot}
       {do
-         ($user
-            {user_mgr get_user_from_slot kGameSlotGuitar0})
-         {if_else
-            {&&
-               $user
-               {$user is_participating}
-               {==
-                  bass
-                  {$user get_track_sym}}}
+         ($user {user_mgr get_user_from_slot kGameSlotGuitar0})
+         {if_else {&& $user {$user is_participating} {== bass {$user get_track_sym}}}
             guitar
-            bass}}
-      {elem
-         (COOP_SLOTS_ORDER)
-         $slot}}}
-{func
-   missing_slot_to_track_icon
+            bass
+         }
+      }
+      {elem (COOP_SLOTS_ORDER) $slot}
+   }
+}
+{func missing_slot_to_track_icon
    ($slot)
-   {cnv_instrumenttoicon
-      {missing_slot_to_track_sym $slot}}}
-{func
-   get_user_name_from_player
+   {cnv_instrumenttoicon {missing_slot_to_track_sym $slot}}
+}
+{func get_user_name_from_player
    ($player)
-   {if_else
-      $player
+   {if_else $player
       {do
-         ($user
-            {$player get_user})
-         {$user get_user_name}}
-      ""}}
-{func
-   get_player_name_from_slot
+         ($user {$player get_user})
+         {$user get_user_name}
+      }
+      ""
+   }
+}
+{func get_player_name_from_slot
    ($slot)
    {do
-      ($user
-         {user_mgr get_user_from_slot $slot})
-      {if_else
-         $user
+      ($user {user_mgr get_user_from_slot $slot})
+      {if_else $user
          {$user get_user_name}
-         ""}}}
-{func
-   frac
+         ""
+      }
+   }
+}
+{func frac
    ($x)
-   {int
-      {'*' $x 256}}}
-{func
-   defrac
+   {int {'*' $x 256}}
+}
+{func defrac
    ($x)
-   {/ $x 256.0}}
-{func
-   forfeit_ranked_game
-   {if
-      {&&
-         {session is_in_game}
-         {gamemode get ranked}}
-      {session_mgr default_ranked_match TRUE}}}
-{func
-   get_story_destination_screen
+   {/ $x 256.0}
+}
+{func forfeit_ranked_game
+   {if {&& {session is_in_game} {gamemode get ranked}}
+      {session_mgr default_ranked_match TRUE}
+   }
+}
+{func get_story_destination_screen
    ($desired_screen)
    {cond
       ({story should_play_chapter_video}
          {story_chaptermovie_screen set destination_screen $desired_screen}
-         story_chaptermovie_screen)
-      ({story should_play_credits}
-         credits_screen)
+         story_chaptermovie_screen
+      )
+      ({story should_play_credits} credits_screen)
       ({story has_hints_to_show}
          {story_hint_screen set destination_screen $desired_screen}
-         story_hint_screen)
+         story_hint_screen
+      )
       ({&&
             {== $desired_screen story_chapter_screen}
             {story should_return_to_challenges}}
-         {if
-            {is_leader_local}
-            {{story performer}
-               select_default_chapter_challenge}}
-         story_chapter_challenges_screen)
+         {if {is_leader_local}
+            {{story performer} select_default_chapter_challenge}
+         }
+         story_chapter_challenges_screen
+      )
       ({&&
             {== $desired_screen story_chapter_screen}
             {story should_skip_to_song_select}}
-         {if
-            {is_leader_local}
-            {{story performer}
-               select_default_chapter_song}}
-         story_chapter_songselect_screen)
-      $desired_screen}}
-{func
-   get_quickplay_nextsong_screen
-   {if_else
-      {meta_performer is_next_song_in_different_venue}
+         {if {is_leader_local}
+            {{story performer} select_default_chapter_song}
+         }
+         story_chapter_songselect_screen
+      )
+      $desired_screen
+   }
+}
+{func get_quickplay_nextsong_screen
+   {if_else {meta_performer is_next_song_in_different_venue}
       load_nextsong_newvenue_screen
-      load_nextsong_screen}}
+      load_nextsong_screen
+   }
+}

@@ -1,28 +1,20 @@
-{new
-   UIPanel
+{new UIPanel
    frame_rate_panel
-   (file
-      "frame_rate.milo")
+   (file "frame_rate.milo")
    (focus venue.lst)
-   (load
-      {content_mgr start_refresh})
-   (is_loaded
-      {content_mgr refresh_done})
+   (load {content_mgr start_refresh})
+   (is_loaded {content_mgr refresh_done})
    (enter
-      {venue.lst
-         set_data
-         {enumerate_frame_rate_results}}
-      {measure.lst
-         set_data
-         (gs cpu)})
+      {venue.lst set_data {enumerate_frame_rate_results}}
+      {measure.lst set_data (gs cpu)}
+   )
    (SELECT_MSG
-      {if
-         {setup_framerate_mode
-            {venue.lst selected_sym}
-            {measure.lst selected_sym}}
-         {ui goto_screen preloading_screen}})}
-{func
-   setup_framerate_mode
+      {if {setup_framerate_mode {venue.lst selected_sym} {measure.lst selected_sym}}
+         {ui goto_screen preloading_screen}
+      }
+   )
+}
+{func setup_framerate_mode
    ($venue $measure)
    {do
       ($song bohemianrhapsody)
@@ -32,219 +24,165 @@
             $venue
             "_keep_"
             {sysplatform_sym}
-            ".dta"})
+            ".dta"
+         }
+      )
       ($data_tag
          {symbol
-            {sprint
-               "shot_"
-               $measure
-               "_sort"}})
-      ($char_tag
-         {symbol
-            {sprint
-               "char_"
-               $measure}})
-      ($file_data
-         {read_file $filename})
-      {if_else
-         {>
-            {size $file_data}
-            0}
+            {sprint "shot_" $measure "_sort"}
+         }
+      )
+      ($char_tag {symbol {sprint "char_" $measure}})
+      ($file_data {read_file $filename})
+      {if_else {> {size $file_data} 0}
          {do
             {gamemode set_mode frame_rate}
-            {set
-               $data
-               {elem
-                  {find $file_data $data_tag}
-                  1}}
-            {set
-               $force_outfits
-               {elem
-                  {find $file_data $char_tag}
-                  1}}
+            {set $data {elem {find $file_data $data_tag} 1}}
+            {set $force_outfits {elem {find $file_data $char_tag} 1}}
             {$bandwardrobe set demand_load 1}
             {set $framerate_use_budget 0}
             {set $framerate_type $measure}
             {setup_game
                $song
                $venue
-               ((real_keys 3 1)
-                  (vocals 3 1))}
+               (
+                  (real_keys 3 1)
+                  (vocals 3 1)
+               )
+            }
             {meta_performer set_harmony_override 1}
             {set $fake_controllers 1}
-            1}
+            1
+         }
          {do
-            {cheat_display
-               show
+            {cheat_display show
                {sprint
                   "framerate mode: no CRB data for "
                   $venue
                   " on "
                   {sysplatform_sym}
-                  ", wait for new build"}}
-            0}}}}
-{func
-   frame_rate_force_venue
-   {$banddirector force_outfits $force_outfits}}
-{new
-   BandScreen
-   frame_rate_screen
-   (panels frame_rate_panel)}
-{new
-   UIPanel
+                  ", wait for new build"
+               }
+            }
+            0
+         }
+      }
+   }
+}
+{func frame_rate_force_venue
+   {$banddirector force_outfits $force_outfits}
+}
+{new BandScreen frame_rate_screen (panels frame_rate_panel)}
+{new UIPanel
    frame_rate_game_panel
    (enter
       {handle
-         ($banddirector set disable_picking 1)}
+         ($banddirector set disable_picking 1)
+      }
       {set $shot 0}
       {frame_rate_game_screen update_shot}
-      {beatmatch
-         foreach_active_player
-         $p
-         {handle
-            ($p set_auto_play_error 34)}
-         {handle
-            ($p set_permanent_overdrive 1)}}
-      {beatmatch jump 10})}
-{new
-   BandScreen
+      {beatmatch foreach_active_player $p
+         {handle ($p set_auto_play_error 34)}
+         {handle ($p set_permanent_overdrive 1)}
+      }
+      {beatmatch jump 10}
+   )
+}
+{new BandScreen
    frame_rate_game_screen
-   (panels game world_panel coop_track_panel frame_rate_game_panel sync_audio_net_panel)
+   (panels
+      game
+      world_panel
+      coop_track_panel
+      frame_rate_game_panel
+      sync_audio_net_panel
+   )
    GAME_SCREEN_HANDLERS
    (back splash_screen)
    (loop_timeout 60.0)
    (update_next_poll 1)
    (poll
-      {if
-         {&&
-            $update_next_poll
-            {<
-               {taskmgr seconds}
-               [loop_timeout]}}
+      {if {&& $update_next_poll {< {taskmgr seconds} [loop_timeout]}}
          {$this update_shot}
          {set $update_next_poll 0}
-         {print
-            "reset time\n"}}
-      {if
-         {&&
-            {>
-               {taskmgr seconds}
-               [loop_timeout]}
-            {! $update_next_poll}}
+         {print "reset time\n"}
+      }
+      {if {&& {> {taskmgr seconds} [loop_timeout]} {! $update_next_poll}}
          {beatmatch jump 10}
-         {set $update_next_poll 1}})
+         {set $update_next_poll 1}
+      }
+   )
    (BUTTON_DOWN_MSG
-      {switch
-         $raw_button
+      {switch $raw_button
          (6
             {'++' $shot}
-            {if
-               {==
-                  $shot
-                  {size $data}}
-               {set $shot 0}}
-            {$this update_shot})
+            {if {== $shot {size $data}}
+               {set $shot 0}
+            }
+            {$this update_shot}
+         )
          (4
             {-- $shot}
-            {if
-               {== $shot -1}
-               {set
-                  $shot
-                  {-
-                     {size $data}
-                     1}}}
-            {$this update_shot})
+            {if {== $shot -1}
+               {set $shot {- {size $data} 1}}
+            }
+            {$this update_shot}
+         )
          (5
             {'+=' $shot 10}
-            {if
-               {>=
-                  $shot
-                  {size $data}}
-               {set $shot 0}}
-            {$this update_shot})
+            {if {>= $shot {size $data}}
+               {set $shot 0}
+            }
+            {$this update_shot}
+         )
          (7
             {-= $shot 10}
-            {if
-               {<= $shot -1}
-               {set
-                  $shot
-                  {-
-                     {size $data}
-                     1}}}
-            {$this update_shot})
-         kDataUnhandled})
+            {if {<= $shot -1}
+               {set $shot {- {size $data} 1}}
+            }
+            {$this update_shot}
+         )
+         kDataUnhandled
+      }
+   )
    (update_shot
       {do
-         ($source
-            {$banddirector camera_source})
-         ($datum
-            {elem $data $shot})
-         ($i
-            {elem
-               {find $datum shot}
-               1})
-         ($j0
-            {elem
-               {find $datum postproc}
-               1})
-         ($j1
-            {elem
-               {find $datum postproc}
-               2})
-         ($presets
-            {find $datum preset})
-         ($world_shot
-            {$source find $i 0})
-         ($world_procA
-            {$source find $j0 0})
-         ($world_procB
-            {$source find $j1 0})
-         ($presetA
-            {elem $presets 1})
-         ($presetB
-            {elem $presets 2})
-         ($world_pp
-            {$source find world.pp})
-         ($world
-            {$banddirector get_curworld})
-         {if_else
-            $world_shot
+         ($source {$banddirector camera_source})
+         ($datum {elem $data $shot})
+         ($i {elem {find $datum shot} 1})
+         ($j0 {elem {find $datum postproc} 1})
+         ($j1 {elem {find $datum postproc} 2})
+         ($presets {find $datum preset})
+         ($world_shot {$source find $i 0})
+         ($world_procA {$source find $j0 0})
+         ($world_procB {$source find $j1 0})
+         ($presetA {elem $presets 1})
+         ($presetB {elem $presets 2})
+         ($world_pp {$source find world.pp})
+         ($world {$banddirector get_curworld})
+         {if_else $world_shot
             {cond
                ({!
                      {$world_shot platform_ok}}
-                  {cheat_display
-                     show
-                     {sprint
-                        "wrong platform: "
-                        $i}})
+                  {cheat_display show {sprint "wrong platform: " $i}}
+               )
                ({$world_shot get disabled}
-                  {cheat_display
-                     show
-                     {sprint
-                        "shot disabled: "
-                        $i}})
-               {handle
-                  ($world start)}
-               {handle
-                  ($world intro_start)}
-               {$banddirector
-                  force_shot
-                  {$world_shot name}}
+                  {cheat_display show {sprint "shot disabled: " $i}}
+               )
+               {handle ($world start)}
+               {handle ($world intro_start)}
+               {$banddirector force_shot {$world_shot name}}
                {$banddirector force_preset_blend $presetA $presetB}
                {$world_pp select}
                {$world_pp set force_current_interp 0}
                {$world_pp interp $world_procA $world_procB 0.5}
                {$world_pp set force_current_interp 1}
-               {cheat_display
-                  show
-                  {sprint
-                     $shot
-                     ": "
-                     $i
-                     " "
-                     $j}}}
-            {cheat_display
-               show
-               {sprint
-                  "couldn't find: "
-                  $i}}}})}
+               {cheat_display show
+                  {sprint $shot ": " $i " " $j}
+               }
+            }
+            {cheat_display show {sprint "couldn't find: " $i}}
+         }
+      }
+   )
+}

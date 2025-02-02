@@ -1,307 +1,174 @@
-#define NUM_COLUMNS
-(4)
-#define POINT_VALUES
-((10000 50000))
-#define GOLD_FLASHCARD_FREQUENCY
-((2 3 3 3 4))
-#define MOVE_PASS_FRACTION
-(0.7)
-#define CONFUSABILITY_TOLERANCE
-(1)
+#define NUM_COLUMNS (4)
+#define POINT_VALUES ((10000 50000))
+#define GOLD_FLASHCARD_FREQUENCY ((2 3 3 3 4))
+#define MOVE_PASS_FRACTION (0.7)
+#define CONFUSABILITY_TOLERANCE (1)
 (point_value_chase
    (music_start -1)
    (music_end -1)
    (play_start -1)
    (play_end -1)
-   (hud
-      "")
-   (columns
-      ())
-   (scored_moves
-      ())
-   (move_dir
-      "")
-   (point_curve
-      "")
+   (hud "")
+   (columns ())
+   (scored_moves ())
+   (move_dir "")
+   (point_curve "")
    (active FALSE)
-   (scores
-      (0 0))
+   (scores (0 0))
    (cur_measure -1)
    (next_gold -1)
    (enter
       ($battle_obj $battle_index $scored_moves)
-      {hamprovider
-         add_sink
-         $this
-         (post_move_finished)
-         kSinkModeHandle
-         FALSE}
-      {master
-         add_sink
-         $this
-         (beat)}
-      {set
-         [play_start]
-         {$battle_obj
-            get
-            (steps $battle_index play_range start)}}
-      {set
-         [play_end]
-         {$battle_obj
-            get
-            (steps $battle_index play_range end)}}
-      {set
-         [music_start]
-         {$battle_obj
-            get
-            (steps $battle_index music_range start)}}
-      {set
-         [music_end]
-         {$battle_obj
-            get
-            (steps $battle_index music_range end)}}
-      {set
-         [hud]
-         {find_obj $hud_panel point_chase_hud}}
-      {set
-         [point_curve]
-         {find_obj
-            [hud]
-            "score_curve.anim"}}
-      {set
-         [move_dir]
-         {$hud_panel get moves_dir}}
-      {resize
-         [scored_moves]
-         0}
-      {foreach_int
-         $i
-         0
-         {gamedata max_players}
+      {hamprovider add_sink $this (post_move_finished) kSinkModeHandle FALSE}
+      {master add_sink $this (beat)}
+      {set [play_start]
+         {$battle_obj get
+            (steps $battle_index play_range start)
+         }
+      }
+      {set [play_end]
+         {$battle_obj get
+            (steps $battle_index play_range end)
+         }
+      }
+      {set [music_start]
+         {$battle_obj get
+            (steps $battle_index music_range start)
+         }
+      }
+      {set [music_end]
+         {$battle_obj get
+            (steps $battle_index music_range end)
+         }
+      }
+      {set [hud] {find_obj $hud_panel point_chase_hud}}
+      {set [point_curve] {find_obj [hud] "score_curve.anim"}}
+      {set [move_dir] {$hud_panel get moves_dir}}
+      {resize [scored_moves] 0}
+      {foreach_int $i 0 {gamedata max_players}
          {do
-            ($list
-               {elem $scored_moves $i})
-            ($add_move
-               "")
-            {foreach
-               $elem
-               $list
-               {set
-                  $add_move
-                  {elem $elem 1}}
+            ($list {elem $scored_moves $i})
+            ($add_move "")
+            {foreach $elem $list
+               {set $add_move {elem $elem 1}}
                {if
                   {&&
-                     {!
-                        {find_elem
-                           [scored_moves]
-                           $add_move}}
-                     {!
-                        {$add_move get omit_minigame}}}
-                  {push_back
-                     [scored_moves]
-                     $add_move}}}
-            {$this set_score $i 0}}}
-      {if
-         {! $kill_omg_shuffle}
-         {random_sort
-            [scored_moves]}}
+                     {! {find_elem [scored_moves] $add_move}}
+                     {! {$add_move get omit_minigame}}
+                  }
+                  {push_back [scored_moves] $add_move}
+               }
+            }
+            {$this set_score $i 0}
+         }
+      }
+      {if {! $kill_omg_shuffle}
+         {random_sort [scored_moves]}
+      }
       {do
-         {resize
-            [columns]
-            0}
-         {if
-            [hud]
-            {foreach_int
-               $i
-               0
-               NUM_COLUMNS
-               {push_back
-                  [columns]
-                  {find_obj
-                     [hud]
-                     {sprint
-                        "column_"
-                        $i}}}}
-            {set
-               [next_gold]
-               {'+' NUM_COLUMNS 1}}
-            {foreach_int
-               $i
-               0
-               {size
-                  [columns]}
+         {resize [columns] 0}
+         {if [hud]
+            {foreach_int $i 0 NUM_COLUMNS
+               {push_back [columns] {find_obj [hud] {sprint "column_" $i}}}
+            }
+            {set [next_gold] {'+' NUM_COLUMNS 1}}
+            {foreach_int $i 0 {size [columns]}
                {do
-                  ($column
-                     {elem
-                        [columns]
-                        $i})
-                  {$column
-                     init
-                     {-
-                        [play_end]
-                        [music_start]}}
-                  {$this
-                     set_new_move_for_column
-                     $i
-                     {-
-                        [play_start]
-                        [music_start]}}}}
-            {set
-               [next_gold]
-               {random_elem
-                  (1 2)}}
+                  ($column {elem [columns] $i})
+                  {$column init {- [play_end] [music_start]}}
+                  {$this set_new_move_for_column $i {- [play_start] [music_start]}}
+               }
+            }
+            {set [next_gold] {random_elem (1 2)}}
             {do
-               ($postproc
-                  "")
-               {[hud]
-                  iterate
-                  PostProc
-                  $pp
-                  {set $postproc $pp}}
-               {if
-                  $postproc
+               ($postproc "")
+               {[hud] iterate PostProc $pp {set $postproc $pp}}
+               {if $postproc
                   {$hamdirector set force_postproc $postproc}
                   {$hamdirector set force_postproc_blend 0}
-                  {$hamdirector set force_postproc_blend_rate 1}}
-               {{$hamdirector get_world}
-                  set
-                  explicit_postproc
-                  FALSE}}}}
-      {hamprovider set game_stage omg})
+                  {$hamdirector set force_postproc_blend_rate 1}
+               }
+               {{$hamdirector get_world} set explicit_postproc FALSE}
+            }
+         }
+      }
+      {hamprovider set game_stage omg}
+   )
    (exit
       {hamprovider set game_stage playing}
-      {$this
-         run_flow
-         "fade_out.flow"}
-      {$this
-         run_flow
-         "deactivate.flow"}
-      {[move_dir]
-         disable_all_detectors}
+      {$this run_flow "fade_out.flow"}
+      {$this run_flow "deactivate.flow"}
+      {[move_dir] disable_all_detectors}
       {handle
-         (hamprovider
-            setup_right_alert
-            none
-            "")}
+         (hamprovider setup_right_alert none "")
+      }
       {handle
-         (hamprovider
-            setup_left_alert
-            none
-            "")}
-      {{$hamdirector get_world}
-         set
-         explicit_postproc
-         TRUE}
-      {handle
-         ($hamdirector on_performance_change)}
-      {if
-         {!=
-            {elem
-               [scores]
-               0}
-            {elem
-               [scores]
-               1}}
+         (hamprovider setup_left_alert none "")
+      }
+      {{$hamdirector get_world} set explicit_postproc TRUE}
+      {handle ($hamdirector on_performance_change)}
+      {if {!= {elem [scores] 0} {elem [scores] 1}}
          {do
             ($winning_idx
-               {if_else
-                  {>
-                     {elem
-                        [scores]
-                        0}
-                     {elem
-                        [scores]
-                        1}}
+               {if_else {> {elem [scores] 0} {elem [scores] 1}}
                   0
-                  1})
+                  1
+               }
+            )
             {handle
-               (hamprovider
-                  nar_play_crew_vo
-                  omg_win
-                  {gamedata getp $winning_idx crew})}}})
+               (hamprovider nar_play_crew_vo omg_win {gamedata getp $winning_idx crew})
+            }
+         }
+      }
+   )
    (poll
       {do
-         ($results
-            (0 0))
-         ($cur_offset
-            {-
-               [cur_measure]
-               [music_start]})
-         ($move
-            "")
+         ($results (0 0))
+         ($cur_offset {- [cur_measure] [music_start]})
+         ($move "")
          ($raw_detection_val 0)
          ($normalized_result 0)
-         {if
-            {&&
-               {> $cur_offset 0}
-               [move_dir]}
-            {foreach
-               $column
-               [columns]
-               {if
-                  {>=
-                     $cur_offset
-                     {$column get move_start}}
-                  {foreach_int
-                     $i
-                     0
-                     {gamedata max_players}
-                     {set
-                        $move
-                        {$column get move}}
-                     {set
-                        $raw_detection_val
-                        {[move_dir]
-                           active_detector_result
-                           $i
-                           $move}}
-                     {set
-                        $normalized_result
-                        {if_else
-                           $move
+         {if {&& {> $cur_offset 0} [move_dir]}
+            {foreach $column [columns]
+               {if {>= $cur_offset {$column get move_start}}
+                  {foreach_int $i 0 {gamedata max_players}
+                     {set $move {$column get move}}
+                     {set $raw_detection_val
+                        {[move_dir] active_detector_result $i $move}
+                     }
+                     {set $normalized_result
+                        {if_else $move
                            {detect_frac_to_rating_frac $raw_detection_val $move}
-                           0.0}}
-                     {if
-                        [point_curve]
-                        {set
-                           $normalized_result
-                           {[point_curve]
-                              value_from_frame
-                              [hud]
-                              (point_curve)
-                              $normalized_result}}}
-                     {set_elem $results $i $normalized_result}}
-                  {$column update_feedback $results}}}}})
+                           0.0
+                        }
+                     }
+                     {if [point_curve]
+                        {set $normalized_result
+                           {[point_curve] value_from_frame [hud] (point_curve) $normalized_result}
+                        }
+                     }
+                     {set_elem $results $i $normalized_result}
+                  }
+                  {$column update_feedback $results}
+               }
+            }
+         }
+      }
+   )
    (post_move_finished
-      {set
-         [cur_measure]
-         {beat_to_measure
-            {taskmgr beat}}}
-      {if
-         {==
-            [cur_measure]
-            [music_start]}
-         {$this
-            run_flow
-            "fade_in.flow"}}
-      {if
-         {==
-            [cur_measure]
-            [music_start]
-            1}
-         {foreach_int
-            $i
-            0
-            {gamedata max_players}
-            {handle
-               ({gamedata getp $i provider}
-                  hide_hud)}}
-         {$hud_panel play nar_omg}}
-      {if
-         [active]
-         {$this
-            do_scoring
-            {- $measure 1}}}
+      {set [cur_measure] {beat_to_measure {taskmgr beat}}}
+      {if {== [cur_measure] [music_start]}
+         {$this run_flow "fade_in.flow"}
+      }
+      {if {== [cur_measure] [music_start] 1}
+         {foreach_int $i 0 {gamedata max_players}
+            {handle ({gamedata getp $i provider} hide_hud)}
+         }
+         {$hud_panel play nar_omg}
+      }
+      {if [active]
+         {$this do_scoring {- $measure 1}}
+      }
       {cond
          ({==
                [cur_measure]
@@ -312,12 +179,9 @@
                   {'+'
                      [music_start]
                      1}}}
-            {$this
-               run_flow
-               "activate.flow"}
-            {set
-               [active]
-               TRUE})
+            {$this run_flow "activate.flow"}
+            {set [active] TRUE}
+         )
          ({==
                [cur_measure]
                {'+'
@@ -326,430 +190,282 @@
             {do
                ($score_delta
                   {-
-                     {{gamedata getp 0 provider}
-                        get
-                        score}
-                     {{gamedata getp 1 provider}
-                        get
-                        score}})
-               ($previous_winner
-                  {cond
-                     ({> $score_delta 0}
-                        0)
-                     ({< $score_delta 0}
-                        1)
-                     (TRUE -1)})
-               ($cur_winner -1)
-               {foreach_int
-                  $i
-                  0
-                  {gamedata max_players}
-                  {do
-                     ($provider
-                        {gamedata getp $i provider})
-                     {$provider
-                        set
+                     {{gamedata getp 0 provider} get
                         score
-                        {'+'
-                           {$provider get score}
-                           {elem
-                              [scores]
-                              $i}}}}}
-               {set
-                  $score_delta
+                     }
+                     {{gamedata getp 1 provider} get
+                        score
+                     }
+                  }
+               )
+               ($previous_winner
+                  {cond ({> $score_delta 0} 0) ({< $score_delta 0} 1) (TRUE -1)}
+               )
+               ($cur_winner -1)
+               {foreach_int $i 0 {gamedata max_players}
+                  {do
+                     ($provider {gamedata getp $i provider})
+                     {$provider set score {'+' {$provider get score} {elem [scores] $i}}}
+                  }
+               }
+               {set $score_delta
                   {-
-                     {{gamedata getp 0 provider}
-                        get
-                        score}
-                     {{gamedata getp 1 provider}
-                        get
-                        score}}}
-               {set
-                  $cur_winner
-                  {cond
-                     ({> $score_delta 0}
-                        0)
-                     ({< $score_delta 0}
-                        1)
-                     (TRUE -1)}}
+                     {{gamedata getp 0 provider} get
+                        score
+                     }
+                     {{gamedata getp 1 provider} get
+                        score
+                     }
+                  }
+               }
+               {set $cur_winner
+                  {cond ({> $score_delta 0} 0) ({< $score_delta 0} 1) (TRUE -1)}
+               }
                {cond
                   ({&&
                         {== $previous_winner 1}
                         {== $cur_winner 0}}
-                     {acc_mgr earn_accomplishment_for_player 0 acc_dance_battle_behind})
+                     {acc_mgr earn_accomplishment_for_player 0 acc_dance_battle_behind}
+                  )
                   ({&&
                         {== $previous_winner 0}
                         {== $cur_winner 1}}
-                     {acc_mgr earn_accomplishment_for_player 1 acc_dance_battle_behind})}}
-            {$this
-               run_flow
-               "display_scores.flow"})}
-      {foreach
-         $column
-         [columns]
-         {$column
-            update
-            {-
-               [cur_measure]
-               [music_start]}}})
+                     {acc_mgr earn_accomplishment_for_player 1 acc_dance_battle_behind}
+                  )
+               }
+            }
+            {$this run_flow "display_scores.flow"}
+         )
+      }
+      {foreach $column [columns]
+         {$column update {- [cur_measure] [music_start]}}
+      }
+   )
    (beat
-      {if
-         {==
-            {round $beat}
-            {'+'
-               {'*'
-                  4
-                  [music_start]}}
-            3}
-         {if
-            {&&
-               $hamdirector
-               {$hamdirector get cur_world}}
-            {{$hamdirector get cur_world}
-               set_showing
-               FALSE}}})
+      {if {== {round $beat} {'+' {'*' 4 [music_start]}} 3}
+         {if {&& $hamdirector {$hamdirector get cur_world}}
+            {{$hamdirector get cur_world} set_showing FALSE}
+         }
+      }
+   )
    (do_scoring
       ($measure)
-      {if
-         [move_dir]
+      {if [move_dir]
          {do
-            ($best_scores
-               (0 0))
-            ($best_columns
-               (-1 -1))
+            ($best_scores (0 0))
+            ($best_columns (-1 -1))
             ($best_hit '')
-            {foreach_int
-               $i
-               0
-               {gamedata max_players}
+            {foreach_int $i 0 {gamedata max_players}
                {set_elem $best_scores $i 0}
                {set_elem $best_columns $i -1}
                {do
                   ($score 0)
-                  ($move
-                     "")
+                  ($move "")
                   ($column)
-                  {if
-                     {size
-                        [columns]}
-                     {foreach_int
-                        $j
-                        0
-                        NUM_COLUMNS
-                        {set
-                           $column
-                           {elem
-                              [columns]
-                              $j}}
-                        {set
-                           $move
-                           {$column get move}}
-                        {set
-                           $score
-                           {[move_dir]
-                              last_detector_result
-                              $i
-                              $move}}
-                        {if
-                           $move
-                           {set
-                              $score
-                              {detect_frac_to_rating_frac $score $move}}}
+                  {if {size [columns]}
+                     {foreach_int $j 0 NUM_COLUMNS
+                        {set $column {elem [columns] $j}}
+                        {set $move {$column get move}}
+                        {set $score
+                           {[move_dir] last_detector_result $i $move}
+                        }
+                        {if $move
+                           {set $score {detect_frac_to_rating_frac $score $move}}
+                        }
                         {if
                            {&&
-                              {>
-                                 $score
-                                 {elem $best_scores $i}}
-                              {>=
-                                 {'+'
-                                    1
-                                    {-
-                                       $measure
-                                       [music_start]}}
-                                 {$column get move_start}}}
+                              {> $score {elem $best_scores $i}}
+                              {>= {'+' 1 {- $measure [music_start]}} {$column get move_start}}
+                           }
                            {set_elem $best_scores $i $score}
-                           {set_elem $best_columns $i $j}}}}}}
-            {if
-               {==
-                  {elem $best_columns 0}
-                  {elem $best_columns 1}}
-               {if_else
-                  {>
-                     {elem $best_scores 0}
-                     {elem $best_scores 1}}
+                           {set_elem $best_columns $i $j}
+                        }
+                     }
+                  }
+               }
+            }
+            {if {== {elem $best_columns 0} {elem $best_columns 1}}
+               {if_else {> {elem $best_scores 0} {elem $best_scores 1}}
                   {set_elem $best_scores 1 0}
-                  {set_elem $best_scores 0 0}}}
-            {foreach_int
-               $i
-               0
-               {size $best_scores}
+                  {set_elem $best_scores 0 0}
+               }
+            }
+            {foreach_int $i 0 {size $best_scores}
                {do
-                  ($best_column_index
-                     {elem $best_columns $i})
-                  {if
-                     {>= $best_column_index 0}
+                  ($best_column_index {elem $best_columns $i})
+                  {if {>= $best_column_index 0}
                      {do
-                        ($column
-                           {elem
-                              [columns]
-                              $best_column_index})
-                        ($move
-                           {$column get move})
-                        ($rating
-                           "")
+                        ($column {elem [columns] $best_column_index})
+                        ($move {$column get move})
+                        ($rating "")
                         ($rating_idx -1)
-                        {if
-                           $move
-                           {if
-                              {>
-                                 {elem $best_scores $i}
-                                 MOVE_PASS_FRACTION}
+                        {if $move
+                           {if {> {elem $best_scores $i} MOVE_PASS_FRACTION}
                               {$this do_score $i $column $best_column_index $measure}
-                              {if
-                                 {!= $best_hit omg_hit_gold}
-                                 {set
-                                    $best_hit
-                                    {if_else
-                                       {$column get gold}
+                              {if {!= $best_hit omg_hit_gold}
+                                 {set $best_hit
+                                    {if_else {$column get gold}
                                        omg_hit_gold
-                                       omg_hit}}}}}}}}}
-            {if
-               {!= $best_hit ''}
-               {handle
-                  (hamprovider $best_hit)}}}})
+                                       omg_hit
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+            {if {!= $best_hit ''}
+               {handle (hamprovider $best_hit)}
+            }
+         }
+      }
+   )
    (do_score
       ($player_index $column $column_index $measure)
       {do
-         ($player_score
-            {elem
-               [scores]
-               $player_index})
-         ($gold
-            {$column get gold})
-         ($move_start_measure
-            {'+'
-               {-
-                  [cur_measure]
-                  [music_start]}
-               2})
-         {$column
-            set_value
-            {elem
-               POINT_VALUES
-               {if_else $gold 1 0}}}
-         {'+='
-            $player_score
-            {$column get value}}
+         ($player_score {elem [scores] $player_index})
+         ($gold {$column get gold})
+         ($move_start_measure {'+' {- [cur_measure] [music_start]} 2})
+         {$column set_value
+            {elem POINT_VALUES
+               {if_else $gold
+                  1
+                  0
+               }
+            }
+         }
+         {'+=' $player_score {$column get value}}
          {$this set_score $player_index $player_score}
-         {if
-            [move_dir]
-            {[move_dir]
-               disable_detector
-               {$column get move}}}
+         {if [move_dir]
+            {[move_dir] disable_detector {$column get move}}
+         }
          {$column win $player_index}
          {$this set_new_move_for_column $column_index $move_start_measure}
-         {foreach_int
-            $i
-            0
-            {size
-               [columns]}
-            {if
-               {==
-                  {{elem
-                        [columns]
-                        $i}
-                     get
-                     move}
-                  ""}
-               {$this set_new_move_for_column $i $move_start_measure}}}})
+         {foreach_int $i 0 {size [columns]}
+            {if {== {{elem [columns] $i} get move} ""}
+               {$this set_new_move_for_column $i $move_start_measure}
+            }
+         }
+      }
+   )
    (run_flow
       ($flow_name)
       {do
-         ($flow
-            {find_obj
-               [hud]
-               $flow_name})
-         {if
-            $flow
-            {$flow activate}}})
+         ($flow {find_obj [hud] $flow_name})
+         {if $flow
+            {$flow activate}
+         }
+      }
+   )
    (set_score
       ($player_index $score)
       {do
-         ($old_score
-            {elem
-               [scores]
-               $player_index})
+         ($old_score {elem [scores] $player_index})
          ($side
-            {{gamedata getp $player_index provider}
-               get
-               side})
+            {{gamedata getp $player_index provider} get
+               side
+            }
+         )
          ($message
-            {if_else
-               {== $side kSkeletonRight}
+            {if_else {== $side kSkeletonRight}
                setup_right_alert
-               setup_left_alert})
-         {set_elem
-            [scores]
-            $player_index
-            $score}
+               setup_left_alert
+            }
+         )
+         {set_elem [scores] $player_index $score}
          {handle
-            (hamprovider
-               $message
-               free4all
-               {sprint $score})}})
+            (hamprovider $message free4all {sprint $score})
+         }
+      }
+   )
    (set_new_move_for_column
       ($column_index $start_measure)
       {do
-         ($column
-            {elem
-               [columns]
-               $column_index})
-         ($cur_col_move
-            {$column get move})
-         ($move
-            "")
-         {if
-            {!=
-               $cur_col_move
-               ""}
-            {push_back
-               [scored_moves]
-               $cur_col_move}
-            {$column
-               set
-               move
-               ""}}
-         {if
-            {<=
-               $start_measure
-               {$column get last_measure}}
-            {set
-               $move
-               {$this next_move $column_index}}}
+         ($column {elem [columns] $column_index})
+         ($cur_col_move {$column get move})
+         ($move "")
+         {if {!= $cur_col_move ""}
+            {push_back [scored_moves] $cur_col_move}
+            {$column set move ""}
+         }
+         {if {<= $start_measure {$column get last_measure}}
+            {set $move {$this next_move $column_index}}
+         }
          {$column set move $move}
-         {if_else
-            {==
-               [next_gold]
-               0}
+         {if_else {== [next_gold] 0}
             {do
                {$column set gold TRUE}
-               {set
-                  [next_gold]
-                  {random_elem GOLD_FLASHCARD_FREQUENCY}}}
+               {set [next_gold] {random_elem GOLD_FLASHCARD_FREQUENCY}}
+            }
             {do
                {$column set gold FALSE}
-               {--
-                  [next_gold]}}}
-         {$column
-            set
-            value
-            {elem POINT_VALUES 0}}
+               {-- [next_gold]}
+            }
+         }
+         {$column set value {elem POINT_VALUES 0}}
          {$column set move_start $start_measure}
-         {[move_dir]
-            enable_detector
-            $move}})
+         {[move_dir] enable_detector $move}
+      }
+   )
    (next_move
       ($column_index)
       {do
          ($found_valid_move FALSE)
          ($index 0)
          ($redundant FALSE)
-         ($move
-            "")
-         ($column
-            "")
-         ($column_move
-            "")
-         ($checked_moves
-            {array 0})
-         {if
-            {!
-               {size
-                  [scored_moves]}}
-            {set $found_valid_move TRUE}}
-         {while
-            {&&
-               {! $found_valid_move}
-               {<
-                  $index
-                  {size
-                     [scored_moves]}}}
-            {set
-               $move
-               {elem
-                  [scored_moves]
-                  $index}}
+         ($move "")
+         ($column "")
+         ($column_move "")
+         ($checked_moves {array 0})
+         {if {! {size [scored_moves]}}
+            {set $found_valid_move TRUE}
+         }
+         {while {&& {! $found_valid_move} {< $index {size [scored_moves]}}}
+            {set $move {elem [scored_moves] $index}}
             {set $redundant FALSE}
-            {foreach_int
-               $i
-               0
-               {size
-                  [columns]}
-               {set
-                  $column
-                  {elem
-                     [columns]
-                     $i}}
-               {set
-                  $column_move
-                  {$column get move}}
+            {foreach_int $i 0 {size [columns]}
+               {set $column {elem [columns] $i}}
+               {set $column_move {$column get move}}
                {if
                   {&&
                      {! $redundant}
                      {!= $i $column_index}
-                     {>
-                        {$move confusability $column_move}
-                        CONFUSABILITY_TOLERANCE}}
-                  {set $redundant TRUE}}}
-            {if
-               {! $redundant}
-               {remove_elem
-                  [scored_moves]
-                  $move}
-               {set $found_valid_move TRUE}}
+                     {> {$move confusability $column_move} CONFUSABILITY_TOLERANCE}
+                  }
+                  {set $redundant TRUE}
+               }
+            }
+            {if {! $redundant}
+               {remove_elem [scored_moves] $move}
+               {set $found_valid_move TRUE}
+            }
             {'++' $index}
-            {if
-               {&&
-                  $redundant
-                  {>=
-                     $index
-                     {size
-                        [scored_moves]}}}
-               {set
-                  $move
-                  ""}
+            {if {&& $redundant {>= $index {size [scored_moves]}}}
+               {set $move ""}
                {notify
                   "Cound not pick any moves for OMG column "
                   {'+' $column_index 1}
                   "\n"
                   "Column 1 "
-                  {{elem
-                        [columns]
-                        0}
-                     get
-                     move}
+                  {{elem [columns] 0} get move}
                   "\n"
                   "Column 2 "
-                  {{elem
-                        [columns]
-                        1}
-                     get
-                     move}
+                  {{elem [columns] 1} get move}
                   "\n"
                   "Column 3 "
-                  {{elem
-                        [columns]
-                        2}
-                     get
-                     move}
+                  {{elem [columns] 2} get move}
                   "\n"
                   "Column 4 "
-                  {{elem
-                        [columns]
-                        3}
-                     get
-                     move}
+                  {{elem [columns] 3} get move}
                   "\n"
                   "Moves to choose from :\n"
-                  [scored_moves]}}}
-         $move}))
+                  [scored_moves]
+               }
+            }
+         }
+         $move
+      }
+   )
+)

@@ -1,329 +1,248 @@
-{new
-   CharacterSelectPanel
+{new CharacterSelectPanel
    character_select_panel
-   (file
-      "character_select.milo")
+   (file "character_select.milo")
    (show_back_button TRUE)
    (focus button_01.sbt)
    (top_index -1)
    (load
       {do
-         ($chars
-            {find $syscfg selectable_characters})
-         ($profile
-            {$this active_profile})
-         {foreach_int
-            $i
-            1
-            {size $chars}
+         ($chars {find $syscfg selectable_characters})
+         ($profile {$this active_profile})
+         {foreach_int $i 1 {size $chars}
             {do
-               ($char
-                  {elem $chars $i})
-               ($outfit
-                  {$profile character_outfit $char})
-               ($unlocked
-                  {$profile is_content_unlocked $char})
-               {$this
-                  add_tex
+               ($char {elem $chars $i})
+               ($outfit {$profile character_outfit $char})
+               ($unlocked {$profile is_content_unlocked $char})
+               {$this add_tex
                   {sprintf
                      "ui/image/char/%s%02i%s_keep.png"
                      $char
                      $outfit
-                     {if_else
-                        $unlocked
+                     {if_else $unlocked
                         ""
-                        "_locked"}}
-                  {sprintf
-                     "%s.mat"
-                     $char}}}}
+                        "_locked"
+                     }
+                  }
+                  {sprintf "%s.mat" $char}
+               }
+            }
+         }
          {do
-            ($song_char
-               {meta_performer get_song_character})
-            ($song_outfit
-               {$profile character_outfit $song_char})
-            {$this
-               add_tex
-               {sprintf
-                  "ui/image/char/%s%02i_keep.png"
-                  $song_char
-                  $song_outfit}
-               "default_character.mat"}}})
+            ($song_char {meta_performer get_song_character})
+            ($song_outfit {$profile character_outfit $song_char})
+            {$this add_tex
+               {sprintf "ui/image/char/%s%02i_keep.png" $song_char $song_outfit}
+               "default_character.mat"
+            }
+         }
+      }
+   )
    (enter
       {right_hand.hbs set_provider character_provider}
       {do
-         ($char
-            {meta_performer get_character_pref})
-         {shell_input
-            set_focus_if_controller_mode
-            {right_hand.hbs
-               set_selected
-               $char
-               [top_index]}}
-         {$this update $char}})
-   (exit
-      {set
-         [top_index]
-         {right_hand.hbs get_top_index}})
+         ($char {meta_performer get_character_pref})
+         {shell_input set_focus_if_controller_mode
+            {right_hand.hbs set_selected $char [top_index]}
+         }
+         {$this update $char}
+      }
+   )
+   (exit {set [top_index] {right_hand.hbs get_top_index}})
    (SELECT_MSG
-      {if_else
-         {== $component back.btn}
-         {ui
-            go_back_screen
-            {{ui current_screen}
-               get
-               back}}
+      {if_else {== $component back.btn}
+         {ui go_back_screen {{ui current_screen} get back}}
          {do
-            ($char
-               {right_hand.hbs selected_sym $component})
-            ($profile
-               {$this active_profile})
-            {switch
-               $char
+            ($char {right_hand.hbs selected_sym $component})
+            ($profile {$this active_profile})
+            {switch $char
                ('')
                (default_character
                   {meta_performer set_character_pref default_character}
-                  {ui
-                     goto_screen
-                     {gamemode get startgame_screen}})
-               {if_else
-                  {$profile is_content_unlocked $char}
+                  {ui goto_screen {gamemode get startgame_screen}}
+               )
+               {if_else {$profile is_content_unlocked $char}
                   {do
                      {meta_performer set_character_pref $char}
                      {$profile mark_content_not_new $char}
-                     {ui goto_screen character_outfit_select_screen}}
+                     {ui goto_screen character_outfit_select_screen}
+                  }
                   {do
                      {shell_input skip_current_select_anim}
                      {locked_content_panel set_up $char}
-                     {ui push_screen locked_content_screen}}}}}})
+                     {ui push_screen locked_content_screen}
+                  }
+               }
+            }
+         }
+      }
+   )
    (FOCUS_MSG
       {if
          {'||'
             {== $new_focus button_01.sbt}
             {== $new_focus button_02.sbt}
             {== $new_focus button_03.sbt}
-            {== $new_focus button_04.sbt}}
-         {$this
-            update
-            {right_hand.hbs selected_sym $new_focus}}})
+            {== $new_focus button_04.sbt}
+         }
+         {$this update {right_hand.hbs selected_sym $new_focus}}
+      }
+   )
    (HIGHLIGHT_CHANGED_MSG
       {if
          {'||'
             {== $component button_01.sbt}
             {== $component button_02.sbt}
             {== $component button_03.sbt}
-            {== $component button_04.sbt}}
-         {$this
-            update
-            {right_hand.hbs selected_sym $component}}})
+            {== $component button_04.sbt}
+         }
+         {$this update {right_hand.hbs selected_sym $component}}
+      }
+   )
    (update
       ($char)
-      {unless
-         {== $char ''}
+      {unless {== $char ''}
          {do
-            ($unlocked
-               {{$this active_profile}
-                  is_content_unlocked
-                  $char})
-            {character.mesh
-               set
-               mat
-               {sprintf
-                  "%s.mat"
-                  $char}}}})
-   (BUTTON_DOWN_MSG
-      {handle_ret
-         (right_hand.hbs handle_button_down $action)})
-   (active_profile
-      {profile_mgr
-         get_profile
-         {user_mgr get_active_user}})}
-{new
-   HamScreen
+            ($unlocked {{$this active_profile} is_content_unlocked $char})
+            {character.mesh set mat {sprintf "%s.mat" $char}}
+         }
+      }
+   )
+   (BUTTON_DOWN_MSG {handle_ret (right_hand.hbs handle_button_down $action)})
+   (active_profile {profile_mgr get_profile {user_mgr get_active_user}})
+}
+{new HamScreen
    character_select_screen
    (panels meta background_panel character_select_panel)
    (focus character_select_panel)
-   (back
-      {gamemode get startgame_screen})}
-{new
-   TexLoadPanel
+   (back {gamemode get startgame_screen})
+}
+{new TexLoadPanel
    character_outfit_select_panel
-   (file
-      "character_outfit_select.milo")
+   (file "character_outfit_select.milo")
    (show_back_button TRUE)
    (focus outfit01.btn)
    (load
       {do
-         ($char_token
-            {$this character})
-         ($vo_file
-            {{$this active_profile}
-               next_outfit_vo_sample
-               $char_token})
+         ($char_token {$this character})
+         ($vo_file {{$this active_profile} next_outfit_vo_sample $char_token})
          {$this load_mogg_clip $vo_file}
-         {$this
-            add_tex
-            {sprintf
-               "ui/image/char/%s01_keep.png"
-               $char_token}
-            outfit01.mat}
-         {$this
-            add_tex
-            {sprintf
-               "ui/image/char/%s02_keep.png"
-               $char_token}
-            outfit02.mat}
-         {$this
-            add_tex
-            {sprintf
-               "ui/image/char/%s02_locked_keep.png"
-               $char_token}
-            outfit02_locked.mat}})
+         {$this add_tex
+            {sprintf "ui/image/char/%s01_keep.png" $char_token}
+            outfit01.mat
+         }
+         {$this add_tex
+            {sprintf "ui/image/char/%s02_keep.png" $char_token}
+            outfit02.mat
+         }
+         {$this add_tex
+            {sprintf "ui/image/char/%s02_locked_keep.png" $char_token}
+            outfit02_locked.mat
+         }
+      }
+   )
    (enter
       {do
-         ($char_token
-            {$this character})
-         ($profile
-            {$this active_profile})
-         ($outfit_idx
-            {$profile character_outfit $char_token})
+         ($char_token {$this character})
+         ($profile {$this active_profile})
+         ($outfit_idx {$profile character_outfit $char_token})
          {character_name.lbl set text_token $char_token}
          {$this update_status $outfit_idx}
-         {foreach_int
-            $i
-            1
-            3
+         {foreach_int $i 1 3
             {do
-               ($outfit_token
-                  {$this outfit_token $i})
-               ($outfit_btn
-                  {sprintf
-                     "outfit%02i.btn"
-                     $i})
-               ($new_label
-                  {sprintf
-                     "new%02i.lbl"
-                     $i})
+               ($outfit_token {$this outfit_token $i})
+               ($outfit_btn {sprintf "outfit%02i.btn" $i})
+               ($new_label {sprintf "new%02i.lbl" $i})
                {$outfit_btn set text_token $outfit_token}
-               {$new_label
-                  set_new
-                  {$profile is_content_new $outfit_token}}
-               {if
-                  {== $i $outfit_idx}
+               {$new_label set_new {$profile is_content_new $outfit_token}}
+               {if {== $i $outfit_idx}
                   {shell_input set_focus_if_controller_mode $outfit_btn}
-                  {$this update $outfit_btn}}}}}
-      {{meta meta_music}
-         set_quiet_vol
-         -10})
-   (exit
-      {{meta meta_music}
-         set_quiet_vol
-         0})
+                  {$this update $outfit_btn}
+               }
+            }
+         }
+      }
+      {{meta meta_music} set_quiet_vol -10}
+   )
+   (exit {{meta meta_music} set_quiet_vol 0})
    (FOCUS_MSG
-      {if
-         {'||'
-            {== $new_focus outfit01.btn}
-            {== $new_focus outfit02.btn}}
-         {$this update $new_focus}})
-   (HIGHLIGHT_CHANGED_MSG
-      {$this update $component})
+      {if {'||' {== $new_focus outfit01.btn} {== $new_focus outfit02.btn}}
+         {$this update $new_focus}
+      }
+   )
+   (HIGHLIGHT_CHANGED_MSG {$this update $component})
    (update
       ($component)
-      {if
-         {&&
-            $component
-            {!= $component back.btn}}
+      {if {&& $component {!= $component back.btn}}
          {do
-            ($profile
-               {$this active_profile})
-            ($outfit_idx
-               {$this outfit_idx $component})
-            ($outfit_token
-               {$this outfit_token $outfit_idx})
-            {outfit.mesh
-               set
+            ($profile {$this active_profile})
+            ($outfit_idx {$this outfit_idx $component})
+            ($outfit_token {$this outfit_token $outfit_idx})
+            {outfit.mesh set
                mat
-               {if_else
-                  {$profile is_content_unlocked $outfit_token}
-                  {sprintf
-                     "outfit%02i.mat"
-                     $outfit_idx}
-                  {sprintf
-                     "outfit%02i_locked.mat"
-                     $outfit_idx}}}}})
+               {if_else {$profile is_content_unlocked $outfit_token}
+                  {sprintf "outfit%02i.mat" $outfit_idx}
+                  {sprintf "outfit%02i_locked.mat" $outfit_idx}
+               }
+            }
+         }
+      }
+   )
    (update_status
       ($outfit_idx)
       {do
-         ($profile
-            {$this active_profile})
-         {foreach_int
-            $i
-            1
-            3
+         ($profile {$this active_profile})
+         {foreach_int $i 1 3
             {do
-               ($outfit_token
-                  {$this outfit_token $i})
-               ($status_label
-                  {sprintf
-                     "status%02i.lbl"
-                     $i})
-               {if_else
-                  {$profile is_content_unlocked $outfit_token}
-                  {$status_label
-                     set_checked
-                     {== $outfit_idx $i}}
-                  {$status_label set_locked TRUE}}}}})
+               ($outfit_token {$this outfit_token $i})
+               ($status_label {sprintf "status%02i.lbl" $i})
+               {if_else {$profile is_content_unlocked $outfit_token}
+                  {$status_label set_checked {== $outfit_idx $i}}
+                  {$status_label set_locked TRUE}
+               }
+            }
+         }
+      }
+   )
    (SELECT_MSG
-      {if_else
-         {== $component back.btn}
-         {ui
-            go_back_screen
-            {{ui current_screen}
-               get
-               back}}
+      {if_else {== $component back.btn}
+         {ui go_back_screen {{ui current_screen} get back}}
          {do
-            ($profile
-               {$this active_profile})
-            ($outfit_idx
-               {$this outfit_idx $component})
-            ($outfit_token
-               {$this outfit_token $outfit_idx})
-            {if_else
-               {$profile is_content_unlocked $outfit_token}
+            ($profile {$this active_profile})
+            ($outfit_idx {$this outfit_idx $component})
+            ($outfit_token {$this outfit_token $outfit_idx})
+            {if_else {$profile is_content_unlocked $outfit_token}
                {do
-                  {$profile
-                     set_character_outfit
-                     {$this character}
-                     $outfit_idx}
+                  {$profile set_character_outfit {$this character} $outfit_idx}
                   {$profile mark_content_not_new $outfit_token}
                   {$this update_status $outfit_idx}
-                  {ui
-                     goto_screen
-                     {gamemode get startgame_screen}}}
+                  {ui goto_screen {gamemode get startgame_screen}}
+               }
                {do
                   {shell_input skip_current_select_anim}
                   {locked_content_panel set_up $outfit_token}
-                  {ui push_screen locked_content_screen}}}}})
-   (active_profile
-      {profile_mgr
-         get_profile
-         {user_mgr get_active_user}})
+                  {ui push_screen locked_content_screen}
+               }
+            }
+         }
+      }
+   )
+   (active_profile {profile_mgr get_profile {user_mgr get_active_user}})
    (outfit_idx
       ($component)
-      {if_else
-         {== $component outfit01.btn}
+      {if_else {== $component outfit01.btn}
          1
-         2})
+         2
+      }
+   )
    (outfit_token
       ($outfit_idx)
-      {sprintf
-         "%s%02i"
-         {$this character}
-         $outfit_idx})
-   (character
-      {meta_performer get_character_pref})}
-{new
-   HamScreen
+      {sprintf "%s%02i" {$this character} $outfit_idx}
+   )
+   (character {meta_performer get_character_pref})
+}
+{new HamScreen
    character_outfit_select_screen
    (panels meta background_panel character_outfit_select_panel)
    (focus character_outfit_select_panel)
-   (back character_select_screen)}
+   (back character_select_screen)
+}

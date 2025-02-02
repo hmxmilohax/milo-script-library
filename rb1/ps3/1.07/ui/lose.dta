@@ -1,219 +1,180 @@
-#define LOSE_PANEL_HANDLERS
-(LIMIT_TO_LEADER_SESSION
+#define LOSE_PANEL_HANDLERS (
+   LIMIT_TO_LEADER_SESSION
    (quit_button '')
    (enter
       {$this set_focus lose_restart.btn}
-      {lose_song_data.lbl
-         set_localized
-         {song_mgr
-            song_name
-            {game get_song}}}
-      {lose_progress_data.lbl
-         set_localized
+      {lose_song_data.lbl set_localized {song_mgr song_name {game get_song}}}
+      {lose_progress_data.lbl set_localized
          {sprintf
             {localize percent_complete_format}
-            {{beatmatch active_player 0}
-               percent_complete}}}
-      {if_else
-         {!
-            {gamemode get is_solo}}
+            {{beatmatch active_player 0} percent_complete}
+         }
+      }
+      {if_else {! {gamemode get is_solo}}
          {do
             {lose_quit.btn set_showing FALSE}
             {$this disable lose_quit.btn}
-            {set
-               [quit_button]
-               menu_item_3.btn}
-            {[quit_button]
-               set
-               text_token
-               QUIT}}
+            {set [quit_button] menu_item_3.btn}
+            {[quit_button] set text_token QUIT}
+         }
          {do
-            {set
-               [quit_button]
-               lose_quit.btn}
-            {$this
-               enable
-               [quit_button]}
-            {[quit_button]
-               set_showing
-               TRUE}
-            {[quit_button]
-               set
-               text_token
-               QUIT}
-            {if
-               {exists menu_item_3.btn}
-               {menu_item_3.btn set text_token practice}}}}
+            {set [quit_button] lose_quit.btn}
+            {$this enable [quit_button]}
+            {[quit_button] set_showing TRUE}
+            {[quit_button] set text_token QUIT}
+            {if {exists menu_item_3.btn}
+               {menu_item_3.btn set text_token practice}
+            }
+         }
+      }
       {session add_sink $this remote_player_left_msg}
-      {$this set_up_buttons})
-   (exit
-      {session remove_sink $this remote_player_left_msg})
+      {$this set_up_buttons}
+   )
+   (exit {session remove_sink $this remote_player_left_msg})
    (set_up_buttons
-      {if_else
-         {<
-            {session num_players}
-            {gamemode get min_players}}
+      {if_else {< {session num_players} {gamemode get min_players}}
          {do
             {$this disable lose_restart.btn}
-            {if
-               {exists lose_diff.btn}
-               {$this disable lose_diff.btn}}
+            {if {exists lose_diff.btn}
+               {$this disable lose_diff.btn}
+            }
             {$this disable lose_selsong.btn}
-            {$this
-               set_focus
-               [quit_button]}}
+            {$this set_focus [quit_button]}
+         }
          {do
             {$this enable lose_restart.btn}
-            {if
-               {exists lose_diff.btn}
-               {$this enable lose_diff.btn}}
-            {$this enable lose_selsong.btn}}})
-   (REMOTE_PLAYER_LEFT_MSG
-      {$this set_up_buttons})
+            {if {exists lose_diff.btn}
+               {$this enable lose_diff.btn}
+            }
+            {$this enable lose_selsong.btn}
+         }
+      }
+   )
+   (REMOTE_PLAYER_LEFT_MSG {$this set_up_buttons})
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (lose_restart.btn
-            {session
-               send_to_all
-               (game_restart)
-               kNetReliable}
-            {game_restart})
+            {session send_to_all (game_restart) kNetReliable}
+            {game_restart}
+         )
          (lose_diff.btn
-            {[quit_confirm_screen]
-               set
-               quitting
-               FALSE}
-            {$this confirm_goto meta_loading_ready_screen})
+            {[quit_confirm_screen] set quitting FALSE}
+            {$this confirm_goto meta_loading_ready_screen}
+         )
          (lose_selsong.btn
-            {[quit_confirm_screen]
-               set
-               quitting
-               FALSE}
-            {$this confirm_goto meta_loading_continue_screen})
-         {if_else
-            {==
-               $component
-               [quit_button]}
+            {[quit_confirm_screen] set quitting FALSE}
+            {$this confirm_goto meta_loading_continue_screen}
+         )
+         {if_else {== $component [quit_button]}
             {do
-               {[quit_confirm_screen]
-                  set
-                  quitting
-                  TRUE}
-               {$this confirm_goto meta_loading_main_screen}}
-            {if
-               {&&
-                  {exists menu_item_3.btn}
-                  {== $component menu_item_3.btn}}
-               {[quit_confirm_screen]
-                  set
-                  quitting
-                  TRUE}
-               {$this confirm_goto goto_practice_screen}}}})
+               {[quit_confirm_screen] set quitting TRUE}
+               {$this confirm_goto meta_loading_main_screen}
+            }
+            {if {&& {exists menu_item_3.btn} {== $component menu_item_3.btn}}
+               {[quit_confirm_screen] set quitting TRUE}
+               {$this confirm_goto goto_practice_screen}
+            }
+         }
+      }
+   )
    (confirm_goto
       ($destination)
       {band_ui_sink set_net_sync FALSE}
-      {set
-         $lose_confirm_screen_return_to
-         {{ui current_screen}
-            name}}
-      {[quit_confirm_screen]
-         set
-         confirm_screen
-         $destination}
-      {ui
-         goto_screen
-         [quit_confirm_screen]}))
-{new
-   UIPanel
+      {set $lose_confirm_screen_return_to {{ui current_screen} name}}
+      {[quit_confirm_screen] set confirm_screen $destination}
+      {ui goto_screen [quit_confirm_screen]}
+   )
+)
+{new UIPanel
    lose
    (file lose.milo)
    (quit_confirm_screen lose_confirm_quit_screen)
-   LOSE_PANEL_HANDLERS}
-{new
-   UIPanel
+   LOSE_PANEL_HANDLERS
+}
+{new UIPanel
    tour_solo_lose_panel
    (file tour_solo_lose.milo)
    (quit_confirm_screen lose_tour_solo_confirm_quit_screen)
-   LOSE_PANEL_HANDLERS}
-#define LOSE_SCREEN_HANDLERS
-((helpbar
-      {if_else
-         {is_leader_local}
+   LOSE_PANEL_HANDLERS
+}
+#define LOSE_SCREEN_HANDLERS (
+   (helpbar
+      {if_else {is_leader_local}
          ('' helpbar_select)
-         (helpbar_leave_session)})
-   HELPBAR_WAITING_FOR_LEADER)
-{new
-   UIScreen
+         (helpbar_leave_session)
+      }
+   )
+   HELPBAR_WAITING_FOR_LEADER
+)
+{new UIScreen
    lose_screen
    (panels lose helpbar)
    (focus lose)
-   LOSE_SCREEN_HANDLERS}
-{new
-   UIScreen
+   LOSE_SCREEN_HANDLERS
+}
+{new UIScreen
    tour_solo_lose_screen
    (panels tour_solo_lose_panel helpbar)
    (focus tour_solo_lose_panel)
-   LOSE_SCREEN_HANDLERS}
-{new
-   UIScreen
+   LOSE_SCREEN_HANDLERS
+}
+{new UIScreen
    goto_practice_screen
    (panels)
    (TRANSITION_COMPLETE_MSG
       {tour clear_performer}
       {gamemode set_mode practice}
-      {band_ui_sink sync_screen meta_loading_practice_screen 1})}
-#define COMMON_LOSE_QUIT_CONFIRM
-((focus dialog_panel)
+      {band_ui_sink sync_screen meta_loading_practice_screen 1}
+   )
+}
+#define COMMON_LOSE_QUIT_CONFIRM (
+   (focus dialog_panel)
    (confirm_screen '')
    (quitting FALSE)
    (back $lose_confirm_screen_return_to)
    (enter
-      {dialog_panel
-         set_yesno
-         {localize confirm_quit}
-         no.btn}
+      {dialog_panel set_yesno {localize confirm_quit} no.btn}
       {dialog_panel set limit leader_session}
       {$this set_up_buttons}
-      {session add_sink $this remote_player_left_msg})
+      {session add_sink $this remote_player_left_msg}
+   )
    (exit
       {session remove_sink $this remote_player_left_msg}
-      {unless
-         [quitting]
-         {band_ui_sink set_net_sync TRUE}})
-   (REMOTE_PLAYER_LEFT_MSG
-      {$this set_up_buttons})
+      {unless [quitting]
+         {band_ui_sink set_net_sync TRUE}
+      }
+   )
+   (REMOTE_PLAYER_LEFT_MSG {$this set_up_buttons})
    QUIT_DIALOG_SET_UP_BUTTONS
    (SELECT_MSG
       {if_else
          {'||'
-            {&&
-               {is_leader_local}
-               {game is_player_participating $player_num}}
-            {gamemode get always_allow_player}}
-         {switch
-            $component
+            {&& {is_leader_local} {game is_player_participating $player_num}}
+            {gamemode get always_allow_player}
+         }
+         {switch $component
             (yes.btn
-               {if_else
-                  [quitting]
-                  {ui
-                     goto_screen
-                     [confirm_screen]}
-                  {band_ui_sink
-                     sync_screen
-                     [confirm_screen]
-                     1}})
+               {if_else [quitting]
+                  {ui goto_screen [confirm_screen]}
+                  {band_ui_sink sync_screen [confirm_screen] 1}
+               }
+            )
             (no.btn
                {ui goto_screen $lose_confirm_screen_return_to}
-               {band_ui_sink set_net_sync TRUE})}
-         kDataUnhandled}))
-{new
-   UIScreen
+               {band_ui_sink set_net_sync TRUE}
+            )
+         }
+         kDataUnhandled
+      }
+   )
+)
+{new UIScreen
    lose_confirm_quit_screen
    (panels lose dialog_panel)
-   COMMON_LOSE_QUIT_CONFIRM}
-{new
-   UIScreen
+   COMMON_LOSE_QUIT_CONFIRM
+}
+{new UIScreen
    lose_tour_solo_confirm_quit_screen
    (panels tour_solo_lose_panel dialog_panel)
-   COMMON_LOSE_QUIT_CONFIRM}
+   COMMON_LOSE_QUIT_CONFIRM
+}

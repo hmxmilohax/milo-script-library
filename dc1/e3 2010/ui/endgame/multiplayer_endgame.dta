@@ -1,170 +1,126 @@
 #include endgame_helpers.dta
-{new
-   HamPanel
+{new HamPanel
    multiplayer_endgame_panel
-   (file
-      "multiplayer_endgame.milo")
+   (file "multiplayer_endgame.milo")
    (start_controller_focus continue.btn)
    (original_leaderboards_mode 0)
    ENDGAME_PANEL_HANDLERS
    (enter
-      {unless
-         {ui went_back}
-         {meta_performer
-            trigger_song_completion
-            0
-            {$this get_num_stars}}
-         {meta_performer
-            advance_song
-            {$this get_num_stars}}}
-      {if
-         {exists leaderboards}
-         {set
-            [original_leaderboards_mode]
-            {leaderboards get_mode}}
+      {unless {ui went_back}
+         {meta_performer trigger_song_completion 0 {$this get_num_stars}}
+         {meta_performer advance_song {$this get_num_stars}}
+      }
+      {if {exists leaderboards}
+         {set [original_leaderboards_mode] {leaderboards get_mode}}
          {leaderboards set_mode 2}
-         {leaderboards
-            download_scores
-            {meta_performer song}}
-         {instarank.hbs set_provider leaderboards}}
+         {leaderboards download_scores {meta_performer song}}
+         {instarank.hbs set_provider leaderboards}
+      }
       {platform_mgr set_notify_ui_location 1}
       {$this set_results}
       {$this show_snapshots}
       ENDGAME_PANEL_COMMON_ENTER
       {$this show_buttons}
       {saveload_mgr autosave}
-      {meta_performer add_sink $this})
+      {meta_performer add_sink $this}
+   )
    (exit
       {platform_mgr set_notify_ui_location 0}
-      {meta_performer remove_sink $this})
+      {meta_performer remove_sink $this}
+   )
    (leaderboards_loaded
       {instarank.hbs update_list}
-      {leaderboards
-         set_mode
-         [original_leaderboards_mode]})
-   (get_score_player1
-      {int
-         {game_panel get inactive_score}})
-   (get_score_player2
-      {int
-         {game_panel get score}})
-   (get_num_stars
-      {int
-         {game_panel get num_stars}})
+      {leaderboards set_mode [original_leaderboards_mode]}
+   )
+   (get_score_player1 {int {game_panel get inactive_score}})
+   (get_score_player2 {int {game_panel get score}})
+   (get_num_stars {int {game_panel get num_stars}})
    (set_results
-      {song.lbl
-         set_song_name
-         {meta_performer get_completed_song}}
-      {difficulty_player1.lbl
-         set
+      {song.lbl set_song_name {meta_performer get_completed_song}}
+      {difficulty_player1.lbl set text_token {meta_performer get_difficulty_sym}}
+      {difficulty_player2.lbl set
          text_token
-         {meta_performer get_difficulty_sym}}
-      {difficulty_player2.lbl
-         set
-         text_token
-         {meta_performer get_secondary_difficulty_sym}}
-      {score_player1.lbl
-         set_int
-         {$this get_score_player1}
-         1}
-      {score_player2.lbl
-         set_int
-         {$this get_score_player2}
-         1})
+         {meta_performer get_secondary_difficulty_sym}
+      }
+      {score_player1.lbl set_int {$this get_score_player1} 1}
+      {score_player2.lbl set_int {$this get_score_player2} 1}
+   )
    (show_snapshots
-      {if
-         gesture_mgr
-         {foreach_int
-            $i
-            1
-            5
+      {if gesture_mgr
+         {foreach_int $i 1 5
             {do
                ($snap_shot
-                  {$this
-                     find
-                     {sprint
-                        "snapshot_0"
-                        $i
-                        ".mesh"}
-                     0})
-               ($taken
-                  {>=
-                     {gesture_mgr num_snapshots}
-                     $i})
-               {if
-                  $snap_shot
+                  {$this find
+                     {sprint "snapshot_0" $i ".mesh"}
+                     0
+                  }
+               )
+               ($taken {>= {gesture_mgr num_snapshots} $i})
+               {if $snap_shot
                   {$snap_shot set_showing $taken}
-                  {if
-                     $taken
-                     {{$snap_shot get mat}
-                        set
-                        diffuse_tex
-                        {gesture_mgr
-                           snapshot_tex
-                           {- $i 1}}}}}}}})
-   (show_popup
-      {ui goto_screen multiplayer_endgame_popup_screen})
+                  {if $taken
+                     {{$snap_shot get mat} set diffuse_tex {gesture_mgr snapshot_tex {- $i 1}}}
+                  }
+               }
+            }
+         }
+      }
+   )
+   (show_popup {ui goto_screen multiplayer_endgame_popup_screen})
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (photos.btn
             {endgame_photos_screen set back_screen multiplayer_endgame_screen}
-            {ui goto_screen endgame_photos_screen})
-         (details.btn
-            {notify
-               "No details screen yet"})
+            {ui goto_screen endgame_photos_screen}
+         )
+         (details.btn {notify "No details screen yet"})
          (continue.btn
-            {if_else
-               {meta_performer just_beat_game}
+            {if_else {meta_performer just_beat_game}
                {ui pop_screen beat_game_screen}
-               {ui goto_screen multiplayer_complete_screen}})})}
-{new
-   HamPanel
+               {ui goto_screen multiplayer_complete_screen}
+            }
+         )
+      }
+   )
+}
+{new HamPanel
    multiplayer_complete_panel
-   (file
-      "multiplayer_complete.milo")
+   (file "multiplayer_complete.milo")
    (show_back_button 1)
    (enter
-      {song.lbl
-         set_song_name
-         {meta_performer get_completed_song}}
-      {difficulty_player1.lbl
-         set
+      {song.lbl set_song_name {meta_performer get_completed_song}}
+      {difficulty_player1.lbl set text_token {meta_performer get_difficulty_sym}}
+      {difficulty_player2.lbl set
          text_token
-         {meta_performer get_difficulty_sym}}
-      {difficulty_player2.lbl
-         set
-         text_token
-         {meta_performer get_secondary_difficulty_sym}})
+         {meta_performer get_secondary_difficulty_sym}
+      }
+   )
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (restart.btn
             {meta_performer restart}
-            {game_restart})
-         (continue.btn
-            {ui pop_screen meta_loading_continue_screen})
-         (back.btn
-            {ui
-               go_back_screen
-               {{ui current_screen}
-                  get
-                  back}})})}
-{new
-   HamScreen
+            {game_restart}
+         )
+         (continue.btn {ui pop_screen meta_loading_continue_screen})
+         (back.btn {ui go_back_screen {{ui current_screen} get back}})
+      }
+   )
+}
+{new HamScreen
    multiplayer_endgame_screen
    (panels multiplayer_endgame_panel)
    (focus multiplayer_endgame_panel)
-   ENDGAME_SCREEN_HANDLERS}
-{new
-   HamScreen
+   ENDGAME_SCREEN_HANDLERS
+}
+{new HamScreen
    multiplayer_endgame_popup_screen
    (panels multiplayer_endgame_panel endgame_popup_panel)
    (focus endgame_popup_panel)
-   ENDGAME_SCREEN_HANDLERS}
-{new
-   HamScreen
+   ENDGAME_SCREEN_HANDLERS
+}
+{new HamScreen
    multiplayer_complete_screen
    (panels multiplayer_complete_panel)
    (focus multiplayer_complete_panel)
-   (back multiplayer_endgame_screen)}
+   (back multiplayer_endgame_screen)
+}

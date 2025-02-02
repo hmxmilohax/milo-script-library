@@ -1,182 +1,128 @@
-#define kRockCentralConnectionTimeout
-(15.0)
-{new
-   HamPanel
+#define kRockCentralConnectionTimeout (15.0)
+{new HamPanel
    song_info_challenge_panel
-   (file
-      "../song_info_challenge.milo")
+   (file "../song_info_challenge.milo")
    (song_name '')
    (showing_full FALSE)
    (pending_song none)
    (song_list_mode TRUE)
    (playlist_mode FALSE)
-   (dlc_song_title
-      "")
+   (dlc_song_title "")
    (enter
-      {set
-         [dlc_song_title]
-         ""}
-      {if_else
-         {!=
-            [pending_song]
-            none}
-         {$this
-            set_song
-            [pending_song]}
-         {$this
-            set_song
-            {gamedata get song}}}
+      {set [dlc_song_title] ""}
+      {if_else {!= [pending_song] none}
+         {$this set_song [pending_song]}
+         {$this set_song {gamedata get song}}
+      }
       {$this show_full_song_details}
       {$this set pending_song none}
       {meta music_stop}
-      {ui
-         add_sink
-         $this
-         (song_data_mounted)})
+      {ui add_sink $this (song_data_mounted)}
+   )
    (exit
       {song_preview start ''}
-      {if
-         {!
-            {gamemode in_mode campaign}}
-         {meta music_start}}
+      {if {! {gamemode in_mode campaign}}
+         {meta music_start}
+      }
       {$this set playlist_mode FALSE}
-      {ui remove_sink $this song_data_mounted})
+      {ui remove_sink $this song_data_mounted}
+   )
    (set_song_list_mode
       ($enabled)
       {$this set song_list_mode $enabled}
-      {if
-         {$this is_up}
-         {if_else
-            {!=
-               [song_name]
-               ''}
+      {if {$this is_up}
+         {if_else {!= [song_name] ''}
             {$this refresh_song_details}
-            {$this clear_song_details}}})
+            {$this clear_song_details}
+         }
+      }
+   )
    (song_data_mounted
       ($song)
-      {if
-         {==
-            $song
-            [song_name]}
-         {$this refresh_album_art}})
+      {if {== $song [song_name]}
+         {$this refresh_album_art}
+      }
+   )
    (set_song
       ($song)
-      {if_else
-         {$this is_up}
+      {if_else {$this is_up}
          {do
             {$this set song_name $song}
             {$this hide_full_song_details}
-            {if_else
-               {!=
-                  [song_name]
-                  ''}
+            {if_else {!= [song_name] ''}
                {$this refresh_song_details}
-               {$this clear_song_details}}}
+               {$this clear_song_details}
+            }
+         }
          {do
-            {$this set pending_song $song}}})
+            {$this set pending_song $song}
+         }
+      }
+   )
    (show_full_song_details
       {$this set showing_full TRUE}
       {$this play_song_preview}
-      {$this refresh_album_art})
+      {$this refresh_album_art}
+   )
    (hide_full_song_details
       {$this set showing_full FALSE}
-      {$this refresh_album_art})
+      {$this refresh_album_art}
+   )
    (refresh_song_details
       {do
-         ($songid
-            {song_mgr
-               get_song_id
-               [song_name]})
-         {song.lbl
-            set_song_name
-            [song_name]}
-         {song.lbl
-            set
-            showing
-            {!
-               [song_list_mode]}}
-         {album.lbl
-            set_album_name
-            [song_name]}
+         ($songid {song_mgr get_song_id [song_name]})
+         {song.lbl set_song_name [song_name]}
+         {song.lbl set showing {! [song_list_mode]}}
+         {album.lbl set_album_name [song_name]}
          {if_else
             {&&
                [song_list_mode]
-               {==
-                  {song_offer_provider get_current_sort_name}
-                  by_artist}}
-            {artist.lbl
-               set_song_name
-               [song_name]}
-            {artist.lbl
-               set_artist_name
-               [song_name]}}
-         {dancer.lbl
-            set_token_fmt
+               {== {song_offer_provider get_current_sort_name} by_artist}
+            }
+            {artist.lbl set_song_name [song_name]}
+            {artist.lbl set_artist_name [song_name]}
+         }
+         {dancer.lbl set_token_fmt
             song_dancer
-            {song_mgr
-               dancer_for_song
-               [song_name]}}})
+            {song_mgr dancer_for_song [song_name]}
+         }
+      }
+   )
    (clear_song_details
       {do
-         {if_else
-            {!=
-               [dlc_song_title]
-               ""}
-            {song.lbl
-               set_prelocalized_string
-               [dlc_song_title]}
-            {song.lbl set text_token ''}}
+         {if_else {!= [dlc_song_title] ""}
+            {song.lbl set_prelocalized_string [dlc_song_title]}
+            {song.lbl set text_token ''}
+         }
          {album.lbl set text_token ''}
          {artist.lbl set text_token ''}
-         {dancer.lbl set text_token ''}})
+         {dancer.lbl set text_token ''}
+      }
+   )
    (refresh_album_art
       {do
-         ($pic
-            {album_art find album_art.pic})
-         {if_else
-            {&&
-               {!=
-                  [song_name]
-                  ''}
-               [showing_full]}
+         ($pic {album_art find album_art.pic})
+         {if_else {&& {!= [song_name] ''} [showing_full]}
             {do
-               ($content_name
-                  {song_mgr
-                     content_name_from_sym
-                     [song_name]})
-               {if_else
-                  {'||'
-                     {==
-                        $content_name
-                        ""}
-                     {content_mgr is_mounted $content_name}}
-                  {$pic
-                     set
-                     tex_file
-                     {song_mgr
-                        album_art_path
-                        [song_name]}}
-                  {$pic
-                     set
-                     tex_file
-                     "ui/image/dc_logo_keep.png"}}}
-            {$pic
-               set
-               tex_file
-               "ui/image/dc_logo_keep.png"}}})
-   (restart_preview_flow
-      {preview.flow activate})
+               ($content_name {song_mgr content_name_from_sym [song_name]})
+               {if_else {'||' {== $content_name ""} {content_mgr is_mounted $content_name}}
+                  {$pic set tex_file {song_mgr album_art_path [song_name]}}
+                  {$pic set tex_file "ui/image/dc_logo_keep.png"}
+               }
+            }
+            {$pic set tex_file "ui/image/dc_logo_keep.png"}
+         }
+      }
+   )
+   (restart_preview_flow {preview.flow activate})
    (play_song_preview
-      {song_preview
-         start_video
-         [song_name]
-         preview.tmov}
-      {preview.flow activate})}
-{new
-   HamPanel
+      {song_preview start_video [song_name] preview.tmov}
+      {preview.flow activate}
+   )
+}
+{new HamPanel
    challenge_feed_panel
-   (file
-      "challenges.milo")
+   (file "challenges.milo")
    (focus right_hand.hnl)
    (skip_controller_focus_on_enter TRUE)
    (back_token screen_name_main)
@@ -187,44 +133,22 @@
    (focus_item_index 0)
    (joypad
       (hold_ms 100)
-      (repeat_ms 80))
-   (is_loaded
-      {content_mgr refresh_done})
+      (repeat_ms 80)
+   )
+   (is_loaded {content_mgr refresh_done})
    (load
       {content_loading_panel allowed_to_show TRUE}
-      {platform_mgr
-         add_sink
-         $this
-         (storage_changed)}
-      {ui_event_mgr
-         add_sink
-         $this
-         (event_dialog_dismiss)})
-   (finish_load
-      {content_loading_panel allowed_to_show FALSE})
+      {platform_mgr add_sink $this (storage_changed)}
+      {ui_event_mgr add_sink $this (event_dialog_dismiss)}
+   )
+   (finish_load {content_loading_panel allowed_to_show FALSE})
    (enter
       {$this set storage_changed_error FALSE}
       {profile_mgr clear_critical_profile}
-      {profile_mgr
-         add_sink
-         $this
-         (profile_changed_msg)
-         0
-         FALSE}
-      {hamprovider
-         add_sink
-         $this
-         (on_ui_nav_player_change)
-         0
-         FALSE}
-      {player_provider_1
-         add_sink
-         $this
-         (padnum_updated)}
-      {player_provider_2
-         add_sink
-         $this
-         (padnum_updated)}
+      {profile_mgr add_sink $this (profile_changed_msg) 0 FALSE}
+      {hamprovider add_sink $this (on_ui_nav_player_change) 0 FALSE}
+      {player_provider_1 add_sink $this (padnum_updated)}
+      {player_provider_2 add_sink $this (padnum_updated)}
       {gamemode set_mode challenge}
       {hamprovider set ui_nav_mode shell}
       {challenge_provider set_sort_index 0}
@@ -234,538 +158,480 @@
       {voice_input_panel activate_voice_context challenge_feed_screen}
       {challenges download_challenge_badge_info}
       {challenge_provider sort_with_headers TRUE}
-      {$this update_all})
+      {$this update_all}
+   )
    (exit
       {profile_mgr remove_sink $this profile_changed_msg}
       {hamprovider remove_sink $this on_ui_nav_player_change}
       {player_provider_1 remove_sink $this padnum_updated}
       {player_provider_2 remove_sink $this padnum_updated}
       {challenge_provider exit}
-      {set
-         [top_index]
-         {right_hand.hnl get_top_index}}
-      {challenge_provider sort_with_headers FALSE})
+      {set [top_index] {right_hand.hnl get_top_index}}
+      {challenge_provider sort_with_headers FALSE}
+   )
    (unload
       {ui_event_mgr remove_sink $this event_dialog_dismiss}
-      {platform_mgr remove_sink $this storage_changed})
-   (get_selected_song_index
-      {right_hand.hnl get_selected})
+      {platform_mgr remove_sink $this storage_changed}
+   )
+   (get_selected_song_index {right_hand.hnl get_selected})
    HIGHLIGHT_RIGHT_LIST_ITEM
    SELECT_RIGHT_LIST_ITEM
-   (poll
-      SLIDE_RIGHT_LIST_ITEM
-      {expire_time.lbl set_expire_time})
+   (poll SLIDE_RIGHT_LIST_ITEM {expire_time.lbl set_expire_time})
    (NAV_SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (right_hand.hnl
             {$this handle_highlight_settled $index}
-            {set
-               $challenge_song_shortname
-               {challenge_provider get_song_shortname $index}}
+            {set $challenge_song_shortname
+               {challenge_provider get_song_shortname $index}
+            }
             {cond
                ({challenge_provider is_data_header $index}
-                  {$this play_song $index})
+                  {$this play_song $index}
+               )
                ({&&
                      $challenge_song_shortname
                      {profile_mgr is_content_unlocked $challenge_song_shortname}}
-                  {$this play_song $index})
+                  {$this play_song $index}
+               )
                (TRUE
                   {do
-                     ($song_type
-                        {challenge_provider get_challenge_record_song_type $index})
-                     {switch
-                        $song_type
+                     ($song_type {challenge_provider get_challenge_record_song_type $index})
+                     {switch $song_type
                         (2
                            {challenge_store_confirmation_screen set selected_index $index}
                            {dialog_panel set_ok_no challenge_dc1_store_confirm FALSE}
-                           {ui goto_screen challenge_store_confirmation_screen})
+                           {ui goto_screen challenge_store_confirmation_screen}
+                        )
                         (3
                            {challenge_store_confirmation_screen set selected_index $index}
                            {dialog_panel set_ok_no challenge_dc2_store_confirm FALSE}
-                           {ui goto_screen challenge_store_confirmation_screen})
+                           {ui goto_screen challenge_store_confirmation_screen}
+                        )
                         (4
                            {challenge_store_confirmation_screen set selected_index $index}
                            {dialog_panel set_ok_no challenge_dlc_store_confirm FALSE}
-                           {ui goto_screen challenge_store_confirmation_screen})}})})
+                           {ui goto_screen challenge_store_confirmation_screen}
+                        )
+                     }
+                  }
+               )
+            }
+         )
          (left_hand.hnl
-            {if
-               {'||'
-                  {== $name back}
-                  {== $name screen_name_main}}
-               {$this move_back_quickplay}})})
+            {if {'||' {== $name back} {== $name screen_name_main}}
+               {$this move_back_quickplay}
+            }
+         )
+      }
+   )
    (NAV_SELECT_DONE_MSG
-      {switch
-         $component
-         (right_hand.hnl
-            {$this uncollapse_headers $index})
+      {switch $component
+         (right_hand.hnl {$this uncollapse_headers $index})
          (left_hand.hnl
-            {switch
-               $name
-               (back
-                  {$this
-                     uncollapse_headers
-                     {right_hand.hnl get_top_index}})})})
+            {switch $name
+               (back {$this uncollapse_headers {right_hand.hnl get_top_index}})
+            }
+         )
+      }
+   )
    (NAV_HIGHLIGHT_MSG
-      {switch
-         $component
-         (right_hand.hnl
-            {$this handle_highlight $index})})
+      {switch $component
+         (right_hand.hnl {$this handle_highlight $index})
+      }
+   )
    (NAV_HIGHLIGHT_SETTLED_MSG
-      {unless
-         {ui in_transition}
-         {switch
-            $component
-            (right_hand.hnl
-               {$this handle_highlight_settled $index})}})
+      {unless {ui in_transition}
+         {switch $component
+            (right_hand.hnl {$this handle_highlight_settled $index})
+         }
+      }
+   )
    (BUTTON_DOWN_MSG
-      {if_else
-         {== $action kAction_Cancel}
+      {if_else {== $action kAction_Cancel}
          {ui go_back_screen main_screen}
-         kDataUnhandled})
+         kDataUnhandled
+      }
+   )
    (uncollapse_headers
       ($header_index)
       {do
-         ($header_name
-            {challenge_provider get_token $header_index})
+         ($header_name {challenge_provider get_token $header_index})
          ($new_index)
          {challenge_provider on_select_done $header_index}
          {right_hand.hnl refresh}
-         {set
-            $new_index
-            {challenge_provider first_data_index $header_name}}
+         {set $new_index {challenge_provider first_data_index $header_name}}
          {right_hand.hnl scroll_to_index $new_index $new_index}
-         {right_hand.hnl play_enter_anim}})
+         {right_hand.hnl play_enter_anim}
+      }
+   )
    (play_song
       ($index)
-      {unless
-         {ui in_transition}
+      {unless {ui in_transition}
          {do
-            ($next_screen
-               {challenge_provider on_select $index})
-            {if
-               $next_screen
-               {ui goto_screen $next_screen}}}})
-   (play_selected_song
-      {$this
-         play_song
-         {right_hand.hnl get_selected}})
+            ($next_screen {challenge_provider on_select $index})
+            {if $next_screen
+               {ui goto_screen $next_screen}
+            }
+         }
+      }
+   )
+   (play_selected_song {$this play_song {right_hand.hnl get_selected}})
    (get_song_info_obj
       ($obj)
-      {song_info_challenge_panel find $obj})
+      {song_info_challenge_panel find $obj}
+   )
    (handle_highlight
       ($index)
       {do
-         ($song
-            {challenge_provider get_song_shortname $index})
-         ($songid
-            {challenge_provider get_song_id $index})
+         ($song {challenge_provider get_song_shortname $index})
+         ($songid {challenge_provider get_song_id $index})
          {challenge_provider set_highlighted_ix $index}
-         {set
-            [focus_item_index]
-            $index}
-         {song_info_challenge_panel
-            set
-            dlc_song_title
-            ""}
-         {if_else
-            {!= $songid 0}
+         {set [focus_item_index] $index}
+         {song_info_challenge_panel set dlc_song_title ""}
+         {if_else {!= $songid 0}
             {do
-               {{$this get_song_info_obj info.grp}
-                  set_showing
-                  TRUE}
-               {if_else
-                  {challenge_provider selection_is header}
+               {{$this get_song_info_obj info.grp} set_showing TRUE}
+               {if_else {challenge_provider selection_is header}
                   {do
-                     {{$this get_song_info_obj challenger.lbl}
-                        set
+                     {{$this get_song_info_obj challenger.lbl} set
                         text_token
-                        challenge_best_challenger}
-                     {{$this get_song_info_obj worth.lbl}
-                        set
-                        text_token
-                        challenge_total}}
+                        challenge_best_challenger
+                     }
+                     {{$this get_song_info_obj worth.lbl} set text_token challenge_total}
+                  }
                   {do
-                     {{$this get_song_info_obj challenger.lbl}
-                        set
+                     {{$this get_song_info_obj challenger.lbl} set
                         text_token
-                        challenge_challenger}
-                     {{$this get_song_info_obj worth.lbl}
-                        set
-                        text_token
-                        challenge_bonus}}}
-               {{$this get_song_info_obj my_best_score.lbl}
-                  set_player_high_score
-                  $songid}
-               {{$this get_song_info_obj my_flaunt_score.lbl}
-                  set_player_challenge_score
-                  $songid}
-               {{$this get_song_info_obj challenger_gamertag.lbl}
-                  set_challenger_gamertag
-                  $index}
-               {{$this get_song_info_obj score_to_beat_score.lbl}
-                  set_challenge_score
-                  $index}
-               {{$this get_song_info_obj bonus_stars.lbl}
-                  set_challenge_exp
-                  $index}
-               {{$this get_song_info_obj worth_stars.lbl}
-                  set_challenge_exp
-                  $index}
-               {{$this get_song_info_obj xp_level.grp}
-                  set_showing
-                  TRUE}
+                        challenge_challenger
+                     }
+                     {{$this get_song_info_obj worth.lbl} set text_token challenge_bonus}
+                  }
+               }
+               {{$this get_song_info_obj my_best_score.lbl} set_player_high_score $songid}
+               {{$this get_song_info_obj my_flaunt_score.lbl} set_player_challenge_score
+                  $songid
+               }
+               {{$this get_song_info_obj challenger_gamertag.lbl} set_challenger_gamertag
+                  $index
+               }
+               {{$this get_song_info_obj score_to_beat_score.lbl} set_challenge_score
+                  $index
+               }
+               {{$this get_song_info_obj bonus_stars.lbl} set_challenge_exp $index}
+               {{$this get_song_info_obj worth_stars.lbl} set_challenge_exp $index}
+               {{$this get_song_info_obj xp_level.grp} set_showing TRUE}
                {do
-                  ($rank
-                     {challenge_provider get_challenger_xp $index})
-                  ($rank_in_tier
-                     {mod $rank 5})
-                  ($tier
-                     {int
-                        {/ $rank 5}})
-                  {if
-                     {!= $rank_in_tier 0}
-                     {'+=' $tier 1}}
-                  {{$this get_song_info_obj player.ep}
-                     set
-                     rank
-                     $rank}
-                  {{$this get_song_info_obj player.ep}
-                     set
-                     tier
-                     $tier}
-                  {{$this get_song_info_obj update_rank_and_tier.flow}
-                     activate}}
-               {if
-                  {== $song ''}
-                  {song_info_challenge_panel
-                     set
+                  ($rank {challenge_provider get_challenger_xp $index})
+                  ($rank_in_tier {mod $rank 5})
+                  ($tier {int {/ $rank 5}})
+                  {if {!= $rank_in_tier 0}
+                     {'+=' $tier 1}
+                  }
+                  {{$this get_song_info_obj player.ep} set rank $rank}
+                  {{$this get_song_info_obj player.ep} set tier $tier}
+                  {{$this get_song_info_obj update_rank_and_tier.flow} activate}
+               }
+               {if {== $song ''}
+                  {song_info_challenge_panel set
                      dlc_song_title
-                     {challenge_provider get_song_title $index}}}
-               {song_info_challenge_panel set_song $song}}
+                     {challenge_provider get_song_title $index}
+                  }
+               }
+               {song_info_challenge_panel set_song $song}
+            }
             {do
-               {{$this get_song_info_obj info.grp}
-                  set_showing
-                  FALSE}
-               {{$this get_song_info_obj xp_level.grp}
-                  set_showing
-                  FALSE}
-               {song_info_challenge_panel set_song ''}}}})
+               {{$this get_song_info_obj info.grp} set_showing FALSE}
+               {{$this get_song_info_obj xp_level.grp} set_showing FALSE}
+               {song_info_challenge_panel set_song ''}
+            }
+         }
+      }
+   )
    (handle_highlight_settled
       ($index)
-      {song_info_challenge_panel show_full_song_details})
-   (get_focus_song
-      {challenge_provider
-         get_token
-         [focus_item_index]})
+      {song_info_challenge_panel show_full_song_details}
+   )
+   (get_focus_song {challenge_provider get_token [focus_item_index]})
    (move_on_quickplay
-      {unless
-         {ui in_transition}
+      {unless {ui in_transition}
          {gamemode set_mode challenge}
-         {hamprovider
-            set
+         {hamprovider set
             target_challenge_score
-            {challenge_provider
-               get_target_challenge_score
-               [focus_item_index]}}
+            {challenge_provider get_target_challenge_score [focus_item_index]}
+         }
          {challenges setup_in_game_data}
-         {ui
-            goto_screen
-            {gamemode get seldiff_screen}}})
+         {ui goto_screen {gamemode get seldiff_screen}}
+      }
+   )
    (move_on_quickplay_playlist
-      {unless
-         {ui in_transition}
+      {unless {ui in_transition}
          {song_select_playlist_screen set back_screen challenge_feed_screen}
-         {ui goto_screen song_select_playlist_tutorial_check_screen}})
+         {ui goto_screen song_select_playlist_tutorial_check_screen}
+      }
+   )
    (move_back_quickplay
-      {unless
-         {ui in_transition}
-         {ui go_back_screen main_screen}})
+      {unless {ui in_transition}
+         {ui go_back_screen main_screen}
+      }
+   )
    (storage_changed
-      {if_else
-         {!
-            {ui_event_mgr has_active_dialog_event}}
+      {if_else {! {ui_event_mgr has_active_dialog_event}}
          {ui_event_mgr trigger_event storage_changed}
-         {set
-            [storage_changed_error]
-            TRUE}})
+         {set [storage_changed_error] TRUE}
+      }
+   )
    (event_dialog_dismiss
-      {if
-         [storage_changed_error]
+      {if [storage_changed_error]
          {ui_event_mgr trigger_event storage_changed}
-         {set
-            [storage_changed_error]
-            FALSE}})
+         {set [storage_changed_error] FALSE}
+      }
+   )
    (update_provider
       {challenge_provider enter}
-      {if
-         {>=
-            [focus_item_index]
-            {challenge_provider num_data}}
+      {if {>= [focus_item_index] {challenge_provider num_data}}
          {$this set focus_item_index 0}
-         {$this set top_index 0}}
-      {if_else
-         {>
-            {challenge_provider num_data}
-            0}
+         {$this set top_index 0}
+      }
+      {if_else {> {challenge_provider num_data} 0}
          {do
             {right_hand.hnl enable_navigation}
-            {right_hand.hnl set_provider challenge_provider}}
+            {right_hand.hnl set_provider challenge_provider}
+         }
          {do
             {right_hand.hnl disable_navigation}
-            {right_hand.hnl set_provider empty.hnp}}})
+            {right_hand.hnl set_provider empty.hnp}
+         }
+      }
+   )
    (update_display
-      {right_hand.hnl
-         scroll_to_index
-         [focus_item_index]
-         [top_index]}
+      {right_hand.hnl scroll_to_index [focus_item_index] [top_index]}
       {right_hand.hnl refresh}
-      {$this
-         handle_highlight
-         [focus_item_index]}
-      {$this
-         handle_highlight_settled
-         [focus_item_index]}
+      {$this handle_highlight [focus_item_index]}
+      {$this handle_highlight_settled [focus_item_index]}
       {player_xp.grp set_showing FALSE}
-      {if
-         {profile_mgr has_active_profile}
+      {if {profile_mgr has_active_profile}
          {do
-            ($profile
-               {profile_mgr get_active_profile})
-            ($meta_rank
-               {$profile get_rank})
-            ($rank_number
-               {$meta_rank get_rank_number})
-            ($xp_of_rank
-               {$meta_rank get_xp_of_rank $rank_number})
-            ($percent_to_next
-               {$meta_rank get_percent_to_next_rank})
-            ($remaining_xp
-               {int
-                  {'*'
-                     {- 1.0 $percent_to_next}
-                     $xp_of_rank}})
-            {gamertag.lbl
-               set_user_name
-               {$profile get_pad_num}}
+            ($profile {profile_mgr get_active_profile})
+            ($meta_rank {$profile get_rank})
+            ($rank_number {$meta_rank get_rank_number})
+            ($xp_of_rank {$meta_rank get_xp_of_rank $rank_number})
+            ($percent_to_next {$meta_rank get_percent_to_next_rank})
+            ($remaining_xp {int {'*' {- 1.0 $percent_to_next} $xp_of_rank}})
+            {gamertag.lbl set_user_name {$profile get_pad_num}}
             {next_rank.lbl set_int $remaining_xp}
             {player_xp.grp set_showing TRUE}
-            {my_player.ep
-               set
-               rank
-               {$meta_rank get_rank_number}}
-            {my_player.ep
-               set
-               tier
-               {$meta_rank get_tier}}
-            {update_rank_and_tier.flow activate}}}
-      {$this update_badge_count})
+            {my_player.ep set rank {$meta_rank get_rank_number}}
+            {my_player.ep set tier {$meta_rank get_tier}}
+            {update_rank_and_tier.flow activate}
+         }
+      }
+      {$this update_badge_count}
+   )
    (update_badge_count
       {gold.lbl set_modal_count 0}
       {silver.lbl set_modal_count 1}
-      {bronze.lbl set_modal_count 2})
+      {bronze.lbl set_modal_count 2}
+   )
    (update_all
-      {if
-         {$this is_up}
+      {if {$this is_up}
          {$this update_provider}
-         {$this update_display}})
+         {$this update_display}
+      }
+   )
    (profile_changed_msg
-      {if_else
-         {profile_mgr has_active_profile}
+      {if_else {profile_mgr has_active_profile}
          {do
             {challenges download_challenge_badge_info}
-            {if_else
-               {challenges need_to_resync_challenges}
+            {if_else {challenges need_to_resync_challenges}
                {ui goto_screen downloading_player_challenge_screen}
-               {$this update_all}}}
-         {ui goto_screen challenges_need_to_sign_in_screen}})
-   (on_ui_nav_player_change
-      {$this update_all})
+               {$this update_all}
+            }
+         }
+         {ui goto_screen challenges_need_to_sign_in_screen}
+      }
+   )
+   (on_ui_nav_player_change {$this update_all})
    (all_challenges_updated
       ($has_new_challenges)
-      {if
-         $has_new_challenges
-         {ui push_screen auto_update_warning_screen}})
+      {if $has_new_challenges
+         {ui push_screen auto_update_warning_screen}
+      }
+   )
    (challenges_expired
       {downloading_player_challenge_screen set download_type 1}
-      {ui goto_screen downloading_player_challenge_screen})
-   (player_badge_count_updated
-      {$this update_badge_count})}
-{new
-   HamScreen
+      {ui goto_screen downloading_player_challenge_screen}
+   )
+   (player_badge_count_updated {$this update_badge_count})
+}
+{new HamScreen
    challenge_feed_screen
-   (panels meta background_panel challenge_feed_panel song_info_challenge_panel)
+   (panels
+      meta
+      background_panel
+      challenge_feed_panel
+      song_info_challenge_panel
+   )
    (focus challenge_feed_panel)
    (back main_screen)
    (handle_global_commands TRUE)
    (on_voice_command
       ($command)
-      {switch
-         $command
-         (screen_name_main
-            {helpbar select_left_list_item 1})
-         BACRO})
+      {switch $command
+         (screen_name_main {helpbar select_left_list_item 1})
+         BACRO
+      }
+   )
    (on_global_voice_command
       ($command)
-      {switch
-         $command
-         (hidden_global_main
-            {helpbar select_left_list_item 1})
-         {on_global_voice_command $command}})
+      {switch $command
+         (hidden_global_main {helpbar select_left_list_item 1})
+         {on_global_voice_command $command}
+      }
+   )
    (select_song_by_index
       ($index)
-      {challenge_feed_panel highlight_right_list_item $index})
+      {challenge_feed_panel highlight_right_list_item $index}
+   )
    (on_say_song_name
       ($song_name)
-      {$this
-         select_song_by_index
-         {challenge_provider first_data_index $song_name}})}
-{new
-   HamScreen
+      {$this select_song_by_index
+         {challenge_provider first_data_index $song_name}
+      }
+   )
+}
+{new HamScreen
    downloading_player_challenge_screen
-   (panels challenge_feed_panel song_info_challenge_panel background_confirmation_panel dialog_panel)
+   (panels
+      challenge_feed_panel
+      song_info_challenge_panel
+      background_confirmation_panel
+      dialog_panel
+   )
    (focus dialog_panel)
    (download_type 0)
    (wait_until_rc_online FALSE)
    (timer kRockCentralConnectionTimeout)
    (enter
       {song_info_challenge_panel set_showing FALSE}
-      {{challenge_feed_panel find player_xp.grp}
-         set_showing
-         FALSE}
+      {{challenge_feed_panel find player_xp.grp} set_showing FALSE}
       {dialog_panel set_msg challenge_updating_from_rc}
-      {if_else
-         [wait_until_rc_online]
-         {set
-            [timer]
-            kRockCentralConnectionTimeout}
+      {if_else [wait_until_rc_online]
+         {set [timer] kRockCentralConnectionTimeout}
          {do
-            {switch
-               [download_type]
-               (1
-                  {challenges download_all_challenges})
-               {challenges download_player_challenges}}
-            {set
-               [download_type]
-               0}}})
+            {switch [download_type]
+               (1 {challenges download_all_challenges})
+               {challenges download_player_challenges}
+            }
+            {set [download_type] 0}
+         }
+      }
+   )
    (poll
-      {if
-         [wait_until_rc_online]
-         {if_else
-            {rock_central is_online}
+      {if [wait_until_rc_online]
+         {if_else {rock_central is_online}
             {do
-               {set
-                  [wait_until_rc_online]
-                  FALSE}
-               {switch
-                  [download_type]
-                  (1
-                     {challenges download_all_challenges})
-                  {challenges download_player_challenges}}
-               {set
-                  [download_type]
-                  0}}
+               {set [wait_until_rc_online] FALSE}
+               {switch [download_type]
+                  (1 {challenges download_all_challenges})
+                  {challenges download_player_challenges}
+               }
+               {set [download_type] 0}
+            }
             {do
-               {-=
-                  [timer]
-                  {taskmgr ui_delta_seconds}}
-               {if
-                  {<
-                     [timer]
-                     0.0}
-                  {ui goto_screen server_not_available_screen}}}}})
+               {-= [timer] {taskmgr ui_delta_seconds}}
+               {if {< [timer] 0.0}
+                  {ui goto_screen server_not_available_screen}
+               }
+            }
+         }
+      }
+   )
    (BUTTON_DOWN_MSG
-      {if
-         {&&
-            {shell_input in_controller_mode}
-            {== $action kAction_Cancel}}
-         {ui go_back_screen main_screen}}
-      kDataUnhandled)
+      {if {&& {shell_input in_controller_mode} {== $action kAction_Cancel}}
+         {ui go_back_screen main_screen}
+      }
+      kDataUnhandled
+   )
    (NAV_SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (left_hand.hnl
-            {switch
-               $name
-               (back
-                  {ui go_back_screen main_screen})})})
+            {switch $name
+               (back {ui go_back_screen main_screen})
+            }
+         )
+      }
+   )
    (all_challenges_updated
       ($has_new_challenges)
       {challenge_feed_panel update_all}
       {song_info_challenge_panel set_showing TRUE}
-      {ui goto_screen challenge_feed_screen})
-   (player_badge_count_updated
-      {challenge_feed_panel update_badge_count})
-   (challenges_failed_rc
-      {ui goto_screen server_not_available_screen})}
-{new
-   HamScreen
+      {ui goto_screen challenge_feed_screen}
+   )
+   (player_badge_count_updated {challenge_feed_panel update_badge_count})
+   (challenges_failed_rc {ui goto_screen server_not_available_screen})
+}
+{new HamScreen
    auto_update_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (timer 30.0)
    (enter
       {song_info_challenge_panel set_showing FALSE}
-      {{challenge_feed_panel find player_xp.grp}
-         set_showing
-         FALSE}
+      {{challenge_feed_panel find player_xp.grp} set_showing FALSE}
       {dialog_panel set_continue challenge_auto_updated TRUE}
-      {set
-         [timer]
-         30.0})
+      {set [timer] 30.0}
+   )
    (poll
-      {-=
-         [timer]
-         {taskmgr ui_delta_seconds}}
-      {if
-         {<
-            [timer]
-            0.0}
-         {$this go_back}})
-   (NAV_SELECT_MSG
-      {$this go_back})
+      {-= [timer] {taskmgr ui_delta_seconds}}
+      {if {< [timer] 0.0}
+         {$this go_back}
+      }
+   )
+   (NAV_SELECT_MSG {$this go_back})
    (go_back
       {challenge_feed_panel update_all}
       {song_info_challenge_panel set_showing TRUE}
-      {ui pop_screen})}
-{new
-   HamScreen
+      {ui pop_screen}
+   )
+}
+{new HamScreen
    challenge_store_confirmation_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (selected_index -1)
    (NAV_SELECT_MSG
-      {switch
-         $name
+      {switch $name
          (ok
-            {unless
-               {ui in_transition}
+            {unless {ui in_transition}
                {do
-                  ($next_screen
-                     {challenge_provider
-                        on_select
-                        [selected_index]})
-                  {if
-                     $next_screen
-                     {ui goto_screen $next_screen}}}})
+                  ($next_screen {challenge_provider on_select [selected_index]})
+                  {if $next_screen
+                     {ui goto_screen $next_screen}
+                  }
+               }
+            }
+         )
          (no
-            {if_else
-               {profile_mgr has_active_profile}
+            {if_else {profile_mgr has_active_profile}
                {do
-                  ($profile
-                     {profile_mgr get_active_profile})
-                  {if_else
-                     {platform_mgr
-                        is_pad_signed_into_live
-                        {$profile get_pad_num}}
-                     {if_else
-                        {rock_central is_online}
-                        {if_else
-                           {challenges can_download_player_challenges}
+                  ($profile {profile_mgr get_active_profile})
+                  {if_else {platform_mgr is_pad_signed_into_live {$profile get_pad_num}}
+                     {if_else {rock_central is_online}
+                        {if_else {challenges can_download_player_challenges}
                            {ui goto_screen downloading_player_challenge_screen}
-                           {ui goto_screen challenge_feed_screen}}
+                           {ui goto_screen challenge_feed_screen}
+                        }
                         {do
                            {downloading_player_challenge_screen set wait_until_rc_online TRUE}
-                           {ui goto_screen downloading_player_challenge_screen}}}
-                     {ui goto_screen challenges_need_to_sign_in_screen}}}
-               {ui goto_screen challenges_need_to_sign_in_screen}})})}
+                           {ui goto_screen downloading_player_challenge_screen}
+                        }
+                     }
+                     {ui goto_screen challenges_need_to_sign_in_screen}
+                  }
+               }
+               {ui goto_screen challenges_need_to_sign_in_screen}
+            }
+         )
+      }
+   )
+}

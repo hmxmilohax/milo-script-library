@@ -1,160 +1,134 @@
-{new
-   LoadingPanel
+{new LoadingPanel
    loading_panel
-   (file
-      [loading_screen_file])
+   (file [loading_screen_file])
    (next_screen '')
-   (loading_screen_file
-      {$this choose_loading_screen})
+   (loading_screen_file {$this choose_loading_screen})
    (helpbar_allow_controller FALSE)
    (hide_helpbar TRUE)
    (show_hand_help FALSE)
-   (load
-      {helpbar sync_to_panel loading_panel})
+   (load {helpbar sync_to_panel loading_panel})
    (enter
       {hamprovider set game_stage intro}
-      {if
-         {$this exists show_skip.anim}
-         {show_skip.anim set_frame 0}}
+      {if {$this exists show_skip.anim}
+         {show_skip.anim set_frame 0}
+      }
       {shell_input exit_controller_mode}
       {meta music_stop}
       {meta init_songpreview}
       {$this enter_workit}
       {hamprovider set is_in_loading TRUE}
-      {handle
-         (hamprovider hide_all_alerts)})
-   (unload
-      {hamprovider set is_in_loading FALSE})
+      {handle (hamprovider hide_all_alerts)}
+   )
+   (unload {hamprovider set is_in_loading FALSE})
    (block_event
       ($event)
-      {!= $event data_error})
-   #include loading_freestyle_workit.dta}
-{new
-   HamScreen
+      {!= $event data_error}
+   )
+   #include loading_freestyle_workit.dta
+}
+{new HamScreen
    loading_screen
    (panels loading_panel rhythm_detector_panel)
    (enter
       {hamprovider set ui_nav_mode loading}
       {practice_welcome_panel set show_perform_shortcut FALSE}
       {ui force_letterbox_off_immediate}
-      {ui goto_screen preloading_screen})}
-#define PRELOAD_PANEL_COMMON
-((song_mgr song_mgr)
-   (current_song
-      {gamedata get song})
-   (max_cache_size
-      {'*'
-         16
-         {'*' 1024 1024}})
+      {ui goto_screen preloading_screen}
+   )
+}
+#define PRELOAD_PANEL_COMMON (
+   (song_mgr song_mgr)
+   (current_song {gamedata get song})
+   (max_cache_size {'*' 16 {'*' 1024 1024}})
    (preload_files
-      ({song_mgr
-            barks_file
-            {gamedata get song}}
-         FALSE)
-      ({song_mgr
-            song_file_path
-            {gamedata get song}
-            ".milo"}
-         FALSE)
-      ({song_mgr
-            midi_file
-            {gamedata get song}}
-         FALSE)))
-{new
-   PreloadPanel
+      ({song_mgr barks_file {gamedata get song}} FALSE)
+      ({song_mgr song_file_path {gamedata get song} ".milo"} FALSE)
+      ({song_mgr midi_file {gamedata get song}} FALSE)
+   )
+)
+{new PreloadPanel
    preload_panel
    PRELOAD_PANEL_COMMON
    (helpbar_allow_controller FALSE)
    (hide_helpbar TRUE)
    (hide_letterbox TRUE)
-   (on_preload_ok
-      {ui goto_screen real_loading_screen})}
-{new
-   HamScreen
+   (on_preload_ok {ui goto_screen real_loading_screen})
+}
+{new HamScreen
    preloading_screen
    (panels loading_panel rhythm_detector_panel preload_panel)
-   (focus preload_panel)}
-{new
-   HamScreen
+   (focus preload_panel)
+}
+{new HamScreen
    real_loading_screen
    (panels loading_panel rhythm_detector_panel)
    (focus loading_panel)
    (enter
-      {song_mgr
-         add_recent_song
-         {gamedata get song}}
+      {song_mgr add_recent_song {gamedata get song}}
       {synth stop_all_sfx}
-      {ui
-         goto_screen
-         {gamemode get game_screen}})}
-{new
-   UIPanel
-   keep_game_world_panel
-   (load)
-   (unload)}
-{new
-   PreloadPanel
+      {ui goto_screen {gamemode get game_screen}}
+   )
+}
+{new UIPanel keep_game_world_panel (load) (unload)}
+{new PreloadPanel
    practice_preload_panel
    PRELOAD_PANEL_COMMON
    (helpbar_allow_controller FALSE)
    (hide_helpbar TRUE)
    (hide_letterbox TRUE)
-   (on_preload_ok
-      {ui goto_screen practice_real_loading_screen})}
-{new
-   HamScreen
+   (on_preload_ok {ui goto_screen practice_real_loading_screen})
+}
+{new HamScreen
    practice_preloading_screen
-   (panels loading_panel rhythm_detector_panel practice_preload_panel keep_game_world_panel)
-   (focus practice_preload_panel)}
-{new
-   HamScreen
+   (panels
+      loading_panel
+      rhythm_detector_panel
+      practice_preload_panel
+      keep_game_world_panel
+   )
+   (focus practice_preload_panel)
+}
+{new HamScreen
    practice_real_loading_screen
    (panels loading_panel rhythm_detector_panel keep_game_world_panel)
    (focus loading_panel)
    (enter
       {synth stop_all_sfx}
-      {if_else
-         $auto_select_practice_moves
+      {if_else $auto_select_practice_moves
          {ui goto_screen practice_choose_screen}
-         {ui
-            goto_screen
-            {gamemode get game_screen}}})}
-{new
-   HamScreen
+         {ui goto_screen {gamemode get game_screen}}
+      }
+   )
+}
+{new HamScreen
    practice_transition_screen
    (panels loading_panel rhythm_detector_panel keep_game_world_panel)
    (focus loading_panel)
    (enter
-      {if_else
-         {==
-            practice
-            {gamemode get gameplay_mode}}
-         {print
-            "in practice_transition_screen : gameplay_mode = practice\n"}
-         {if_else
-            {==
-               campaign_practice
-               {gamemode get gameplay_mode}}
+      {if_else {== practice {gamemode get gameplay_mode}}
+         {print "in practice_transition_screen : gameplay_mode = practice\n"}
+         {if_else {== campaign_practice {gamemode get gameplay_mode}}
             {print
-               "in practice_transition_screen : gameplay_mode = campaign_practice\n"}}}
+               "in practice_transition_screen : gameplay_mode = campaign_practice\n"
+            }
+         }
+      }
       {if
          {==
             {gamedata getp 0 difficulty}
-            {sym_to_difficulty beginner}}
-         {gamedata
-            setp
-            0
-            difficulty
-            {sym_to_difficulty easy}}}
+            {sym_to_difficulty beginner}
+         }
+         {gamedata setp 0 difficulty {sym_to_difficulty easy}}
+      }
       {if
          {==
             {gamedata getp 1 difficulty}
-            {sym_to_difficulty beginner}}
-         {gamedata
-            setp
-            1
-            difficulty
-            {sym_to_difficulty easy}}}
+            {sym_to_difficulty beginner}
+         }
+         {gamedata setp 1 difficulty {sym_to_difficulty easy}}
+      }
       {taskmgr set_auto_seconds_beats TRUE}
       {ui force_letterbox_off}
-      {ui goto_screen practice_preloading_screen})}
+      {ui goto_screen practice_preloading_screen}
+   )
+}

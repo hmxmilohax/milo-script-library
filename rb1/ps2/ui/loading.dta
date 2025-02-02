@@ -1,19 +1,18 @@
 #ifndef _SHIP
 ; special screens for initializing multi-song event via my.dta
-{new UIScreen loading_multi_screen
-   (enter
-      {ui goto_screen loading_multi_content_screen}      
-   )
+{new UIScreen
+   loading_multi_screen
+   (enter {ui goto_screen loading_multi_content_screen})
 }
 
 ; exists so we don't start loading until content is ready
-{new UIPanel loading_multi_content_panel
-   (is_loaded
-      {content_mgr refresh_done}
-   )
+{new UIPanel
+   loading_multi_content_panel
+   (is_loaded {content_mgr refresh_done})
 }
 
-{new UIScreen loading_multi_content_screen
+{new UIScreen
+   loading_multi_content_screen
    (panels loading_multi_content_panel)
    (enter
       {tour create_test_event}
@@ -23,17 +22,15 @@
 }
 #endif
 
-{new UIPanel wait_on_content_mgr_panel
-   (load
-      {content_mgr start_refresh}
-   )
-   (is_loaded
-      {content_mgr refresh_done}
-   )
+{new UIPanel
+   wait_on_content_mgr_panel
+   (load {content_mgr start_refresh})
+   (is_loaded {content_mgr refresh_done})
 }
 
 ; The loading panel
-{new UIScreen loading_screen
+{new UIScreen
+   loading_screen
    (panels wait_on_content_mgr_panel)
    (enter
       {band_ui_sink set block_mode kBlockLoadingGame}
@@ -47,108 +44,103 @@
 }
 
 #ifdef HX_XBOX
-{new PreloadPanel preload_panel
+{new PreloadPanel
+   preload_panel
    (enter
       {if_else [preload_ok]
          ; looks like we've successfully pre-loaded our song
-         {ui goto_screen real_loading_screen}   
+         {ui goto_screen real_loading_screen}
          ; we had an error during load, this will boot us to main menu
          {band_ui_sink content_file_read_failed}
       }
    )
 }
 
-{new UIScreen preloading_screen
-   (panels preload_panel)
-}
+{new UIScreen preloading_screen (panels preload_panel)}
 #endif
 
 ; the "real" loading screen that start the rest of the load sequence
-{new UIScreen real_loading_screen
+{new UIScreen
+   real_loading_screen
    (enter
       ; we're about to play a song, add it to recently played list
       {song_provider add_recent_song {gamecfg get_song}}
-      
-	 	; REA - clear any error dialogs still up
-		{band_ui_sink hide_error_dialog}
+
+      ; REA - clear any error dialogs still up
+      {band_ui_sink hide_error_dialog}
       {seed_random_context {gamecfg get net_random_seed}}
-      {do ($next_screen
-           {cond
-              ($force_loading_tip   loading_tip_screen)
-              ($force_loading_image loading_image_screen)
-              (
-                 {&& {gamemode get show_loading_images} {== {mod {gamecfg get net_random_seed} 2} 0}}
-                 loading_image_screen
-              )
-              loading_tip_screen
-          })
-		  ;#ifdef HX_XBOX
-		  ;	{ui goto_screen $next_screen}
-		 ;#else
-			{ui goto_screen loading_image_screen}
-		;#endif
+      {do
+         ($next_screen
+            {cond
+               ($force_loading_tip loading_tip_screen)
+               ($force_loading_image loading_image_screen)
+               ({&& {gamemode get show_loading_images} {== {mod {gamecfg get net_random_seed} 2} 0}}
+                  loading_image_screen
+               )
+               loading_tip_screen
+            }
+         )
+         ;#ifdef HX_XBOX
+         ;	{ui goto_screen $next_screen}
+         ;#else
+         {ui goto_screen loading_image_screen}
+         ;#endif
       }
    )
 }
 
-{new UIPanel char_loading_panel
-}
+{new UIPanel char_loading_panel}
 
-{new UIPanel loading_tip
-#ifdef HX_XBOX
+{new UIPanel
+   loading_tip
+   #ifdef HX_XBOX
    (file loading.milo) ; load before charactersF
-#else
+   #else
    (file loading_og.milo) ; load before characters
-#endif
-   
-#ifndef _SHIP
-; When using my.dta to launch, make sure content loaded before selecting tip.
-; Context-checked tips need song data that's loaded by content manager.
-   (is_loaded
-      {content_mgr refresh_done}
-   )
-#endif
+   #endif
+
+   #ifndef _SHIP
+   ; When using my.dta to launch, make sure content loaded before selecting tip.
+   ; Context-checked tips need song data that's loaded by content manager.
+   (is_loaded {content_mgr refresh_done})
+   #endif
 
    (load
       {if {gamemode get load_chars}
          {game load_all_chars TRUE} ; TRUE to set track types
       }
    )
-   
+
    (enter
-        
-				  {band_photo.pic set_showing FALSE}
-			      {Plane01.mesh set_showing TRUE}
-				  {tip.lbl set_showing TRUE}
-				  {tip.lbl set_localized
-					 {localize 
-						{if_else $force_loading_tip
-						   $force_loading_tip
-						   {random_context {elem {find $syscfg tips} 1}}
-						}
-					 }
-				  }
-		
+      {band_photo.pic set_showing FALSE}
+      {Plane01.mesh set_showing TRUE}
+      {tip.lbl set_showing TRUE}
+      {tip.lbl set_localized
+         {localize
+            {if_else $force_loading_tip
+               $force_loading_tip
+               {random_context {elem {find $syscfg tips} 1}}
+            }
+         }
+      }
    )
 }
 
-{new UIScreen loading_tip_screen
+{new UIScreen
+   loading_tip_screen
    (panels loading_tip)
-   
-   (enter
-      {synth stop_all_sfx}
-   )
-   
-   (TRANSITION_COMPLETE_MSG
-      {ui goto_screen loading_tip_screen_2}
-   )
+
+   (enter {synth stop_all_sfx})
+
+   (TRANSITION_COMPLETE_MSG {ui goto_screen loading_tip_screen_2})
 }
 
-{new UIScreen loading_tip_screen_2
+{new UIScreen
+   loading_tip_screen_2
    ; char loading panel will ensure that the characters
    ; are all loaded before going onto load_instruments and the game.
    (panels loading_tip char_loading_panel)
-   
+
    (TRANSITION_COMPLETE_MSG
       {game load_all_chars TRUE} ; have to reset world names
       {ui goto_screen {gamemode get game_screen}}
@@ -159,113 +151,116 @@
 
 ; the first loading screen panel, loads BEFORE characters
 
-{new UIPanel loading_image
-#ifdef HX_XBOX
+{new UIPanel
+   loading_image
+   #ifdef HX_XBOX
    (file loading.milo kLoadStayBack) ; load before game world
-#else
+   #else
    (file loading_og.milo kLoadStayBack) ; load before game world
-#endif   
-  
+   #endif
+
    (enter
-     ;;HOJ Band specific loading screen
-	 ;#ifndef HX_XBOX
-	  {if_else {&& {gamemode get is_tour} {== {random_int 0 2} 1}  {! {gamemode is_hth_arrangement}}}
-			{do
-				{set $rNum {random_int 1 4}}
-			    {set $genre {song_mgr get_characters {game get_song}}}
-				{if_else {== $genre anarchy_club}
-					{band_photo.pic set_tex {sprintf "ui/loading/images/%s_keep.bmp" $genre}}
-					{band_photo.pic set_tex {sprintf "ui/loading/images/%s_%i_keep.bmp" $genre $rNum}}
-				}
-				{Plane01.mesh set_showing FALSE}
-				{tip.lbl set_showing FALSE}
-			}
-			;else
-			{do
-				  {band_photo.pic set_showing FALSE}
-			      {Plane01.mesh set_showing TRUE}
-				  {tip.lbl set_showing TRUE}
-				  {tip.lbl set_localized
-					 {localize 
-						{if_else $force_loading_tip
-						   $force_loading_tip
-						   {random_context {elem {find $syscfg tips} 1}}
-						}
-					 }
-				  }
-			}
-		}
-	;	#else
-	;			{Plane01.mesh set_showing FALSE}
-	;			{tip.lbl set_showing FALSE}
-	;	#endif
-	   
+      ;;HOJ Band specific loading screen
+      ;#ifndef HX_XBOX
+      {if_else
+         {&&
+            {gamemode get is_tour}
+            {== {random_int 0 2} 1}
+            {! {gamemode is_hth_arrangement}}
+         }
+         {do
+            {set $rNum {random_int 1 4}}
+            {set $genre {song_mgr get_characters {game get_song}}}
+            {if_else {== $genre anarchy_club}
+               {band_photo.pic set_tex {sprintf "ui/loading/images/%s_keep.bmp" $genre}}
+               {band_photo.pic set_tex
+                  {sprintf "ui/loading/images/%s_%i_keep.bmp" $genre $rNum}
+               }
+            }
+            {Plane01.mesh set_showing FALSE}
+            {tip.lbl set_showing FALSE}
+         }
+         ;else
+         {do
+            {band_photo.pic set_showing FALSE}
+            {Plane01.mesh set_showing TRUE}
+            {tip.lbl set_showing TRUE}
+            {tip.lbl set_localized
+               {localize
+                  {if_else $force_loading_tip
+                     $force_loading_tip
+                     {random_context {elem {find $syscfg tips} 1}}
+                  }
+               }
+            }
+         }
+      }
+      ;	#else
+      ;			{Plane01.mesh set_showing FALSE}
+      ;			{tip.lbl set_showing FALSE}
+      ;	#endif
    )
 }
 
-{new UIScreen loading_image_screen
+{new UIScreen
+   loading_image_screen
    (panels loading_image)
-   
-   
-   (enter
-      {synth stop_all_sfx}
-   )
-   
-   (TRANSITION_COMPLETE_MSG
-      {ui goto_screen loading_instrument_screen}
-   )
+
+   (enter {synth stop_all_sfx})
+
+   (TRANSITION_COMPLETE_MSG {ui goto_screen loading_instrument_screen})
 }
 
 ; second loading screen , chars are loaded, but might need to change instruments
-{new UIPanel loading_instrument
-#ifdef HX_XBOX
+{new UIPanel
+   loading_instrument
+   #ifdef HX_XBOX
    (file loading_instrument.milo kLoadStayBack) ; way back, so chars load
-#else
+   #else
    (file loading_instrument_og.milo kLoadStayBack) ; way back, so chars load
-#endif
-   
-   (enter
-   )
+   #endif
+
+   (enter)
 }
 
-{new UIScreen loading_instrument_screen
+{new UIScreen
+   loading_instrument_screen
    (panels loading_instrument loading_image)
-     
-   (TRANSITION_COMPLETE_MSG
-      {ui goto_screen loading_photo_screen}
-   )
+
+   (TRANSITION_COMPLETE_MSG {ui goto_screen loading_photo_screen})
 }
 
 ; the final loading screen panel, loads AFTER characters and displays band photo
-{new LoadingPanel loading_photo
-   (file 
-     {if_else $force_loading_image
-        $force_loading_image
-        {if_else {gamemode get load_chars}
-           {if_else {gamemode is_band_arrangement}
-              {random_context {elem {find $syscfg loading_screens} 1}}
-              {switch {{game get_player_config {game get leader_num}} get_track_sym}
-                 (guitar loading/ls_h2h_guitar.milo)
-                 (bass loading/ls_h2h_bass.milo)
-                 (drum loading/ls_h2h_drum.milo)
-                 (vocals loading/ls_h2h_vocals.milo)
-              }
-           }
-		   "" ; TODO some kinda background
+{new LoadingPanel
+   loading_photo
+   (file
+      {if_else $force_loading_image
+         $force_loading_image
+         {if_else {gamemode get load_chars}
+            {if_else {gamemode is_band_arrangement}
+               {random_context {elem {find $syscfg loading_screens} 1}}
+               {switch {{game get_player_config {game get leader_num}} get_track_sym}
+                  (guitar loading/ls_h2h_guitar.milo)
+                  (bass loading/ls_h2h_bass.milo)
+                  (drum loading/ls_h2h_drum.milo)
+                  (vocals loading/ls_h2h_vocals.milo)
+               }
+            }
+            "" ; TODO some kinda background
          }
       }
       kLoadStayBack ; way back, so instruments load. 
    )
 }
 
-{new UIScreen loading_photo_screen
+{new UIScreen
+   loading_photo_screen
    (panels loading_photo loading_image)
-         
+
    (TRANSITION_COMPLETE_MSG
       {game load_all_chars TRUE} ; have to reset world names
       {ui goto_screen {gamemode get game_screen}}
       {band_ui_sink set_net_sync TRUE}
       {band_ui_sink set block_mode kBlockNone}
    )
-   
 }

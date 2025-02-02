@@ -1,5 +1,3 @@
-
-
 ;; PUBLIC INTERFACE (used by saveload.dta)
 
 ;; Call this to kick off the autoload process
@@ -9,12 +7,12 @@
       {set $saveload_goto_type kMetaNextTypePushPop}
 
       {set $saveload_player_num 0}
-   
+
       ;; We only attempt to autoload once at the start; afterwards, we rely on
       ;; what's in memory or manual loads. Since we also need to show a warning
       ;; once at the start, we do that, and let the warning continue onto the
       ;; actual load.
-   
+
       {if_else {autosave_warning get shown}
          ; then we're already done...
          {ps3_saveload_cleanup_and_shutdown}
@@ -22,29 +20,30 @@
          {do
             ; save the stat of the sync
             {ps3_saveload_begin_async}
-   
+
             {ui push_screen autosave_warning}
          }
       }
    }
 }
 
-
 ;; Kick off an autosave flow
-{func ps3_autosave_start ($goto_type $next_screen)
+{func ps3_autosave_start
+   ($goto_type $next_screen)
    {if {! $saveload_ui_is_up}
       {set $save_load_mode kAutoSave}
-   
+
       {set $saveload_goto_screen $next_screen}
       {set $saveload_goto_type $goto_type}
-   
+
       {if_else {profile_mgr has_unsaved_data 0}
          {do
             {ps3_saveload_begin_async}
 
             {set $saveload_player_num 0}
             {switch $saveload_goto_type
-               ((kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
+               (
+                  (kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
                   {goto_save_screen_with_overwrite}
                )
                ; default
@@ -57,7 +56,6 @@
    }
 }
 
-
 ;; Call this to kick off a manual save
 {func ps3_manual_save_start
    {ps3_saveload_begin_async}
@@ -67,7 +65,6 @@
 
    {push_save_screen_no_overwrite}
 }
-
 
 ;; Call this to kick off a manual load
 {func ps3_manual_load_start
@@ -82,7 +79,6 @@
       {ui push_screen manual_load_screen}
    }
 }
-
 
 ;;;;;;;;;;;;
 
@@ -126,12 +122,11 @@
          {band_ui_sink set_net_sync $saveload_sync_state}
 
          {switch $saveload_goto_type
-            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
+            (
+               (kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
                {ui pop_screen $saveload_goto_screen}
             )
-            (kMetaNextTypeGotoGoto
-               {ui goto_screen $saveload_goto_screen}
-            )
+            (kMetaNextTypeGotoGoto {ui goto_screen $saveload_goto_screen})
             ; default
             {ui pop_screen}
          }
@@ -142,15 +137,12 @@
       ; else
       {do
          {switch $saveload_goto_type
-            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto)
+            (
+               (kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto)
                {ui goto_screen $saveload_goto_screen}
             )
-            (kMetaNextTypeGotoPopGoto
-               {ui pop_screen $saveload_goto_screen}
-            )
-            (kMetaNextTypeGotoPop
-               {ui pop_screen}
-            )
+            (kMetaNextTypeGotoPopGoto {ui pop_screen $saveload_goto_screen})
+            (kMetaNextTypeGotoPop {ui pop_screen})
             ; default, do nothing (nothing pushed, so nothing to pop)
          }
       }
@@ -161,16 +153,13 @@
 
 ;; This should be called whenever the saveload flow is done,
 ;;   regardless of what happened or if the saveload succeeded.
-{func on_saveload_done ($state)
+{func on_saveload_done
+   ($state)
    {memcardmgr saveload_profile_complete $saveload_player_num $state}
 
    {switch $save_load_mode
-      (kAutoSave
-         {ps3_saveload_upload_start}
-      )
-      (kAutoLoad
-          {ps3_saveload_cleanup_and_shutdown}
-      )
+      (kAutoSave {ps3_saveload_upload_start})
+      (kAutoLoad {ps3_saveload_cleanup_and_shutdown})
       ; default
       {ps3_saveload_cleanup_and_shutdown}
    }
@@ -180,11 +169,11 @@
    {ps3_saveload_cleanup_and_shutdown}
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AUTO LOAD
 
-{new UIScreen autosave_warning
+{new UIScreen
+   autosave_warning
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -194,17 +183,16 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {ui goto_screen auto_load_screen}
-         )
+         (option1.btn {ui goto_screen auto_load_screen})
       }
       kDataUnhandled
    )
-   
+
    (shown FALSE)
 }
 
-{new UIScreen auto_load_screen
+{new UIScreen
+   auto_load_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -217,42 +205,31 @@
 
    (MEMCARD_RESULT_MSG
       {switch $result
-         (kMCCorrupt
-            {ui goto_screen auto_load_corrupt_screen}
-         )
-         (kMCFileNotFound
-            {goto_save_screen_no_overwrite}
-         )
+         (kMCCorrupt {ui goto_screen auto_load_corrupt_screen})
+         (kMCFileNotFound {goto_save_screen_no_overwrite})
          (kMCNoError
             {$this setup_msg mc_auto_load_complete}
 
             ;; Use this profile's options (TODO PS3 revisions???)
             {do
                ($profile
-                  {profile_mgr
-                     get_mapped_profile_from_player
-                     $saveload_player_num
-                  }
+                  {profile_mgr get_mapped_profile_from_player $saveload_player_num}
                )
 
                {if {$profile get_played_before} ;...but only if we HAVE saved data
-                  {profile_mgr set_global_options_pad 
-                     {joypad_get_players_padnum $saveload_player_num}}
+                  {profile_mgr set_global_options_pad
+                     {joypad_get_players_padnum $saveload_player_num}
+                  }
                }
             }
 
-            {script_task kTaskUISeconds (delay 0.5)
-               (script
-                  {on_saveload_done kMetaSaveLoaded}
-               )
+            {script_task kTaskUISeconds
+               (delay 0.5)
+               (script {on_saveload_done kMetaSaveLoaded})
             }
          )
-         (kMCObsoleteVersion
-            {ui goto_screen auto_load_obsolete_version_screen}
-         )
-         (kMCNewerVersion
-            {ui goto_screen auto_load_newer_version_screen}
-         )
+         (kMCObsoleteVersion {ui goto_screen auto_load_obsolete_version_screen})
+         (kMCNewerVersion {ui goto_screen auto_load_newer_version_screen})
 
          ; default
          {ui goto_screen load_failed_screen}
@@ -260,7 +237,8 @@
    )
 }
 
-{new UIScreen auto_load_corrupt_screen
+{new UIScreen
+   auto_load_corrupt_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -275,18 +253,15 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
 
-{new UIScreen auto_load_newer_version_screen
+{new UIScreen
+   auto_load_newer_version_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -301,17 +276,12 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AUTOSAVE
@@ -320,18 +290,14 @@
 ;;   effectively "re-enter" the save_screen, by first transitioning away
 ;;   to this screen, and then back again (hopefully this time acting on a
 ;;   different player_num).
-{new UIScreen auto_save_start
+{new UIScreen
+   auto_save_start
    SAVELOAD_DIALOG_SCREEN
-   
-   (enter
-      {$this setup_msg mc_save}
-   )
-   
-   (TRANSITION_COMPLETE_MSG
-      {goto_save_screen_with_overwrite}
-   )
-}
 
+   (enter {$this setup_msg mc_save})
+
+   (TRANSITION_COMPLETE_MSG {goto_save_screen_with_overwrite})
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -355,9 +321,10 @@
    {ui push_screen save_screen}
 }
 
-{new UIScreen save_screen
+{new UIScreen
+   save_screen
    SAVELOAD_DIALOG_SCREEN
-   
+
    ; public properties
 
    (overwrite 0)
@@ -369,7 +336,7 @@
    (done_saving FALSE)
    (done_polling FALSE)
    (long FALSE)
-   
+
    (enter
       {set [enter_time] {taskmgr ui_seconds}}
       {set [save_time] 0.0}
@@ -393,7 +360,7 @@
                      {&& {< $save_dt 1.0} {>= $enter_dt 1.0}}
                      {&& {>= $save_dt 1.0} {>= $enter_dt 4.0}}
                   }
-                  
+
                   {set [done_polling] TRUE}
                   {on_saveload_done kMetaSaveLoaded}
                }
@@ -414,7 +381,7 @@
             {set [done_saving] TRUE}
             {set [save_time] {taskmgr ui_seconds}}
          )
-         
+
          ; possible errors
          (kMCFileExists
             {set [done_polling] TRUE}
@@ -434,7 +401,8 @@
    )
 }
 
-{new UIScreen delete_saves_screen
+{new UIScreen
+   delete_saves_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -448,7 +416,8 @@
    )
 }
 
-{new UIScreen save_confirm_overwrite_screen
+{new UIScreen
+   save_confirm_overwrite_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -466,18 +435,15 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
 
-{new UIScreen save_not_enough_space_screen
+{new UIScreen
+   save_not_enough_space_screen
    SAVELOAD_DIALOG_SCREEN
 
    (last_option opt1)
@@ -495,7 +461,8 @@
       }
 
       ; Need to reset the message, but fill in the space required value.
-      {saveload_dialog_panel set_label_string msg.lbl
+      {saveload_dialog_panel set_label_string
+         msg.lbl
          {sprintf
             {localize mc_save_not_enough_space}
             {- {memcardmgr save_game_space_needed}}
@@ -522,12 +489,13 @@
    )
 }
 
-{new UIScreen save_failed_screen
+{new UIScreen
+   save_failed_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
       {$this setup_3btn
-         mc_save_failed 
+         mc_save_failed
          mc_button_retry
          mc_button_continue_no_save
          '' ; TODO
@@ -537,12 +505,8 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {ui goto_screen save_screen}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {ui goto_screen save_screen})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -550,28 +514,25 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{new UIScreen load_failed_screen
+{new UIScreen
+   load_failed_screen
    SAVELOAD_DIALOG_SCREEN
 
-   (enter
-      {$this setup_continue mc_load_failed}
-   )
+   (enter {$this setup_continue mc_load_failed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MANUAL LOAD
 
-{new UIScreen manual_load_confirm_screen
+{new UIScreen
+   manual_load_confirm_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -586,18 +547,15 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {ui goto_screen manual_load_screen}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {ui goto_screen manual_load_screen})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
 
-{new UIScreen manual_load_screen
+{new UIScreen
+   manual_load_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -607,34 +565,27 @@
 
    (MEMCARD_RESULT_MSG
       {switch $result
-         (kMCFileNotFound
-            {ui goto_screen manual_load_no_file_screen}
-         )
-         (kMCCorrupt
-            {ui goto_screen manual_load_corrupt_screen}
-         )
+         (kMCFileNotFound {ui goto_screen manual_load_no_file_screen})
+         (kMCCorrupt {ui goto_screen manual_load_corrupt_screen})
          (kMCNoError
             {$this setup_msg mc_manual_load_complete}
 
             ;; Use this profile's options (TODO PS3 revisions???)
             {do
                ($profile
-                  {profile_mgr
-                     get_mapped_profile_from_player
-                     $saveload_player_num
-                  }
+                  {profile_mgr get_mapped_profile_from_player $saveload_player_num}
                )
 
                {if {$profile get_played_before} ;...but only if we HAVE saved data
-                  {profile_mgr set_global_options_pad 
-                     {joypad_get_players_padnum $saveload_player_num}}
+                  {profile_mgr set_global_options_pad
+                     {joypad_get_players_padnum $saveload_player_num}
+                  }
                }
             }
 
-            {script_task kTaskUISeconds (delay 0.5)
-               (script
-                  {on_saveload_done kMetaSaveLoaded}
-               )
+            {script_task kTaskUISeconds
+               (delay 0.5)
+               (script {on_saveload_done kMetaSaveLoaded})
             }
          )
 
@@ -644,39 +595,30 @@
    )
 }
 
-{new UIScreen manual_load_no_file_screen
+{new UIScreen
+   manual_load_no_file_screen
    SAVELOAD_DIALOG_SCREEN
 
-   (enter
-      {$this setup_continue mc_manual_load_no_file}
-   )
+   (enter {$this setup_continue mc_manual_load_no_file})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
 
-{new UIScreen manual_load_corrupt_screen
+{new UIScreen
+   manual_load_corrupt_screen
    SAVELOAD_DIALOG_SCREEN
 
-   (enter
-      {$this setup_continue mc_manual_load_corrupt}
-   )
+   (enter {$this setup_continue mc_manual_load_corrupt})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 }
-
-
-

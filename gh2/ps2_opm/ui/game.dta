@@ -1,252 +1,235 @@
 #include track_panel.dta
 #include hud_panel.dta
-{new
-   GHPanel
+{new GHPanel
    mtv_overlay_panel
    (file mtv_overlay.milo)
    (enter
-      {if_else
-         {game is_tutorial_running}
+      {if_else {game is_tutorial_running}
          {$this show_overlay FALSE}
-         {$this setup_text}})
+         {$this setup_text}
+      }
+   )
    (setup_text
       {do
-         ($song_text
-            {game get_song_text})
-         ($artist_text
-            {game get_song_artist_text})
-         ($song_caption
-            {game get_song_caption})
-         {if_else
-            {campaign
-               is_store_song
-               {game get_song}}
+         ($song_text {game get_song_text})
+         ($artist_text {game get_song_artist_text})
+         ($song_caption {game get_song_caption})
+         {if_else {campaign is_store_song {game get_song}}
             {do
-               ($prefix
-                  "mtv_unlock_line")
+               ($prefix "mtv_unlock_line")
                {mtv_campaign_song_id.view set_showing FALSE}
                {mtv_unlock_song_id.view set_showing TRUE}
                {$this set_line $prefix 1 $song_text}
-               {$this set_line $prefix 2 $artist_text}}
+               {$this set_line $prefix 2 $artist_text}
+            }
             {do
-               ($prefix
-                  "mtv_campaign_line")
+               ($prefix "mtv_campaign_line")
                {mtv_campaign_song_id.view set_showing TRUE}
                {mtv_unlock_song_id.view set_showing FALSE}
                {$this set_line $prefix 1 $song_text}
                {$this set_line $prefix 2 $song_caption}
-               {$this set_line $prefix 3 $artist_text}}}})
+               {$this set_line $prefix 3 $artist_text}
+            }
+         }
+      }
+   )
    (set_line
       ($prefix $i $text)
       {{sprint
             $prefix
             $i
-            ".lbl"}
-         set_localized_text
-         $text}
+            ".lbl"} set_localized_text
+         $text
+      }
       {{sprint
             $prefix
             $i
-            "_shadow.lbl"}
-         set_localized_text
-         $text})
+            "_shadow.lbl"} set_localized_text
+         $text
+      }
+   )
    (show_overlay
       ($show)
       {$this set_showing $show}
-      {$this
-         set_paused
-         {! $show}})}
-#define LOSE_MUSIC_SLOW_SEC
-(2)
-{new
-   GamePanel
+      {$this set_paused {! $show}}
+   )
+}
+#define LOSE_MUSIC_SLOW_SEC (2)
+{new GamePanel
    game
-   (file
-      "")
+   (file "")
    (track_extend_sec -2)
    (enter)
    (intro_start
       ($fast $encore)
       {track_panel intro_start}
       {mtv_overlay_panel show_overlay FALSE}
-      {new
-         ScriptTask
-         (delay 1)
-         (script
-            {mtv_overlay_panel show_overlay TRUE})}
-      kDataUnhandled)
-   (intro_skip
-      {track_panel intro_skip}
-      kDataUnhandled)
+      {new ScriptTask (delay 1) (script {mtv_overlay_panel show_overlay TRUE})}
+      kDataUnhandled
+   )
+   (intro_skip {track_panel intro_skip} kDataUnhandled)
    (extend_track
       {track_panel do_extend_sequence}
-      {new
-         ScriptTask
+      {new ScriptTask
          (delay 1.8)
          (units kTaskSeconds)
          (script
-            {handle
-               ($this slide_meter_in)}
-            {mtv_overlay_panel show_overlay FALSE})})
-   (music_start
-      {ui music_start}
-      kDataUnhandled)
+            {handle ($this slide_meter_in)}
+            {mtv_overlay_panel show_overlay FALSE}
+         )
+      }
+   )
+   (music_start {ui music_start} kDataUnhandled)
    (beat
-      {if
-         $barf_cheat
-         {new
-            AnimTask
+      {if $barf_cheat
+         {new AnimTask
             (anim track_panel kTaskRange)
             (start 2000)
             (end 2025)
-            (period 0.4)}}
-      {if
-         $debug.beep
-         {play_sfx click}}
-      {if
-         {!
-            {game is_tutorial_running}}
+            (period 0.4)
+         }
+      }
+      {if $debug.beep
+         {play_sfx click}
+      }
+      {if {! {game is_tutorial_running}}
          {do
             ($clap FALSE)
-            {$this
-               foreach_player
-               $p
-               {if
-                  {$p in_star_mode}
-                  {set $clap TRUE}}}
-            {if
-               $clap
-               {new
-                  ScriptTask
+            {$this foreach_player $p
+               {if {$p in_star_mode}
+                  {set $clap TRUE}
+               }
+            }
+            {if $clap
+               {new ScriptTask
                   (units kTaskBeats)
                   (delay CLAP_DELAY_BEATS)
-                  (script
-                     {play_game_sequence CLAP_SEQUENCE})}}}}
-      kDataUnhandled)
+                  (script {play_game_sequence CLAP_SEQUENCE})
+               }
+            }
+         }
+      }
+      kDataUnhandled
+   )
    (downbeat
-      {$this
-         foreach_player
-         $p
-         {$p on_downbeat}}
-      kDataUnhandled)
+      {$this foreach_player $p
+         {$p on_downbeat}
+      }
+      kDataUnhandled
+   )
    (game_over
-      {$this
-         foreach_player
-         $p
-         {$p on_game_over}}
+      {$this foreach_player $p
+         {$p on_game_over}
+      }
       {stop_sfx sp_deployed}
       {stop_sfx sp_deployed_multi}
       {stop_sfx sp_deploystart.cue}
-      kDataUnhandled)
+      kDataUnhandled
+   )
    (game_won
       ($encore)
-      {if_else
-         {gamecfg get game_over_sequence}
+      {if_else {gamecfg get game_over_sequence}
          {do
             {track_panel explode}
             {play_game_sfx TRACK_EXPLODE_SFX}
             {game set_realtime TRUE}
             {beatmatch set_paused TRUE}
-            kDataUnhandled}
-         0})
+            kDataUnhandled
+         }
+         0
+      }
+   )
    (game_lost
       {track_panel set_showing FALSE}
       {game set_realtime TRUE}
       {$this slow_music}
-      kDataUnhandled)
+      kDataUnhandled
+   )
    (game_outro_complete
       {synth stop_all_sfx}
       {game set_paused TRUE}
-      {if_else
-         [won]
+      {if_else [won]
          {do
-            {if
-               {&&
-                  {==
-                     {gamecfg get mode}
-                     career}
-                  {campaign final_song}}
-               {meta set won_campaign TRUE}}
-            {ui
-               goto_screen
-               {if_else $auto_restart loading_screen post_show_screen}}}
-         {ui
-            goto_screen
-            {gamecfg get lose_screen}}}
-      kDataUnhandled)
+            {if {&& {== {gamecfg get mode} career} {campaign final_song}}
+               {meta set won_campaign TRUE}
+            }
+            {ui goto_screen
+               {if_else $auto_restart
+                  loading_screen
+                  post_show_screen
+               }
+            }
+         }
+         {ui goto_screen {gamecfg get lose_screen}}
+      }
+      kDataUnhandled
+   )
    (blew_big_note
       ($player)
-      {if
-         {crowd_audio enabled}
-         {play_game_sequence_player blew_bignote.cue blew_bignote.cue $player}})
+      {if {crowd_audio enabled}
+         {play_game_sequence_player blew_bignote.cue blew_bignote.cue $player}
+      }
+   )
    (practice_end
       {$this set_paused TRUE}
-      {ui goto_screen practice_end_screen})
+      {ui goto_screen practice_end_screen}
+   )
    (slow_music
-      {set
-         [lose_time]
-         {taskmgr seconds}}
-      {new
-         ScriptTask
+      {set [lose_time] {taskmgr seconds}}
+      {new ScriptTask
          (once FALSE)
          (script
             {do
-               ($t
-                  {-
-                     {taskmgr seconds}
-                     [lose_time]})
-               {if_else
-                  {< $t LOSE_MUSIC_SLOW_SEC}
+               ($t {- {taskmgr seconds} [lose_time]})
+               {if_else {< $t LOSE_MUSIC_SLOW_SEC}
                   {do
-                     {beatmatch
-                        set_music_speed
-                        {/
-                           {- LOSE_MUSIC_SLOW_SEC $t}
-                           LOSE_MUSIC_SLOW_SEC}}
-                     TRUE}
+                     {beatmatch set_music_speed
+                        {/ {- LOSE_MUSIC_SLOW_SEC $t} LOSE_MUSIC_SLOW_SEC}
+                     }
+                     TRUE
+                  }
                   {do
                      {beatmatch set_paused TRUE}
-                     FALSE}}})})
+                     FALSE
+                  }
+               }
+            }
+         )
+      }
+   )
    (end_streak
       ($player $playerobj)
-      {if
-         {gamecfg get blown_streak_feedback}
+      {if {gamecfg get blown_streak_feedback}
          {do
             ($mult)
-            {if_else
-               {==
-                  multi_coop
-                  {gamecfg get mode}}
-               {set
-                  $mult
-                  {band base_multiplier}}
-               {set
-                  $mult
-                  {$playerobj base_multiplier}}}
-            {if
-               {> $mult 1}
+            {if_else {== multi_coop {gamecfg get mode}}
+               {set $mult {band base_multiplier}}
+               {set $mult {$playerobj base_multiplier}}
+            }
+            {if {> $mult 1}
                {handle
-                  (game blow_streak $player $mult)}}}})
+                  (game blow_streak $player $mult)
+               }
+            }
+         }
+      }
+   )
    (blow_streak
       ($player $mult)
       {do
-         ($sfx
-            {sprintf
-               "streak_broken_%ix.cue"
-               $mult})
-         {play_game_sfx_player $sfx $sfx $player}}
-      kDataUnhandled)
+         ($sfx {sprintf "streak_broken_%ix.cue" $mult})
+         {play_game_sfx_player $sfx $sfx $player}
+      }
+      kDataUnhandled
+   )
    (cheat_force_encore
-      {cheat_display
-         show
-         "Forcing encore intro/outro"}
-      {set
-         [force_encore]
-         TRUE})
+      {cheat_display show "Forcing encore intro/outro"}
+      {set [force_encore] TRUE}
+   )
    (force_encore FALSE)
-   (lose_time 0)}
-{new
-   UIPanel
+   (lose_time 0)
+}
+{new UIPanel
    world_panel
    (file
       {sprint
@@ -254,42 +237,35 @@
          {game get_venue}
          "/"
          {game get_venue}
-         {if_else
-            {game multiplayer}
-            {if_else
-               {game multiplayer_vs}
+         {if_else {game multiplayer}
+            {if_else {game multiplayer_vs}
                "_mp.milo"
-               "_coop.milo"}
-            ".milo"}})
+               "_coop.milo"
+            }
+            ".milo"
+         }
+      }
+   )
    (enter
-      {if_else
-         {game multiplayer}
-         {handle
-            ($this multi_player)}
-         {handle
-            ($this single_player)}})
+      {if_else {game multiplayer}
+         {handle ($this multi_player)}
+         {handle ($this single_player)}
+      }
+   )
    (finish_load
-      {{$this loaded_dir}
-         set_name
-         world
-         main}
-      {$this set_showing TRUE})}
-#define ATTRACT_LENGTH_SEC
-(120)
-#define FADE_LENGTH_SEC
-(2)
-{new
-   FadePanel
+      {{$this loaded_dir} set_name world main}
+      {$this set_showing TRUE}
+   )
+}
+#define ATTRACT_LENGTH_SEC (120)
+#define FADE_LENGTH_SEC (2)
+{new FadePanel
    fade_panel
    (file fade.milo)
-   (enter
-      {press_any_button.lbl
-         set_showing
-         {game_screen get attract_mode}})}
-#define GAME_PANELS
-(game world_panel track_panel hud mtv_overlay_panel)
-{new
-   GHScreen
+   (enter {press_any_button.lbl set_showing {game_screen get attract_mode}})
+}
+#define GAME_PANELS (game world_panel track_panel hud mtv_overlay_panel)
+{new GHScreen
    game_screen
    (panels GAME_PANELS fade_panel)
    (allow_back FALSE)
@@ -297,71 +273,64 @@
    (in_game TRUE)
    (attract_mode FALSE)
    (BUTTON_DOWN_MSG
-      {if_else
-         [attract_mode]
+      {if_else [attract_mode]
          {if
             {&&
                {! $leaving}
-               {meta is_any_button $button $player_num}}
+               {meta is_any_button $button $player_num}
+            }
             {campaign attract_interrupt}
-            {set
-               $leaving
-               {-
-                  {taskmgr ui_seconds}
-                  $enter_time}}}
-         {if
-            {&&
-               {== $button kPad_Start}
-               {!
-                  {game get game_over}}}
-            {ui goto_screen pause_screen}}})
+            {set $leaving {- {taskmgr ui_seconds} $enter_time}}
+         }
+         {if {&& {== $button kPad_Start} {! {game get game_over}}}
+            {ui goto_screen pause_screen}
+         }
+      }
+   )
    (poll
-      {if_else
-         [attract_mode]
+      {if_else [attract_mode]
          {do
-            ($now
-               {-
-                  {taskmgr ui_seconds}
-                  $enter_time})
-            {if
-               {! $leaving}
-               {if
-                  {> $now ATTRACT_LENGTH_SEC}
-                  {set $leaving $now}}}
-            {if
-               $leaving
-               {if
-                  {! $started_fade}
+            ($now {- {taskmgr ui_seconds} $enter_time})
+            {if {! $leaving}
+               {if {> $now ATTRACT_LENGTH_SEC}
+                  {set $leaving $now}
+               }
+            }
+            {if $leaving
+               {if {! $started_fade}
                   {fade_panel start_fade FADE_LENGTH_SEC}
-                  {set $started_fade TRUE}}
-               {if
-                  {>
-                     $now
-                     {'+' $leaving FADE_LENGTH_SEC}}
+                  {set $started_fade TRUE}
+               }
+               {if {> $now {'+' $leaving FADE_LENGTH_SEC}}
                   {synth stop_all_sfx}
                   {game set_paused TRUE}
-                  {ui goto_screen finish_fade}}}}
-         {if
-            {game is_missing_controller}
-            {ui goto_screen pause_controller_screen}}})
+                  {ui goto_screen finish_fade}
+               }
+            }
+         }
+         {if {game is_missing_controller}
+            {ui goto_screen pause_controller_screen}
+         }
+      }
+   )
    (TRANSITION_COMPLETE_MSG
-      {if
-         $game_unpause_on_enter
+      {if $game_unpause_on_enter
          {game set_paused FALSE}
-         {set $game_unpause_on_enter FALSE}})
+         {set $game_unpause_on_enter FALSE}
+      }
+   )
    (enter
-      {if
-         [attract_mode]
-         {set
-            $enter_time
-            {taskmgr ui_seconds}}
+      {if [attract_mode]
+         {set $enter_time {taskmgr ui_seconds}}
          {set $leaving FALSE}
          {set $started_fade FALSE}
-         {track_panel set_showing FALSE}})}
-{new
-   GHScreen
+         {track_panel set_showing FALSE}
+      }
+   )
+}
+{new GHScreen
    finish_fade
    (panels fade_panel)
-   (enter
-      {meta_loading_goto demo_marketing_screen_quit})}
+   (enter {meta_loading_goto demo_marketing_screen_quit})
+}
 #include hud_budget.dta

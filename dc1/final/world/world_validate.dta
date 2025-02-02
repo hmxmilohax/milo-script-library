@@ -1,146 +1,110 @@
-#define WORLD_OBJECT_VALIDATE
-((test_light_preset
-      "")
+#define WORLD_OBJECT_VALIDATE (
+   (test_light_preset "")
    (custom_start_trigger '')
    (next_preset
       ($obj)
       {do
-         ($found
-            {==
-               $obj
-               ""})
-         ($next
-            "")
-         ($preset_names
-            ())
+         ($found {== $obj ""})
+         ($next "")
+         ($preset_names ())
          {resize $preset_names 0}
-         {$this
-            iterate
+         {$this iterate
             LightPreset
             $preset
-            {insert_elem
-               $preset_names
-               0
-               {$preset name}}}
+            {insert_elem $preset_names 0 {$preset name}}
+         }
          {sort $preset_names}
-         {foreach_int
-            $i
-            0
-            {size $preset_names}
-            {if
-               {==
-                  $next
-                  ""}
-               {if_else
-                  $found
-                  {set
-                     $next
-                     {elem $preset_names $i}}
-                  {if
-                     {==
-                        {$obj name}
-                        {elem $preset_names $i}}
-                     {set $found TRUE}}}}}
-         {if_else
-            {==
-               $next
-               ""}
+         {foreach_int $i 0 {size $preset_names}
+            {if {== $next ""}
+               {if_else $found
+                  {set $next {elem $preset_names $i}}
+                  {if {== {$obj name} {elem $preset_names $i}}
+                     {set $found TRUE}
+                  }
+               }
+            }
+         }
+         {if_else {== $next ""}
             $next
-            {$this find $next}}})
+            {$this find $next}
+         }
+      }
+   )
    (start_test_preset
-      {if
-         {!=
-            ""
-            [test_light_preset]}
-         {if
-            {exists test_light_preset_anim}
-            {delete test_light_preset_anim}}
-         {[test_light_preset]
-            animate
+      {if {!= "" [test_light_preset]}
+         {if {exists test_light_preset_anim}
+            {delete test_light_preset_anim}
+         }
+         {[test_light_preset] animate
             (name test_light_preset_anim)
-            (loop
-               0
-               {[test_light_preset]
-                  end_frame})}
-         {if
-            {exists test_light_preset_task}
-            {delete test_light_preset_task}}
-         {if
-            {[test_light_preset]
-               get
-               manual}
-            {[test_light_preset]
-               reset_events}
-            {[test_light_preset]
-               first}
-            {thread_task
-               kTaskBeats
+            (loop 0 {[test_light_preset] end_frame})
+         }
+         {if {exists test_light_preset_task}
+            {delete test_light_preset_task}
+         }
+         {if {[test_light_preset] get manual}
+            {[test_light_preset] reset_events}
+            {[test_light_preset] first}
+            {thread_task kTaskBeats
                (preserve)
                (name test_light_preset_task)
                (script
-                  {[test_light_preset]
-                     next}
+                  {[test_light_preset] next}
                   {$task sleep 4}
-                  {$task loop})}}})
+                  {$task loop}
+               )
+            }
+         }
+      }
+   )
    (find_preset_type
       ($type $excite $adjective)
       {set $found FALSE}
-      {$this
-         iterate
+      {$this iterate
          LightPreset
          $preset
-         {if
-            {==
-               {$preset get category}
-               $type}
-            {if_else
-               {!= $adjective ''}
-               {foreach
-                  $adj
-                  {$preset get_array adjectives}
-                  {if
-                     {== $adj $adjective}
-                     {set $found TRUE}}}
-               {set $found TRUE}}}}
-      $found)
+         {if {== {$preset get category} $type}
+            {if_else {!= $adjective ''}
+               {foreach $adj {$preset get_array adjectives}
+                  {if {== $adj $adjective}
+                     {set $found TRUE}
+                  }
+               }
+               {set $found TRUE}
+            }
+         }
+      }
+      $found
+   )
    (translate_excite
       ($excite)
-      {switch
-         $excite
-         (0
-            "kExcitementBoot")
-         (1
-            "kExcitementBad")
-         (2
-            "kExcitementOkay")
-         (3
-            "kExcitementGreat")
-         (4
-            "kExcitementPeak")})
+      {switch $excite
+         (0 "kExcitementBoot")
+         (1 "kExcitementBad")
+         (2 "kExcitementOkay")
+         (3 "kExcitementGreat")
+         (4 "kExcitementPeak")
+      }
+   )
    (check_has_any_presets
       ($min_excite $max_excite $categories $adjective)
-      {foreach_int
-         $excitement
-         $min_excite
-         $max_excite
+      {foreach_int $excitement $min_excite $max_excite
          {do
             ($found FALSE)
-            {foreach
-               $type
-               $categories
-               {if
-                  {$this find_preset_type $type $excitement $adjective}
-                  {set $found TRUE}}}
-            {if
-               {!= $found TRUE}
-               {if_else
-                  {== $adjective ''}
+            {foreach $type $categories
+               {if {$this find_preset_type $type $excitement $adjective}
+                  {set $found TRUE}
+               }
+            }
+            {if {!= $found TRUE}
+               {if_else {== $adjective ''}
                   {notify
                      $path
                      " has no LightPreset for excitement level "
                      {$this translate_excite $excitement}
                      " from these categories: "
-                     $categories}
+                     $categories
+                  }
                   {notify
                      $path
                      " has no LightPreset for adjective "
@@ -148,191 +112,144 @@
                      ", excitement level "
                      {$this translate_excite $excitement}
                      " from these categories: "
-                     $categories}}}}})
+                     $categories
+                  }
+               }
+            }
+         }
+      }
+   )
    (validate_cameras
       {set $cameras.validating TRUE}
-      {$this
-         iterate_self
+      {$this iterate_self
          HamCamShot
          $shot
-         {if
-            {!=
-               {$shot get_type}
-               ham}
-            {notify
-               {path_name $shot}
-               " is not type ham!"}}
+         {if {!= {$shot get_type} ham}
+            {notify {path_name $shot} " is not type ham!"}
+         }
          {do
-            ($next_shots
-               {$shot list_all_next_shots})
-            {foreach_int
-               $i
-               0
-               {size $next_shots}
-               {set
-                  $next
-                  {elem $next_shots $i}}
-               {foreach_int
-                  $i
-                  0
-                  {$next
-                     size
-                     (targets)}
-                  {unless
-                     {$next
-                        get
-                        (targets $i teleport)}
-                     {foreach_int
-                        $j
-                        0
-                        {$shot
-                           size
-                           (targets)}
+            ($next_shots {$shot list_all_next_shots})
+            {foreach_int $i 0 {size $next_shots}
+               {set $next {elem $next_shots $i}}
+               {foreach_int $i 0 {$next size (targets)}
+                  {unless {$next get (targets $i teleport)}
+                     {foreach_int $j 0 {$shot size (targets)}
                         {if
                            {&&
-                              {==
-                                 {$next
-                                    get
-                                    (targets $i target)}
-                                 {$shot
-                                    get
-                                    (targets $j target)}}
-                              {$shot
-                                 get
-                                 (targets $j return)}}
+                              {== {$next get (targets $i target)} {$shot get (targets $j target)}}
+                              {$shot get (targets $j return)}
+                           }
                            {notify
                               {path_name $next}
                               " target "
-                              {$next
-                                 get
-                                 (targets $i target)}
+                              {$next get (targets $i target)}
                               " does not teleport, and is a next shot of "
                               $shot
-                              " which has return true which will mess up the shot, return should be false"}}}}}
-               {if
-                  {&&
-                     {==
-                        {$shot get category}
-                        INTRO_VENUE}
-                     {==
-                        $i
-                        {-
-                           {size $next_shots}
-                           1}}}
-                  {if
-                     {!=
-                        {$next get category}
-                        INTRO_OVER}
+                              " which has return true which will mess up the shot, return should be false"
+                           }
+                        }
+                     }
+                  }
+               }
+               {if {&& {== {$shot get category} INTRO_VENUE} {== $i {- {size $next_shots} 1}}}
+                  {if {!= {$next get category} INTRO_OVER}
                      {notify
                         {path_name $next}
                         " is a last shot of "
                         $shot
-                        ", must be INTRO_OVER or no lipsync will play"}}}}}
+                        ", must be INTRO_OVER or no lipsync will play"
+                     }
+                  }
+               }
+            }
+         }
          {do
-            ($cat
-               {$shot get category})
+            ($cat {$shot get category})
             {if
                {find_elem
                   (INTRO_VENUE INTRO_OVER LOSE WIN OUTRO_MULTI)
-                  $cat}
-               {if
-                  {!=
-                     {$shot get rate}
-                     k30_fps}
-                  {notify
-                     {path_name $shot}
-                     " category "
-                     $cat
-                     " must have units of seconds"}}}}
-         {if
-            {==
-               {$shot duration}
-               0}
-            {notify
-               {path_name $shot}
-               " has zero duration!"}}}
+                  $cat
+               }
+               {if {!= {$shot get rate} k30_fps}
+                  {notify {path_name $shot} " category " $cat " must have units of seconds"}
+               }
+            }
+         }
+         {if {== {$shot duration} 0}
+            {notify {path_name $shot} " has zero duration!"}
+         }
+      }
       {do
-         ($err
-            {sprint
-               {path_name $this}
-               " no CamShot:"})
-         ($camera.cfgs
-            ())
-         ($camera.cats
-            {array
-               (REQUIRED_CAM_CATS)})
-         {foreach
-            $cat
+         ($err {sprint {path_name $this} " no CamShot:"})
+         ($camera.cfgs ())
+         ($camera.cats {array (REQUIRED_CAM_CATS)})
+         {foreach $cat
             {cond
                {eval
-                  (INTRO_VENUE INTRO_OVER OUTRO_MULTI OUTRO_VENUE WIN)}}
-            {push_back $camera.cats $cat}}
-         {$this check_categories $err}}
-      {set $cameras.validating FALSE})
-   (check_categories
-      ($err))
+                  (INTRO_VENUE INTRO_OVER OUTRO_MULTI OUTRO_VENUE WIN)
+               }
+            }
+            {push_back $camera.cats $cat}
+         }
+         {$this check_categories $err}
+      }
+      {set $cameras.validating FALSE}
+   )
+   (check_categories ($err))
    (check_platforms
       ($err)
       {do
-         ($err2
-            "")
+         ($err2 "")
          ($found FALSE)
-         {foreach
-            $check.platform_name
-            ("kPlatformXBox"
-               "kPlatformPS3")
+         {foreach $check.platform_name ("kPlatformXBox" "kPlatformPS3")
             {if_else
-               {$this
-                  check_camera
-                  {sprint
-                     $err
-                     " "
-                     $check.platform_name}}
+               {$this check_camera
+                  {sprint $err " " $check.platform_name}
+               }
                {set $found TRUE}
                {strcat
                   $err2
-                  {if_else
-                     $err2
-                     {sprint
-                        "|"
-                        $check.platform_name}
-                     $check.platform_name}}}}
-         {if
-            {&& $err2 $found}
-            {notify
-               $err
-               " "
-               $err2}}
-         $found})
+                  {if_else $err2
+                     {sprint "|" $check.platform_name}
+                     $check.platform_name
+                  }
+               }
+            }
+         }
+         {if {&& $err2 $found}
+            {notify $err " " $err2}
+         }
+         $found
+      }
+   )
    (check_camera
       ($err)
       {do
          ($match
             {array
-               ((flags_any
-                     {macro_elem $check.facing})
+               (
+                  (flags_any {macro_elem $check.facing})
                   (platform_only
-                     {if_else
-                        {==
-                           $check.platform_name
-                           "kPlatformXbox"}
+                     {if_else {== $check.platform_name "kPlatformXbox"}
                         (kPlatformXbox kPlatformNone)
-                        (kPlatformPS3 kPlatformNone)})
-                  (flags_exact kBCSBOneTime 0))})
-         {if
-            {has_any_substr
-               $check.cat
-               ("coop_"
-                  "h2h")}
-            {push_back
-               $match
-               (min_time 0)}
-            {push_back
-               $match
-               (max_time 0)}}
-         {$this find_shot $check.cat $match}})
+                        (kPlatformPS3 kPlatformNone)
+                     }
+                  )
+                  (flags_exact kBCSBOneTime 0)
+               )
+            }
+         )
+         {if {has_any_substr $check.cat ("coop_" "h2h")}
+            {push_back $match (min_time 0)}
+            {push_back $match (max_time 0)}
+         }
+         {$this find_shot $check.cat $match}
+      }
+   )
    (platform_filter
-      {if_else
-         {== $cameras.platform kPlatformXBox}
+      {if_else {== $cameras.platform kPlatformXBox}
          (kPlatformXBox kPlatformNone)
-         (kPlatformPS3 kPlatformNone)}))
+         (kPlatformPS3 kPlatformNone)
+      }
+   )
+)

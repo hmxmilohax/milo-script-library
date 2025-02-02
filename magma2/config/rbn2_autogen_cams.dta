@@ -1,78 +1,54 @@
-{func
-   CheckShouldAutogenCams
-   {set
-      [working_track]
-      "VENUE"}
+{func CheckShouldAutogenCams
+   {set [working_track] "VENUE"}
    {set $hasCamCues FALSE}
-   {$this
-      foreach_textevent
-      $text
+   {$this foreach_textevent $text
       $tick
-      {if
-         {'||'
-            {has_substr
-               $text
-               "coop_"}
-            {has_substr
-               $text
-               "directed_"}}
-         {set $hasCamCues TRUE}}}
-   {set
-      $willAutogen
-      {'||'
-         [force_autogen]
-         {! $hasCamCues}}}
-   {unless
-      $willAutogen
-      {$this add_symbol_key shot_5 coop_all_far 0}}
-   $willAutogen}
-{func
-   GetCamPacingFromSymbol
+      {if {'||' {has_substr $text "coop_"} {has_substr $text "directed_"}}
+         {set $hasCamCues TRUE}
+      }
+   }
+   {set $willAutogen {'||' [force_autogen] {! $hasCamCues}}}
+   {unless $willAutogen
+      {$this add_symbol_key shot_5 coop_all_far 0}
+   }
+   $willAutogen
+}
+{func GetCamPacingFromSymbol
    ($pacingName)
    {do
       ($result kCamIntervalMed)
-      {switch
-         $pacingName
-         (minimal
-            {set $result kCamIntervalMinimal})
-         (slow
-            {set $result kCamIntervalSlow})
-         (medium
-            {set $result kCamIntervalMed})
-         (fast
-            {set $result kCamIntervalFast})
-         (crazy
-            {set $result kCamIntervalCrazy})}
-      $result}}
-{func
-   UpdateMinTicksBetweenCuts
+      {switch $pacingName
+         (minimal {set $result kCamIntervalMinimal})
+         (slow {set $result kCamIntervalSlow})
+         (medium {set $result kCamIntervalMed})
+         (fast {set $result kCamIntervalFast})
+         (crazy {set $result kCamIntervalCrazy})
+      }
+      $result
+   }
+}
+{func UpdateMinTicksBetweenCuts
    ($camInterval)
-   {if_else
-      {>= $camInterval kCamIntervalFast}
-      {switch
-         $camInterval
-         (kCamIntervalFast
-            {set $MIN_TICKS_BETWEEN_CUTS 480})
-         (kCamIntervalCrazy
-            {set $MIN_TICKS_BETWEEN_CUTS 1})}
-      {set $MIN_TICKS_BETWEEN_CUTS 960}}}
+   {if_else {>= $camInterval kCamIntervalFast}
+      {switch $camInterval
+         (kCamIntervalFast {set $MIN_TICKS_BETWEEN_CUTS 480})
+         (kCamIntervalCrazy {set $MIN_TICKS_BETWEEN_CUTS 1})
+      }
+      {set $MIN_TICKS_BETWEEN_CUTS 960}
+   }
+}
 {set $CAMAUTOGEN_ENABLE_PRIMARY_FOCUSES 1}
 {set $RANDOMIZED_CAM_INTERVAL kCamIntervalMed}
-{set
-   $themePacingArr
-   {$this get_theme_def camera_pacing}}
-{if
-   {>
-      {size $themePacingArr}
-      1}
-   {set
-      $RANDOMIZED_CAM_INTERVAL
-      {GetCamPacingFromSymbol
-         {elem $themePacingArr 1}}}}
-{if_else
-   {== $RANDOMIZED_CAM_INTERVAL kCamIntervalMinimal}
+{set $themePacingArr {$this get_theme_def camera_pacing}}
+{if {> {size $themePacingArr} 1}
+   {set $RANDOMIZED_CAM_INTERVAL
+      {GetCamPacingFromSymbol {elem $themePacingArr 1}}
+   }
+}
+{if_else {== $RANDOMIZED_CAM_INTERVAL kCamIntervalMinimal}
    {set $CAMAUTOGEN_ENABLE_RANDOMIZED_CAMS 0}
-   {set $CAMAUTOGEN_ENABLE_RANDOMIZED_CAMS 1}}
+   {set $CAMAUTOGEN_ENABLE_RANDOMIZED_CAMS 1}
+}
 {UpdateMinTicksBetweenCuts $RANDOMIZED_CAM_INTERVAL}
 {set $PROB_PRIMARY_FOCUS_ONLY 20}
 {set $PROB_PRIMARY_PLUS_OTHERS 45}
@@ -81,35 +57,34 @@
 {set $PROB_SINGLE_FOCUS 50}
 {set $BONUS_INTENSITY_BEFORE_BEATS 2}
 {set $BONUS_INTENSITY_AFTER_BEATS 4}
-{func
-   DoAutogen_Cams
-   {set
-      $track_names
-      ("PART BASS"
-         "PART DRUMS"
-         "PART GUITAR"
-         "PART VOCALS"
-         "PART KEYS")}
-   {set
-      $focus_names
-      ('bass,' 'drums,' 'guitar,' 'vocals,' keys)}
-   {set
-      $solo_dircuts
-      ((directed_bass_cam)
+{func DoAutogen_Cams
+   {set $track_names
+      ("PART BASS" "PART DRUMS" "PART GUITAR" "PART VOCALS" "PART KEYS")
+   }
+   {set $focus_names
+      ('bass,' 'drums,' 'guitar,' 'vocals,' keys)
+   }
+   {set $solo_dircuts
+      (
+         (directed_bass_cam)
          (directed_drums_lt)
          (directed_guitar_cam_pt directed_guitar)
          ()
-         (directed_keys_cam))}
-   {set
-      $single_focus_groups
-      ((kFocusBass)
+         (directed_keys_cam)
+      )
+   }
+   {set $single_focus_groups
+      (
+         (kFocusBass)
          (kFocusDrums)
          (kFocusGuitar)
          (kFocusVocals)
-         (kFocusKeys))}
-   {set
-      $multi_focus_groups
-      ((kFocusVocals kFocusGuitar)
+         (kFocusKeys)
+      )
+   }
+   {set $multi_focus_groups
+      (
+         (kFocusVocals kFocusGuitar)
          (kFocusVocals kFocusKeys)
          (kFocusVocals kFocusBass)
          (kFocusGuitar kFocusBass)
@@ -120,390 +95,246 @@
          (kFocusVocals kFocusBass kFocusKeys)
          (kFocusVocals kFocusGuitar kFocusBass kFocusDrums)
          (kFocusVocals kFocusGuitar kFocusKeys kFocusDrums)
-         (kFocusVocals kFocusKeys kFocusBass kFocusDrums))}
-   {set
-      $multi_focus_groups_noduo
-      ((kFocusVocals kFocusGuitar kFocusBass)
+         (kFocusVocals kFocusKeys kFocusBass kFocusDrums)
+      )
+   }
+   {set $multi_focus_groups_noduo
+      (
+         (kFocusVocals kFocusGuitar kFocusBass)
          (kFocusVocals kFocusGuitar kFocusKeys)
          (kFocusVocals kFocusBass kFocusKeys)
          (kFocusVocals kFocusGuitar kFocusBass kFocusDrums)
          (kFocusVocals kFocusGuitar kFocusKeys kFocusDrums)
-         (kFocusVocals kFocusKeys kFocusBass kFocusDrums))}
-   {set
-      $primaryFocusRegions
-      {array 0}}
-   {set
-      $MIEEvents
-      {array 0}}
-   {func
-      CollectRegionsFromTextEvents
+         (kFocusVocals kFocusKeys kFocusBass kFocusDrums)
+      )
+   }
+   {set $primaryFocusRegions {array 0}}
+   {set $MIEEvents {array 0}}
+   {func CollectRegionsFromTextEvents
       ($trackName $beginTextStr $endTextStr $outputArray)
-      {set
-         [working_track]
-         $trackName}
+      {set [working_track] $trackName}
       {set $beginTick -1}
-      {$this
-         foreach_textevent
-         $text
+      {$this foreach_textevent $text
          $tick
-         {if
-            {&&
-               {has_substr $text $beginTextStr}
-               {== $beginTick -1}}
-            {set $beginTick $tick}}
-         {if
-            {has_substr $text $endTextStr}
-            {unless
-               {== $beginTick -1}
-               {push_back
-                  $outputArray
-                  {array
-                     ($beginTick $tick)}}}
-            {set $beginTick -1}}}}
-   {func
-      AddFocusRegion
+         {if {&& {has_substr $text $beginTextStr} {== $beginTick -1}}
+            {set $beginTick $tick}
+         }
+         {if {has_substr $text $endTextStr}
+            {unless {== $beginTick -1}
+               {push_back $outputArray {array ($beginTick $tick)}}
+            }
+            {set $beginTick -1}
+         }
+      }
+   }
+   {func AddFocusRegion
       ($newRegion)
-      {set
-         $fixedRegion
+      {set $fixedRegion
          {array
             ({elem $newRegion 0}
                {elem $newRegion 1}
-               {$this
-                  closest_beat
-                  {elem $newRegion 2}}
-               {$this
-                  closest_beat
-                  {elem $newRegion 3}})}}
+               {$this closest_beat {elem $newRegion 2}}
+               {$this closest_beat {elem $newRegion 3}}
+            )
+         }
+      }
       {set $shouldAdd TRUE}
-      {foreach_int
-         $i
-         0
-         {size $primaryFocusRegions}
-         {set
-            $curReg
-            {elem $primaryFocusRegions $i}}
+      {foreach_int $i 0 {size $primaryFocusRegions}
+         {set $curReg {elem $primaryFocusRegions $i}}
          {if
             {&&
-               {==
-                  {elem $curReg 2}
-                  {elem $fixedRegion 2}}
-               {==
-                  {elem $curReg 3}
-                  {elem $fixedRegion 3}}
-               {==
-                  {elem $curReg 0}
-                  {elem $fixedRegion 0}}
-               {==
-                  {elem $curReg 1}
-                  {elem $fixedRegion 1}}}
-            {set $shouldAdd FALSE}}}
-      {if
-         $shouldAdd
-         {push_back $primaryFocusRegions $fixedRegion}}}
-   {func
-      AddPrimaryFocuses_Solo
+               {== {elem $curReg 2} {elem $fixedRegion 2}}
+               {== {elem $curReg 3} {elem $fixedRegion 3}}
+               {== {elem $curReg 0} {elem $fixedRegion 0}}
+               {== {elem $curReg 1} {elem $fixedRegion 1}}
+            }
+            {set $shouldAdd FALSE}
+         }
+      }
+      {if $shouldAdd
+         {push_back $primaryFocusRegions $fixedRegion}
+      }
+   }
+   {func AddPrimaryFocuses_Solo
       ($focusID)
-      {set
-         [working_track]
-         {elem $track_names $focusID}}
-      {$this
-         foreach_midievent
-         kNote_G6
+      {set [working_track] {elem $track_names $focusID}}
+      {$this foreach_midievent kNote_G6
          kNote_G6
          $pitch
          $tick
          $state
-         {if_else
-            $state
+         {if_else $state
             {set $on_tick $tick}
             {do
-               {set
-                  $newFocusRegion
+               {set $newFocusRegion
                   {array
-                     ({sprint
-                           "solo_"
-                           {elem $focus_names $focusID}}
-                        $focusID
-                        $on_tick
-                        $tick)}}
-               {AddFocusRegion $newFocusRegion}}}}}
-   {func
-      VocalTextCountForRegion
+                     ({sprint "solo_" {elem $focus_names $focusID}} $focusID $on_tick $tick)
+                  }
+               }
+               {AddFocusRegion $newFocusRegion}
+            }
+         }
+      }
+   }
+   {func VocalTextCountForRegion
       ($beginTick $endTick)
-      {set
-         $oldWorkingTrack
-         [working_track]}
-      {set
-         [working_track]
-         {elem $track_names kFocusVocals}}
+      {set $oldWorkingTrack [working_track]}
+      {set [working_track] {elem $track_names kFocusVocals}}
       {set $count 0}
-      {$this
-         foreach_textevent
-         $text
+      {$this foreach_textevent $text
          $tick
-         {if
-            {&&
-               {>= $tick $beginTick}
-               {< $tick $endTick}}
-            {unless
-               {&&
-                  {has_substr
-                     $text
-                     "["}
-                  {has_substr
-                     $text
-                     "]"}}
-               {'+=' $count 1}}}}
-      {set
-         [working_track]
-         $oldWorkingTrack}
-      $count}
-   {func
-      AddPrimaryFocuses_VocalPhrases
-      {set
-         [working_track]
-         {elem $track_names kFocusVocals}}
-      {set
-         $newRegions
-         {array 0}}
-      {$this
-         foreach_midievent
-         kNote_A6
+         {if {&& {>= $tick $beginTick} {< $tick $endTick}}
+            {unless {&& {has_substr $text "["} {has_substr $text "]"}}
+               {'+=' $count 1}
+            }
+         }
+      }
+      {set [working_track] $oldWorkingTrack}
+      $count
+   }
+   {func AddPrimaryFocuses_VocalPhrases
+      {set [working_track] {elem $track_names kFocusVocals}}
+      {set $newRegions {array 0}}
+      {$this foreach_midievent kNote_A6
          kNote_A6
          $pitch
          $tick
          $state
-         {if_else
-            $state
+         {if_else $state
             {do
-               {set $on_tick $tick}}
+               {set $on_tick $tick}
+            }
             {do
-               {set
-                  $newFocusRegion
+               {set $newFocusRegion
                   {array
-                     ("vocalphrase"
-                        kFocusVocals
-                        $on_tick
-                        $tick)}}
-               {push_back $newRegions $newFocusRegion}}}}
-      {foreach_int
-         $i
-         0
-         {size $newRegions}
-         {set
-            $newRegion
-            {elem $newRegions $i}}
-         {set
-            $vocalCount
-            {VocalTextCountForRegion
-               {elem $newRegion 2}
-               {elem $newRegion 3}}}
-         {if
-            {> $vocalCount 0}
-            {AddFocusRegion $newRegion}}}}
-   {func
-      AddPrimaryFocuses_PracticeSections
+                     ("vocalphrase" kFocusVocals $on_tick $tick)
+                  }
+               }
+               {push_back $newRegions $newFocusRegion}
+            }
+         }
+      }
+      {foreach_int $i 0 {size $newRegions}
+         {set $newRegion {elem $newRegions $i}}
+         {set $vocalCount
+            {VocalTextCountForRegion {elem $newRegion 2} {elem $newRegion 3}}
+         }
+         {if {> $vocalCount 0}
+            {AddFocusRegion $newRegion}
+         }
+      }
+   }
+   {func AddPrimaryFocuses_PracticeSections
       ($sectionSubStr $focusId)
-      {set
-         [working_track]
-         "EVENTS"}
+      {set [working_track] "EVENTS"}
       {set $beginTick -1}
-      {$this
-         foreach_textevent
-         $text
+      {$this foreach_textevent $text
          $tick
-         {if
-            {> $beginTick 0}
-            {set
-               $newFocusRegion
+         {if {> $beginTick 0}
+            {set $newFocusRegion
                {array
-                  ({sprint
-                        $sectionSubStr
-                        "section"}
-                     $focusId
-                     $beginTick
-                     $tick)}}
+                  ({sprint $sectionSubStr "section"} $focusId $beginTick $tick)
+               }
+            }
             {AddFocusRegion $newFocusRegion}
-            {set $beginTick -1}}
+            {set $beginTick -1}
+         }
          {if
             {&&
-               {'||'
-                  {has_substr
-                     $text
-                     "[section "}
-                  {has_substr
-                     $text
-                     "[prc_"}}
-               {has_substr $text $sectionSubStr}}
-            {set $beginTick $tick}}}}
-   {func
-      FindPrimaryFocusesForTick
+               {'||' {has_substr $text "[section "} {has_substr $text "[prc_"}}
+               {has_substr $text $sectionSubStr}
+            }
+            {set $beginTick $tick}
+         }
+      }
+   }
+   {func FindPrimaryFocusesForTick
       ($tick)
-      {set
-         $result
-         {array 0}}
-      {foreach_int
-         $i
-         0
-         {size $primaryFocusRegions}
-         {set
-            $beginTick
-            {elem
-               {elem $primaryFocusRegions $i}
-               2}}
-         {set
-            $endTick
-            {elem
-               {elem $primaryFocusRegions $i}
-               3}}
-         {if
-            {&&
-               {>= $tick $beginTick}
-               {< $tick $endTick}}
-            {set
-               $focusToAdd
-               {elem
-                  {elem $primaryFocusRegions $i}
-                  1}}
+      {set $result {array 0}}
+      {foreach_int $i 0 {size $primaryFocusRegions}
+         {set $beginTick {elem {elem $primaryFocusRegions $i} 2}}
+         {set $endTick {elem {elem $primaryFocusRegions $i} 3}}
+         {if {&& {>= $tick $beginTick} {< $tick $endTick}}
+            {set $focusToAdd {elem {elem $primaryFocusRegions $i} 1}}
             {set $found FALSE}
-            {foreach_int
-               $i
-               0
-               {size $result}
-               {if
-                  {==
-                     {elem $result $i}
-                     $focusToAdd}
-                  {set $found TRUE}}}
-            {unless
-               $found
-               {push_back $result $focusToAdd}}}}
-      $result}
-   {func
-      IsNearBeginningOfFocusRegion
+            {foreach_int $i 0 {size $result}
+               {if {== {elem $result $i} $focusToAdd}
+                  {set $found TRUE}
+               }
+            }
+            {unless $found
+               {push_back $result $focusToAdd}
+            }
+         }
+      }
+      $result
+   }
+   {func IsNearBeginningOfFocusRegion
       ($tick)
       {set $result FALSE}
-      {foreach_int
-         $i
-         0
-         {size $primaryFocusRegions}
-         {set
-            $beginTick
-            {elem
-               {elem $primaryFocusRegions $i}
-               2}}
-         {set
-            $endTick
-            {'+' $beginTick 960}}
-         {if
-            {&&
-               {>= $tick $beginTick}
-               {< $tick $endTick}}
+      {foreach_int $i 0 {size $primaryFocusRegions}
+         {set $beginTick {elem {elem $primaryFocusRegions $i} 2}}
+         {set $endTick {'+' $beginTick 960}}
+         {if {&& {>= $tick $beginTick} {< $tick $endTick}}
             {set $foundBeginTick $beginTick}
-            {set $result TRUE}}
-         {set
-            $beginTick
-            {- $beginTick 960}}
-         {set
-            $endTick
-            {elem
-               {elem $primaryFocusRegions $i}
-               2}}
-         {if
-            {&&
-               {> $tick $beginTick}
-               {<= $tick $endTick}}
+            {set $result TRUE}
+         }
+         {set $beginTick {- $beginTick 960}}
+         {set $endTick {elem {elem $primaryFocusRegions $i} 2}}
+         {if {&& {> $tick $beginTick} {<= $tick $endTick}}
             {set $foundBeginTick $beginTick}
-            {set $result TRUE}}}
-      $result}
-   {func
-      PickBestFocus
+            {set $result TRUE}
+         }
+      }
+      $result
+   }
+   {func PickBestFocus
       ($possibleFocuses $tick)
-      {if_else
-         {== $RANDOMIZED_CAM_INTERVAL kCamIntervalCrazy}
-         {set
-            $result
-            {random_elem $possibleFocuses}}
+      {if_else {== $RANDOMIZED_CAM_INTERVAL kCamIntervalCrazy}
+         {set $result {random_elem $possibleFocuses}}
          {do
             {set $bestScore -1}
-            {set
-               $bestResults
-               {array 0}}
-            {foreach_int
-               $i
-               0
-               {size $possibleFocuses}
-               {set
-                  $curFocuses
-                  {elem $possibleFocuses $i}}
-               {$this
-                  print
+            {set $bestResults {array 0}}
+            {foreach_int $i 0 {size $possibleFocuses}
+               {set $curFocuses {elem $possibleFocuses $i}}
+               {$this print
                   "start scoring for "
                   $curFocuses
                   " at tick "
                   $tick
                   " "
                   {$this closest_measure $tick}
-                  "\n"}
+                  "\n"
+               }
                {set $curScore 0}
-               {foreach_int
-                  $j
-                  0
-                  {size $MIEEvents}
-                  {set
-                     $curMIE
-                     {elem $MIEEvents $j}}
-                  {set
-                     $mieStartTick
-                     {elem $curMIE 2}}
-                  {set
-                     $mieEndTick
-                     {elem $curMIE 3}}
-                  {set
-                     $mieImportance
-                     {elem $curMIE 4}}
-                  {set
-                     $mieFocuses
-                     {elem $curMIE 1}}
+               {foreach_int $j 0 {size $MIEEvents}
+                  {set $curMIE {elem $MIEEvents $j}}
+                  {set $mieStartTick {elem $curMIE 2}}
+                  {set $mieEndTick {elem $curMIE 3}}
+                  {set $mieImportance {elem $curMIE 4}}
+                  {set $mieFocuses {elem $curMIE 1}}
                   {set $isMatch TRUE}
-                  {if
-                     {&&
-                        {>= $tick $mieStartTick}
-                        {< $tick $mieEndTick}}
-                     {foreach_int
-                        $k
-                        0
-                        {size $mieFocuses}
-                        {if
-                           {!
-                              {find_elem
-                                 $curFocuses
-                                 {elem $mieFocuses $k}}}
-                           {set $isMatch FALSE}}}
-                     {if
-                        $isMatch
+                  {if {&& {>= $tick $mieStartTick} {< $tick $mieEndTick}}
+                     {foreach_int $k 0 {size $mieFocuses}
+                        {if {! {find_elem $curFocuses {elem $mieFocuses $k}}}
+                           {set $isMatch FALSE}
+                        }
+                     }
+                     {if $isMatch
                         {if
                            {&&
-                              {>=
-                                 {size $curFocuses}
-                                 3}
+                              {>= {size $curFocuses} 3}
                               {< $mieImportance 0}
                               {random_elem
-                                 (0 1 0 1 0)}}
+                                 (0 1 0 1 0)
+                              }
+                           }
                            {set $mieImportance 0}
-                           {$this
-                              print
-                              "deciding to let 3 or 4 person penalty slide...\n"}}
-                        {set
-                           $normalize
-                           {/
-                              {size $mieFocuses}
-                              {size $curFocuses}}}
-                        {'+='
-                           $curScore
-                           {'*' $mieImportance $normalize}}
-                        {$this
-                           print
+                           {$this print "deciding to let 3 or 4 person penalty slide...\n"}
+                        }
+                        {set $normalize {/ {size $mieFocuses} {size $curFocuses}}}
+                        {'+=' $curScore {'*' $mieImportance $normalize}}
+                        {$this print
                            "focuses "
                            $curFocuses
                            " match MIE "
@@ -514,110 +345,84 @@
                            {$this closest_measure $tick}
                            " score add: "
                            {'*' $mieImportance $normalize}
-                           "\n"}}}}
-               {if
-                  {== $curScore $bestScore}
-                  {push_back $bestResults $curFocuses}}
-               {if
-                  {> $curScore $bestScore}
-                  {set
-                     $bestResults
-                     {array 0}}
+                           "\n"
+                        }
+                     }
+                  }
+               }
+               {if {== $curScore $bestScore}
                   {push_back $bestResults $curFocuses}
-                  {set $bestScore $curScore}}
-               {$this
-                  print
+               }
+               {if {> $curScore $bestScore}
+                  {set $bestResults {array 0}}
+                  {push_back $bestResults $curFocuses}
+                  {set $bestScore $curScore}
+               }
+               {$this print
                   "end score: "
                   $curScore
                   " num results: "
                   {size $bestResults}
-                  "\n"}}
-            {if_else
-               {>
-                  {size $bestResults}
-                  0}
-               {set
-                  $result
-                  {random_elem $bestResults}}
-               {set
-                  $result
-                  {random_elem $possibleFocuses}}}}}
-      $result}
-   {func
-      AddMIE_Play
+                  "\n"
+               }
+            }
+            {if_else {> {size $bestResults} 0}
+               {set $result {random_elem $bestResults}}
+               {set $result {random_elem $possibleFocuses}}
+            }
+         }
+      }
+      $result
+   }
+   {func AddMIE_Play
       ($focusID)
-      {set
-         [working_track]
-         {elem $track_names $focusID}}
-      {set
-         $focusArr
-         {array
-            ($focusID)}}
+      {set [working_track] {elem $track_names $focusID}}
+      {set $focusArr {array ($focusID)}}
       {set $playTick -1}
-      {$this
-         foreach_textevent
-         $text
+      {$this foreach_textevent $text
          $tick
          {if
             {&&
                {== $playTick -1}
                {'||'
-                  {has_substr
-                     $text
-                     "[play"}
-                  {has_substr
-                     $text
-                     "[mellow"}
-                  {has_substr
-                     $text
-                     "[intense"}}}
+                  {has_substr $text "[play"}
+                  {has_substr $text "[mellow"}
+                  {has_substr $text "[intense"}
+               }
+            }
             {set $playTick $tick}
-            {set
-               $newMIE
+            {set $newMIE
                {array
                   ({sprint
                         "playstart_"
                         {elem $focus_names $focusID}}
                      $focusArr
-                     {-
-                        $tick
-                        {'*' 480 $BONUS_INTENSITY_BEFORE_BEATS}}
-                     {'+'
-                        $tick
-                        {'*' 480 $BONUS_INTENSITY_AFTER_BEATS}}
-                     2.5)}}
-            {push_back $MIEEvents $newMIE}}
-         {if
-            {'||'
-               {has_substr
-                  $text
-                  "[mellow"}
-               {has_substr
-                  $text
-                  "[intense"}}
-            {set
-               $newMIE
+                     {- $tick {'*' 480 $BONUS_INTENSITY_BEFORE_BEATS}}
+                     {'+' $tick {'*' 480 $BONUS_INTENSITY_AFTER_BEATS}}
+                     2.5
+                  )
+               }
+            }
+            {push_back $MIEEvents $newMIE}
+         }
+         {if {'||' {has_substr $text "[mellow"} {has_substr $text "[intense"}}
+            {set $newMIE
                {array
                   ({sprint
                         "intensitychange_"
                         {elem $focus_names $focusID}}
                      $focusArr
-                     {-
-                        $tick
-                        {'*' 480 $BONUS_INTENSITY_BEFORE_BEATS}}
-                     {'+'
-                        $tick
-                        {'*' 480 $BONUS_INTENSITY_AFTER_BEATS}}
-                     2.5)}}
-            {push_back $MIEEvents $newMIE}}
-         {if
-            {has_substr
-               $text
-               "[idle"}
-            {unless
-               {== $playTick -1}
-               {set
-                  $newMIE
+                     {- $tick {'*' 480 $BONUS_INTENSITY_BEFORE_BEATS}}
+                     {'+' $tick {'*' 480 $BONUS_INTENSITY_AFTER_BEATS}}
+                     2.5
+                  )
+               }
+            }
+            {push_back $MIEEvents $newMIE}
+         }
+         {if {has_substr $text "[idle"}
+            {unless {== $playTick -1}
+               {set $newMIE
                   {array
                      ({sprint
                            "playing_"
@@ -625,33 +430,29 @@
                         $focusArr
                         $playTick
                         $tick
-                        1.0)}}
-               {push_back $MIEEvents $newMIE}}
-            {set $playTick -1}}}}
-   {func
-      AddMIE_PenalizeIdling
+                        1.0
+                     )
+                  }
+               }
+               {push_back $MIEEvents $newMIE}
+            }
+            {set $playTick -1}
+         }
+      }
+   }
+   {func AddMIE_PenalizeIdling
       ($focusID)
-      {set
-         $results
-         {array 0}}
+      {set $results {array 0}}
       {CollectRegionsFromTextEvents
          {elem $track_names $focusID}
          "[idle"
          "[play"
-         $results}
-      {set
-         $focusArr
-         {array
-            ($focusID)}}
-      {foreach_int
-         $i
-         0
-         {size $results}
-         {set
-            $result
-            {elem $results $i}}
-         {$this
-            print
+         $results
+      }
+      {set $focusArr {array ($focusID)}}
+      {foreach_int $i 0 {size $results}
+         {set $result {elem $results $i}}
+         {$this print
             "adding MIE to penalize idling for "
             {elem $focus_names $focusID}
             " at ("
@@ -659,16 +460,12 @@
             " "
             {elem $result 1}
             ") ("
-            {$this
-               closest_measure
-               {elem $result 0}}
+            {$this closest_measure {elem $result 0}}
             " "
-            {$this
-               closest_measure
-               {elem $result 1}}
-            ")\n"}
-         {set
-            $newMIE
+            {$this closest_measure {elem $result 1}}
+            ")\n"
+         }
+         {set $newMIE
             {array
                ({sprint
                      "idling_"
@@ -676,83 +473,75 @@
                   $focusArr
                   {elem $result 0}
                   {elem $result 1}
-                  -1.0)}}
-         {push_back $MIEEvents $newMIE}}}
-   {func
-      AddMIE_PenalizeVocalPercussion
-      {set
-         $results
-         {array 0}}
+                  -1.0
+               )
+            }
+         }
+         {push_back $MIEEvents $newMIE}
+      }
+   }
+   {func AddMIE_PenalizeVocalPercussion
+      {set $results {array 0}}
       {CollectRegionsFromTextEvents
          {elem $track_names kFocusVocals}
          "[tambourine_start"
          "[tambourine_end"
-         $results}
+         $results
+      }
       {CollectRegionsFromTextEvents
          {elem $track_names kFocusVocals}
          "[cowbell_start"
          "[cowbell_end"
-         $results}
+         $results
+      }
       {CollectRegionsFromTextEvents
          {elem $track_names kFocusVocals}
          "[clap_start"
          "[clap_end"
-         $results}
-      {set
-         $focusArr
-         {array
-            (kFocusVocals)}}
-      {foreach_int
-         $i
-         0
-         {size $results}
-         {set
-            $result
-            {elem $results $i}}
-         {$this
-            print
+         $results
+      }
+      {set $focusArr {array (kFocusVocals)}}
+      {foreach_int $i 0 {size $results}
+         {set $result {elem $results $i}}
+         {$this print
             "adding MIE to penalize vocal percussion at ("
             {elem $result 0}
             " "
             {elem $result 1}
             ") ("
-            {$this
-               closest_measure
-               {elem $result 0}}
+            {$this closest_measure {elem $result 0}}
             " "
-            {$this
-               closest_measure
-               {elem $result 1}}
-            ")\n"}
-         {set
-            $newMIE
+            {$this closest_measure {elem $result 1}}
+            ")\n"
+         }
+         {set $newMIE
             {array
-               ("vocal_percussion"
+               (
+                  "vocal_percussion"
                   $focusArr
                   {elem $result 0}
                   {elem $result 1}
-                  -2.0)}}
-         {push_back $MIEEvents $newMIE}}}
-   {func
-      AddMIE_Note
+                  -2.0
+               )
+            }
+         }
+         {push_back $MIEEvents $newMIE}
+      }
+   }
+   {func AddMIE_Note
       ($trackName $note $mieName $focusArr $score)
-      {set
-         [working_track]
-         $trackName}
-      {$this
-         foreach_midievent
-         {int $note}
+      {set [working_track] $trackName}
+      {$this foreach_midievent {int $note}
          {int $note}
          $pitch
          $tick
          $state
-         {if_else
-            $state
+         {if_else $state
             {do
-               {set $on_tick $tick}}
+               {set $on_tick $tick}
+            }
             {do
-               {$this
-                  print
+               {$this print
                   "adding MIE "
                   $mieName
                   " from "
@@ -763,217 +552,134 @@
                   $focusArr
                   " and score: "
                   $score
-                  "\n"}
-               {set
-                  $newMIE
+                  "\n"
+               }
+               {set $newMIE
                   {array
-                     ($mieName $focusArr $on_tick $tick $score)}}
-               {push_back $MIEEvents $newMIE}}}}}
-   {func
-      AddMIE_LightingChange
-      {set
-         [working_track]
-         "VENUE"}
-      {set
-         $focusArr
+                     ($mieName $focusArr $on_tick $tick $score)
+                  }
+               }
+               {push_back $MIEEvents $newMIE}
+            }
+         }
+      }
+   }
+   {func AddMIE_LightingChange
+      {set [working_track] "VENUE"}
+      {set $focusArr
          {array
-            (kFocusVocals kFocusGuitar kFocusBass kFocusDrums)}}
+            (kFocusVocals kFocusGuitar kFocusBass kFocusDrums)
+         }
+      }
       {set $playTick -1}
-      {$this
-         foreach_textevent
-         $text
+      {$this foreach_textevent $text
          $tick
          {if
             {&&
                {random_elem
-                  (0 1 0 1)}
-               {has_substr
-                  $text
-                  "[lighting"}}
-            {set
-               $newMIE
+                  (0 1 0 1)
+               }
+               {has_substr $text "[lighting"}
+            }
+            {set $newMIE
                {array
-                  ("lighting_change"
+                  (
+                     "lighting_change"
                      $focusArr
                      {- $tick 1440}
                      {- $tick 480}
-                     2.0)}}
-            {push_back $MIEEvents $newMIE}}}}
-   {func
-      IsInMIE
+                     2.0
+                  )
+               }
+            }
+            {push_back $MIEEvents $newMIE}
+         }
+      }
+   }
+   {func IsInMIE
       ($tick $name)
       {set $result FALSE}
-      {foreach_int
-         $i
-         0
-         {size $MIEEvents}
-         {set
-            $beginTick
-            {elem
-               {elem $MIEEvents $i}
-               2}}
-         {set
-            $endTick
-            {elem
-               {elem $MIEEvents $i}
-               3}}
-         {set
-            $mieName
-            {elem
-               {elem $MIEEvents $i}
-               0}}
-         {if
-            {&&
-               {>= $tick $beginTick}
-               {<= $tick $endTick}
-               {has_substr $mieName $name}}
-            {set $result TRUE}}}
-      $result}
-   {func
-      NumPlaying
+      {foreach_int $i 0 {size $MIEEvents}
+         {set $beginTick {elem {elem $MIEEvents $i} 2}}
+         {set $endTick {elem {elem $MIEEvents $i} 3}}
+         {set $mieName {elem {elem $MIEEvents $i} 0}}
+         {if {&& {>= $tick $beginTick} {<= $tick $endTick} {has_substr $mieName $name}}
+            {set $result TRUE}
+         }
+      }
+      $result
+   }
+   {func NumPlaying
       ($tick)
       {set $numPlaying 0}
-      {foreach
-         $focID
-         (kFocusBass kFocusDrums kFocusGuitar kFocusVocals)
-         {set
-            $mieName
-            {sprint
-               "playing_"
-               {elem $focus_names $focID}}}
-         {if
-            {IsInMIE $tick $mieName}
-            {'+=' $numPlaying 1}}}
-      $numPlaying}
-   {func
-      IsInPrimaryFocusRegion
+      {foreach $focID (kFocusBass kFocusDrums kFocusGuitar kFocusVocals)
+         {set $mieName {sprint "playing_" {elem $focus_names $focID}}}
+         {if {IsInMIE $tick $mieName}
+            {'+=' $numPlaying 1}
+         }
+      }
+      $numPlaying
+   }
+   {func IsInPrimaryFocusRegion
       ($tick $name)
       {set $result FALSE}
-      {foreach_int
-         $i
-         0
-         {size $primaryFocusRegions}
-         {set
-            $beginTick
-            {elem
-               {elem $primaryFocusRegions $i}
-               2}}
-         {set
-            $endTick
-            {elem
-               {elem $primaryFocusRegions $i}
-               3}}
-         {set
-            $pfrName
-            {elem
-               {elem $primaryFocusRegions $i}
-               0}}
-         {if
-            {&&
-               {>= $tick $beginTick}
-               {<= $tick $endTick}
-               {has_substr $pfrName $name}}
-            {set $result TRUE}}}
-      $result}
-   {func
-      randCamCutTick
+      {foreach_int $i 0 {size $primaryFocusRegions}
+         {set $beginTick {elem {elem $primaryFocusRegions $i} 2}}
+         {set $endTick {elem {elem $primaryFocusRegions $i} 3}}
+         {set $pfrName {elem {elem $primaryFocusRegions $i} 0}}
+         {if {&& {>= $tick $beginTick} {<= $tick $endTick} {has_substr $pfrName $name}}
+            {set $result TRUE}
+         }
+      }
+      $result
+   }
+   {func randCamCutTick
       ($tick)
-      {-
-         $tick
-         {random_elem
-            (0 15 30)}}}
-   {func
-      FindPrcCategoryAtTick
+      {- $tick {random_elem (0 15 30)}}
+   }
+   {func FindPrcCategoryAtTick
       ($tick)
       {set $prcCategoryResult ''}
-      {foreach_int
-         $i
-         0
-         {size $lighting_cues}
-         {if
-            {== $prcCategoryResult ''}
-            {set
-               $cueStartTick
-               {int
-                  {elem
-                     {elem $lighting_cues $i}
-                     1}}}
-            {if_else
-               {==
-                  $i
-                  {-
-                     {size $lighting_cues}
-                     1}}
-               {set
-                  $cueEndTick
-                  {int $final_change_tick}}
-               {set
-                  $cueEndTick
-                  {int
-                     {elem
-                        {elem
-                           $lighting_cues
-                           {'+' $i 1}}
-                        1}}}}
-            {if
-               {&&
-                  {>= $tick $cueStartTick}
-                  {< $tick $cueEndTick}}
-               {set
-                  $prc_name
-                  {elem
-                     {elem $lighting_cues $i}
-                     0}}
-               {set
-                  $prcCategoryResult
-                  {ConvertPrcToCategory $prc_name}}}}}
-      $prcCategoryResult}
-   {if
-      {> $end 0}
-      {set
-         [working_track]
-         "VENUE"}
+      {foreach_int $i 0 {size $lighting_cues}
+         {if {== $prcCategoryResult ''}
+            {set $cueStartTick {int {elem {elem $lighting_cues $i} 1}}}
+            {if_else {== $i {- {size $lighting_cues} 1}}
+               {set $cueEndTick {int $final_change_tick}}
+               {set $cueEndTick {int {elem {elem $lighting_cues {'+' $i 1}} 1}}}
+            }
+            {if {&& {>= $tick $cueStartTick} {< $tick $cueEndTick}}
+               {set $prc_name {elem {elem $lighting_cues $i} 0}}
+               {set $prcCategoryResult {ConvertPrcToCategory $prc_name}}
+            }
+         }
+      }
+      $prcCategoryResult
+   }
+   {if {> $end 0}
+      {set [working_track] "VENUE"}
       {do
          ($count 0)
          ($tick 0)
-         {foreach
-            $camProp
-            (shot_5)
-            {$this remove_keys $camProp}}
-         {print
-            "MIDI Compiler: Autogenerating camera cues...\n"}
+         {foreach $camProp (shot_5)
+            {$this remove_keys $camProp}
+         }
+         {print "MIDI Compiler: Autogenerating camera cues...\n"}
          {set $curShotProp shot_5}
          {$this add_symbol_key $curShotProp coop_all_far 0}
-         {if
-            $CAMAUTOGEN_ENABLE_PRIMARY_FOCUSES
+         {if $CAMAUTOGEN_ENABLE_PRIMARY_FOCUSES
             {AddPrimaryFocuses_Solo kFocusGuitar}
             {AddPrimaryFocuses_Solo kFocusDrums}
             {AddPrimaryFocuses_Solo kFocusKeys}
             {AddPrimaryFocuses_VocalPhrases}
-            {AddPrimaryFocuses_PracticeSections
-               "gtr_"
-               kFocusGuitar}
-            {AddPrimaryFocuses_PracticeSections
-               "slide_"
-               kFocusGuitar}
-            {AddPrimaryFocuses_PracticeSections
-               "bass_"
-               kFocusBass}
-            {AddPrimaryFocuses_PracticeSections
-               "drum_"
-               kFocusDrums}
-            {AddPrimaryFocuses_PracticeSections
-               "keyboard_"
-               kFocusKeys}
-            {AddPrimaryFocuses_PracticeSections
-               "organ_"
-               kFocusKeys}
-            {AddPrimaryFocuses_PracticeSections
-               "piano_"
-               kFocusKeys}
-            {AddPrimaryFocuses_PracticeSections
-               "synth_"
-               kFocusKeys}}
+            {AddPrimaryFocuses_PracticeSections "gtr_" kFocusGuitar}
+            {AddPrimaryFocuses_PracticeSections "slide_" kFocusGuitar}
+            {AddPrimaryFocuses_PracticeSections "bass_" kFocusBass}
+            {AddPrimaryFocuses_PracticeSections "drum_" kFocusDrums}
+            {AddPrimaryFocuses_PracticeSections "keyboard_" kFocusKeys}
+            {AddPrimaryFocuses_PracticeSections "organ_" kFocusKeys}
+            {AddPrimaryFocuses_PracticeSections "piano_" kFocusKeys}
+            {AddPrimaryFocuses_PracticeSections "synth_" kFocusKeys}
+         }
          {AddMIE_Play kFocusGuitar}
          {AddMIE_Play kFocusDrums}
          {AddMIE_Play kFocusBass}
@@ -986,218 +692,155 @@
          {AddMIE_PenalizeIdling kFocusVocals}
          {AddMIE_PenalizeIdling kFocusKeys}
          {AddMIE_PenalizeVocalPercussion}
-         {set
-            [working_track]
-            "VENUE"}
-         {foreach_int
-            $i
-            0
-            {size $lighting_cues}
-            {set
-               $cueTick
-               {int
-                  {elem
-                     {elem $lighting_cues $i}
-                     1}}}
-            {set
-               $prc_name
-               {elem
-                  {elem $lighting_cues $i}
-                  0}}
-            {set
-               $prcCategory
-               {ConvertPrcToCategory $prc_name}}
-            {set
-               $dirCut
-               {LookupSectionPreset $prcCategory dircut_at_start TRUE}}
-            {if
-               {!= $dirCut -1}
-               {$this add_symbol_key $curShotProp $dirCut $cueTick $MIN_TICKS_BETWEEN_CUTS}}}
-         {foreach_int
-            $i
-            0
-            {size $primaryFocusRegions}
-            {set
-               $curRegion
-               {elem $primaryFocusRegions $i}}
-            {set
-               $curFocus
-               {elem $curRegion 1}}
-            {set
-               $curStartTick
-               {elem $curRegion 2}}
-            {set
-               $curEndTick
-               {elem $curRegion 3}}
+         {set [working_track] "VENUE"}
+         {foreach_int $i 0 {size $lighting_cues}
+            {set $cueTick {int {elem {elem $lighting_cues $i} 1}}}
+            {set $prc_name {elem {elem $lighting_cues $i} 0}}
+            {set $prcCategory {ConvertPrcToCategory $prc_name}}
+            {set $dirCut
+               {LookupSectionPreset $prcCategory dircut_at_start TRUE}
+            }
+            {if {!= $dirCut -1}
+               {$this add_symbol_key
+                  $curShotProp
+                  $dirCut
+                  $cueTick
+                  $MIN_TICKS_BETWEEN_CUTS
+               }
+            }
+         }
+         {foreach_int $i 0 {size $primaryFocusRegions}
+            {set $curRegion {elem $primaryFocusRegions $i}}
+            {set $curFocus {elem $curRegion 1}}
+            {set $curStartTick {elem $curRegion 2}}
+            {set $curEndTick {elem $curRegion 3}}
             {set $isCloseup TRUE}
             {if_else
                {&&
-                  {has_substr
-                     {elem $curRegion 0}
-                     "solo"}
-                  {>
-                     {size
-                        {elem $solo_dircuts $curFocus}}
-                     0}}
+                  {has_substr {elem $curRegion 0} "solo"}
+                  {> {size {elem $solo_dircuts $curFocus}} 0}
+               }
                {do
-                  ($dirCuts
-                     {elem $solo_dircuts $curFocus})
-                  ($dirCut
-                     {elem
-                        $dirCuts
-                        {random_int
-                           0
-                           {size $dirCuts}}})
-                  {$this add_symbol_key $curShotProp $dirCut $curStartTick $MIN_TICKS_BETWEEN_CUTS}}
+                  ($dirCuts {elem $solo_dircuts $curFocus})
+                  ($dirCut {elem $dirCuts {random_int 0 {size $dirCuts}}})
+                  {$this add_symbol_key
+                     $curShotProp
+                     $dirCut
+                     $curStartTick
+                     $MIN_TICKS_BETWEEN_CUTS
+                  }
+               }
                {if_else
                   {&&
-                     {has_substr
-                        {elem $curRegion 0}
-                        "vocalphrase"}
-                     {>
-                        {random_int 0 100}
-                        65}}
+                     {has_substr {elem $curRegion 0} "vocalphrase"}
+                     {> {random_int 0 100} 65}
+                  }
                   {do
-                     {set
-                        $posibleFocuses
-                        {array 0}}
-                     {foreach_int
-                        $i
-                        0
-                        {size $multi_focus_groups}
-                        {if
-                           {find_elem
-                              {elem $multi_focus_groups $i}
-                              kFocusVocals}
-                           {push_back
-                              $posibleFocuses
-                              {elem $multi_focus_groups $i}}}}
-                     {set
-                        $pickedFocuses
-                        {PickBestFocus $posibleFocuses $curStartTick}}
-                     {$this
-                        add_symbol_key
+                     {set $posibleFocuses {array 0}}
+                     {foreach_int $i 0 {size $multi_focus_groups}
+                        {if {find_elem {elem $multi_focus_groups $i} kFocusVocals}
+                           {push_back $posibleFocuses {elem $multi_focus_groups $i}}
+                        }
+                     }
+                     {set $pickedFocuses {PickBestFocus $posibleFocuses $curStartTick}}
+                     {$this add_symbol_key
                         $curShotProp
                         {$this shotname_for_focuses $pickedFocuses}
                         {randCamCutTick $curStartTick}
-                        $MIN_TICKS_BETWEEN_CUTS}
-                     {$this
-                        print
+                        $MIN_TICKS_BETWEEN_CUTS
+                     }
+                     {$this print
                         "    Picking shot with others "
                         $pickedFocuses
                         " at tick "
                         $curStartTick
-                        " for vocal phrase PF \n"}}
+                        " for vocal phrase PF \n"
+                     }
+                  }
                   {do
-                     {$this
-                        add_symbol_key
+                     {$this add_symbol_key
                         $curShotProp
-                        {$this
-                           shotname_for_focuses
-                           {array
-                              ($curFocus)}
-                           $isCloseup}
+                        {$this shotname_for_focuses {array ($curFocus)} $isCloseup}
                         {randCamCutTick $curStartTick}
-                        $MIN_TICKS_BETWEEN_CUTS}
-                     {$this
-                        print
+                        $MIN_TICKS_BETWEEN_CUTS
+                     }
+                     {$this print
                         "    Normal cut at tick "
                         $curStartTick
                         " for PF "
                         {elem $curRegion 0}
-                        "\n"}}}}}
+                        "\n"
+                     }
+                  }
+               }
+            }
+         }
          {set $curCamInterval $RANDOMIZED_CAM_INTERVAL}
-         {if
-            $CAMAUTOGEN_ENABLE_RANDOMIZED_CAMS
+         {if $CAMAUTOGEN_ENABLE_RANDOMIZED_CAMS
             {set $tick $intro_start}
-            {while
-               {< $tick $end}
-               {if_else
-                  {>= $curCamInterval kCamIntervalFast}
+            {while {< $tick $end}
+               {if_else {>= $curCamInterval kCamIntervalFast}
                   {set $shouldSkip FALSE}
-                  {if_else
-                     {== $curCamInterval kCamIntervalMinimal}
+                  {if_else {== $curCamInterval kCamIntervalMinimal}
                      {do
-                        {set $shouldSkip TRUE}}
+                        {set $shouldSkip TRUE}
+                     }
                      {do
-                        {set
-                           $shouldSkip
-                           {IsNearBeginningOfFocusRegion $tick}}
-                        {if
-                           $shouldSkip
+                        {set $shouldSkip {IsNearBeginningOfFocusRegion $tick}}
+                        {if $shouldSkip
                            {'+=' $tick 480}
-                           {set
-                              $shouldSkip
-                              {IsNearBeginningOfFocusRegion $tick}}}
-                        {if
-                           $shouldSkip
+                           {set $shouldSkip {IsNearBeginningOfFocusRegion $tick}}
+                        }
+                        {if $shouldSkip
                            {'+=' $tick -960}
-                           {set
-                              $shouldSkip
-                              {IsNearBeginningOfFocusRegion $tick}}}}}}
-               {unless
-                  $shouldSkip
-                  {set
-                     $primaryFocuses
-                     {FindPrimaryFocusesForTick $tick}}
-                  {$this
-                     print
+                           {set $shouldSkip {IsNearBeginningOfFocusRegion $tick}}
+                        }
+                     }
+                  }
+               }
+               {unless $shouldSkip
+                  {set $primaryFocuses {FindPrimaryFocusesForTick $tick}}
+                  {$this print
                      "num people playing at "
                      $tick
                      " "
                      {$this closest_measure $tick}
                      ": "
                      {NumPlaying $tick}
-                     "\n"}
-                  {set
-                     $allowDuo
-                     {!=
-                        {NumPlaying $tick}
-                        1}}
-                  {if_else
-                     {!=
-                        {NumPlaying $tick}
-                        1}
+                     "\n"
+                  }
+                  {set $allowDuo {!= {NumPlaying $tick} 1}}
+                  {if_else {!= {NumPlaying $tick} 1}
                      {set $multiFocusFiltered $multi_focus_groups}
-                     {set $multiFocusFiltered $multi_focus_groups_noduo}}
-                  {if_else
-                     {>
-                        {size $primaryFocuses}
-                        0}
+                     {set $multiFocusFiltered $multi_focus_groups_noduo}
+                  }
+                  {if_else {> {size $primaryFocuses} 0}
                      {do
-                        {set
-                           $totalWeight
-                           {'+' $PROB_PRIMARY_FOCUS_ONLY $PROB_PRIMARY_PLUS_OTHERS $PROB_NO_PRIMARY_FOCUS_SINGLE}}
-                        {set
-                           $randWeight
-                           {random_float 0 $totalWeight}}
-                        {if_else
-                           {< $randWeight $PROB_PRIMARY_FOCUS_ONLY}
+                        {set $totalWeight
+                           {'+'
+                              $PROB_PRIMARY_FOCUS_ONLY
+                              $PROB_PRIMARY_PLUS_OTHERS
+                              $PROB_NO_PRIMARY_FOCUS_SINGLE
+                           }
+                        }
+                        {set $randWeight {random_float 0 $totalWeight}}
+                        {if_else {< $randWeight $PROB_PRIMARY_FOCUS_ONLY}
                            {do
-                              {set
-                                 $primaryFocus
-                                 {random_elem $primaryFocuses}}
+                              {set $primaryFocus {random_elem $primaryFocuses}}
                               {set $isCloseup FALSE}
-                              {if
-                                 {IsInPrimaryFocusRegion
-                                    $tick
-                                    "solo"}
-                                 {set $isCloseup TRUE}}
-                              {set
-                                 $shotName
-                                 {$this
-                                    shotname_for_focuses
-                                    {array
-                                       ($primaryFocus)}
-                                    $isCloseup}}
-                              {$this
-                                 add_symbol_key
+                              {if {IsInPrimaryFocusRegion $tick "solo"}
+                                 {set $isCloseup TRUE}
+                              }
+                              {set $shotName
+                                 {$this shotname_for_focuses {array ($primaryFocus)} $isCloseup}
+                              }
+                              {$this add_symbol_key
                                  $curShotProp
                                  $shotName
                                  {randCamCutTick $tick}
-                                 $MIN_TICKS_BETWEEN_CUTS}
-                              {$this
-                                 print
+                                 $MIN_TICKS_BETWEEN_CUTS
+                              }
+                              {$this print
                                  "showing just primary focus "
                                  {elem $focus_names $primaryFocus}
                                  " and picked shot: "
@@ -1206,62 +849,44 @@
                                  $tick
                                  " "
                                  {$this closest_measure $tick}
-                                 "\n"}}
-                           {if_else
-                              {<
-                                 $randWeight
-                                 {'+' $PROB_PRIMARY_FOCUS_ONLY $PROB_PRIMARY_PLUS_OTHERS}}
+                                 "\n"
+                              }
+                           }
+                           {if_else {< $randWeight {'+' $PROB_PRIMARY_FOCUS_ONLY $PROB_PRIMARY_PLUS_OTHERS}}
                               {do
-                                 {set
-                                    $primaryFocus
-                                    {random_elem $primaryFocuses}}
-                                 {set
-                                    $posibleFocuses
-                                    {array 0}}
-                                 {foreach_int
-                                    $i
-                                    0
-                                    {size $multiFocusFiltered}
-                                    {if
-                                       {find_elem
-                                          {elem $multiFocusFiltered $i}
-                                          $primaryFocus}
-                                       {push_back
-                                          $posibleFocuses
-                                          {elem $multiFocusFiltered $i}}}}
-                                 {set
-                                    $pickedFocuses
-                                    {PickBestFocus $posibleFocuses $tick}}
-                                 {if_else
-                                    {IsInMIE
-                                       $tick
-                                       "lighting_change"}
+                                 {set $primaryFocus {random_elem $primaryFocuses}}
+                                 {set $posibleFocuses {array 0}}
+                                 {foreach_int $i 0 {size $multiFocusFiltered}
+                                    {if {find_elem {elem $multiFocusFiltered $i} $primaryFocus}
+                                       {push_back $posibleFocuses {elem $multiFocusFiltered $i}}
+                                    }
+                                 }
+                                 {set $pickedFocuses {PickBestFocus $posibleFocuses $tick}}
+                                 {if_else {IsInMIE $tick "lighting_change"}
                                     {do
-                                       {$this
-                                          add_symbol_key
+                                       {$this add_symbol_key
                                           $curShotProp
                                           coop_all_far
                                           {randCamCutTick $tick}
-                                          $MIN_TICKS_BETWEEN_CUTS}
-                                       {$this
-                                          print
+                                          $MIN_TICKS_BETWEEN_CUTS
+                                       }
+                                       {$this print
                                           "near lighting change so showing everyone "
                                           at
                                           " $tick "
                                           " {$this closest_measure $tick} "
-                                          '\\n"'}}
+                                          '\\n"'
+                                       }
+                                    }
                                     {do
-                                       {set
-                                          $shotName
-                                          {$this shotname_for_focuses $pickedFocuses}}
-                                       {$this
-                                          add_symbol_key
+                                       {set $shotName {$this shotname_for_focuses $pickedFocuses}}
+                                       {$this add_symbol_key
                                           $curShotProp
                                           $shotName
                                           {randCamCutTick $tick}
-                                          $MIN_TICKS_BETWEEN_CUTS}
-                                       {$this
-                                          print
+                                          $MIN_TICKS_BETWEEN_CUTS
+                                       }
+                                       {$this print
                                           "showing just primary focus + others "
                                           $pickedFocuses
                                           " and picked shot: "
@@ -1270,30 +895,23 @@
                                           $tick
                                           " "
                                           {$this closest_measure $tick}
-                                          "\n"}}}}
+                                          "\n"
+                                       }
+                                    }
+                                 }
+                              }
                               {do
-                                 {if_else
-                                    {==
-                                       {size $primaryFocuses}
-                                       4}
+                                 {if_else {== {size $primaryFocuses} 4}
                                     {do
-                                       {set
-                                          $primaryFocus
-                                          {random_elem $primaryFocuses}}
-                                       {set
-                                          $shotName
-                                          {$this
-                                             shotname_for_focuses
-                                             {array
-                                                ($primaryFocus)}}}
-                                       {$this
-                                          add_symbol_key
+                                       {set $primaryFocus {random_elem $primaryFocuses}}
+                                       {set $shotName {$this shotname_for_focuses {array ($primaryFocus)}}}
+                                       {$this add_symbol_key
                                           $curShotProp
                                           $shotName
                                           {randCamCutTick $tick}
-                                          $MIN_TICKS_BETWEEN_CUTS}
-                                       {$this
-                                          print
+                                          $MIN_TICKS_BETWEEN_CUTS
+                                       }
+                                       {$this print
                                           "wanted to show single other, but have 4 primary focues so showing "
                                           {elem $focus_names $primaryFocus}
                                           " and picked shot: "
@@ -1302,100 +920,78 @@
                                           $tick
                                           " "
                                           {$this closest_measure $tick}
-                                          "\n"}}
+                                          "\n"
+                                       }
+                                    }
                                     {do
-                                       {set
-                                          $possibleFocuses
-                                          {array 0}}
-                                       {foreach_int
-                                          $i
-                                          0
-                                          {size $single_focus_groups}
+                                       {set $possibleFocuses {array 0}}
+                                       {foreach_int $i 0 {size $single_focus_groups}
                                           {set $okToAdd TRUE}
-                                          {foreach_int
-                                             $j
-                                             0
-                                             {size $primaryFocuses}
-                                             {if
-                                                {==
-                                                   {elem
-                                                      {elem $single_focus_groups $i}
-                                                      0}
-                                                   {elem $primaryFocuses $j}}
-                                                {set $okToAdd FALSE}}}
-                                          {if
-                                             $okToAdd
-                                             {push_back
-                                                $possibleFocuses
-                                                {elem $single_focus_groups $i}}}}
-                                       {set
-                                          $pickedFocuses
-                                          {PickBestFocus $possibleFocuses $tick}}
-                                       {set
-                                          $shotName
-                                          {$this shotname_for_focuses $pickedFocuses}}
-                                       {$this
-                                          add_symbol_key
+                                          {foreach_int $j 0 {size $primaryFocuses}
+                                             {if {== {elem {elem $single_focus_groups $i} 0} {elem $primaryFocuses $j}}
+                                                {set $okToAdd FALSE}
+                                             }
+                                          }
+                                          {if $okToAdd
+                                             {push_back $possibleFocuses {elem $single_focus_groups $i}}
+                                          }
+                                       }
+                                       {set $pickedFocuses {PickBestFocus $possibleFocuses $tick}}
+                                       {set $shotName {$this shotname_for_focuses $pickedFocuses}}
+                                       {$this add_symbol_key
                                           $curShotProp
                                           $shotName
                                           {randCamCutTick $tick}
-                                          $MIN_TICKS_BETWEEN_CUTS}
-                                       {$this
-                                          print
+                                          $MIN_TICKS_BETWEEN_CUTS
+                                       }
+                                       {$this print
                                           "showing single other "
-                                          {elem
-                                             $focus_names
-                                             {elem $pickedFocuses 0}}
+                                          {elem $focus_names {elem $pickedFocuses 0}}
                                           " and picked shot: "
                                           $shotName
                                           " at "
                                           $tick
                                           " "
                                           {$this closest_measure $tick}
-                                          "\n"}}}}}}}
+                                          "\n"
+                                       }
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
                      {do
-                        {set
-                           $totalWeight
-                           {'+' $PROB_ONE_OR_MORE $PROB_SINGLE_FOCUS}}
-                        {set
-                           $randWeight
-                           {random_float 0 $totalWeight}}
-                        {if_else
-                           {< $randWeight $PROB_ONE_OR_MORE}
+                        {set $totalWeight {'+' $PROB_ONE_OR_MORE $PROB_SINGLE_FOCUS}}
+                        {set $randWeight {random_float 0 $totalWeight}}
+                        {if_else {< $randWeight $PROB_ONE_OR_MORE}
                            {do
-                              {set
-                                 $pickedFocuses
-                                 {PickBestFocus $multiFocusFiltered $tick}}
-                              {if_else
-                                 {IsInMIE
-                                    $tick
-                                    "lighting_change"}
+                              {set $pickedFocuses {PickBestFocus $multiFocusFiltered $tick}}
+                              {if_else {IsInMIE $tick "lighting_change"}
                                  {do
-                                    {$this
-                                       add_symbol_key
+                                    {$this add_symbol_key
                                        $curShotProp
                                        coop_all_far
                                        {randCamCutTick $tick}
-                                       $MIN_TICKS_BETWEEN_CUTS}
-                                    {$this
-                                       print
+                                       $MIN_TICKS_BETWEEN_CUTS
+                                    }
+                                    {$this print
                                        "near lighting change so showing everyone "
                                        at
                                        " $tick "
                                        " {$this closest_measure $tick} "
-                                       '\\n"'}}
+                                       '\\n"'
+                                    }
+                                 }
                                  {do
-                                    {set
-                                       $shotName
-                                       {$this shotname_for_focuses $pickedFocuses}}
-                                    {$this
-                                       add_symbol_key
+                                    {set $shotName {$this shotname_for_focuses $pickedFocuses}}
+                                    {$this add_symbol_key
                                        $curShotProp
                                        $shotName
                                        {randCamCutTick $tick}
-                                       $MIN_TICKS_BETWEEN_CUTS}
-                                    {$this
-                                       print
+                                       $MIN_TICKS_BETWEEN_CUTS
+                                    }
+                                    {$this print
                                        "no primary focus, but showing multiple focuses: "
                                        $pickedFocuses
                                        " and picked shot: "
@@ -1404,16 +1000,15 @@
                                        $tick
                                        " "
                                        {$this closest_measure $tick}
-                                       "\n"}}}}
+                                       "\n"
+                                    }
+                                 }
+                              }
+                           }
                            {do
-                              {set
-                                 $pickedFocuses
-                                 {PickBestFocus $single_focus_groups $tick}}
-                              {set
-                                 $shotName
-                                 {$this shotname_for_focuses $pickedFocuses}}
-                              {$this
-                                 print
+                              {set $pickedFocuses {PickBestFocus $single_focus_groups $tick}}
+                              {set $shotName {$this shotname_for_focuses $pickedFocuses}}
+                              {$this print
                                  "no primary focus, but showing single focus: "
                                  $pickedFocuses
                                  " and picked shot: "
@@ -1422,78 +1017,52 @@
                                  $tick
                                  " "
                                  {$this closest_measure $tick}
-                                 "\n"}
-                              {$this
-                                 add_symbol_key
+                                 "\n"
+                              }
+                              {$this add_symbol_key
                                  $curShotProp
                                  $shotName
                                  {randCamCutTick $tick}
-                                 $MIN_TICKS_BETWEEN_CUTS}}}}}}
-               {set
-                  $curPrcCategory
-                  {FindPrcCategoryAtTick $tick}}
+                                 $MIN_TICKS_BETWEEN_CUTS
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+               {set $curPrcCategory {FindPrcCategoryAtTick $tick}}
                {set $curCamInterval $RANDOMIZED_CAM_INTERVAL}
-               {if
-                  {!= $curPrcCategory ''}
-                  {set
-                     $sectionOverride
-                     {LookupSectionPreset $curPrcCategory camera_pacing TRUE}}
-                  {if
-                     {!= $sectionOverride -1}
-                     {set
-                        $curCamInterval
-                        {GetCamPacingFromSymbol $sectionOverride}}}}
+               {if {!= $curPrcCategory ''}
+                  {set $sectionOverride
+                     {LookupSectionPreset $curPrcCategory camera_pacing TRUE}
+                  }
+                  {if {!= $sectionOverride -1}
+                     {set $curCamInterval {GetCamPacingFromSymbol $sectionOverride}}
+                  }
+               }
                {UpdateMinTicksBetweenCuts $curCamInterval}
-               {switch
-                  $curCamInterval
-                  (kCamIntervalSlow
-                     {set
-                        $weights
-                        ((0 25 105 55 213 59 58 42 163)
-                           719
-                           720)})
-                  (kCamIntervalMed
-                     {set
-                        $weights
-                        ((0 25 105 55 213 59 58 42 163)
-                           719
-                           480)})
-                  (kCamIntervalFast
-                     {set
-                        $weights
-                        ((0 0 0 55 59 105 213 58 42 163)
-                           694
-                           240)})
-                  (kCamIntervalCrazy
-                     {set
-                        $weights
-                        ((0 1 0 0 0 0 0 0 0)
-                           1
-                           60)})
+               {switch $curCamInterval
+                  (kCamIntervalSlow {set $weights ((0 25 105 55 213 59 58 42 163) 719 720)})
+                  (kCamIntervalMed {set $weights ((0 25 105 55 213 59 58 42 163) 719 480)})
+                  (kCamIntervalFast {set $weights ((0 0 0 55 59 105 213 58 42 163) 694 240)})
+                  (kCamIntervalCrazy {set $weights ((0 1 0 0 0 0 0 0 0) 1 60)})
                   (kCamIntervalMinimal
-                     {set
-                        $weights
-                        ((0 25 105 55 213 59 58 42 163)
-                           719
-                           480)})}
+                     {set $weights ((0 25 105 55 213 59 58 42 163) 719 480)}
+                  )
+               }
                {do
-                  ($val
-                     {random_int
-                        0
-                        {elem $weights 1}})
+                  ($val {random_int 0 {elem $weights 1}})
                   ($i 0)
-                  ($arr
-                     {elem $weights 0})
-                  ($skipBy
-                     {elem $weights 2})
-                  {while
-                     {>=
-                        $val
-                        {elem $arr $i}}
-                     {-=
-                        $val
-                        {elem $arr $i}}
-                     {'++' $i}}
-                  {'+='
-                     $tick
-                     {'*' $skipBy $i}}}}}}}}
+                  ($arr {elem $weights 0})
+                  ($skipBy {elem $weights 2})
+                  {while {>= $val {elem $arr $i}}
+                     {-= $val {elem $arr $i}}
+                     {'++' $i}
+                  }
+                  {'+=' $tick {'*' $skipBy $i}}
+               }
+            }
+         }
+      }
+   }
+}

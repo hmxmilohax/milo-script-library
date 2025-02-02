@@ -1,161 +1,135 @@
 #ifndef HX_WII
-{new
-   UIPanel
+{new UIPanel
    invite_friends_panel
-   (file
-      "player_names_dialog.milo")
+   (file "player_names_dialog.milo")
    (focus players.lst)
-   (helpbar
-      (helpbar_back helpbar_select))
+   (helpbar (helpbar_back helpbar_select))
    (BUTTON_DOWN_MSG
-      {if_else
-         {== $action kAction_Cancel}
+      {if_else {== $action kAction_Cancel}
          {do
             {play_instr_sfx $user button_back}
-            {{ui current_screen}
-               leave}}
-         kDataUnhandled})
+            {{ui current_screen} leave}
+         }
+         kDataUnhandled
+      }
+   )
    (SELECT_MSG
-      {if
-         {>
-            {friends_provider get_friends_count}
-            0}
-         {friends_provider
-            invite_friend
-            {players.lst selected_pos}}
+      {if {> {friends_provider get_friends_count} 0}
+         {friends_provider invite_friend {players.lst selected_pos}}
          {players.lst set_showing FALSE}
-         {set
-            [selected_friend]
-            TRUE}})
+         {set [selected_friend] TRUE}
+      }
+   )
    (enter
       {title.lbl set text_token invite_friend}
       {platform_mgr add_sink $this}
       {friends_provider enumerate_friends}
       {players.lst set_provider friends_provider}
-      {set
-         [selected_friend]
-         FALSE})
+      {set [selected_friend] FALSE}
+   )
    (exit
       {platform_mgr remove_sink $this}
-      {friends_provider cleanup})
+      {friends_provider cleanup}
+   )
    (UI_CHANGED_MSG
-      {if
-         {! $showing}
-         {players.lst set_showing TRUE}})}
+      {if {! $showing}
+         {players.lst set_showing TRUE}
+      }
+   )
+}
 #else
-{new
-   UIPanel
+{new UIPanel
    invite_friends_panel
-   (file
-      "invite_players_dialog.milo")
+   (file "invite_players_dialog.milo")
    (focus players.lst)
    (BUTTON_DOWN_MSG
-      {if_else
-         {== $action kAction_Cancel}
+      {if_else {== $action kAction_Cancel}
          {do
             {play_instr_sfx $user button_back}
-            {{ui current_screen}
-               leave}}
-         kDataUnhandled})
+            {{ui current_screen} leave}
+         }
+         kDataUnhandled
+      }
+   )
    (SELECT_MSG
-      {if
-         {>
-            {friends_provider get_friends_count}
-            0}
-         {friends_provider
-            invite_friend
-            {players.lst selected_pos}}
+      {if {> {friends_provider get_friends_count} 0}
+         {friends_provider invite_friend {players.lst selected_pos}}
          {players.lst set_showing FALSE}
-         {invite_sent_screen
-            set
+         {invite_sent_screen set
             friend_name
-            {friends_provider
-               get_friend_nickname
-               {players.lst selected_pos}}}
-         {invite_sent_screen
-            set
+            {friends_provider get_friend_nickname {players.lst selected_pos}}
+         }
+         {invite_sent_screen set
             friend_code
-            {friends_provider
-               get_friend_code
-               {players.lst selected_pos}}}
+            {friends_provider get_friend_code {players.lst selected_pos}}
+         }
          {ui goto_screen invite_sent_screen}
-         {set
-            [selected_friend]
-            TRUE}})
+         {set [selected_friend] TRUE}
+      }
+   )
    (enter
       {title.lbl set text_token invite_friend_wii}
       {invitations add_sink $this}
       {friends_provider add_sink $this}
       {invitations allow_add_friend FALSE}
       {friends_provider enumerate_online}
-      {players.lst
-         set_showing
-         {!=
-            {friends_provider get_friends_count}
-            0}}
+      {players.lst set_showing {!= {friends_provider get_friends_count} 0}}
       {players.lst set_provider friends_provider}
-      {helpbar
-         set_config
-         (cancel helpbar_cancel)}
-      {set
-         [selected_friend]
-         FALSE})
+      {helpbar set_config (cancel helpbar_cancel)}
+      {set [selected_friend] FALSE}
+   )
    (exit
       {friends_provider remove_sink $this}
-      {invitations remove_sink $this})
-   (unload
-      {friends_provider cleanup})
+      {invitations remove_sink $this}
+   )
+   (unload {friends_provider cleanup})
    (sorting_op_complete
       ($success)
       {players.lst set_provider friends_provider}
-      {players.lst
-         set_showing
-         {!=
-            {friends_provider get_friends_count}
-            0}}
-      {if_else
-         {==
-            {friends_provider get_friends_count}
-            0}
-         {helpbar
-            set_config
-            ((cancel helpbar_cancel))}
-         {helpbar
-            set_config
-            ((cancel helpbar_cancel)
-               (confirm invite_friend_local))}})
+      {players.lst set_showing {!= {friends_provider get_friends_count} 0}}
+      {if_else {== {friends_provider get_friends_count} 0}
+         {helpbar set_config ((cancel helpbar_cancel))}
+         {helpbar set_config
+            (
+               (cancel helpbar_cancel)
+               (confirm invite_friend_local)
+            )
+         }
+      }
+   )
    (UI_CHANGED_MSG
-      {if
-         {! $showing}
-         {players.lst set_showing TRUE}})}
+      {if {! $showing}
+         {players.lst set_showing TRUE}
+      }
+   )
+}
 #endif
-{new
-   BandScreen
+{new BandScreen
    invite_friends_screen
    (panels mm_net_options_panel invite_friends_panel)
    (focus invite_friends_panel)
    MATCHMAKING_OPTIONS_SUBSCREEN_HANDLERS
-   MATCHMAKING_SCREEN_ERROR_HANDLERS}
-{new
-   BandScreen
+   MATCHMAKING_SCREEN_ERROR_HANDLERS
+}
+{new BandScreen
    invite_sent_screen
    (panels invite_friends_panel dialog_panel)
    (focus dialog_panel)
-   (friend_name
-      "")
-   (friend_code
-      "")
+   (friend_name "")
+   (friend_code "")
    MATCHMAKING_SCREEN_ERROR_HANDLERS
    (enter
-      {dialog_panel
-         set_ok
+      {dialog_panel set_ok
          (invite_friend_dialog_local
             {invite_sent_screen get friend_name}
-            {invite_sent_screen get friend_code})})
-   (exit
-      {input_mgr clear_user})
+            {invite_sent_screen get friend_code}
+         )
+      }
+   )
+   (exit {input_mgr clear_user})
    (SELECT_MSG
-      {switch
-         $component
-         (ok.btn
-            {ui goto_screen mm_net_options_screen})})}
+      {switch $component
+         (ok.btn {ui goto_screen mm_net_options_screen})
+      }
+   )
+}

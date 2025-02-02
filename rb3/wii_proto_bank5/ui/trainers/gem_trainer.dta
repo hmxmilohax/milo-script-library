@@ -4,283 +4,181 @@
 #include drum_challenges.dta
 #include rg_challenges.dta
 #include rk_challenges.dta
-#define GEM_TRAINER_PANEL_ENTER
-({{coop_track_panel find scoreboard}
-      set_showing
-      0}
-   {{coop_track_panel find crowd_meter}
-      set_showing
-      0}
-   {{coop_track_panel find player_hud_top.grp}
-      set_showing
-      0}
+#define GEM_TRAINER_PANEL_ENTER (
+   {{coop_track_panel find scoreboard} set_showing 0}
+   {{coop_track_panel find crowd_meter} set_showing 0}
+   {{coop_track_panel find player_hud_top.grp} set_showing 0}
    {{{{{beatmatch active_player 0}
                track}
             get_dir}
          get
-         popup_object}
-      set
+         popup_object} set
       intro_disabled
-      1}
+      1
+   }
    {{{{{beatmatch active_player 0}
                track}
             get_dir}
          get
-         popup_object}
-      set
+         popup_object} set
       popup_help_disabled
-      1}
+      1
+   }
    {{{{{beatmatch active_player 0}
                track}
             get_dir}
          get
-         player_intro}
-      set
+         player_intro} set
       set_enabled
-      0}
-   {$this clear_gems}
-   {{beatmatch active_player 0}
-      add_sink
-      $this}
-   {foreach_int
-      $i
       0
-      {size
-         [speed_modifier]}
+   }
+   {$this clear_gems}
+   {{beatmatch active_player 0} add_sink $this}
+   {foreach_int $i 0 {size [speed_modifier]}
       {{elem
             [speed_labels]
-            $i}
-         set_token_fmt
+            $i} set_token_fmt
          eg_percent_format
-         {int
-            {'*'
-               {elem
-                  [speed_modifier]
-                  $i}
-               100}}}
-      {{elem
-            [speed_labels]
-            $i}
-         set
-         color_override
-         fail.color}}
-   {set
-      [speed_index]
-      0}
+         {int {'*' {elem [speed_modifier] $i} 100}}
+      }
+      {{elem [speed_labels] $i} set color_override fail.color}
+   }
+   {set [speed_index] 0}
    {$this update_speed}
    {lesson_restrictions.lbl set_showing 1}
    {lesson_restrictions_body.lbl set_showing 0}
    {if_else
       {'||'
          {gamemode in_mode pro_song_lessons_real_guitar}
-         {gamemode in_mode pro_song_lessons_keyboard}}
-      {lesson.lbl
-         set_song_name
-         {meta_performer song}}
-      {lesson.lbl
-         set
-         text_token
-         [header]}}
-   {{{beatmatch active_player 0}
-         track}
-      track_in_now}
-   {if_else
-      {gamemode get stop_start}
+         {gamemode in_mode pro_song_lessons_keyboard}
+      }
+      {lesson.lbl set_song_name {meta_performer song}}
+      {lesson.lbl set text_token [header]}
+   }
+   {{{beatmatch active_player 0} track} track_in_now}
+   {if_else {gamemode get stop_start}
       {show_stop_start.trig trigger}
-      {hide_stop_start.trig trigger}}
+      {hide_stop_start.trig trigger}
+   }
    {hide_chord_legend.trig trigger}
-   {set
-      [trainer_go_back]
-      1})
-#define GEM_TRAINER_PANEL_EXIT
-({{coop_track_panel find scoreboard}
-      set_showing
-      1}
-   {{coop_track_panel find crowd_meter}
-      set_showing
-      1}
-   {{coop_track_panel find player_hud_top.grp}
-      set_showing
-      1}
-   {{beatmatch active_player 0}
-      remove_sink
-      $this}
-   {synth stop_all_sfx})
-#define GEM_TRAINER_PANEL_SCORING
-((hit
+   {set [trainer_go_back] 1}
+)
+#define GEM_TRAINER_PANEL_EXIT (
+   {{coop_track_panel find scoreboard} set_showing 1}
+   {{coop_track_panel find crowd_meter} set_showing 1}
+   {{coop_track_panel find player_hud_top.grp} set_showing 1}
+   {{beatmatch active_player 0} remove_sink $this}
+   {synth stop_all_sfx}
+)
+#define GEM_TRAINER_PANEL_SCORING (
+   (hit
       ($gem_id)
-      {set
-         [num_hit]
-         {'+'
-            [num_hit]
-            1.0}}
+      {set [num_hit] {'+' [num_hit] 1.0}}
       {$this update_score}
       {$this score_on_final_gem $gem_id}
-      {$this on_hit $gem_id})
+      {$this on_hit $gem_id}
+   )
    (miss
       ($user $gem_id)
-      {if
-         {$this should_miss_cause_fail}
+      {if {$this should_miss_cause_fail}
          {$this fail}
-         {$this on_miss $gem_id}})
+         {$this on_miss $gem_id}
+      }
+   )
    (pass
       ($gem_id)
       {$this fail}
-      {$this on_pass $gem_id})
+      {$this on_pass $gem_id}
+   )
    (loop
-      {if
-         {&&
-            {==
-               [speed_index]
-               0}
-            {!
-               [failed]}}
-         {{gamemode get game_panel}
-            inc_section}
-         {gem_preview_panel
-            set
+      {if {&& {== [speed_index] 0} {! [failed]}}
+         {{gamemode get game_panel} inc_section}
+         {gem_preview_panel set
             curr_section
-            {{gamemode get game_panel}
-               get_curr_section}}
-         {gem_preview_panel update_labels}}
-      {$this reset_score})
+            {{gamemode get game_panel} get_curr_section}
+         }
+         {gem_preview_panel update_labels}
+      }
+      {$this reset_score}
+   )
    (score
-      {if
-         {!
-            [failed]}
-         {if_else
-            {$this challenge_success}
+      {if {! [failed]}
+         {if_else {$this challenge_success}
             {do
                {success.trig trigger}
-               {foreach_int
-                  $i
-                  [speed_index]
-                  {size
-                     [speed_labels]}
-                  {{elem
-                        [speed_labels]
-                        $i}
-                     set
-                     color_override
-                     success.color}}
-               {{elem
-                     [success_fx]
-                     [speed_index]}
-                  play}
-               {$this
-                  on_success
-                  [speed_index]}
-               {{get_track_panel}
-                  play_seq
-                  achieve_star.cue}
-               {if
-                  {&&
-                     {$this all_sections_finished}
-                     [trainer_go_back]}
-                  {ui push_screen trainer_finished_screen}}}
+               {foreach_int $i [speed_index] {size [speed_labels]}
+                  {{elem [speed_labels] $i} set color_override success.color}
+               }
+               {{elem [success_fx] [speed_index]} play}
+               {$this on_success [speed_index]}
+               {{get_track_panel} play_seq achieve_star.cue}
+               {if {&& {$this all_sections_finished} [trainer_go_back]}
+                  {ui push_screen trainer_finished_screen}
+               }
+            }
             {do
                {challenge_fail.trig trigger}
-               {$this
-                  on_fail
-                  [speed_index]}}}})
+               {$this on_fail [speed_index]}
+            }
+         }
+      }
+   )
    (update_score
       {do
-         ($percent
-            {'*'
-               {/
-                  [num_hit]
-                  {$this get_num_gems_float}}
-               100.0})
-         {score.lbl
-            set_token_fmt
-            eg_percent_format
-            {int $percent}}})
+         ($percent {'*' {/ [num_hit] {$this get_num_gems_float}} 100.0})
+         {score.lbl set_token_fmt eg_percent_format {int $percent}}
+      }
+   )
    (reset_score
       {score.lbl set_token_fmt eg_percent_format 0}
       {score.lbl set color_override success.color}
-      {set
-         [num_hit]
-         0.0}
-      {set
-         [failed]
-         0})
+      {set [num_hit] 0.0}
+      {set [failed] 0}
+   )
    (fail
-      {if
-         {!
-            [failed]}
+      {if {! [failed]}
          {do
-            ($index
-               [speed_index])
-            {if
-               {==
-                  {mod $index 2}
-                  1}
-               {'+=' $index 1}}
+            ($index [speed_index])
+            {if {== {mod $index 2} 1}
+               {'+=' $index 1}
+            }
             {fail.trig trigger}
             {score.lbl set color_override fail.color}
-            {set
-               [failed]
-               1}}})
+            {set [failed] 1}
+         }
+      }
+   )
    (update_thermometer
       ($speed)
-      {foreach_int
-         $i
-         0
-         {size
-            [speed_modifier]}
-         {if_else
-            {>=
-               $speed
-               {elem
-                  [speed_modifier]
-                  $i}}
-            {{elem
-                  [speed_labels]
-                  $i}
-               set
-               color_override
-               success.color}
-            {{elem
-                  [speed_labels]
-                  $i}
-               set
-               color_override
-               fail.color}}}))
-#define GEM_TRAINER_PANEL_SPEED
-((inc_speed
-      {if
-         {>
-            [speed_index]
-            0}
+      {foreach_int $i 0 {size [speed_modifier]}
+         {if_else {>= $speed {elem [speed_modifier] $i}}
+            {{elem [speed_labels] $i} set color_override success.color}
+            {{elem [speed_labels] $i} set color_override fail.color}
+         }
+      }
+   )
+)
+#define GEM_TRAINER_PANEL_SPEED (
+   (inc_speed
+      {if {> [speed_index] 0}
          {dpad_up.trig trigger}
-         {--
-            [speed_index]}
-         {$this update_speed}})
+         {-- [speed_index]}
+         {$this update_speed}
+      }
+   )
    (dec_speed
-      {if
-         {<
-            [speed_index]
-            {-
-               {size
-                  [speed_modifier]}
-               1}}
+      {if {< [speed_index] {- {size [speed_modifier]} 1}}
          {dpad_down.trig trigger}
-         {'++'
-            [speed_index]}
-         {$this update_speed}})
+         {'++' [speed_index]}
+         {$this update_speed}
+      }
+   )
    (update_speed
       {do
-         ($speed_ratio
-            {elem
-               [speed_modifier]
-               [speed_index]})
-         ($speed_percent
-            {'*' $speed_ratio 100.0})
+         ($speed_ratio {elem [speed_modifier] [speed_index]})
+         ($speed_percent {'*' $speed_ratio 100.0})
          {$this set_speed_ratio $speed_ratio}
-         {speed.lbl
-            set_token_fmt
-            eg_percent_format
-            {int $speed_percent}}
+         {speed.lbl set_token_fmt eg_percent_format {int $speed_percent}}
          {do
             ($speed_frame
                {-
@@ -288,201 +186,201 @@
                   {'*'
                      {/
                         {- 1.0 $speed_ratio}
-                        {-
-                           1.0
-                           {-
-                              {elem
-                                 [speed_modifier]
-                                 {-
-                                    {size
-                                       [speed_modifier]}
-                                    1}}
-                              0.1}}}
-                     10.0}})
-            {speed_meter_fill_pct.anim set_frame $speed_frame}}}
+                        {- 1.0 {- {elem [speed_modifier] {- {size [speed_modifier]} 1}} 0.1}}
+                     }
+                     10.0
+                  }
+               }
+            )
+            {speed_meter_fill_pct.anim set_frame $speed_frame}
+         }
+      }
       {$this reset_score}
-      {set
-         [failed]
-         1})
+      {set [failed] 1}
+   )
    (reset_speed_labels
-      {foreach
-         $lbl
-         [speed_labels]
-         {$lbl set color_override fail.color}})
+      {foreach $lbl [speed_labels]
+         {$lbl set color_override fail.color}
+      }
+   )
    (get_speed_modifier
       ($speed)
-      {elem
-         [speed_modifier]
-         $speed}))
-#define GEM_TRAINER_PANEL_PREVIEW
-((goto_preview
+      {elem [speed_modifier] $speed}
+   )
+)
+#define GEM_TRAINER_PANEL_PREVIEW (
+   (goto_preview
       ($sec_dir)
-      {if_else
-         {> $sec_dir 0}
-         {{{gamemode get game_panel}
-               find
-               dpad_right.trig}
-            trigger}
-         {if
-            {< $sec_dir 0}
-            {{{gamemode get game_panel}
-                  find
-                  dpad_left.trig}
-               trigger}}}
+      {if_else {> $sec_dir 0}
+         {{{gamemode get game_panel} find dpad_right.trig} trigger}
+         {if {< $sec_dir 0}
+            {{{gamemode get game_panel} find dpad_left.trig} trigger}
+         }
+      }
       {$this reset_speed_labels}
       {gem_preview_panel set sec_dir $sec_dir}
-      {ui push_screen gem_preview_screen}))
-#define GEM_TRAINER_SCREEN_BUTTON_HANDLING
-((BUTTON_DOWN_MSG
-      {if_else
-         {== $action 7}
-         {{gamemode get game_panel}
-            goto_preview
-            1}
-         {if_else
-            {== $action 9}
-            {{gamemode get game_panel}
-               goto_preview
-               -1}
-            {if_else
-               {== $action 6}
-               {{gamemode get game_panel}
-                  inc_speed}
-               {if
-                  {== $action 8}
-                  {{gamemode get game_panel}
-                     dec_speed}}}}}
-      kDataUnhandled))
-#define GEM_TRAINER_PANEL_SECTIONS
-((update_restrictions
+      {ui push_screen gem_preview_screen}
+   )
+)
+#define GEM_TRAINER_SCREEN_BUTTON_HANDLING (
+   (BUTTON_DOWN_MSG
+      {if_else {== $action 7}
+         {{gamemode get game_panel} goto_preview 1}
+         {if_else {== $action 9}
+            {{gamemode get game_panel} goto_preview -1}
+            {if_else {== $action 6}
+               {{gamemode get game_panel} inc_speed}
+               {if {== $action 8}
+                  {{gamemode get game_panel} dec_speed}
+               }
+            }
+         }
+      }
+      kDataUnhandled
+   )
+)
+#define GEM_TRAINER_PANEL_SECTIONS (
+   (update_restrictions
       ($token)
       {lesson_restrictions_body.lbl set_showing 1}
-      {lesson_restrictions_body.lbl set text_token $token})
+      {lesson_restrictions_body.lbl set text_token $token}
+   )
    (set_section_name
       ($token)
       {sub_lesson.lbl set text_token $token}
-      {description_body.lbl
-         set
-         text_token
-         {sprint
-            $token
-            "_desc"}}
+      {description_body.lbl set text_token {sprint $token "_desc"}}
       {if_else
          {'||'
             {gamemode in_mode pro_song_lessons_real_guitar}
-            {gamemode in_mode pro_song_lessons_keyboard}}
-         {lesson_info.lbl
-            set_artist_name_from_shortname
-            {meta_performer song}}
-         {lesson_info.lbl
-            set
-            text_token
-            {sprint
-               $token
-               "_info"}}})
+            {gamemode in_mode pro_song_lessons_keyboard}
+         }
+         {lesson_info.lbl set_artist_name_from_shortname {meta_performer song}}
+         {lesson_info.lbl set text_token {sprint $token "_info"}}
+      }
+   )
    (pause_track
       ($val)
       {beatmatch set_paused $val 1 0}
-      {{get_track_panel}
-         set_paused
-         $val})
+      {{get_track_panel} set_paused $val}
+   )
    (pause_track_hide_track
       ($val)
       {$this pause_track $val}
-      {coop_track_panel
-         set_showing
-         {! $val}})
+      {coop_track_panel set_showing {! $val}}
+   )
    (unpause_track_no_rollback
       {beatmatch set_paused 0 1 0}
-      {{get_track_panel}
-         set_paused
-         0})
-   (get_header
-      [header]))
-#define GEM_TRAINER_PANEL_PROPERTIES
-((speed_modifier
-      (1.0 0.95 0.9 0.85 0.8 0.75 0.7 0.65 0.6))
+      {{get_track_panel} set_paused 0}
+   )
+   (get_header [header])
+)
+#define GEM_TRAINER_PANEL_PROPERTIES (
+   (speed_modifier (1.0 0.95 0.9 0.85 0.8 0.75 0.7 0.65 0.6))
    (speed_index 0)
    (speed_labels
-      (spd_value05.lbl hidden.lbl spd_value04.lbl hidden.lbl spd_value03.lbl hidden.lbl spd_value02.lbl hidden.lbl spd_value01.lbl))
+      (spd_value05.lbl
+         hidden.lbl
+         spd_value04.lbl
+         hidden.lbl
+         spd_value03.lbl
+         hidden.lbl
+         spd_value02.lbl
+         hidden.lbl
+         spd_value01.lbl
+      )
+   )
    (success_fx
-      (success5.cue success4.cue success4.cue success3.cue success3.cue success2.cue success2.cue success1.cue success1.cue))
+      (success5.cue
+         success4.cue
+         success4.cue
+         success3.cue
+         success3.cue
+         success2.cue
+         success2.cue
+         success1.cue
+         success1.cue
+      )
+   )
    (num_hit 0.0)
    (failed 0)
    (header '')
-   (trainer_go_back 1))
-{new
-   GemTrainerPanel
+   (trainer_go_back 1)
+)
+{new GemTrainerPanel
    gem_trainer_panel
-   (file
-      "gem_trainer_panel.milo")
+   (file "gem_trainer_panel.milo")
    (enter
       GEM_TRAINER_PANEL_ENTER
       {section_list_hide.trig trigger}
       {$this goto_preview 1}
-      {toggle_icon.lbl set_showing 0})
+      {toggle_icon.lbl set_showing 0}
+   )
    (exit GEM_TRAINER_PANEL_EXIT)
    GEM_TRAINER_PANEL_SCORING
    GEM_TRAINER_PANEL_SPEED
    GEM_TRAINER_PANEL_PREVIEW
    GEM_TRAINER_PANEL_SECTIONS
    GEM_TRAINER_PANEL_PROPERTIES
-   (on_hit
-      ($gem_id))
-   (on_miss
-      ($gem_id))
-   (on_pass
-      ($gem_id))}
+   (on_hit ($gem_id))
+   (on_miss ($gem_id))
+   (on_pass ($gem_id))
+}
 {new GemTrainerLoopPanel gem_trainer_loop_panel}
-{new
-   UIPanel
+{new UIPanel
    trainer_background_panel
-   (file
-      "../../world/vignette/shell/sv5_a.milo")
+   (file "../../world/vignette/shell/sv5_a.milo")
    (enter
       {$this set_camera}
-      {{$this dir}
-         force_shot
-         {practice
-            find
-            gamemode
-            get
-            {trainer_cam_shot}}})}
-{new
-   BandScreen
+      {{$this dir} force_shot
+         {practice find gamemode get {trainer_cam_shot}}
+      }
+   )
+}
+{new BandScreen
    guitar_trainer_screen
-   (panels game sync_audio_net_panel gem_trainer_loop_panel trainer_background_panel coop_track_panel gem_trainer_panel)
+   (panels
+      game
+      sync_audio_net_panel
+      gem_trainer_loop_panel
+      trainer_background_panel
+      coop_track_panel
+      gem_trainer_panel
+   )
    GAME_SCREEN_HANDLERS
-   GEM_TRAINER_SCREEN_BUTTON_HANDLING}
-{new
-   BandScreen
+   GEM_TRAINER_SCREEN_BUTTON_HANDLING
+}
+{new BandScreen
    drum_trainer_screen
-   (panels game sync_audio_net_panel gem_trainer_loop_panel trainer_background_panel coop_track_panel gem_trainer_panel)
+   (panels
+      game
+      sync_audio_net_panel
+      gem_trainer_loop_panel
+      trainer_background_panel
+      coop_track_panel
+      gem_trainer_panel
+   )
    GAME_SCREEN_HANDLERS
-   GEM_TRAINER_SCREEN_BUTTON_HANDLING}
-{new
-   BandScreen
+   GEM_TRAINER_SCREEN_BUTTON_HANDLING
+}
+{new BandScreen
    trainer_finished_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
       {dialog_panel set_custom trainer_go_back yes no opt1.btn}
-      {{gamemode get game_panel}
-         pause_track
-         1})
-   (exit
-      {{gamemode get game_panel}
-         pause_track
-         0})
+      {{gamemode get game_panel} pause_track 1}
+   )
+   (exit {{gamemode get game_panel} pause_track 0})
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (opt1.btn
             {ui pop_screen}
-            {ui_event_mgr trigger_event quit_early})
+            {ui_event_mgr trigger_event quit_early}
+         )
          (opt2.btn
             {ui pop_screen}
-            {{gamemode get game_panel}
-               set
-               trainer_go_back
-               0})})}
+            {{gamemode get game_panel} set trainer_go_back 0}
+         )
+      }
+   )
+}

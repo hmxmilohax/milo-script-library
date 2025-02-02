@@ -3,101 +3,121 @@
 )
 
 (handlers
-
-   (hit ($slot $star $hopoable $hopoed $player_num)
+   (hit
+      ($slot $star $hopoable $hopoed $player_num)
       {if $star
          {play_game_seq_player sp_gemhit sp_gemhit $player_num}
       }
       kDataUnhandled
    )
 
-   (hopo
-      {hopo_callback}
-      kDataUnhandled
-   )
+   (hopo {hopo_callback} kDataUnhandled)
 
-   (swingAtHopo
-      {swingAtHopo_callback}
-   )
+   (swingAtHopo {swingAtHopo_callback})
 
-   (miss ($player_num $slot)
+   (miss
+      ($player_num $slot)
       ;; Uncomment if we want to supress miss sound in multiplayer
       ;{if {! {game multiplayer}}
-         {do ($seq {switch {{game get_player_config $player_num} get_track_type}
-                      (kTrackDrum {if_else {== $slot 0} miss_kick.cue miss_drum})
-                      (kTrackBass {if_else {== $slot 0} miss_bass miss_bass}) ;; dc - i hope this does what i think...
-                      miss_gtr.cue}) ; lead and rhythm
-            {play_game_seq_player $seq $seq $player_num}
-         }
+      {do
+         ($seq
+            {switch {{game get_player_config $player_num} get_track_type}
+               (kTrackDrum
+                  {if_else {== $slot 0}
+                     miss_kick.cue
+                     miss_drum
+                  }
+               )
+               (kTrackBass
+                  {if_else {== $slot 0}
+                     miss_bass
+                     miss_bass
+                  }
+               ) ;; dc - i hope this does what i think...
+               miss_gtr.cue
+            }
+         ) ; lead and rhythm
+         {play_game_seq_player $seq $seq $player_num}
+      }
       ;}
       kDataUnhandled
    )
 
-   (swing
-      kDataUnhandled
-   )
+   (swing kDataUnhandled)
 
-   (set_tambourine ($on)
+   (set_tambourine
+      ($on)
       {$this send_track_val set_tambourine $on}
       {if $on
          {$this solo_start}
       }
    )
 
-   (set_tambourine_percent ($pct)
+   (set_tambourine_percent
+      ($pct)
       {$this solo_hit $pct}
    )
 
    ; this function to send objects to the track if the track exists
-   (send_track ($message)
-      {do ($track {$this track})
-         {if $track {$track $message}}
+   (send_track
+      ($message)
+      {do
+         ($track {$this track})
+         {if $track
+            {$track $message}
+         }
       }
    )
-   
-   (send_track_val ($message $val)
-      {do ($track {$this track})
-         {if $track {$track $message $val}}
+
+   (send_track_val
+      ($message $val)
+      {do
+         ($track {$this track})
+         {if $track
+            {$track $message $val}
+         }
       }
    )
-   
-   (get_track_obj ($obj_name)
-      {do ($track {$this track})
-         {if_else $track 
+
+   (get_track_obj
+      ($obj_name)
+      {do
+         ($track {$this track})
+         {if_else $track
             {$track get_obj $obj_name}
             0
          }
       }
    )
-   
+
    ; returns the star power meter associated with this player
-   (star_power_meter
-      {{{$this track} get_dir} get star_power_meter}
-   )
-   
+   (star_power_meter {{{$this track} get_dir} get star_power_meter})
+
    ; returns the player feedback associated with this player
-   (player_feedback
-      {{{$this track} get_dir} get player_feedback}
-   )
-   
+   (player_feedback {{{$this track} get_dir} get player_feedback})
+
    (ending_bonus
       {if_else {{get_track_panel} exists ending_bonus}
          {{get_track_panel} find ending_bonus}
          ""
       }
-      
-   )
-   
-   (whammy_start
-      {whammy_start_callback}
-   )
-   (whammy_end
-      {whammy_end_callback}
    )
 
-#ifdef HX_XBOX // JMB functionality moved to code - PlayerWrapper
+   (whammy_start {whammy_start_callback})
+   (whammy_end {whammy_end_callback})
+
+   #ifdef HX_XBOX
+   //
+   JMB
+   functionality
+   moved
+   to
+   code
+   -
+   PlayerWrapper
    (deploy
-      {do ($sfx {sprintf "rp_deployed_%s.cue" {{$this config} get_track_sym}})
+      {do
+         ($sfx {sprintf "rp_deployed_%s.cue" {{$this config} get_track_sym}})
          {synth play $sfx}
       }
       {$this send_track deploy}
@@ -107,108 +127,108 @@
    )
 
    (stop_deploy
-      {do ($sfx {sprintf "rp_depleted_%s.cue" {{$this config} get_track_sym}})
+      {do
+         ($sfx {sprintf "rp_depleted_%s.cue" {{$this config} get_track_sym}})
          {synth play $sfx}
       }
       {$this send_track stop_deploy}
-      
+
       ; update the energy
       {handle ($this set_energy {$this band_energy})}
       kDataUnhandled
    )
-#endif
+   #endif
 
-   (unison_miss_guilty ($phrase)
+   (unison_miss_guilty
+      ($phrase)
       {$this send_track_val on_miss_phrase $phrase}
       {$this send_track spotlight_fail_guilty}
    )
 
-   (unison_miss ($phrase)
+   (unison_miss
+      ($phrase)
       ;; Someone else failed - doesn't matter anymore
       kDataUnhandled
    )
 
-   (unison_hit
-       {$this send_track spotlight_phrase_success}
-      kDataUnhandled
-   )
-   
+   (unison_hit {$this send_track spotlight_phrase_success} kDataUnhandled)
+
    ;; Someone else blew the coda
-   (coda_blown
-      {$this send_track coda_blown}
-      kDataUnhandled
-   )
-   
+   (coda_blown {$this send_track coda_blown} kDataUnhandled)
+
    ;; We blew the coda
-   (coda_fail
-      {$this send_track coda_fail}
-      kDataUnhandled
-   )
-   
+   (coda_fail {$this send_track coda_fail} kDataUnhandled)
+
    ;; We completed the coda
-   (coda_success
-      {$this send_track coda_success}
-      kDataUnhandled
-   )
+   (coda_success {$this send_track coda_success} kDataUnhandled)
 
    ;; Helper
-   (play_instrument_cue ($format)
-      {do ($num {$this player_num})
-          ($inst {{game get_player_config $num} get_track_sym})
-          ($seq {sprintf $format $inst})
+   (play_instrument_cue
+      ($format)
+      {do
+         ($num {$this player_num})
+         ($inst {{game get_player_config $num} get_track_sym})
+         ($seq {sprintf $format $inst})
          {play_game_seq_player $seq $seq $num}
       }
    )
 
-   (enable_player
-      {$this send_track enable_player}
-   )
+   (enable_player {$this send_track enable_player})
 
-   (disable_player ($strikes) ;HOJ HERE FAILED in player.dta 
+   (disable_player
+      ($strikes) ;HOJ HERE FAILED in player.dta 
       {$this play_instrument_cue "%s_died.cue"}
       {$this send_track_val disable_player $strikes}
       {if $world
          {$world player_failed
-                 {{game get_player_config {$this player_num}} get_track_sym}}
+            {{game get_player_config {$this player_num}} get_track_sym}
+         }
       }
-	  #ifndef HX_XBOX
-	
-		{game game_player_failed {$this player_num}}
-		
-	  #endif
-
+      #ifndef HX_XBOX
+      {game game_player_failed {$this player_num}}
+      #endif
    )
 
-   (save_player ($causer); HOJ HERE SAVED in player.dta
+   (save_player
+      ($causer) ; HOJ HERE SAVED in player.dta
       {$this play_instrument_cue "%s_regen.cue"}
       {$this send_track save_player}
       {if $world
          {$world player_saved {{game get_player_config $causer} get_track_sym}}
       }
-	  #ifndef HX_XBOX
-	 
-		{game game_player_saved $causer}
-		
-	  #endif
+      #ifndef HX_XBOX
+      {game game_player_saved $causer}
+      #endif
    )
 
-   (set_multiplier ($multiplier)
+   (set_multiplier
+      ($multiplier)
       {$this send_track_val set_multiplier $multiplier}
    )
 
-#ifdef HX_XBOX // JMB functionality moved to code - PlayerWrapper
+   #ifdef HX_XBOX
+   //
+   JMB
+   functionality
+   moved
+   to
+   code
+   -
+   PlayerWrapper
    ; band energy meter needs to be updated -- pass message on to band energy meter
-   (set_energy ($in_energy)
-      {do ($instrument {{game get_player_config {$this player_num}} get_track_sym})
+   (set_energy
+      ($in_energy)
+      {do
+         ($instrument {{game get_player_config {$this player_num}} get_track_sym})
          {if {$this track} ; TODO track should be a sink of this object...
-            {do ($meter {$this star_power_meter})
-                ($threshold 0.500)
-                ($player_state {cond ({$this is_deploying}  deploying)
-                                     ({$this can_deploy}    ready)
-                                                            none})
+            {do
+               ($meter {$this star_power_meter})
+               ($threshold 0.500)
+               ($player_state
+                  {cond ({$this is_deploying} deploying) ({$this can_deploy} ready) none}
+               )
                {if $meter
-                  {if {&& {< {$meter get energy} $threshold}
-                          {>= $in_energy $threshold}}
+                  {if {&& {< {$meter get energy} $threshold} {>= $in_energy $threshold}}
                      ; just got enough star power
                      {if {== $instrument drum}
                         ; If I'm the drummer, then we turn on/off soloing based on
@@ -216,9 +236,9 @@
                         {$this enable_drum_solos TRUE}
                      }
                   }
-;;                {if {&& {>= {$meter get energy} $threshold}
-;;                        {< $in_energy $threshold}}
-                     ; we no longer have enough star power
+                  ;;                {if {&& {>= {$meter get energy} $threshold}
+                  ;;                        {< $in_energy $threshold}}
+                  ; we no longer have enough star power
                   {if {!= $player_state ready}
                      {if {== $instrument drum}
                         {$this enable_drum_solos FALSE}
@@ -232,9 +252,10 @@
       }
       kDataUnhandled
    )
-#endif
-   
-   (enable_drum_solos ($in_enable)
+   #endif
+
+   (enable_drum_solos
+      ($in_enable)
       ; pass through to code
       {if_else $in_enable
          {do
@@ -246,30 +267,36 @@
          {$this disable_solos}
       }
    )
-   
+
    ; screaming is a trigger for band energy
-   (scream
-      {$this deploy_if_possible}
-   )
-   
+   (scream {$this deploy_if_possible})
+
    ; guitar/tambourine solo mechanic
    (solo_start
       ; grab the guitar solo feedback from the track
-      {do ($feedback {$this player_feedback})
+      {do
+         ($feedback {$this player_feedback})
          ; pass the message on to the feedback object
-         {if $feedback {$feedback start_solo}}
+         {if $feedback
+            {$feedback start_solo}
+         }
       }
 
-#ifdef HX_XBOX ;HWR - not used & removed in the Pi branch
-      {do ($trigger {$this get_track_obj guitar_solo_start.trig})
-         {if $trigger {$trigger trigger}}
+      #ifdef HX_XBOX ;HWR - not used & removed in the Pi branch
+      {do
+         ($trigger {$this get_track_obj guitar_solo_start.trig})
+         {if $trigger
+            {$trigger trigger}
+         }
       }
-#endif
+      #endif
    )
-   
-   (solo_end ($in_points $result)
+
+   (solo_end
+      ($in_points $result)
       ; grab solo feedback from the track
-      {do ($feedback {$this player_feedback})
+      {do
+         ($feedback {$this player_feedback})
          {if $feedback
             ; pass the rating
             {$feedback set_result $result}
@@ -280,18 +307,25 @@
          }
       }
 
-#ifdef HX_XBOX ;HWR - not used & removed in the Pi branch
-      {do ($trigger {$this get_track_obj guitar_solo_stop.trig})
-         {if $trigger {$trigger trigger}}
+      #ifdef HX_XBOX ;HWR - not used & removed in the Pi branch
+      {do
+         ($trigger {$this get_track_obj guitar_solo_stop.trig})
+         {if $trigger
+            {$trigger trigger}
+         }
       }
-#endif
+      #endif
    )
-   
-   (solo_hit ($in_val)
+
+   (solo_hit
+      ($in_val)
       ; grab the guitar solo feedback from the track
-      {do ($feedback {$this player_feedback})
+      {do
+         ($feedback {$this player_feedback})
          ; pass the message on to the feedback object
-         {if $feedback {$feedback set_percent $in_val}}
+         {if $feedback
+            {$feedback set_percent $in_val}
+         }
       }
    )
 

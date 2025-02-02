@@ -1,360 +1,234 @@
-{func
-   CheckShouldAutogenLighting
-   {set
-      $lighting_cues
-      {array 0}}
-   {set
-      [working_track]
-      "EVENTS"}
+{func CheckShouldAutogenLighting
+   {set $lighting_cues {array 0}}
+   {set [working_track] "EVENTS"}
    {set $hasPracticeSections FALSE}
-   {$this
-      foreach_textevent
-      $text
+   {$this foreach_textevent $text
       $tick
-      {if
-         {'||'
-            {has_substr
-               $text
-               "[section "}
-            {has_substr
-               $text
-               "[prc_"}}
-         {set $hasPracticeSections TRUE}}}
-   {unless
-      $hasPracticeSections
+      {if {'||' {has_substr $text "[section "} {has_substr $text "[prc_"}}
+         {set $hasPracticeSections TRUE}
+      }
+   }
+   {unless $hasPracticeSections
       {print
-         "WARNING: MIDI Compiler: No practice sections found in your EVENTS track.  Lighting autogen requires them to function properly.\n"}}
-   {set
-      [working_track]
-      "VENUE"}
+         "WARNING: MIDI Compiler: No practice sections found in your EVENTS track.  Lighting autogen requires them to function properly.\n"
+      }
+   }
+   {set [working_track] "VENUE"}
    {set $hasLightingCues FALSE}
-   {$this
-      foreach_textevent
-      $text
+   {$this foreach_textevent $text
       $tick
-      {if
-         {'||'
-            {has_substr
-               $text
-               "[lighting"}
-            {has_substr
-               $text
-               ".pp]"}}
-         {set $hasLightingCues TRUE}}}
-   {'||'
-      [force_autogen]
-      {! $hasLightingCues}}}
-{func
-   CanKeyframe
+      {if {'||' {has_substr $text "[lighting"} {has_substr $text ".pp]"}}
+         {set $hasLightingCues TRUE}
+      }
+   }
+   {'||' [force_autogen] {! $hasLightingCues}}
+}
+{func CanKeyframe
    ($presetName)
    {if_else
       {has_any_substr
          $presetName
-         ("dischord"
-            "verse"
-            "chorus"
-            "manual_cool"
-            "manual_warm"
-            "stomp")}
+         ("dischord" "verse" "chorus" "manual_cool" "manual_warm" "stomp")
+      }
       TRUE
-      FALSE}}
-{func
-   InitFromTheme
-   {set
-      $prcToCategoryMappings
-      {array
-         {$this get_section_mappings}}}
-   {set
-      $themeMappings
-      {$this get_theme_def extra_sections}}
-   {if
-      {==
-         {type $themeMappings}
-         kDataArray}
-      {foreach_int
-         $i
-         1
-         {size $themeMappings}
-         {set
-            $mapping
-            {elem
-               $themeMappings
-               {-
-                  {size $themeMappings}
-                  $i}}}
-         {insert_elem $prcToCategoryMappings 1 $mapping}}}
-   {set
-      $themeSectionPresets
-      {$this get_theme_def section_presets}}
-   {set
-      $numSectionsPresets
-      {-
-         {size $themeSectionPresets}
-         1}}}
-{func
-   LookupSectionPreset
+      FALSE
+   }
+}
+{func InitFromTheme
+   {set $prcToCategoryMappings {array {$this get_section_mappings}}}
+   {set $themeMappings {$this get_theme_def extra_sections}}
+   {if {== {type $themeMappings} kDataArray}
+      {foreach_int $i 1 {size $themeMappings}
+         {set $mapping {elem $themeMappings {- {size $themeMappings} $i}}}
+         {insert_elem $prcToCategoryMappings 1 $mapping}
+      }
+   }
+   {set $themeSectionPresets {$this get_theme_def section_presets}}
+   {set $numSectionsPresets {- {size $themeSectionPresets} 1}}
+}
+{func LookupSectionPreset
    ($prcCategory $presetType $stripTag)
    {do
-      ($result
-         {find_exists $themeSectionPresets $prcCategory $presetType})
-      {if_else
-         {== $result kDataUnhandled}
+      ($result {find_exists $themeSectionPresets $prcCategory $presetType})
+      {if_else {== $result kDataUnhandled}
          -1
-         {if_else
-            $stripTag
+         {if_else $stripTag
             {elem $result 1}
-            $result}}}}
-{func
-   HasBonusFXForSection
+            $result
+         }
+      }
+   }
+}
+{func HasBonusFXForSection
    ($prcCategory)
    {do
-      ($result
-         {find_exists $themeSectionPresets $prcCategory bonusfx_at_start})
-      {if_else
-         {== $result kDataUnhandled}
+      ($result {find_exists $themeSectionPresets $prcCategory bonusfx_at_start})
+      {if_else {== $result kDataUnhandled}
          FALSE
-         TRUE}}}
-{func
-   LookupSectionPreset_Lighting
+         TRUE
+      }
+   }
+}
+{func LookupSectionPreset_Lighting
    ($prcCategory)
-   {LookupSectionPreset $prcCategory allowed_lightpresets FALSE}}
-{func
-   LookupSectionPreset_KeyframeRate
+   {LookupSectionPreset $prcCategory allowed_lightpresets FALSE}
+}
+{func LookupSectionPreset_KeyframeRate
    ($prcCategory)
-   {LookupSectionPreset $prcCategory keyframe_rate TRUE}}
-{func
-   LookupSectionPreset_PostProc
+   {LookupSectionPreset $prcCategory keyframe_rate TRUE}
+}
+{func LookupSectionPreset_PostProc
    ($prcCategory)
-   {LookupSectionPreset $prcCategory allowed_postprocs FALSE}}
-{func
-   LookupSectionPreset_PostProcBlendIn
+   {LookupSectionPreset $prcCategory allowed_postprocs FALSE}
+}
+{func LookupSectionPreset_PostProcBlendIn
    ($prcCategory)
-   {LookupSectionPreset $prcCategory postproc_blendin TRUE}}
-{func
-   LookupSectionPreset_LightPresetBlendIn
+   {LookupSectionPreset $prcCategory postproc_blendin TRUE}
+}
+{func LookupSectionPreset_LightPresetBlendIn
    ($prcCategory)
-   {LookupSectionPreset $prcCategory lightpreset_blendin TRUE}}
-{func
-   FindCategoryIndex
+   {LookupSectionPreset $prcCategory lightpreset_blendin TRUE}
+}
+{func FindCategoryIndex
    ($prcCategory)
    {do
       ($idx 0)
       ($i 0)
-      {foreach_int
-         $i
-         1
-         {size $themeSectionPresets}
-         {set
-            $category
-            {elem $themeSectionPresets $i}}
-         {if
-            {==
-               {elem $category 0}
-               $prcCategory}
-            {set
-               $idx
-               {- $i 1}}}}
-      $idx}}
-{func
-   FindCategoryName
+      {foreach_int $i 1 {size $themeSectionPresets}
+         {set $category {elem $themeSectionPresets $i}}
+         {if {== {elem $category 0} $prcCategory}
+            {set $idx {- $i 1}}
+         }
+      }
+      $idx
+   }
+}
+{func FindCategoryName
    ($theIdx)
-   {elem
-      {elem
-         $themeSectionPresets
-         {'+' $theIdx 1}}
-      0}}
-{func
-   ConvertPrcToCategory
+   {elem {elem $themeSectionPresets {'+' $theIdx 1}} 0}
+}
+{func ConvertPrcToCategory
    ($practiceSection)
    {set $defaultCategory default}
    {set $found FALSE}
    {set $category $defaultCategory}
-   {foreach_int
-      $i
-      1
-      {size $prcToCategoryMappings}
-      {set
-         $mapping
-         {elem $prcToCategoryMappings $i}}
-      {if
-         {! $found}
-         {set
-            $patterns
-            {elem $mapping 1}}
-         {foreach_int
-            $j
-            1
-            {size $patterns}
-            {set
-               $pattern
-               {elem $patterns $j}}
-            {if
-               {match_pattern $practiceSection $pattern}
+   {foreach_int $i 1 {size $prcToCategoryMappings}
+      {set $mapping {elem $prcToCategoryMappings $i}}
+      {if {! $found}
+         {set $patterns {elem $mapping 1}}
+         {foreach_int $j 1 {size $patterns}
+            {set $pattern {elem $patterns $j}}
+            {if {match_pattern $practiceSection $pattern}
                {set $found TRUE}
-               {set
-                  $category
-                  {elem $mapping 0}}}}}}
-   {if
-      {==
-         {find_exists $themeSectionPresets $category}
-         kDataUnhandled}
-      {set $category default}}
-   $category}
-{func
-   NumPossiblePresets
+               {set $category {elem $mapping 0}}
+            }
+         }
+      }
+   }
+   {if {== {find_exists $themeSectionPresets $category} kDataUnhandled}
+      {set $category default}
+   }
+   $category
+}
+{func NumPossiblePresets
    ($prcCategory)
-   {-
-      {size
-         {LookupSectionPreset_Lighting $prcCategory}}
-      1}}
-{func
-   SelectPreset
+   {- {size {LookupSectionPreset_Lighting $prcCategory}} 1}
+}
+{func SelectPreset
    ($prcCategory)
    {do
-      ($catPresets
-         {LookupSectionPreset_Lighting $prcCategory})
+      ($catPresets {LookupSectionPreset_Lighting $prcCategory})
       ($preset loop_warm)
-      {if
-         {&&
-            {!= $catPresets -1}
-            {>
-               {size $catPresets}
-               1}}
-         {if_else
-            {==
-               {size $catPresets}
-               2}
-            {set
-               $preset
-               {elem $catPresets 1}}
+      {if {&& {!= $catPresets -1} {> {size $catPresets} 1}}
+         {if_else {== {size $catPresets} 2}
+            {set $preset {elem $catPresets 1}}
             {do
-               ($val
-                  {random_int
-                     1
-                     {size $catPresets}})
-               {set
-                  $preset
-                  {elem $catPresets $val}}}}}
-      $preset}}
-{func
-   SelectPostProc
+               ($val {random_int 1 {size $catPresets}})
+               {set $preset {elem $catPresets $val}}
+            }
+         }
+      }
+      $preset
+   }
+}
+{func SelectPostProc
    ($prcCategory)
    {do
-      ($catPostProcs
-         {LookupSectionPreset_PostProc $prcCategory})
+      ($catPostProcs {LookupSectionPreset_PostProc $prcCategory})
       ($postproc ProFilm_a.pp)
-      {if
-         {&&
-            {!= $catPostProcs -1}
-            {>
-               {size $catPostProcs}
-               1}}
-         {if_else
-            {==
-               {size $catPostProcs}
-               2}
-            {set
-               $postproc
-               {elem $catPostProcs 1}}
+      {if {&& {!= $catPostProcs -1} {> {size $catPostProcs} 1}}
+         {if_else {== {size $catPostProcs} 2}
+            {set $postproc {elem $catPostProcs 1}}
             {do
-               ($val
-                  {random_int
-                     1
-                     {size $catPostProcs}})
-               {set
-                  $postproc
-                  {elem $catPostProcs $val}}}}}
-      $postproc}}
-{func
-   DoAutogen_Lighting
+               ($val {random_int 1 {size $catPostProcs}})
+               {set $postproc {elem $catPostProcs $val}}
+            }
+         }
+      }
+      $postproc
+   }
+}
+{func DoAutogen_Lighting
    {do
       ($count 0)
       ($tick 0)
-      {set
-         [working_track]
-         "VENUE"}
+      {set [working_track] "VENUE"}
       {set $should_autogen 1}
-      {foreach
-         $lightingProp
-         (lightpreset lightpreset_keyframe spot_bass spot_guitar spot_drums spot_keyboard spot_vocal postproc)
-         {$this remove_keys $lightingProp}}}
-   {print
-      "MIDI Compiler: Autogenerating lighting + post proc cues...\n"}
+      {foreach $lightingProp
+         (lightpreset
+            lightpreset_keyframe
+            spot_bass
+            spot_guitar
+            spot_drums
+            spot_keyboard
+            spot_vocal
+            postproc
+         )
+         {$this remove_keys $lightingProp}
+      }
+   }
+   {print "MIDI Compiler: Autogenerating lighting + post proc cues...\n"}
    {InitFromTheme}
-   {$this
-      print
-      "\nmusic_start: "
-      $music_start
-      " music_end: "
-      $music_end
-      "\n"}
-   {if_else
-      {&&
-         {< $music_start $music_end}
-         {> $music_end 0}}
+   {$this print "\nmusic_start: " $music_start " music_end: " $music_end "\n"}
+   {if_else {&& {< $music_start $music_end} {> $music_end 0}}
       {do
          ($tick 0)
          ($found_first_downbeat FALSE)
-         {if_else
-            {!= $coda -1}
+         {if_else {!= $coda -1}
             {set $final_change_tick $coda}
-            {set $final_change_tick $music_end}}
-         {set
-            [working_track]
-            "EVENTS"}
-         {set
-            $lighting_cues
-            {array 0}}
+            {set $final_change_tick $music_end}
+         }
+         {set [working_track] "EVENTS"}
+         {set $lighting_cues {array 0}}
          {set $lastPrcCategory ''}
-         {$this
-            foreach_textevent
-            $text
+         {$this foreach_textevent $text
             $tick
             {if
                {&&
-                  {'||'
-                     {has_substr
-                        $text
-                        "[section "}
-                     {has_substr
-                        $text
-                        "[prc_"}}
+                  {'||' {has_substr $text "[section "} {has_substr $text "[prc_"}}
                   {> $tick $0}
-                  {< $tick $final_change_tick}}
-               {set
-                  $newPrcCategory
-                  {ConvertPrcToCategory $text}}
-               {if
-                  {'||'
-                     {!= $newPrcCategory $lastPrcCategory}
-                     {== $newPrcCategory default}}
-                  {push_back
-                     $lighting_cues
-                     {array
-                        ($text $tick)}}}
-               {set $lastPrcCategory $newPrcCategory}}}
-         {$this
-            print
-            "   found "
-            {size $lighting_cues}
-            " lighting cues\n"}
-         {set
-            [working_track]
-            "VENUE"}
+                  {< $tick $final_change_tick}
+               }
+               {set $newPrcCategory {ConvertPrcToCategory $text}}
+               {if {'||' {!= $newPrcCategory $lastPrcCategory} {== $newPrcCategory default}}
+                  {push_back $lighting_cues {array ($text $tick)}}
+               }
+               {set $lastPrcCategory $newPrcCategory}
+            }
+         }
+         {$this print "   found " {size $lighting_cues} " lighting cues\n"}
+         {set [working_track] "VENUE"}
          {$this add_symbol_key lightpreset intro 0}
          {$this add_postproc_key ProFilm_a.pp 0 TRUE}
-         {if
-            {!= $coda -1}
-            {$this add_symbol_key lightpreset bre $coda}}
-         {set
-            $fadeoutTick
-            {int $music_end}}
-         {$this
-            add_symbol_key
+         {if {!= $coda -1}
+            {$this add_symbol_key lightpreset bre $coda}
+         }
+         {set $fadeoutTick {int $music_end}}
+         {$this add_symbol_key
             lightpreset
-            {random_elem
-               (blackout_spot silhouettes)}
-            $fadeoutTick}
+            {random_elem (blackout_spot silhouettes)}
+            $fadeoutTick
+         }
          {$this add_postproc_key ProFilm_a.pp $fadeoutTick TRUE}
          {$this add_postproc_key ProFilm_a.pp $end TRUE}
          {set $newLightSelection ''}
@@ -362,263 +236,152 @@
          {set $newPostProc ''}
          {set $lastPostProc ProFilm_a.pp}
          {set $lastTick 0}
-         {foreach_int
-            $i
-            0
-            {size $lighting_cues}
-            {set
-               $tick
-               {int
-                  {elem
-                     {elem $lighting_cues $i}
-                     1}}}
-            {set
-               $prc_name
-               {elem
-                  {elem $lighting_cues $i}
-                  0}}
-            {if_else
-               {==
-                  $i
-                  {-
-                     {size $lighting_cues}
-                     1}}
-               {set
-                  $lighting_end_tick
-                  {int $final_change_tick}}
-               {set
-                  $lighting_end_tick
-                  {int
-                     {elem
-                        {elem
-                           $lighting_cues
-                           {'+' $i 1}}
-                        1}}}}
-            {set
-               $prcCategory
-               {ConvertPrcToCategory $prc_name}}
-            {$this
-               print
-               "\n   "
-               $prc_name
-               " -> "
-               $prcCategory
-               "\n"}
-            {if
-               {HasBonusFXForSection $prcCategory}
+         {foreach_int $i 0 {size $lighting_cues}
+            {set $tick {int {elem {elem $lighting_cues $i} 1}}}
+            {set $prc_name {elem {elem $lighting_cues $i} 0}}
+            {if_else {== $i {- {size $lighting_cues} 1}}
+               {set $lighting_end_tick {int $final_change_tick}}
+               {set $lighting_end_tick {int {elem {elem $lighting_cues {'+' $i 1}} 1}}}
+            }
+            {set $prcCategory {ConvertPrcToCategory $prc_name}}
+            {$this print "\n   " $prc_name " -> " $prcCategory "\n"}
+            {if {HasBonusFXForSection $prcCategory}
                {$this add_symbol_key world_event bonusfx $tick}
-               {$this
-                  print
-                  "     bonus fx!\n"}}
-            {set
-               $newPostProc
-               {SelectPostProc $prcCategory}}
-            {set
-               $postProcBlendIn
-               {LookupSectionPreset_PostProcBlendIn $prcCategory}}
-            {if_else
-               {&&
-                  {!= $lastPostProc ''}
-                  {> $postProcBlendIn 0}}
+               {$this print "     bonus fx!\n"}
+            }
+            {set $newPostProc {SelectPostProc $prcCategory}}
+            {set $postProcBlendIn {LookupSectionPreset_PostProcBlendIn $prcCategory}}
+            {if_else {&& {!= $lastPostProc ''} {> $postProcBlendIn 0}}
                {do
-                  {$this
-                     print
+                  {$this print
                      "     post proc: "
                      $newPostProc
                      " (blend in for "
                      $postProcBlendIn
-                     " beats) \n"}
-                  {if
-                     {>
-                        {- $tick $lastTick}
-                        {'*' $postProcBlendIn 480}}
-                     {$this
-                        add_postproc_key
+                     " beats) \n"
+                  }
+                  {if {> {- $tick $lastTick} {'*' $postProcBlendIn 480}}
+                     {$this add_postproc_key
                         $lastPostProc
-                        {-
-                           $tick
-                           {'+'
-                              {'*' $postProcBlendIn 480}
-                              15}}
-                        TRUE}}
-                  {$this
-                     add_postproc_key
-                     $newPostProc
-                     {- $tick 15}
-                     TRUE}}
+                        {- $tick {'+' {'*' $postProcBlendIn 480} 15}}
+                        TRUE
+                     }
+                  }
+                  {$this add_postproc_key $newPostProc {- $tick 15} TRUE}
+               }
                {do
-                  {$this
-                     print
-                     "     post proc: "
-                     $newPostProc
-                     "\n"}
-                  {$this
-                     add_postproc_key
-                     $newPostProc
-                     {- $tick 15}
-                     FALSE}}}
+                  {$this print "     post proc: " $newPostProc "\n"}
+                  {$this add_postproc_key $newPostProc {- $tick 15} FALSE}
+               }
+            }
             {set $lastPostProc $newPostProc}
-            {set
-               $newLightSelection
-               {SelectPreset $prcCategory}}
-            {unless
-               {==
-                  {NumPossiblePresets $prcCategory}
-                  1}
-               {while
-                  {== $newLightSelection $lastLightSelection}
-                  {set
-                     $newLightSelection
-                     {SelectPreset $prcCategory}}}}
-            {set
-               $presetBlendIn
-               {LookupSectionPreset_LightPresetBlendIn $prcCategory}}
-            {if_else
-               {> $presetBlendIn 0}
+            {set $newLightSelection {SelectPreset $prcCategory}}
+            {unless {== {NumPossiblePresets $prcCategory} 1}
+               {while {== $newLightSelection $lastLightSelection}
+                  {set $newLightSelection {SelectPreset $prcCategory}}
+               }
+            }
+            {set $presetBlendIn {LookupSectionPreset_LightPresetBlendIn $prcCategory}}
+            {if_else {> $presetBlendIn 0}
                {do
-                  {$this
-                     print
+                  {$this print
                      "     light preset: "
                      $newLightSelection
                      " (blend in for "
                      $presetBlendIn
-                     " beats) \n"}
-                  {if_else
-                     {>
-                        {- $tick $lastTick}
-                        {'*' $presetBlendIn 480}}
-                     {$this
-                        add_symbol_key
+                     " beats) \n"
+                  }
+                  {if_else {> {- $tick $lastTick} {'*' $presetBlendIn 480}}
+                     {$this add_symbol_key
                         lightpreset
                         $lastLightSelection
-                        {-
-                           $tick
-                           {'+'
-                              {'*' $presetBlendIn 480}
-                              15}}}
-                     {$this
-                        add_symbol_key
-                        lightpreset
-                        $lastLightSelection
-                        {- $lastTick 14}}}}
-               {$this
-                  print
-                  "     light preset: "
-                  $newLightSelection
-                  "\n"}}
-            {$this
-               add_symbol_key
-               lightpreset
-               $newLightSelection
-               {- $tick 15}}
+                        {- $tick {'+' {'*' $presetBlendIn 480} 15}}
+                     }
+                     {$this add_symbol_key lightpreset $lastLightSelection {- $lastTick 14}}
+                  }
+               }
+               {$this print "     light preset: " $newLightSelection "\n"}
+            }
+            {$this add_symbol_key lightpreset $newLightSelection {- $tick 15}}
             {set $lastLightSelection $newLightSelection}
             {set $lastTick $tick}
-            {set
-               $keyframe_rate
-               {LookupSectionPreset_KeyframeRate $prcCategory}}
-            {if
-               {== $keyframe_rate -1}
-               {set
-                  $keyframe_rate
-                  {random_elem
-                     (2 4)}}}
-            {if
-               {&&
-                  {CanKeyframe $newLightSelection}
-                  {> $keyframe_rate 0}}
-               {$this
-                  print
-                  "     keyframe rate: "
-                  $keyframe_rate
-                  "\n"}
-               {while
-                  {< $tick $lighting_end_tick}
+            {set $keyframe_rate {LookupSectionPreset_KeyframeRate $prcCategory}}
+            {if {== $keyframe_rate -1}
+               {set $keyframe_rate {random_elem (2 4)}}
+            }
+            {if {&& {CanKeyframe $newLightSelection} {> $keyframe_rate 0}}
+               {$this print "     keyframe rate: " $keyframe_rate "\n"}
+               {while {< $tick $lighting_end_tick}
                   {$this add_symbol_key lightpreset_keyframe next $tick}
-                  {'+='
-                     $tick
-                     {'*' $keyframe_rate 480}}}}}}
-      {do}}
+                  {'+=' $tick {'*' $keyframe_rate 480}}
+               }
+            }
+         }
+      }
+      {do}
+   }
    {do
       ($part_spotlight_info
-         {if_else
-            [output_songanim]
-            (("PART DRUMS"
-                  spot_drums)
-               ("PART GUITAR"
-                  spot_guitar)
-               ("PART KEYS"
-                  spot_keyboard))
-            (("PART DRUMS"
-                  kNote_D1)
-               ("PART GUITAR"
-                  kNote_Ds1)
-               ("PART KEYS"
-                  kNote_F1))})
-      ($spotlight_midievents
-         {array 0})
-      {foreach
-         $info
-         $part_spotlight_info
+         {if_else [output_songanim]
+            (
+               ("PART DRUMS" spot_drums)
+               ("PART GUITAR" spot_guitar)
+               ("PART KEYS" spot_keyboard)
+            )
+            (
+               ("PART DRUMS" kNote_D1)
+               ("PART GUITAR" kNote_Ds1)
+               ("PART KEYS" kNote_F1)
+            )
+         }
+      )
+      ($spotlight_midievents {array 0})
+      {foreach $info $part_spotlight_info
          {do
             ($pitch 0)
             ($tick 0)
             ($state 0)
             ($on_tick -1)
-            {set
-               [working_track]
-               {elem $info 0}}
-            {$this
-               foreach_midievent
-               kNote_G6
+            {set [working_track] {elem $info 0}}
+            {$this foreach_midievent kNote_G6
                kNote_G6
                $pitch
                $tick
                $state
-               {if_else
-                  $state
+               {if_else $state
                   {set $on_tick $tick}
-                  {if
-                     {!= $on_tick -1}
+                  {if {!= $on_tick -1}
                      {do
-                        ($midievent
-                           {array 0})
-                        {push_back
-                           $midievent
-                           {elem $info 1}}
+                        ($midievent {array 0})
+                        {push_back $midievent {elem $info 1}}
                         {push_back $midievent $on_tick}
                         {push_back $midievent $tick}
                         {push_back $spotlight_midievents $midievent}
-                        {set $on_tick -1}}}}}}}
-      {set
-         [working_track]
-         "VENUE"}
-      {if_else
-         [output_songanim]
+                        {set $on_tick -1}
+                     }
+                  }
+               }
+            }
+         }
+      }
+      {set [working_track] "VENUE"}
+      {if_else [output_songanim]
          {do
-            {foreach
-               $midievent
-               $spotlight_midievents
-               {$this
-                  add_symbol_key
-                  {elem $midievent 0}
-                  on
-                  {elem $midievent 1}}
-               {$this
-                  add_symbol_key
-                  {elem $midievent 0}
-                  off
-                  {elem $midievent 2}}}
-            {foreach
-               $spotProp
-               (spot_bass spot_guitar spot_drums spot_keyboard spot_vocal)
-               {$this add_symbol_key $spotProp off 0}}}
-         {foreach
-            $midievent
-            $spotlight_midievents
-            {$this
-               add_midi_note
+            {foreach $midievent $spotlight_midievents
+               {$this add_symbol_key {elem $midievent 0} on {elem $midievent 1}}
+               {$this add_symbol_key {elem $midievent 0} off {elem $midievent 2}}
+            }
+            {foreach $spotProp (spot_bass spot_guitar spot_drums spot_keyboard spot_vocal)
+               {$this add_symbol_key $spotProp off 0}
+            }
+         }
+         {foreach $midievent $spotlight_midievents
+            {$this add_midi_note
                {elem $midievent 0}
                {elem $midievent 1}
-               {-
-                  {elem $midievent 2}
-                  {elem $midievent 1}}}}}}}
+               {- {elem $midievent 2} {elem $midievent 1}}
+            }
+         }
+      }
+   }
+}

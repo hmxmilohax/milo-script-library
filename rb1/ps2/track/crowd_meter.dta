@@ -1,4 +1,3 @@
-
 #define MAXED_THRESHOLD (.98)
 
 ; Crowd meter icon
@@ -17,43 +16,36 @@
             (state_warning script (script {$this set_state warning}))
             (state_failed script (script {$this set_state failed}))
          )
-         
-         (reset
-            {reset.trig trigger}
-         )
-         
-         (arrow_hide
-            {arrow_hide.trig trigger}
-         )
-         
-         (arrow_show
-            {arrow_show.trig trigger}
-         )
-         
-         (deploy
-            {deploy.trig trigger}
-         )
-         
-         (stop_deploy
-            {stop_deploy.trig trigger}
-         )
-         
-         (set_state ($state)
+
+         (reset {reset.trig trigger})
+
+         (arrow_hide {arrow_hide.trig trigger})
+
+         (arrow_show {arrow_show.trig trigger})
+
+         (deploy {deploy.trig trigger})
+
+         (stop_deploy {stop_deploy.trig trigger})
+
+         (set_state
+            ($state)
             {switch $state
                (failed {state_failed.trig trigger})
                (warning {state_failing.trig trigger})
                (normal {state_normal.trig trigger})
             }
          )
-         
-         (set_glowing ($in_val)
+
+         (set_glowing
+            ($in_val)
             {if_else $in_val
                {glow.trig trigger}
                {glow_stop.trig trigger}
             }
          )
 
-         (set_icon ($icon)
+         (set_icon
+            ($icon)
             {icon.lbl set_localized $icon}
          )
       )
@@ -65,39 +57,45 @@
    (types
       (crowd_meter
          (editor
-            (value float
+            (value
+               float
                (range 0 1)
-               (post_sync {$this set_crowd [value]}) 
+               (post_sync {$this set_crowd [value]})
                (help "Band health. Animates crowd_meter.grp")
             )
-            (guitar float
+            (guitar
+               float
                (range -1 1)
                (post_sync {$this set_val guitar [guitar]})
                (help "Guitar health. Animates guitar.tnm")
             )
-            (drum float 
+            (drum
+               float
                (range -1 1)
                (post_sync {$this set_val drum [drum]})
                (help "Drummer health. Animates drum.tnm")
             )
-            (bass float 
+            (bass
+               float
                (range -1 1)
                (post_sync {$this set_val bass [bass]})
                (help "Bass health. Animates bass.tnm")
             )
-            (vocals float 
+            (vocals
+               float
                (range -1 1)
                (post_sync {$this set_val vocals [vocals]})
                (help "Vocal health. Animates vocals.tnm")
             )
             (reset script (script {$this reset}))
             (level_colors (array color))
-            (maxed bool
+            (maxed
+               bool
                (post_sync {$this set_maxed [maxed]})
                (help "Turned on when in the 'meter maxed' state. Animates maxed.tnm")
             )
          )
-         
+
          (value 0)
          (lose_level 0)
          (guitar 0)
@@ -108,7 +106,7 @@
          (level_colors (0 0 0 0 0))
          (deployed 0)
          (disabled_list ()) ; list of disabled instruments
-         
+
          (reset
             {$this reset_crowd_meter}
             {$this set_crowd .5}
@@ -116,22 +114,24 @@
             {drum.grp set_frame .5}
             {bass.grp set_frame .5}
             {vocals.grp set_frame .5}
-            
+
             {set [deployed] 0}
             {band_energy_stop.trig trigger}
             {resize [disabled_list] 0}
             {disabled_stop.trig trigger}
-            
+
             {$this set_maxed FALSE}
          )
 
-;#ifdef HX_XBOX  ;HWR - Overridden in C++ code         
+         ;#ifdef HX_XBOX  ;HWR - Overridden in C++ code         
          ; send this icon down to crowd_meter_icon
-         (send_icon ($instrument $icon)
+         (send_icon
+            ($instrument $icon)
             {{object $instrument} set_icon $icon}
          )
-         
-         (set_crowd ($in_val)
+
+         (set_crowd
+            ($in_val)
             ; this makes sure the crowd meter doesn't drop before the icon does
             {if_else {> $in_val {crowd_meter.mnm frame}}
                {crowd_meter.mnm set_frame $in_val}
@@ -141,16 +141,21 @@
             }
             {$this update_excitement}
          )
-         
+
          (update_excitement
-            {do ($excitement 2)
+            {do
+               ($excitement 2)
                ; get the excitement level
                {if {exists game}
                   {set $excitement {game get excitement}}
                }
-            
-               {if {< $excitement 0} {set $excitement 0}}
-               {if {> $excitement 4} {set $excitement 4}}
+
+               {if {< $excitement 0}
+                  {set $excitement 0}
+               }
+               {if {> $excitement 4}
+                  {set $excitement 4}
+               }
 
                ; if we cross the "maxed" threshold then call the set_maxed function
                {if {&& [maxed] {!= $excitement kExcitementPeak}}
@@ -164,43 +169,53 @@
                {crowd_meter.mat set color {elem [level_colors] $excitement}}
             }
          )
-;#endif
+         ;#endif
 
-         (set_player_icon_state ($instrument $state)
+         (set_player_icon_state
+            ($instrument $state)
             {{object $instrument} set_state $state}
          )
-         
-;#ifdef HX_XBOX  ;HWR - Overridden in C++ code
+
+         ;#ifdef HX_XBOX  ;HWR - Overridden in C++ code
          ; sets maxed to true or false
-         (set_maxed ($in_val)        
+         (set_maxed
+            ($in_val)
             {set [maxed] $in_val}
             {if {&& {exists audio} {gamemode get crowd_reacts}}
-               {audio set_crowd_fader {if_else [maxed] 0 kDbSilence}}
+               {audio set_crowd_fader
+                  {if_else [maxed]
+                     0
+                     kDbSilence
+                  }
+               }
             }
          )
-;#endif
-         
-         (deploy ($in_name)
+         ;#endif
+
+         (deploy
+            ($in_name)
             {++ [deployed]}
-            {if {== 1 [deployed]}               
+            {if {== 1 [deployed]}
                {band_energy_deploy.trig trigger}
             }
             {{object $in_name} deploy}
          )
-         
-         (stop_deploy ($in_name)
+
+         (stop_deploy
+            ($in_name)
             {-- [deployed]}
             {if {== 0 [deployed]}
                {band_energy_stop.trig trigger}
             }
             {{object $in_name} stop_deploy}
          )
-         
-         (enable_player ($inst)
+
+         (enable_player
+            ($inst)
             {if {find_elem [disabled_list] $inst}
                ; remove the player from the DL
                {remove_elem [disabled_list] $inst}
-               
+
                {if {== {size [disabled_list]} 0}
                   ; there's no one on the DL anymore, stop warning!
                   {disabled_stop.trig trigger}
@@ -208,26 +223,23 @@
                }
             }
          )
-         
-         (disable_player ($inst)
+
+         (disable_player
+            ($inst)
             {if {! {find_elem [disabled_list] $inst}}
                ; Add him to the DL
                {insert_elem [disabled_list] 0 $inst}
-               
+
                {if {== {size [disabled_list]} 1}
                   ; start warning
                   {disabled_start.trig trigger}
                }
             }
          )
-         
-         (show_peak_arrow
-            {show_peak_arrow.trig trigger}
-         )
-         
-         (hide_peak_arrow
-            {hide_peak_arrow.trig trigger}
-         )
+
+         (show_peak_arrow {show_peak_arrow.trig trigger})
+
+         (hide_peak_arrow {hide_peak_arrow.trig trigger})
       )
    )
 )

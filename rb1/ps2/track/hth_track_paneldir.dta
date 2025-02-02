@@ -1,73 +1,99 @@
 (PanelDir
    (types
       (hth_track_paneldir
-         (editor        
-            (reset script (script {$this configure_tracks} {$this reset}))
-            (track_0 int (list ("kTrackLocal" "kTrackNet")) (post_sync {$this configure_tracks}))
-            (track_1 int (list ("kTrackLocal" "kTrackNet")) (post_sync {$this configure_tracks}))
-            (test_score int (post_sync {$this set_score_diff [test_score]}))                   
-            (game_mode symbol 
+         (editor
+            (reset
+               script
+               (script
+                  {$this configure_tracks}
+                  {$this reset}
+               )
+            )
+            (track_0
+               int
+               (list ("kTrackLocal" "kTrackNet"))
+               (post_sync {$this configure_tracks})
+            )
+            (track_1
+               int
+               (list ("kTrackLocal" "kTrackNet"))
+               (post_sync {$this configure_tracks})
+            )
+            (test_score int (post_sync {$this set_score_diff [test_score]}))
+            (game_mode
+               symbol
                (list (tug_of_war score_duel))
                (post_sync {$this configure_tracks})
             )
-            (instrument symbol
+            (instrument
+               symbol
                (list (bass drum guitar vocals))
                (post_sync {$this reset})
             )
-            (configuration object 
-               (list {$this configuration_list}) 
+            (configuration
+               object
+               (list {$this configuration_list})
                (post_sync {$this set_configuration [configuration]})
             )
-            (configurable_objects 
+            (configurable_objects
                (array object (class Trans))
                (help "Objects which can change transform or showing per configuration.")
             )
-            
-            (vocal_game bool (post_sync {$this configure_tracks} {$this play_intro}) (read_only TRUE))
-            
+
+            (vocal_game
+               bool
+               (post_sync
+                  {$this configure_tracks}
+                  {$this play_intro}
+               )
+               (read_only TRUE)
+            )
+
             (view_time_easy float)
             (view_time_expert float)
             (net_track_alpha float (post_sync {$this configure_tracks}))
          )
-         
+
          (track_0 kTrackLocal)
          (track_1 kTrackLocal)
-         
+
          (test_score 0)
          (multiplier 1)
-         
+
          (game_mode tug_of_war)
          (instrument "drum")
          (vocal_game FALSE)
 
          ; configuration object currently applied
          (configuration "")
-         
+
          (configurable_objects ())
-         
+
          ; first player to finish guitar solo
          (first_solo_player 0)
-         
+
          ; solo rating for first player to finish solo
          (first_solo_result '')
-         
+
          ; solo points for first player to finish solo
          (first_solo_points 0)
-         
+
          (gem_tracks ())
-         
+
          ; to calculate track speed values
          ; the number of seconds you can see from the now bar to the end fade out
          (view_time_easy 2.4)
          (view_time_expert 1.5)
-         
+
          (net_track_alpha .3)
-         
+
          ; DEBUG FEATURE TO CYCLE THE DIFFERENT TRACK SURFACES
-         (next_surface ($val)
-            {do ($configuration_list {$this configuration_list})
-                ($size {size $configuration_list})
-                ($index 0)
+         (next_surface
+            ($val)
+            {do
+               ($configuration_list {$this configuration_list})
+               ($size {size $configuration_list})
+               ($index 0)
                ; find the index of the next one in the list
                {foreach_int $i 0 $size
                   {if {== {elem $configuration_list $i} [configuration]}
@@ -76,15 +102,14 @@
                }
                {$this set_configuration {elem $configuration_list $index}}
             }
-            
+
             {cheat_display show {[configuration] name}}
          )
-      
-         (reset_players
-         )
-         
+
+         (reset_players)
+
          ; set up the track configuration for the players that are enabled
-         (configure_tracks            
+         (configure_tracks
             {resize [gem_tracks] 0}
 
             {if {! [vocal_game]}
@@ -111,26 +136,26 @@
                ; hook up the players feedback
                {track_0 set player_feedback {object player_feedback_01}}
                {track_1 set player_feedback {object player_feedback_02}}
-               
+
                {track_0 set effect_selector {$this find guitar_fx_0}}
                {track_1 set effect_selector {$this find guitar_fx_1}}
-               
+
                {$this set_player_local {object track_0}}
                {$this set_player_local {object track_1}}
-#ifndef HX_XBOX ; REA - reset the tracks after the above objects are assigned so the player names are set right
-					;{track_0 reset}
-					;{track_1 reset}
-#endif
+               #ifndef HX_XBOX ; REA - reset the tracks after the above objects are assigned so the player names are set right
+               ;{track_0 reset}
+               ;{track_1 reset}
+               #endif
             }
-            
+
             {if [vocal_game]
                {track_0 set vocalist_volume {$this find volume_0}}
                {track_1 set vocalist_volume {$this find volume_1}}
-               
+
                ; let both tracks know if it's top or bottom
                {track_0 set side top}
                {track_1 set side bottom}
-               
+
                {track_0 update_configuration}
                {track_1 update_configuration}
             }
@@ -149,41 +174,42 @@
                      (kRegularAspect {$this set_configuration tug_of_war})
                      (kWidescreenAspect {$this set_configuration tug_of_war_wide})
                   }
-                  
                )
                (score_duel
                   {switch {rnd aspect}
                      (kRegularAspect {$this set_configuration score_duel})
                      (kWidescreenAspect {$this set_configuration score_duel_wide})
                   }
-               )              
+               )
             }
-            
+
             ; setup LOD.. head to head doesn't really need to worry about it
             {set $track_LOD 0}
-            
+
             ; apply the track speed
             {if {! [vocal_game]}
                {$this apply_track_speed}
             }
-            
+
             ; set up the mtv overlay frame
             {if {exists mtv_overlay}
-               {do ($anim {mtv_overlay find MTV_overlay.tnm})
-                   ($frame)
+               {do
+                  ($anim {mtv_overlay find MTV_overlay.tnm})
+                  ($frame)
                   {if_else [vocal_game]
                      {set $frame 5}
                      {switch {rnd aspect}
                         (kRegularAspect {set $frame 7})
                         (kWidescreenAspect {set $frame 6})
-                     }                     
+                     }
                   }
                   {$anim set_frame $frame}
                }
             }
-            
+
             ; show or hide the scores on the player feedbacks
-            {do ($player_feedback)
+            {do
+               ($player_feedback)
                {set $player_feedback {track_0 get player_feedback}}
                {if {!= $player_feedback ""}
                   {{$player_feedback find score.grp} set_showing {== [game_mode] score_duel}}
@@ -194,17 +220,21 @@
                }
             }
          )
-         
-         (get_vocal_display_mode ($track)
+
+         (get_vocal_display_mode
+            ($track)
             {if_else {== {$track get parent} ""}
                kVocalStyleScrolling
                {{$track get parent} display_mode}
             }
          )
-         
+
          (configuration_list
-            {do ($array {array 0})
-               {$this iterate (Object track_configuration) $obj
+            {do
+               ($array {array 0})
+               {$this iterate
+                  (Object track_configuration)
+                  $obj
                   {push_back $array $obj name}
                }
                $array
@@ -212,7 +242,8 @@
          )
 
          ; sets a configuration object
-         (set_configuration ($in_obj)
+         (set_configuration
+            ($in_obj)
             ; set the configuration var
             {set [configuration] $in_obj}
             ; apply the configuration
@@ -220,50 +251,51 @@
          )
 
          (enter
-            {if $edit_mode 
+            {if $edit_mode
                {$this configure_tracks}
                {$this reset}
             }
          )
 
-         (reset            
+         (reset
             ; reset all the animations
             {reset_all.trig trigger}
-            
+
             {$this set_score_diff 0}
-            
+
             ; reset the meters
             {head2head_meter reset}
-            
+
             ; reset the bre scores
             {ending_bonus_p01 reset}
             {ending_bonus_p02 reset}
-            
+
             ; setup the max-delta from the game, which has already parsed it from scoring.dta
             {if {exists beatmatch}
                {head2head_meter set max_diff {beatmatch max_delta_points}}
                {head2head_meter set tie_window {beatmatch get_tie_window}}
             }
-            
+
             ; apply the track speed
             {if {! [vocal_game]}
                {$this apply_track_speed}
             }
-               
-            {if $edit_mode 
+
+            {if $edit_mode
                ; play the intro if we're in milo
                {$this play_intro}
             }
-            
+
             {set [first_solo_player] 0}
-            
-            {if {exists game}  
+
+            {if {exists game}
                {$this setup_h2h_icons {object track_0} {object icon_01}}
                {$this setup_h2h_icons {object track_1} {object icon_02}}
             }
          )
-         
-         (setup_h2h_icons ($track $icon)
+
+         (setup_h2h_icons
+            ($track $icon)
             {if_else {!= $track ""}
                {do
                   ; set the player icon and hide the arrow
@@ -271,90 +303,99 @@
                   {$icon arrow_hide}
                   {$icon stop_deploy}
                   ; set the player names
-                  {player_name_01.lbl set text_token {get_player_name {{object track_0} get player}}}
-                  {player_name_02.lbl set text_token {get_player_name {{object track_1} get player}}}
+                  {player_name_01.lbl set
+                     text_token
+                     {get_player_name {{object track_0} get player}}
+                  }
+                  {player_name_02.lbl set
+                     text_token
+                     {get_player_name {{object track_1} get player}}
+                  }
                }
                'G'
             }
          )
-         
+
          ; track speed will depend on average difficulty
          (apply_track_speed
-         
             ; track speed will be based on average difficulty
             ; calculate the average difficluty
-            {do ($average_difficulty 0)
+            {do
+               ($average_difficulty 0)
 
-               {if {exists game}               
+               {if {exists game}
                   ; calculate average difficulty for players
-                  {set $average_difficulty {+ {{track_0 get player} difficulty} {{track_1 get player} difficulty}}}
+                  {set $average_difficulty
+                     {+ {{track_0 get player} difficulty} {{track_1 get player} difficulty}}
+                  }
                   {/= $average_difficulty 2}
                }
 
                ; normalize average difficulty to a value between 0 and 1
                {/= $average_difficulty kDifficultyExpert}
-               
+
                ; track speed is based on normalized average difficulty
-               {do ($view_time {+ [view_time_easy] {* $average_difficulty {- [view_time_expert] [view_time_easy]}}})
+               {do
+                  ($view_time
+                     {+
+                        [view_time_easy]
+                        {* $average_difficulty {- [view_time_expert] [view_time_easy]}}
+                     }
+                  )
                   {track_0 set y_per_second {/ {track_0 get top_y} $view_time}}
                   {track_1 set y_per_second {/ {track_1 get top_y} $view_time}}
                }
             }
          )
-         
-         (play_intro 
-            {script_task kTaskBeats (delay 0.001)
-               (script {intro.trig trigger})
-            }
+
+         (play_intro
+            {script_task kTaskBeats (delay 0.001) (script {intro.trig trigger})}
          )
-         
-         (set_crowd_rating ($val)
-         )
-         
-         (set_accumulative_rate ($val)
-         )
-         
+
+         (set_crowd_rating ($val))
+
+         (set_accumulative_rate ($val))
+
          ; updated when the band multiplier changes
-         (set_multiplier ($val)
-         )
-         
-         (set_aspect_ratio ($val)
-         )
-         
+         (set_multiplier ($val))
+
+         (set_aspect_ratio ($val))
+
          ; visibility for the trackpanel dir
-         (set_showing ($visible)
+         (set_showing
+            ($visible)
             {draw.grp set_showing $visible}
          )
-         
-         (showing
-            {draw.grp showing}
-         )
-         
+
+         (showing {draw.grp showing})
+
          (toggle_surface
             ; hide all the surface meshes
-            {do ($surface)
+            {do
+               ($surface)
                {set $surface {track_0 find {track_0 get surface_mesh}}}
                {$surface set_showing {! {$surface showing}}}
-               
+
                {set $surface {track_1 find {track_1 get surface_mesh}}}
                {$surface set_showing {! {$surface showing}}}
             }
-
          )
-         
+
          (toggle_nowbar
             ; show/hide all the nowbars
-            {do ($activator)
-              {set $activator {track_0 find activator.grp}}
-              {$activator set_showing {! {$activator showing}}}
-              {set $activator {track_1 find activator.grp}}
-              {$activator set_showing {! {$activator showing}}}
-            }           
-            
+            {do
+               ($activator)
+               {set $activator {track_0 find activator.grp}}
+               {$activator set_showing {! {$activator showing}}}
+               {set $activator {track_1 find activator.grp}}
+               {$activator set_showing {! {$activator showing}}}
+            }
          )
-         
-         (is_instrument_local ($track)
-            {do ($local TRUE)
+
+         (is_instrument_local
+            ($track)
+            {do
+               ($local TRUE)
                {if_else {exists game}
                   {set $local {! {{$track get player} is_net}}}
                   {do
@@ -368,23 +409,23 @@
          )
 
          ; enter the coda
-         (coda
-            {enter_coda.trig trigger}
-         )
-         
+         (coda {enter_coda.trig trigger})
+
          (coda_end
             {ending_bonus_p01 coda_end}
             {ending_bonus_p02 coda_end}
          )
-         
+
          ; set the coda score
-         (set_coda_score ($in_val)
+         (set_coda_score
+            ($in_val)
             ; TODO SOMEONE FILL ME IN!!!
             ;{ending_bonus set_score $in_val}
             1 ; just so it returns something.
-         )         
-         
-         (hth_coda_success ($player)
+         )
+
+         (hth_coda_success
+            ($player)
             {if {== {track0 player} $player}
                {bre_success_p01.trig trigger}
             }
@@ -392,17 +433,23 @@
                {bre_success_p02.trig trigger}
             }
          )
-         
-         (ending_bonus ($player)
-            {sprintf "ending_bonus_p0%d"
-               {if_else {== {track0 player} $player} 1 2}}
+
+         (ending_bonus
+            ($player)
+            {sprintf
+               "ending_bonus_p0%d"
+               {if_else {== {track0 player} $player}
+                  1
+                  2
+               }
+            }
          )
-         
-         (solo_end ($player $points $result)            
+
+         (solo_end
+            ($player $points $result)
             {if_else [first_solo_player]
                {do
-                  {[first_solo_player] solo_end 
-                      [first_solo_points] [first_solo_result]}
+                  {[first_solo_player] solo_end [first_solo_points] [first_solo_result]}
                   {$player solo_end $points $result}
                   {set [first_solo_player] 0}
                }
@@ -415,49 +462,75 @@
                }
             }
          )
-         
+
          (game_over
             {game_over.trig trigger}
-            
+
             ; remove all the pop up helps and intro icons
-            {do ($obj)
+            {do
+               ($obj)
                {set $obj {track_0 get popup_object}}
-               {if {!= $obj ""} {$obj reset}}
+               {if {!= $obj ""}
+                  {$obj reset}
+               }
                {set $obj {track_1 get popup_object}}
-               {if {!= $obj ""} {$obj reset}}
+               {if {!= $obj ""}
+                  {$obj reset}
+               }
                {set $obj {track_0 get player_intro}}
-               {if {!= $obj ""} {$obj reset}}
+               {if {!= $obj ""}
+                  {$obj reset}
+               }
                {set $obj {track_1 get player_intro}}
-               {if {!= $obj ""} {$obj reset}}
+               {if {!= $obj ""}
+                  {$obj reset}
+               }
             }
          )
-         
+
          ; pass on to the correct head to head meter
-         (set_score_diff ($val)      
-            {do ($last_winner {head2head_meter get winner})
-                ($cur_winner)
+         (set_score_diff
+            ($val)
+            {do
+               ($last_winner {head2head_meter get winner})
+               ($cur_winner)
                {head2head_meter set_score_diff $val}
                {set $cur_winner {head2head_meter get winner}}
                {if {!= $cur_winner $last_winner}
-                  {if {exists glower} {delete glower}}
+                  {if {exists glower}
+                     {delete glower}
+                  }
                   ; add a delay to prevent glow flip-flop
-                  {script_task kTaskSeconds (delay .1) (name glower)
+                  {script_task kTaskSeconds
+                     (delay .1)
+                     (name glower)
                      (script
                         {switch $cur_winner
-                           (-1 {icon_01 set_glowing TRUE} {icon_02 set_glowing FALSE})
-                           (0 {icon_01 set_glowing FALSE} {icon_02 set_glowing FALSE})
-                           (1 {icon_01 set_glowing FALSE} {icon_02 set_glowing TRUE})
+                           (-1
+                              {icon_01 set_glowing TRUE}
+                              {icon_02 set_glowing FALSE}
+                           )
+                           (0
+                              {icon_01 set_glowing FALSE}
+                              {icon_02 set_glowing FALSE}
+                           )
+                           (1
+                              {icon_01 set_glowing FALSE}
+                              {icon_02 set_glowing TRUE}
+                           )
                         }
                      )
                   }
                }
             }
          )
-         
+
          ; copied from track_paneldir.dta
-         (set_player_local ($obj)
+         (set_player_local
+            ($obj)
             {if {! [vocal_game]}
-               {do ($player_feedback {$obj get player_feedback})
+               {do
+                  ($player_feedback {$obj get player_feedback})
                   {if_else {$this is_instrument_local $obj}
                      {do
                         ; We are a local player

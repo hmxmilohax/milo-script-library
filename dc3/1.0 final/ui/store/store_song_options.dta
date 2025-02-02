@@ -1,476 +1,445 @@
-{new
-   HamPanel
+{new HamPanel
    store_song_options_panel
-   (file
-      "store_song_options.milo")
+   (file "store_song_options.milo")
    (focus right_hand.hnl)
    (back_token back)
    (showing_offer '')
    (allow_voice_control FALSE)
    (enter
-      {songs.lst
-         set_provider
-         {{store_panel offer_provider}
-            get_pack_provider}}
+      {songs.lst set_provider {{store_panel offer_provider} get_pack_provider}}
       {store_info_panel set_song_list_mode FALSE}
-      {$this refresh})
+      {$this refresh}
+   )
    SELECT_RIGHT_LIST_TOKEN
    (poll SLIDE_RIGHT_LIST_ITEM)
    (set_offer
       ($offer)
-      {set
-         [showing_offer]
-         $offer}
-      {if
-         {$this is_up}
-         {$this refresh}})
+      {set [showing_offer] $offer}
+      {if {$this is_up}
+         {$this refresh}
+      }
+   )
    (purchase_allowed
       ($offer)
       {&&
          {$offer is_available}
-         {!
-            {{store_panel offer_provider}
-               show_browser_purchased
-               $offer}}})
+         {! {{store_panel offer_provider} show_browser_purchased $offer}}
+      }
+   )
    (refresh
       {do
-         ($offer
-            [showing_offer])
+         ($offer [showing_offer])
          ($linkidx 1)
          {store_info_panel set_offer $offer}
          {store_info_panel show_full_song_details}
-         {details.grp
-            set
-            showing
-            {==
-               {$offer offer_type}
-               pack}}
-         {{store_panel offer_provider}
-            set_pack
-            $offer}
+         {details.grp set showing {== {$offer offer_type} pack}}
+         {{store_panel offer_provider} set_pack $offer}
          {songs.lst refresh}
          {provider.hnp set_format_args 0}
-         {if_else
-            {$offer is_purchased}
+         {if_else {$offer is_purchased}
             {provider.hnp set_label 0 store_download_again}
             {do
                {provider.hnp set_label 0 store_buy}
-               {if
-                  {!
-                     {$this purchase_allowed $offer}}
-                  {set $linkidx 0}}}}
-         {while
-            {>
-               {provider.hnp
-                  size
-                  (nav_items)}
-               1}
-            {provider.hnp
-               remove
-               (nav_items 1)}}
-         {if
-            {==
-               {$offer offer_type}
-               song}
+               {if {! {$this purchase_allowed $offer}}
+                  {set $linkidx 0}
+               }
+            }
+         }
+         {while {> {provider.hnp size (nav_items)} 1}
+            {provider.hnp remove (nav_items 1)}
+         }
+         {if {== {$offer offer_type} song}
             {do
-               ($pack
-                  {{store_panel offer_provider}
-                     find_pack
-                     $offer})
+               ($pack {{store_panel offer_provider} find_pack $offer})
                {if
                   {&&
                      $pack
-                     {'||'
-                        {$pack is_available}
-                        {{store_panel offer_provider}
-                           show_unavailable}}}
-                  {if
-                     {== $linkidx 1}
-                     {provider.hnp append_nav_item}}
+                     {'||' {$pack is_available} {{store_panel offer_provider} show_unavailable}}
+                  }
+                  {if {== $linkidx 1}
+                     {provider.hnp append_nav_item}
+                  }
                   {provider.hnp set_label $linkidx store_view_pack}
-                  {provider.hnp
-                     set_format_args
-                     $linkidx
-                     {$pack offer_name}}}}}
-         {if
-            {==
-               {$offer offer_type}
-               song}
+                  {provider.hnp set_format_args $linkidx {$pack offer_name}}
+               }
+            }
+         }
+         {if {== {$offer offer_type} song}
             {if_else
                {&&
                   {store_panel is_cart_enabled}
-                  {{store_panel offer_provider}
-                     is_offer_in_cart
-                     $offer}}
+                  {{store_panel offer_provider} is_offer_in_cart $offer}
+               }
                {do
-                  ($nav_idx
-                     {provider.hnp
-                        size
-                        (nav_items)})
+                  ($nav_idx {provider.hnp size (nav_items)})
                   {provider.hnp append_nav_item}
-                  {provider.hnp set_label $nav_idx store_remove_item}}
-               {if
-                  {!
-                     {$offer is_purchased}}
+                  {provider.hnp set_label $nav_idx store_remove_item}
+               }
+               {if {! {$offer is_purchased}}
                   {do
-                     ($nav_idx
-                        {provider.hnp
-                           size
-                           (nav_items)})
+                     ($nav_idx {provider.hnp size (nav_items)})
                      {provider.hnp append_nav_item}
-                     {provider.hnp set_label $nav_idx store_add_item}}}}}})
-   (enum_finished
-      {$this refresh})
+                     {provider.hnp set_label $nav_idx store_add_item}
+                  }
+               }
+            }
+         }
+      }
+   )
+   (enum_finished {$this refresh})
    (NAV_SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (right_hand.hnl
-            {switch
-               $name
+            {switch $name
                (store_buy
                   {cond
                      ({!
                            {[showing_offer]
                               is_available}}
-                        {ui push_screen store_unavailable_warning_screen})
+                        {ui push_screen store_unavailable_warning_screen}
+                     )
                      ({{store_panel offer_provider}
                            is_partially_purchased
                            [showing_offer]}
-                        {if_else
-                           {==
-                              {[showing_offer]
-                                 offer_type}
-                              pack}
+                        {if_else {== {[showing_offer] offer_type} pack}
                            {ui push_screen store_partially_purchased_warning_screen}
-                           {ui push_screen store_unavailable_warning_screen}})
+                           {ui push_screen store_unavailable_warning_screen}
+                        }
+                     )
                      ({[showing_offer]
                            partially_in_library}
-                        {ui push_screen store_library_warning_screen})
-                     {$this do_checkout}})
+                        {ui push_screen store_library_warning_screen}
+                     )
+                     {$this do_checkout}
+                  }
+               )
                (store_download_again
                   {store_info_panel stop_song_preview}
-                  {store_panel
-                     re_download
-                     [showing_offer]})
+                  {store_panel re_download [showing_offer]}
+               )
                (store_view_pack
-                  {$this
-                     set_offer
-                     {{store_panel offer_provider}
-                        find_pack
-                        [showing_offer]}})
+                  {$this set_offer {{store_panel offer_provider} find_pack [showing_offer]}}
+               )
                (store_view_singles
-                  {store_panel
-                     set_filter_pack_singles
-                     [showing_offer]}
+                  {store_panel set_filter_pack_singles [showing_offer]}
                   {store_songs_panel set top_index 0}
                   {store_songs_panel set focus_song_index 0}
-                  {ui goto_screen store_songs_screen})
+                  {ui goto_screen store_songs_screen}
+               )
                (store_add_item
                   {cond
                      ({!
                            {store_panel is_cart_enabled}}
-                        {ui push_screen store_cart_disabled_screen})
+                        {ui push_screen store_cart_disabled_screen}
+                     )
                      ({store_panel is_cart_full}
-                        {ui push_screen store_cart_full_check_cart_warning_screen})
+                        {ui push_screen store_cart_full_check_cart_warning_screen}
+                     )
                      ({!
                            {[showing_offer]
                               is_available}}
-                        {ui push_screen store_unavailable_warning_screen})
+                        {ui push_screen store_unavailable_warning_screen}
+                     )
                      ({{store_panel offer_provider}
                            is_partially_purchased
                            [showing_offer]}
-                        {if_else
-                           {==
-                              {[showing_offer]
-                                 offer_type}
-                              pack}
+                        {if_else {== {[showing_offer] offer_type} pack}
                            {ui push_screen store_add_partially_purchased_offer_to_cart_warning_screen}
-                           {ui push_screen store_unavailable_warning_screen}})
+                           {ui push_screen store_unavailable_warning_screen}
+                        }
+                     )
                      ({[showing_offer]
                            partially_in_library}
-                        {ui push_screen store_add_library_to_cart_warning_screen})
+                        {ui push_screen store_add_library_to_cart_warning_screen}
+                     )
                      {do
-                        {store_panel
-                           add_offer_to_cart
-                           [showing_offer]}
-                        {if_else
-                           {store_panel is_cart_full}
+                        {store_panel add_offer_to_cart [showing_offer]}
+                        {if_else {store_panel is_cart_full}
                            {ui push_screen store_want_to_checkout_warning_screen}
-                           {$this go_back}}}})
+                           {$this go_back}
+                        }
+                     }
+                  }
+               )
                (store_remove_item
-                  {store_panel
-                     remove_offer_from_cart
-                     [showing_offer]}
-                  {$this go_back})})
+                  {store_panel remove_offer_from_cart [showing_offer]}
+                  {$this go_back}
+               )
+            }
+         )
          (left_hand.hnl
-            {switch
-               $name
-               (back
-                  {$this go_back})})})
+            {switch $name
+               (back {$this go_back})
+            }
+         )
+      }
+   )
    (BUTTON_DOWN_MSG
-      {if_else
-         {&&
-            {shell_input in_controller_mode}
-            {== $action kAction_Cancel}}
+      {if_else {&& {shell_input in_controller_mode} {== $action kAction_Cancel}}
          {$this go_back}
-         kDataUnhandled})
+         kDataUnhandled
+      }
+   )
    (do_checkout
       {store_info_panel stop_song_preview}
-      {store_panel
-         check_out
-         [showing_offer]})
+      {store_panel check_out [showing_offer]}
+   )
    (checkout_finished
       ($purchaseMade $needsReenum)
-      {if_else
-         $needsReenum
+      {if_else $needsReenum
          {do
             {store_panel reset_cancel_timer}
-            {ui push_screen store_reenum_screen}}
+            {ui push_screen store_reenum_screen}
+         }
          {do
-            {if_else
-               $purchaseMade
+            {if_else $purchaseMade
                {do
-                  ($offer
-                     [showing_offer])
+                  ($offer [showing_offer])
                   {$this play_purchase_sound}
                   {if
                      {&&
                         {store_panel is_cart_enabled}
-                        {==
-                           {$offer offer_type}
-                           song}
-                        {{store_panel offer_provider}
-                           is_offer_in_cart
-                           $offer}}
-                     {store_panel remove_offer_from_cart $offer}}
-                  {$this go_back}}
-               {$this refresh}}}})
-   (play_purchase_sound
-      {store_purchase.snd play})
+                        {== {$offer offer_type} song}
+                        {{store_panel offer_provider} is_offer_in_cart $offer}
+                     }
+                     {store_panel remove_offer_from_cart $offer}
+                  }
+                  {$this go_back}
+               }
+               {$this refresh}
+            }
+         }
+      }
+   )
+   (play_purchase_sound {store_purchase.snd play})
    (go_back
       {if_else
          {&&
-            {store_panel
-               is_curr_filter_cart
-               {store_main_panel get focus_song_index}}
-            {store_panel is_cart_empty}}
+            {store_panel is_curr_filter_cart {store_main_panel get focus_song_index}}
+            {store_panel is_cart_empty}
+         }
          {ui goto_screen store_main_screen}
-         {ui
-            go_back_screen
-            {{ui current_screen}
-               get
-               back}}})}
-{new
-   HamScreen
+         {ui go_back_screen {{ui current_screen} get back}}
+      }
+   )
+}
+{new HamScreen
    store_song_options_screen
-   (panels meta background_panel store_song_options_panel store_info_panel store_panel)
+   (panels
+      meta
+      background_panel
+      store_song_options_panel
+      store_info_panel
+      store_panel
+   )
    (focus store_song_options_panel)
-   (back store_songs_screen)}
-{new
-   HamScreen
+   (back store_songs_screen)
+}
+{new HamScreen
    store_library_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (enter
       {do
-         ($offer
-            {store_song_options_panel get showing_offer})
-         {dialog_panel
-            set_ok_no
+         ($offer {store_song_options_panel get showing_offer})
+         {dialog_panel set_ok_no
             ({sprintf
                   "store_library_buy_%s_warning"
                   {$offer offer_type}}
-               {$offer offer_name})
-            FALSE}})
+               {$offer offer_name}
+            )
+            FALSE
+         }
+      }
+   )
    (NAV_SELECT_MSG
-      {if
-         {== $name ok}
-         {store_song_options_panel do_checkout}}
-      {ui pop_screen})}
-{new
-   HamScreen
+      {if {== $name ok}
+         {store_song_options_panel do_checkout}
+      }
+      {ui pop_screen}
+   )
+}
+{new HamScreen
    store_partially_purchased_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (enter
       {do
-         ($offer
-            {store_song_options_panel get showing_offer})
-         {dialog_panel
-            set_ok_no
-            (store_partially_purchased_warning
-               {$offer offer_name})
-            FALSE}})
+         ($offer {store_song_options_panel get showing_offer})
+         {dialog_panel set_ok_no
+            (store_partially_purchased_warning {$offer offer_name})
+            FALSE
+         }
+      }
+   )
    (NAV_SELECT_MSG
-      {if
-         {== $name ok}
-         {store_song_options_panel do_checkout}}
-      {ui pop_screen})}
-{new
-   HamScreen
+      {if {== $name ok}
+         {store_song_options_panel do_checkout}
+      }
+      {ui pop_screen}
+   )
+}
+{new HamScreen
    store_unavailable_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (enter
       {do
-         ($offer
-            {store_song_options_panel get showing_offer})
-         {dialog_panel
-            set_ok
-            (store_unavailable_warning
-               {$offer offer_name})
-            FALSE}})
-   (NAV_SELECT_MSG
-      {ui pop_screen})}
-{new
-   HamScreen
+         ($offer {store_song_options_panel get showing_offer})
+         {dialog_panel set_ok (store_unavailable_warning {$offer offer_name}) FALSE}
+      }
+   )
+   (NAV_SELECT_MSG {ui pop_screen})
+}
+{new HamScreen
    store_reenum_screen
    (panels background_confirmation_panel dialog_panel)
    (focus store_panel)
    (helpbar_confirm_label none)
    (enter
       {dialog_panel set_msg store_reenum FALSE}
-      {store_panel start_reenum_if_needed})
+      {store_panel start_reenum_if_needed}
+   )
    (reenum_finished
       ($purchaseMade)
-      {if_else
-         $purchaseMade
+      {if_else $purchaseMade
          {do
-            ($offer
-               {store_song_options_panel get showing_offer})
+            ($offer {store_song_options_panel get showing_offer})
             {store_song_options_panel play_purchase_sound}
             {if
                {&&
                   {store_panel is_cart_enabled}
-                  {==
-                     {$offer offer_type}
-                     song}
-                  {{store_panel offer_provider}
-                     is_offer_in_cart
-                     $offer}}
-               {store_panel remove_offer_from_cart $offer}}
+                  {== {$offer offer_type} song}
+                  {{store_panel offer_provider} is_offer_in_cart $offer}
+               }
+               {store_panel remove_offer_from_cart $offer}
+            }
             {if_else
                {&&
-                  {store_panel
-                     is_curr_filter_cart
-                     {store_main_panel get focus_song_index}}
-                  {store_panel is_cart_empty}}
+                  {store_panel is_curr_filter_cart {store_main_panel get focus_song_index}}
+                  {store_panel is_cart_empty}
+               }
                {ui pop_screen store_main_screen}
-               {ui
-                  pop_screen
-                  {store_song_options_screen get back}}}}
+               {ui pop_screen {store_song_options_screen get back}}
+            }
+         }
          {do
             {store_song_options_panel refresh}
-            {ui pop_screen}}})
+            {ui pop_screen}
+         }
+      }
+   )
    (BUTTON_DOWN_MSG
-      {if
-         {&&
-            {shell_input in_controller_mode}
-            {== $action kAction_Cancel}}
-         {$this go_back}}
-      kDataUnhandled)
+      {if {&& {shell_input in_controller_mode} {== $action kAction_Cancel}}
+         {$this go_back}
+      }
+      kDataUnhandled
+   )
    (NAV_SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (left_hand.hnl
-            {switch
-               $name
-               (back
-                  {$this go_back})})})
+            {switch $name
+               (back {$this go_back})
+            }
+         )
+      }
+   )
    (go_back
-      {if
-         {store_panel allow_cancel}
+      {if {store_panel allow_cancel}
          {store_song_options_panel refresh}
-         {ui pop_screen}})}
-{new
-   HamScreen
+         {ui pop_screen}
+      }
+   )
+}
+{new HamScreen
    store_cart_full_check_cart_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel set_ok_no store_cart_full_check_cart FALSE})
+   (enter {dialog_panel set_ok_no store_cart_full_check_cart FALSE})
    (NAV_SELECT_MSG
-      {if_else
-         {== $name ok}
+      {if_else {== $name ok}
          {do
             {store_panel set_filter_to_cart}
             {store_songs_panel set top_index 0}
             {store_songs_panel set focus_song_index 0}
-            {ui pop_screen store_songs_screen}}
-         {ui pop_screen}})}
-{new
-   HamScreen
+            {ui pop_screen store_songs_screen}
+         }
+         {ui pop_screen}
+      }
+   )
+}
+{new HamScreen
    store_add_partially_purchased_offer_to_cart_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (enter
       {do
-         ($offer
-            {store_song_options_panel get showing_offer})
-         {dialog_panel
-            set_ok_no
-            (store_partially_purchased_warning
-               {$offer offer_name})
-            FALSE}})
+         ($offer {store_song_options_panel get showing_offer})
+         {dialog_panel set_ok_no
+            (store_partially_purchased_warning {$offer offer_name})
+            FALSE
+         }
+      }
+   )
    (NAV_SELECT_MSG
-      {if_else
-         {== $name ok}
+      {if_else {== $name ok}
          {do
-            ($offer
-               {store_song_options_panel get showing_offer})
+            ($offer {store_song_options_panel get showing_offer})
             {store_panel add_offer_to_cart $offer}
-            {if_else
-               {store_panel is_cart_full}
+            {if_else {store_panel is_cart_full}
                {ui goto_screen store_want_to_checkout_warning_screen}
-               {ui
-                  pop_screen
-                  {store_song_options_screen get back}}}}
-         {ui pop_screen}})}
-{new
-   HamScreen
+               {ui pop_screen {store_song_options_screen get back}}
+            }
+         }
+         {ui pop_screen}
+      }
+   )
+}
+{new HamScreen
    store_add_library_to_cart_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
    (enter
       {do
-         ($offer
-            {store_song_options_panel get showing_offer})
-         {dialog_panel
-            set_ok_no
+         ($offer {store_song_options_panel get showing_offer})
+         {dialog_panel set_ok_no
             ({sprintf
                   "store_library_cart_%s_warning"
                   {$offer offer_type}}
-               {$offer offer_name})
-            FALSE}})
+               {$offer offer_name}
+            )
+            FALSE
+         }
+      }
+   )
    (NAV_SELECT_MSG
-      {if_else
-         {== $name ok}
+      {if_else {== $name ok}
          {do
-            ($offer
-               {store_song_options_panel get showing_offer})
+            ($offer {store_song_options_panel get showing_offer})
             {store_panel add_offer_to_cart $offer}
-            {if_else
-               {store_panel is_cart_full}
+            {if_else {store_panel is_cart_full}
                {ui goto_screen store_want_to_checkout_warning_screen}
-               {ui
-                  pop_screen
-                  {store_song_options_screen get back}}}}
-         {ui pop_screen}})}
-{new
-   HamScreen
+               {ui pop_screen {store_song_options_screen get back}}
+            }
+         }
+         {ui pop_screen}
+      }
+   )
+}
+{new HamScreen
    store_want_to_checkout_warning_screen
    (panels background_confirmation_panel dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel set_ok_no store_cart_full_checkout FALSE})
+   (enter {dialog_panel set_ok_no store_cart_full_checkout FALSE})
    (NAV_SELECT_MSG
-      {if_else
-         {== $name ok}
+      {if_else {== $name ok}
          {do
             {store_panel set_filter_to_cart}
             {store_songs_panel set top_index 0}
             {store_songs_panel set focus_song_index 0}
-            {ui pop_screen store_songs_screen}}
-         {ui
-            pop_screen
-            {store_song_options_screen get back}}})}
+            {ui pop_screen store_songs_screen}
+         }
+         {ui pop_screen {store_song_options_screen get back}}
+      }
+   )
+}

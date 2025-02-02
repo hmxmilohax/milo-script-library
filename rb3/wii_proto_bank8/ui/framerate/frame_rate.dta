@@ -5,48 +5,29 @@
 {set $frm_procB ''}
 {set $frm_show_shot TRUE}
 {set $frm_debug_print FALSE}
-#define FRAMERATE_MODE_DEFAULT_SONG
-(roundabout)
-#define FRAMERATE_MODE_NUM_OVERDRIVE_PLAYERS
-(2)
+#define FRAMERATE_MODE_DEFAULT_SONG (roundabout)
+#define FRAMERATE_MODE_NUM_OVERDRIVE_PLAYERS (2)
 {set $frm_shot 0}
-{set
-   $frm_data
-   ()}
-{new
-   UIPanel
+{set $frm_data ()}
+{new UIPanel
    frame_rate_panel
-   (file
-      "frame_rate.milo")
+   (file "frame_rate.milo")
    (focus venue.lst)
-   (load
-      {content_mgr start_refresh})
-   (is_loaded
-      {content_mgr refresh_done})
+   (load {content_mgr start_refresh})
+   (is_loaded {content_mgr refresh_done})
    (enter
-      {venue.lst
-         set_data
-         {enumerate_frame_rate_results}}
-      {measure.lst
-         set_data
-         (cpu)}
-      {char.lst
-         set_data
-         (budget expensive)}
-      #define PRO_ALL_INTS
-      ('pro (all)')
-      #define ALL_INST
-      ('7p  (all)')
-      {instruments.lst
-         set_data
-         ('plastic (g/k)' PRO_ALL_INTS ALL_INST 'pro (g/k)' 'pro (b/k)' 'pro (g/b)')}
-      {autoplay.lst
-         set_data
-         (yes no)}
-      {song.lst
-         set_data
-         (roundabout)}
-      {song.lst set_selected FRAMERATE_MODE_DEFAULT_SONG})
+      {venue.lst set_data {enumerate_frame_rate_results}}
+      {measure.lst set_data (cpu)}
+      {char.lst set_data (budget expensive)}
+      #define PRO_ALL_INTS ('pro (all)')
+      #define ALL_INST ('7p  (all)')
+      {instruments.lst set_data
+         ('plastic (g/k)' PRO_ALL_INTS ALL_INST 'pro (g/k)' 'pro (b/k)' 'pro (g/b)')
+      }
+      {autoplay.lst set_data (yes no)}
+      {song.lst set_data (roundabout)}
+      {song.lst set_selected FRAMERATE_MODE_DEFAULT_SONG}
+   )
    (SELECT_MSG
       {if
          {setup_framerate_mode
@@ -55,10 +36,13 @@
             {char.lst selected_sym}
             {instruments.lst selected_sym}
             {autoplay.lst selected_sym}
-            {song.lst selected_sym}}
-         {ui goto_screen preloading_screen}})}
-{func
-   frm_init_data
+            {song.lst selected_sym}
+         }
+         {ui goto_screen preloading_screen}
+      }
+   )
+}
+{func frm_init_data
    ($venue $measure)
    {do
       ($filename
@@ -67,559 +51,455 @@
             $venue
             "_keep_"
             {sysplatform_sym}
-            ".dta"})
+            ".dta"
+         }
+      )
       ($data_tag
          {symbol
-            {sprint
-               "shot_"
-               $measure
-               "_sort"}})
-      ($file_data
-         {read_file $filename})
-      {if_else
-         {>
-            {size $file_data}
-            0}
+            {sprint "shot_" $measure "_sort"}
+         }
+      )
+      ($file_data {read_file $filename})
+      {if_else {> {size $file_data} 0}
          {do
-            {set
-               $frm_data
-               {elem
-                  {find $file_data $data_tag}
-                  1}}
-            TRUE}
+            {set $frm_data {elem {find $file_data $data_tag} 1}}
+            TRUE
+         }
          {do
-            {cheat_display
-               show
+            {cheat_display show
                {sprint
                   "framerate mode: no CRB data for "
                   $venue
                   " on "
                   {sysplatform_sym}
-                  ", wait for new build"}}
-            FALSE}}}}
-{func
-   frm_init_char
+                  ", wait for new build"
+               }
+            }
+            FALSE
+         }
+      }
+   }
+}
+{func frm_init_char
    ($char_type)
    {do
-      ($char_demand
-         {symbol
-            {sprint
-               $char_type
-               "_male"}})
-      {$bandwardrobe set demand_load $char_demand}}}
-{func
-   setup_framerate_mode
+      ($char_demand {symbol {sprint $char_type "_male"}})
+      {$bandwardrobe set demand_load $char_demand}
+   }
+}
+{func setup_framerate_mode
    ($venue $measure $char_type $instrument_type $autoplay_sym $song)
    {do
-      {if_else
-         {frm_init_data $venue $measure}
+      {if_else {frm_init_data $venue $measure}
          {do
-            ($autoplay
-               {== $autoplay_sym yes})
-            ($char_demand
-               {symbol
-                  {sprint
-                     $char_type
-                     "_male"}})
+            ($autoplay {== $autoplay_sym yes})
+            ($char_demand {symbol {sprint $char_type "_male"}})
             ($char_male
                {symbol
-                  {sprint
-                     {sysplatform_sym}
-                     "_"
-                     $char_type
-                     "_male"}})
+                  {sprint {sysplatform_sym} "_" $char_type "_male"}
+               }
+            )
             ($char_female
                {symbol
-                  {sprint
-                     {sysplatform_sym}
-                     "_"
-                     $char_type
-                     "_female"}})
+                  {sprint {sysplatform_sym} "_" $char_type "_female"}
+               }
+            )
             {gamemode set_mode frame_rate}
-            {switch
-               $instrument_type
+            {switch $instrument_type
                (PRO_ALL_INTS
                   {frm_init_char $char_type}
                   {setup_game
                      $song
                      $venue
-                     ((vocals kDifficultyExpert $autoplay)
+                     (
+                        (vocals kDifficultyExpert $autoplay)
                         (real_guitar kDifficultyExpert $autoplay)
                         (real_keys kDifficultyExpert $autoplay)
-                        (drum kDifficultyExpert $autoplay))})
+                        (drum kDifficultyExpert $autoplay)
+                     )
+                  }
+               )
                (ALL_INST
                   {frm_init_char $char_type}
                   {modifier_mgr enable_auto_vocals}
                   {setup_game
                      $song
                      $venue
-                     ((bass kDifficultyExpert $autoplay)
+                     (
+                        (bass kDifficultyExpert $autoplay)
                         (real_guitar kDifficultyExpert $autoplay)
                         (real_keys kDifficultyExpert $autoplay)
-                        (drum kDifficultyExpert $autoplay))})
+                        (drum kDifficultyExpert $autoplay)
+                     )
+                  }
+               )
                ('pro (g/k)'
                   {cheat_debug_prefabs}
                   {setup_game
                      $song
                      $venue
-                     ((vocals kDifficultyExpert $autoplay $char_male)
+                     (
+                        (vocals kDifficultyExpert $autoplay $char_male)
                         (real_guitar kDifficultyExpert $autoplay $char_female)
                         (real_keys kDifficultyExpert $autoplay $char_male)
-                        (drum kDifficultyExpert $autoplay $char_female))})
+                        (drum kDifficultyExpert $autoplay $char_female)
+                     )
+                  }
+               )
                ('pro (b/k)'
                   {cheat_debug_prefabs}
                   {setup_game
                      $song
                      $venue
-                     ((vocals kDifficultyExpert $autoplay $char_male)
+                     (
+                        (vocals kDifficultyExpert $autoplay $char_male)
                         (real_bass kDifficultyExpert $autoplay $char_female)
                         (real_keys kDifficultyExpert $autoplay $char_male)
-                        (drum kDifficultyExpert $autoplay $char_female))})
+                        (drum kDifficultyExpert $autoplay $char_female)
+                     )
+                  }
+               )
                ('pro (g/b)'
                   {cheat_debug_prefabs}
                   {setup_game
                      $song
                      $venue
-                     ((vocals kDifficultyExpert $autoplay $char_male)
+                     (
+                        (vocals kDifficultyExpert $autoplay $char_male)
                         (real_guitar kDifficultyExpert $autoplay $char_female)
                         (real_bass kDifficultyExpert $autoplay $char_male)
-                        (drum kDifficultyExpert $autoplay $char_female))})
+                        (drum kDifficultyExpert $autoplay $char_female)
+                     )
+                  }
+               )
                ('plastic (g/k)'
                   {frm_init_char $char_type}
                   {setup_game
                      $song
                      $venue
-                     ((vocals kDifficultyExpert $autoplay $char_male)
+                     (
+                        (vocals kDifficultyExpert $autoplay $char_male)
                         (guitar kDifficultyExpert $autoplay $char_female)
                         (keys kDifficultyExpert $autoplay $char_male)
-                        (drum kDifficultyExpert $autoplay $char_female))})}
+                        (drum kDifficultyExpert $autoplay $char_female)
+                     )
+                  }
+               )
+            }
             {meta_performer set_realdrums_override TRUE}
             {meta_performer set_harmony_override TRUE}
             {{{get_track_panel my_track_panel_dir}
                   get_gem_track
-                  0}
-               set
+                  0} set
                fake_finger_shape
-               TRUE}
+               TRUE
+            }
             {{{get_track_panel my_track_panel_dir}
                   get_gem_track
-                  0}
-               set
+                  0} set
                cycle_fake_finger_shapes
-               TRUE}
+               TRUE
+            }
             {{{get_track_panel my_track_panel_dir}
                   get_gem_track
-                  0}
-               set
+                  0} set
                random_shape_frame_count
-               10}
+               10
+            }
             {set $fake_controllers TRUE}
-            TRUE}
-         {do FALSE}}}}
-{new
-   BandScreen
-   frame_rate_screen
-   (panels frame_rate_panel)}
-{new
-   UIPanel
+            TRUE
+         }
+         {do
+            FALSE
+         }
+      }
+   }
+}
+{new BandScreen frame_rate_screen (panels frame_rate_panel)}
+{new UIPanel
    frame_rate_game_panel
    (enter
       {handle
-         ($banddirector set disable_picking 1)}
+         ($banddirector set disable_picking 1)
+      }
       {frame_rate_game_screen update_shot}
       {set $notify_level 0}
       {do
          ($i 0)
-         {beatmatch
-            foreach_active_player
-            $p
-            {handle
-               ($p set_auto_play_error 34)}
-            {if
-               {< $i FRAMERATE_MODE_NUM_OVERDRIVE_PLAYERS}
-               {handle
-                  ($p set_permanent_overdrive TRUE)}}
-            {'++' $i}}}
-      {beatmatch jump 455000})}
-{func
-   fake_frm_update_shot
+         {beatmatch foreach_active_player $p
+            {handle ($p set_auto_play_error 34)}
+            {if {< $i FRAMERATE_MODE_NUM_OVERDRIVE_PLAYERS}
+               {handle ($p set_permanent_overdrive TRUE)}
+            }
+            {'++' $i}
+         }
+      }
+      {beatmatch jump 455000}
+   )
+}
+{func fake_frm_update_shot
    {do
-      ($source
-         {$banddirector camera_source})
-      ($datum
-         {elem $frm_data $frm_shot})
-      ($shot_name
-         {elem
-            {find $datum shot}
-            1})
-      ($world_shot
-         {$source find $shot_name FALSE})
-      {if_else
-         $world_shot
+      ($source {$banddirector camera_source})
+      ($datum {elem $frm_data $frm_shot})
+      ($shot_name {elem {find $datum shot} 1})
+      ($world_shot {$source find $shot_name FALSE})
+      {if_else $world_shot
          {cond
             ({!
                   {$world_shot platform_ok}}
-               {cheat_display
-                  show
-                  {sprint
-                     "wrong platform: "
-                     $shot_name}})
+               {cheat_display show {sprint "wrong platform: " $shot_name}}
+            )
             ({$world_shot get disabled}
-               {cheat_display
-                  show
-                  {sprint
-                     "shot disabled: "
-                     $shot_name}})
+               {cheat_display show {sprint "shot disabled: " $shot_name}}
+            )
             {handle
-               ($banddirector set disable_picking TRUE)}
-            {$banddirector
-               force_shot
-               {$world_shot name}}
-            {cheat_display
-               show
-               {sprint
-                  "shot "
-                  $frm_shot
-                  ": "
-                  $shot_name}}}
-         {cheat_display
-            show
-            {sprint
-               "couldn't find shot: "
-               $shot_name}}}}}
-{func
-   frm_go
-   {ui goto_screen frame_rate_screen}}
-{func
-   frm_forward
+               ($banddirector set disable_picking TRUE)
+            }
+            {$banddirector force_shot {$world_shot name}}
+            {cheat_display show
+               {sprint "shot " $frm_shot ": " $shot_name}
+            }
+         }
+         {cheat_display show {sprint "couldn't find shot: " $shot_name}}
+      }
+   }
+}
+{func frm_go
+   {ui goto_screen frame_rate_screen}
+}
+{func frm_forward
    ($amount)
-   {if
-      {>
-         {size $frm_data}
-         0}
+   {if {> {size $frm_data} 0}
       {'+=' $frm_shot $amount}
       {do
          ($valid_shot FALSE)
-         {while
-            {! $valid_shot}
-            {if
-               {>=
-                  $frm_shot
-                  {size $frm_data}}
-               {set $frm_shot 0}}
-            {if_else
-               {frm_filter_shot $frm_shot $frm_debug_print FALSE}
+         {while {! $valid_shot}
+            {if {>= $frm_shot {size $frm_data}}
+               {set $frm_shot 0}
+            }
+            {if_else {frm_filter_shot $frm_shot $frm_debug_print FALSE}
                {set $valid_shot TRUE}
-               {'++' $frm_shot}}}
-         {if_else
-            {gamemode in_mode frame_rate}
+               {'++' $frm_shot}
+            }
+         }
+         {if_else {gamemode in_mode frame_rate}
             {frame_rate_game_screen update_shot}
-            {fake_frm_update_shot}}}}}
-{func
-   frm_backward
+            {fake_frm_update_shot}
+         }
+      }
+   }
+}
+{func frm_backward
    ($amount)
-   {if
-      {>
-         {size $frm_data}
-         0}
+   {if {> {size $frm_data} 0}
       {-= $frm_shot $amount}
       {do
          ($valid_shot FALSE)
-         {while
-            {! $valid_shot}
-            {if
-               {<= $frm_shot -1}
-               {set
-                  $frm_shot
-                  {-
-                     {size $frm_data}
-                     1}}}
-            {if_else
-               {frm_filter_shot $frm_shot $frm_debug_print FALSE}
+         {while {! $valid_shot}
+            {if {<= $frm_shot -1}
+               {set $frm_shot {- {size $frm_data} 1}}
+            }
+            {if_else {frm_filter_shot $frm_shot $frm_debug_print FALSE}
                {set $valid_shot TRUE}
-               {-- $frm_shot}}}
-         {if_else
-            {gamemode in_mode frame_rate}
+               {-- $frm_shot}
+            }
+         }
+         {if_else {gamemode in_mode frame_rate}
             {frame_rate_game_screen update_shot}
-            {fake_frm_update_shot}}}}}
-{func
-   frm_zero
-   {if
-      {>
-         {size $frm_data}
-         0}
+            {fake_frm_update_shot}
+         }
+      }
+   }
+}
+{func frm_zero
+   {if {> {size $frm_data} 0}
       {set $frm_shot 0}
-      {if_else
-         {gamemode in_mode frame_rate}
+      {if_else {gamemode in_mode frame_rate}
          {frame_rate_game_screen update_shot}
-         {fake_frm_update_shot}}}}
-{func
-   frm_goto
+         {fake_frm_update_shot}
+      }
+   }
+}
+{func frm_goto
    ($shot_name)
-   {if
-      {>
-         {size $frm_data}
-         0}
+   {if {> {size $frm_data} 0}
       {do
          ($found_shot 0)
-         {foreach_int
-            $i
-            0
-            {size $frm_data}
+         {foreach_int $i 0 {size $frm_data}
             {do
-               ($datum
-                  {elem $frm_data $i})
-               ($cur_shot_name
-                  {elem
-                     {find $datum shot}
-                     1})
-               {if
-                  {== $cur_shot_name $shot_name}
+               ($datum {elem $frm_data $i})
+               ($cur_shot_name {elem {find $datum shot} 1})
+               {if {== $cur_shot_name $shot_name}
                   {set $frm_shot $i}
-                  {set $found_shot 1}}}}
-         {if_else
-            $found_shot
-            {if_else
-               {gamemode in_mode frame_rate}
+                  {set $found_shot 1}
+               }
+            }
+         }
+         {if_else $found_shot
+            {if_else {gamemode in_mode frame_rate}
                {frame_rate_game_screen update_shot}
-               {fake_frm_update_shot}}
-            {cheat_display
-               show
-               {sprint
-                  "couldn't find shot: "
-                  $shot_name}}}}}}
-{func
-   frm_filter_shot
+               {fake_frm_update_shot}
+            }
+            {cheat_display show {sprint "couldn't find shot: " $shot_name}}
+         }
+      }
+   }
+}
+{func frm_filter_shot
    ($shot_num $do_print $do_cheat_disp)
    {do
-      ($source
-         {$banddirector camera_source})
-      ($datum
-         {elem $frm_data $shot_num})
-      ($shot_name
-         {elem
-            {find $datum shot}
-            1})
-      ($world_shot
-         {$source find $shot_name FALSE})
-      {if_else
-         $world_shot
+      ($source {$banddirector camera_source})
+      ($datum {elem $frm_data $shot_num})
+      ($shot_name {elem {find $datum shot} 1})
+      ($world_shot {$source find $shot_name FALSE})
+      {if_else $world_shot
          {cond
             ({!
                   {$world_shot platform_ok}}
-               {if
-                  $do_print
-                  {print
-                     "shot "
-                     $shot_num
-                     ": "
-                     $shot_name
-                     ": wrong platform\n"}}
-               {if
-                  $do_cheat_disp
-                  {cheat_display
-                     show
-                     {sprint
-                        "shot "
-                        $shot_num
-                        ": "
-                        $shot_name
-                        ": wrong platform"}}}
-               FALSE)
+               {if $do_print
+                  {print "shot " $shot_num ": " $shot_name ": wrong platform\n"}
+               }
+               {if $do_cheat_disp
+                  {cheat_display show
+                     {sprint "shot " $shot_num ": " $shot_name ": wrong platform"}
+                  }
+               }
+               FALSE
+            )
             ({$world_shot get disabled}
-               {if
-                  $do_print
-                  {print
-                     "shot "
-                     $shot_num
-                     ": "
-                     $shot_name
-                     ": shot disabled\n"}}
-               {if
-                  $do_cheat_disp
-                  {cheat_display
-                     show
-                     {sprint
-                        "shot "
-                        $shot_num
-                        ": "
-                        $shot_name
-                        ": shot disabled"}}}
-               FALSE)
-            TRUE}
+               {if $do_print
+                  {print "shot " $shot_num ": " $shot_name ": shot disabled\n"}
+               }
+               {if $do_cheat_disp
+                  {cheat_display show
+                     {sprint "shot " $shot_num ": " $shot_name ": shot disabled"}
+                  }
+               }
+               FALSE
+            )
+            TRUE
+         }
          {do
-            {if
-               $do_print
-               {print
-                  "shot "
-                  $shot_num
-                  ": "
-                  $shot_name
-                  ": invalid shot\n"}}
-            {if
-               $do_cheat_disp
-               {cheat_display
-                  show
-                  {sprint
-                     "shot "
-                     $shot_num
-                     ": "
-                     $shot_name
-                     ": invalid shot"}}}
-            FALSE}}}}
-{new
-   BandScreen
+            {if $do_print
+               {print "shot " $shot_num ": " $shot_name ": invalid shot\n"}
+            }
+            {if $do_cheat_disp
+               {cheat_display show
+                  {sprint "shot " $shot_num ": " $shot_name ": invalid shot"}
+               }
+            }
+            FALSE
+         }
+      }
+   }
+}
+{new BandScreen
    frame_rate_game_screen
-   (panels game world_panel coop_track_panel frame_rate_game_panel sync_audio_net_panel)
+   (panels
+      game
+      world_panel
+      coop_track_panel
+      frame_rate_game_panel
+      sync_audio_net_panel
+   )
    GAME_SCREEN_HANDLERS
    (back splash_screen)
    (loop_timeout 480.0)
    (update_next_poll TRUE)
    (poll
-      {if
-         {&&
-            $update_next_poll
-            {<
-               {taskmgr seconds}
-               [loop_timeout]}}
+      {if {&& $update_next_poll {< {taskmgr seconds} [loop_timeout]}}
          {$this update_shot}
          {set $update_next_poll FALSE}
-         {print
-            "reset time\n"}}
-      {if
-         {&&
-            {>
-               {taskmgr seconds}
-               [loop_timeout]}
-            {! $update_next_poll}}
+         {print "reset time\n"}
+      }
+      {if {&& {> {taskmgr seconds} [loop_timeout]} {! $update_next_poll}}
          {beatmatch jump 455000}
-         {set $update_next_poll TRUE}})
+         {set $update_next_poll TRUE}
+      }
+   )
    (BUTTON_DOWN_MSG
-      {switch
-         $raw_button
-         (kPad_X
-            {frm_forward 1})
-         (kPad_Circle
-            {frm_backward 1})
-         (kPad_Square
-            {frm_forward 10})
-         (kPad_Tri
-            {frm_backward 10})
-         kDataUnhandled})
+      {switch $raw_button
+         (kPad_X {frm_forward 1})
+         (kPad_Circle {frm_backward 1})
+         (kPad_Square {frm_forward 10})
+         (kPad_Tri {frm_backward 10})
+         kDataUnhandled
+      }
+   )
    (update_shot
-      {if
-         {frm_filter_shot $frm_shot FALSE TRUE}
+      {if {frm_filter_shot $frm_shot FALSE TRUE}
          {do
-            ($source
-               {$banddirector camera_source})
-            ($datum
-               {elem $frm_data $frm_shot})
-            ($shot_name
-               {elem
-                  {find $datum shot}
-                  1})
-            ($procA
-               {elem
-                  {find $datum postproc}
-                  1})
-            ($procB
-               {elem
-                  {find $datum postproc}
-                  2})
-            ($presets
-               {find $datum preset})
-            ($world_shot
-               {$source find $shot_name FALSE})
-            ($world_procA
-               {$source find $procA FALSE})
-            ($world_procB
-               {$source find $procB FALSE})
-            ($presetA
-               {elem $presets 1})
-            ($presetB
-               {elem $presets 2})
-            ($world_pp
-               {$source find world.pp})
-            ($world
-               {$banddirector get_curworld})
-            {if
-               {!= $frm_procA ''}
+            ($source {$banddirector camera_source})
+            ($datum {elem $frm_data $frm_shot})
+            ($shot_name {elem {find $datum shot} 1})
+            ($procA {elem {find $datum postproc} 1})
+            ($procB {elem {find $datum postproc} 2})
+            ($presets {find $datum preset})
+            ($world_shot {$source find $shot_name FALSE})
+            ($world_procA {$source find $procA FALSE})
+            ($world_procB {$source find $procB FALSE})
+            ($presetA {elem $presets 1})
+            ($presetB {elem $presets 2})
+            ($world_pp {$source find world.pp})
+            ($world {$banddirector get_curworld})
+            {if {!= $frm_procA ''}
                {set $procA $frm_procA}
-               {set
-                  $world_procA
-                  {$source find $procA FALSE}}}
-            {if
-               {!= $frm_procB ''}
+               {set $world_procA
+                  {$source find $procA FALSE}
+               }
+            }
+            {if {!= $frm_procB ''}
                {set $procB $frm_procB}
-               {set
-                  $world_procB
-                  {$source find $procB FALSE}}}
-            {if
-               {!= $frm_presetA ''}
-               {set $presetA $frm_presetA}}
-            {if
-               {!= $frm_presetB ''}
-               {set $presetB $frm_presetB}}
-            {handle
-               ($world start)}
-            {handle
-               ($world intro_start)}
-            {$banddirector
-               force_shot
-               {$world_shot name}}
+               {set $world_procB
+                  {$source find $procB FALSE}
+               }
+            }
+            {if {!= $frm_presetA ''}
+               {set $presetA $frm_presetA}
+            }
+            {if {!= $frm_presetB ''}
+               {set $presetB $frm_presetB}
+            }
+            {handle ($world start)}
+            {handle ($world intro_start)}
+            {$banddirector force_shot {$world_shot name}}
             {$banddirector set lightpreset_interp_enabled FALSE}
-            {if
-               {! $frm_blend_presets}
-               {set $presetB $presetA}}
+            {if {! $frm_blend_presets}
+               {set $presetB $presetA}
+            }
             {$banddirector stomp_presets $presetA $presetB}
             {$world_pp select}
             {$world_pp set force_current_interp FALSE}
             {$world_pp interp $world_procA $world_procB 0.5}
             {$world_pp set force_current_interp TRUE}
-            {if
-               $frm_show_shot
-               {cheat_display
-                  show
-                  {sprint
-                     "shot "
-                     $frm_shot
-                     ": "
-                     $shot_name}}}
-            {if
-               $frm_debug_print
-               {print
-                  "postproc A: "
-                  $procA}
-               {if
-                  {!= $frm_procA ''}
-                  {print
-                     " (forced)"}}
-               {print
-                  "\n"}
-               {print
-                  "postproc B: "
-                  $procB}
-               {if
-                  {!= $frm_procB ''}
-                  {print
-                     " (forced)"}}
-               {print
-                  "\n"}
-               {print
-                  "preset A: "
-                  $presetA}
-               {if
-                  {!= $frm_presetA ''}
-                  {print
-                     " (forced)"}}
-               {print
-                  "\n"}
-               {print
-                  "preset B: "
-                  $presetB}
-               {if
-                  {!= $frm_presetB ''}
-                  {print
-                     " (forced)"}}
-               {print
-                  "\n"}}}})}
+            {if $frm_show_shot
+               {cheat_display show
+                  {sprint "shot " $frm_shot ": " $shot_name}
+               }
+            }
+            {if $frm_debug_print
+               {print "postproc A: " $procA}
+               {if {!= $frm_procA ''}
+                  {print " (forced)"}
+               }
+               {print "\n"}
+               {print "postproc B: " $procB}
+               {if {!= $frm_procB ''}
+                  {print " (forced)"}
+               }
+               {print "\n"}
+               {print "preset A: " $presetA}
+               {if {!= $frm_presetA ''}
+                  {print " (forced)"}
+               }
+               {print "\n"}
+               {print "preset B: " $presetB}
+               {if {!= $frm_presetB ''}
+                  {print " (forced)"}
+               }
+               {print "\n"}
+            }
+         }
+      }
+   )
+}

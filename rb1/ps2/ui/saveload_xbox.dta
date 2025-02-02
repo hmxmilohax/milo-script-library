@@ -1,21 +1,21 @@
-
-
 ;; PUBLIC INTERFACE (used by saveload.dta)
 
 ;; Call this to kick off the autoload process
-{func autoload_look_for_new_signin ($save_if_missing)
+{func autoload_look_for_new_signin
+   ($save_if_missing)
    {if {! $saveload_ui_is_up}
       {autoload_screen set save_if_missing $save_if_missing}
       {set $save_load_mode kAutoLoad}
       {set $saveload_goto_type kMetaNextTypePushPop}
-   
-      {do ($player_num {memcardmgr get_new_signin_player_num})
+
+      {do
+         ($player_num {memcardmgr get_new_signin_player_num})
          {if_else {== $player_num -1}
             {xbox_saveload_cleanup_and_shutdown}
             ; else
             {do
                {xbox_saveload_begin_async}
-   
+
                {set $saveload_player_num $player_num}
                {ui push_screen autoload_start_screen}
             }
@@ -24,17 +24,18 @@
    }
 }
 
-
 ;; Kick off an xbox autosave flow
-{func xbox_autosave_start ($goto_type $next_screen)
+{func xbox_autosave_start
+   ($goto_type $next_screen)
    ;; init mode
    {if {! $saveload_ui_is_up}
       {set $save_load_mode kAutoSave}
-   
+
       {set $saveload_goto_screen $next_screen}
       {set $saveload_goto_type $goto_type}
 
-      {do ($player_num {memcardmgr get_autosavable_player_num})
+      {do
+         ($player_num {memcardmgr get_autosavable_player_num})
          {if_else {!= $player_num -1}
             {do
                ;; prepare for an async op w/ popup interface
@@ -44,48 +45,28 @@
                {if_else {memcardmgr is_device_valid $player_num}
                   {switch $saveload_goto_type
                      (
-                        (
-                           kMetaNextTypeGotoPop
-                           kMetaNextTypeGotoGoto
-                           kMetaNextTypeGotoPopGoto
-                        )
+                        (kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
                         {goto_save_screen_with_overwrite}
                      )
                      (
-                        (
-                           kMetaNextTypePushPop
-                           kMetaNextTypePushPopGoto
-                        )
+                        (kMetaNextTypePushPop kMetaNextTypePushPopGoto)
                         {push_save_screen_with_overwrite}
                      )
                      ; default
-                     {fail "Unknown $saveload_goto_type: "
-                        $saveload_goto_type
-                        "\n"
-                     }
+                     {fail "Unknown $saveload_goto_type: " $saveload_goto_type "\n"}
                   }
                   ; else
                   {switch $saveload_goto_type
                      (
-                        (
-                           kMetaNextTypeGotoPop
-                           kMetaNextTypeGotoGoto
-                           kMetaNextTypeGotoPopGoto
-                        )
+                        (kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
                         {ui goto_screen save_device_invalid}
                      )
                      (
-                        (
-                           kMetaNextTypePushPop
-                           kMetaNextTypePushPopGoto
-                        )
+                        (kMetaNextTypePushPop kMetaNextTypePushPopGoto)
                         {ui push_screen save_device_invalid}
                      )
                      ; default
-                     {fail "Unknown $saveload_goto_type: "
-                        $saveload_goto_type
-                        "\n"
-                     }
+                     {fail "Unknown $saveload_goto_type: " $saveload_goto_type "\n"}
                   }
                }
             }
@@ -94,11 +75,7 @@
                ; first make sure the state is correct...
                {switch $saveload_goto_type
                   (
-                     (
-                        kMetaNextTypeGotoPop
-                        kMetaNextTypeGotoGoto
-                        kMetaNextTypeGotoPopGoto
-                     )
+                     (kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
 
                      {xbox_saveload_begin_async}
                   )
@@ -111,9 +88,9 @@
    }
 }
 
-
 ;; Call this to kick off a manual save (on a particular player)
-{func manual_save_start ($player_num)
+{func manual_save_start
+   ($player_num)
    {if_else
       {&&
          {gamecfg is_player_local $player_num}
@@ -134,9 +111,9 @@
    }
 }
 
-
 ;; Call this to kick off a manual load (on a particular player)
-{func manual_load_start ($player_num)
+{func manual_load_start
+   ($player_num)
    {if_else
       {&&
          {gamecfg is_player_local $player_num}
@@ -165,7 +142,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{new UIScreen manual_saveload_not_signed_in_screen
+{new UIScreen
+   manual_saveload_not_signed_in_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -174,22 +152,16 @@
       {$this setup_continue mc_manual_load_not_signed_in}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {ui pop_screen}
-         )
+         (option1.btn {ui pop_screen})
       }
       kDataUnhandled
    )
 
-   (signin_changed
-      {ui pop_screen}
-   )
+   (signin_changed {ui pop_screen})
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -234,13 +206,13 @@
          {band_ui_sink set_net_sync $saveload_sync_state}
 
          {switch $saveload_goto_type
-            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
+            (
+               (kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
                {ui pop_screen $saveload_goto_screen}
             )
-            (kMetaNextTypeGotoGoto
-               {ui goto_screen $saveload_goto_screen}
-            )
-            ((kMetaNextTypePushPop kMetaNextTypeGotoPop)
+            (kMetaNextTypeGotoGoto {ui goto_screen $saveload_goto_screen})
+            (
+               (kMetaNextTypePushPop kMetaNextTypeGotoPop)
                {ui pop_screen}
             )
             ; default
@@ -252,10 +224,12 @@
       }
       ; else
       {switch $saveload_goto_type
-         ((kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
+         (
+            (kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
             {ui goto_screen $saveload_goto_screen}
          )
-         ((kMetaNextTypePushPop kMetaNextTypeGotoPop)
+         (
+            (kMetaNextTypePushPop kMetaNextTypeGotoPop)
             ; do nothing (nothing pushed, so nothing to pop)
          )
          ; default
@@ -268,7 +242,8 @@
 
 ;; This should be called whenever the saveload flow is done for a particular
 ;;   player/profile, regardless of what happened or if the saveload succeeded.
-{func on_saveload_done ($state)
+{func on_saveload_done
+   ($state)
    {if_else {== $state kMetaSaveError}
       {ui goto_screen saveload_autosave_disabled_screen}
       ; else
@@ -276,13 +251,15 @@
    }
 }
 
-{func on_saveload_really_done ($state)
+{func on_saveload_really_done
+   ($state)
 
    ;; assumes $saveload_is_ui_up is TRUE
 
    {memcardmgr saveload_profile_complete $saveload_player_num $state}
 
-   {do ($player_num -1)
+   {do
+      ($player_num -1)
       {switch $save_load_mode
          (kAutoSave
             {set $player_num {memcardmgr get_autosavable_player_num}}
@@ -316,7 +293,8 @@
    }
 }
 
-{new UIScreen saveload_autosave_disabled_screen
+{new UIScreen
+   saveload_autosave_disabled_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -325,15 +303,11 @@
       {$this setup_continue mc_autosave_disabled}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_really_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_really_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -357,32 +331,40 @@
 #define kSaveloadTypeSavePush (2)
 #define kSaveloadTypeLoad (3)
 
-{func xbox_autoload_handle_errors_and_goto ($next_screen)
+{func xbox_autoload_handle_errors_and_goto
+   ($next_screen)
    {xbox_saveload_handle_errors_and_goto $next_screen kSaveloadTypeAutoLoad}
 }
 
-{func xbox_save_handle_errors_and_goto ($next_screen)
+{func xbox_save_handle_errors_and_goto
+   ($next_screen)
    {xbox_saveload_handle_errors_and_goto $next_screen kSaveloadTypeSaveGoto}
 }
 
-{func xbox_save_handle_errors_and_push ($next_screen)
+{func xbox_save_handle_errors_and_push
+   ($next_screen)
    {xbox_saveload_handle_errors_and_goto $next_screen kSaveloadTypeSavePush}
 }
 
-{func xbox_manual_save_handle_errors_and_goto ($next_screen)
+{func xbox_manual_save_handle_errors_and_goto
+   ($next_screen)
    {xbox_saveload_handle_errors_and_goto $next_screen kSaveloadTypeSaveGoto}
 }
 
-{func xbox_manual_load_handle_errors_and_goto ($next_screen)
+{func xbox_manual_load_handle_errors_and_goto
+   ($next_screen)
    {xbox_saveload_handle_errors_and_goto $next_screen kSaveloadTypeLoad}
 }
 
-{func xbox_saveload_handle_errors_and_goto ($next_screen $saveload_type)
-#ifndef _SHIP
+{func xbox_saveload_handle_errors_and_goto
+   ($next_screen $saveload_type)
+   #ifndef _SHIP
    {if {! $saveload_ui_is_up}
-      {fail "xbox_saveload_has_handled_errors called, but $saveload_ui_is_up is FALSE\n"}
+      {fail
+         "xbox_saveload_has_handled_errors called, but $saveload_ui_is_up is FALSE\n"
+      }
    }
-#endif
+   #endif
    {cond
       ({! {platform_mgr is_player_signed_in $saveload_player_num}}
          ;; deal with a sign out...
@@ -391,18 +373,10 @@
       ({! {memcardmgr is_device_valid $saveload_player_num}}
          ;; deal with invalid (aka missing) device
          {switch $saveload_type
-            (kSaveloadTypeAutoLoad
-               {ui goto_screen autoload_device_missing}
-            )
-            (kSaveloadTypeSaveGoto
-               {ui goto_screen save_device_invalid}
-            )
-            (kSaveloadTypeSavePush
-               {ui push_screen save_device_invalid}
-            )
-            (kSaveloadTypeLoad
-               {ui goto_screen manual_load_device_missing}
-            )
+            (kSaveloadTypeAutoLoad {ui goto_screen autoload_device_missing})
+            (kSaveloadTypeSaveGoto {ui goto_screen save_device_invalid})
+            (kSaveloadTypeSavePush {ui push_screen save_device_invalid})
+            (kSaveloadTypeLoad {ui goto_screen manual_load_device_missing})
             ; default
             {fail "unknown saveload_type\n"}
          }
@@ -411,16 +385,10 @@
          ;; no errors
          {switch $saveload_type
             (
-               (
-                  kSaveloadTypeAutoLoad
-                  kSaveloadTypeLoad
-                  kSaveloadTypeSaveGoto
-               )
+               (kSaveloadTypeAutoLoad kSaveloadTypeLoad kSaveloadTypeSaveGoto)
                {ui goto_screen $next_screen}
             )
-            (kSaveloadTypeSavePush
-               {ui push_screen $next_screen}
-            )
+            (kSaveloadTypeSavePush {ui push_screen $next_screen})
             ; default
             {fail "unknown saveload_type\n"}
          }
@@ -428,8 +396,7 @@
    }
 }
 
-#define COMMON_CHOOSE_DEVICE_HANDLERS
-(
+#define COMMON_CHOOSE_DEVICE_HANDLERS (
    (SELECT_START_MSG
       {switch $component
          (option1.btn
@@ -439,9 +406,7 @@
                {on_saveload_done kMetaSaveUnchanged}
             }
          )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -452,20 +417,20 @@
       }
    )
 
-   (no_device_chosen
-   )
+   (no_device_chosen)
 )
 
-#define COMMON_AUTOLOAD_CHOOSE_DEVICE_HANDLERS
-(
+#define COMMON_AUTOLOAD_CHOOSE_DEVICE_HANDLERS (
    COMMON_CHOOSE_DEVICE_HANDLERS
 
-   (device_chosen ($device)
+   (device_chosen
+      ($device)
       {xbox_autoload_handle_errors_and_goto autoload_screen}
    )
 )
 
-{new UIScreen autoload_device_missing
+{new UIScreen
+   autoload_device_missing
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -479,23 +444,19 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    COMMON_AUTOLOAD_CHOOSE_DEVICE_HANDLERS
 }
 
-#define COMMON_SAVE_CHOOSE_DEVICE_HANDLERS
-(
+#define COMMON_SAVE_CHOOSE_DEVICE_HANDLERS (
    COMMON_CHOOSE_DEVICE_HANDLERS
 
-   (device_chosen ($device)
-      {goto_save_screen_no_overwrite}
-   )
+   (device_chosen ($device) {goto_save_screen_no_overwrite})
 )
 
-{new UIScreen save_device_invalid
+{new UIScreen
+   save_device_invalid
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -509,17 +470,15 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    COMMON_SAVE_CHOOSE_DEVICE_HANDLERS
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AUTO LOAD
-{new UIScreen autoload_start_screen
+{new UIScreen
+   autoload_start_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -535,7 +494,8 @@
 
    ;; result messages...
 
-   (device_chosen ($device)
+   (device_chosen
+      ($device)
       {xbox_autoload_handle_errors_and_goto autoload_screen}
    )
 
@@ -544,7 +504,8 @@
    )
 }
 
-{new UIScreen autoload_no_selection_screen
+{new UIScreen
+   autoload_no_selection_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -558,14 +519,13 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    COMMON_AUTOLOAD_CHOOSE_DEVICE_HANDLERS
 }
 
-{new UIScreen autoload_screen
+{new UIScreen
+   autoload_screen
    (save_if_missing TRUE)
 
    SAVELOAD_DIALOG_SCREEN
@@ -580,13 +540,10 @@
 
    (MEMCARD_RESULT_MSG
       {switch $result
-         (kMCNoCard
-            {ui goto_screen autoload_device_missing}
-         )
-         (kMCCorrupt
-            {xbox_autoload_handle_errors_and_goto autoload_corrupt_screen}
-         )
-         ((kMCFileNotFound kMCNotEnoughSpace)
+         (kMCNoCard {ui goto_screen autoload_device_missing})
+         (kMCCorrupt {xbox_autoload_handle_errors_and_goto autoload_corrupt_screen})
+         (
+            (kMCFileNotFound kMCNotEnoughSpace)
             {if_else [save_if_missing]
                {goto_save_screen_no_overwrite}
                ;else we're done
@@ -599,14 +556,11 @@
             {if {! {profile_mgr global_options_pad_set}}
                {do
                   ($profile
-                     {profile_mgr
-                        get_mapped_profile_from_player
-                        $saveload_player_num
-                     }
+                     {profile_mgr get_mapped_profile_from_player $saveload_player_num}
                   )
 
                   {if {$profile get_played_before} ;...but only if we HAVE saved data
-                     {profile_mgr set_global_options_pad 
+                     {profile_mgr set_global_options_pad
                         {joypad_get_players_padnum $saveload_player_num}
                      }
                   }
@@ -616,7 +570,8 @@
             {$this setup_msg mc_auto_load_complete}
 
             ;; pause to show the message...
-            {script_task kTaskUISeconds (delay 0.5)
+            {script_task kTaskUISeconds
+               (delay 0.5)
                (script
                   ;; sanity check, make sure nothing egregious has
                   ;; happened in the past 0.5 seconds...
@@ -629,14 +584,10 @@
             }
          )
          (kMCObsoleteVersion
-            {xbox_autoload_handle_errors_and_goto
-               autoload_obsolete_version_screen
-            }
+            {xbox_autoload_handle_errors_and_goto autoload_obsolete_version_screen}
          )
          (kMCNewerVersion
-            {xbox_autoload_handle_errors_and_goto
-               autoload_newer_version_screen
-            }
+            {xbox_autoload_handle_errors_and_goto autoload_newer_version_screen}
          )
 
          ; default
@@ -645,7 +596,8 @@
    )
 }
 
-{new UIScreen autoload_corrupt_screen
+{new UIScreen
+   autoload_corrupt_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -659,18 +611,12 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -682,7 +628,8 @@
    )
 }
 
-{new UIScreen autoload_obsolete_version_screen
+{new UIScreen
+   autoload_obsolete_version_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -696,18 +643,12 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -719,7 +660,8 @@
    )
 }
 
-{new UIScreen autoload_newer_version_screen
+{new UIScreen
+   autoload_newer_version_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -733,18 +675,12 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -756,7 +692,6 @@
    )
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AUTOSAVE
 
@@ -764,9 +699,10 @@
 ;;   effectively "re-enter" the save_screen, by first transitioning away
 ;;   to this screen, and then back again (hopefully this time acting on a
 ;;   different player_num).
-{new UIScreen auto_save_start
+{new UIScreen
+   auto_save_start
    SAVELOAD_DIALOG_SCREEN
-   
+
    (enter
       {$this setup_msg mc_save}
       {goto_save_screen_with_overwrite}
@@ -787,7 +723,8 @@
    {xbox_save_handle_errors_and_push save_screen}
 }
 
-{new UIScreen save_look_for_file_screen
+{new UIScreen
+   save_look_for_file_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -798,14 +735,14 @@
 
    (MEMCARD_RESULT_MSG
       {switch $result
-         (kMCNoCard
-            {ui goto_screen save_device_invalid}
-         )
-         ((kMCNoError kMCFileExists)
+         (kMCNoCard {ui goto_screen save_device_invalid})
+         (
+            (kMCNoError kMCFileExists)
             ;; container already exists!
             {ui goto_screen save_confirm_overwrite_screen}
          )
-         ((kMCFileNotFound kMCNotEnoughSpace)
+         (
+            (kMCFileNotFound kMCNotEnoughSpace)
             ;; container doesn't already exist, create a new one...
             {goto_save_screen_with_overwrite}
          )
@@ -816,9 +753,10 @@
    )
 }
 
-{new UIScreen save_screen
+{new UIScreen
+   save_screen
    SAVELOAD_DIALOG_SCREEN
-   
+
    ; private properties 
 
    (enter_time 0.0)
@@ -826,7 +764,7 @@
    (done_saving FALSE)
    (done_polling FALSE)
    (long FALSE)
-   
+
    (enter
       {set [enter_time] {taskmgr ui_seconds}}
       {set [save_time] 0.0}
@@ -850,7 +788,7 @@
                      {&& {< $save_dt 1.0} {>= $enter_dt 1.0}}
                      {&& {>= $save_dt 1.0} {>= $enter_dt 4.0}}
                   }
-                  
+
                   {set [done_polling] TRUE}
                   {on_saveload_done kMetaSaveLoaded}
                }
@@ -885,7 +823,7 @@
             {set [done_saving] TRUE}
             {set [save_time] {taskmgr ui_seconds}}
          )
-         
+
          ; default
          {set [done_polling] TRUE}
          {xbox_save_handle_errors_and_goto save_failed_screen}
@@ -893,7 +831,8 @@
    )
 }
 
-{new UIScreen save_confirm_overwrite_screen
+{new UIScreen
+   save_confirm_overwrite_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -907,18 +846,12 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {goto_save_screen_with_overwrite}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {goto_save_screen_with_overwrite})
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -930,7 +863,8 @@
    )
 }
 
-{new UIScreen save_not_enough_space_screen
+{new UIScreen
+   save_not_enough_space_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -939,15 +873,11 @@
       {$this setup_continue mc_save_not_enough_space}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -959,7 +889,8 @@
    )
 }
 
-{new UIScreen save_failed_screen
+{new UIScreen
+   save_failed_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -968,15 +899,11 @@
       {$this setup_continue mc_save_failed}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -990,7 +917,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{new UIScreen load_failed_screen
+{new UIScreen
+   load_failed_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -999,15 +927,11 @@
       {$this setup_continue mc_load_failed}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -1019,11 +943,11 @@
    )
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MANUAL SAVE
 
-{new UIScreen manual_save_start_screen
+{new UIScreen
+   manual_save_start_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1039,15 +963,11 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    ;; result messages...
 
-   (device_chosen ($device)
-      {goto_save_screen_no_overwrite}
-   )
+   (device_chosen ($device) {goto_save_screen_no_overwrite})
 
    (no_device_chosen
       {xbox_manual_save_handle_errors_and_goto manual_save_no_device_screen}
@@ -1060,9 +980,10 @@
    )
 }
 
-{new UIScreen manual_save_no_device_screen
+{new UIScreen
+   manual_save_no_device_screen
    SAVELOAD_DIALOG_SCREEN
-   
+
    (enter
       {session add_sink $this signin_changed}
 
@@ -1074,18 +995,14 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
          (option1.btn
             {xbox_manual_save_handle_errors_and_goto manual_save_start_screen}
          )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -1100,7 +1017,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MANUAL LOAD
 
-{new UIScreen manual_load_device_missing
+{new UIScreen
+   manual_load_device_missing
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1114,9 +1032,7 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
@@ -1127,19 +1043,17 @@
                {on_saveload_done kMetaSaveUnchanged}
             }
          )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
 
-   (device_chosen ($device)
+   (device_chosen
+      ($device)
       {xbox_manual_load_handle_errors_and_goto manual_load_start_screen}
    )
 
-   (no_device_chosen
-   )
+   (no_device_chosen)
 
    (signin_changed
       {if {platform_mgr has_player_signin_changed $saveload_player_num}
@@ -1148,7 +1062,8 @@
    )
 }
 
-{new UIScreen manual_load_confirm_unsaved_screen
+{new UIScreen
+   manual_load_confirm_unsaved_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1162,18 +1077,14 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
-   
+   (exit {session remove_sink $this signin_changed})
+
    (SELECT_START_MSG
       {switch $component
          (option1.btn
             {xbox_manual_load_handle_errors_and_goto manual_load_start_screen}
          )
-         (option2.btn
-            {on_saveload_done kMetaSaveUnchanged}
-         )
+         (option2.btn {on_saveload_done kMetaSaveUnchanged})
       }
       kDataUnhandled
    )
@@ -1185,32 +1096,24 @@
    )
 }
 
-{new UIScreen manual_load_confirm_screen
+{new UIScreen
+   manual_load_confirm_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
       {session add_sink $this signin_changed}
 
-      {$this setup_2btn
-         mc_manual_load_confirm
-         mc_button_yes
-         mc_button_no
-         opt1
-      }
+      {$this setup_2btn mc_manual_load_confirm mc_button_yes mc_button_no opt1}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
          (option1.btn
             {xbox_manual_load_handle_errors_and_goto manual_load_start_screen}
          )
-         (option2.btn
-            {on_saveload_done kMetaSaveUnchanged}
-         )
+         (option2.btn {on_saveload_done kMetaSaveUnchanged})
       }
       kDataUnhandled
    )
@@ -1222,7 +1125,8 @@
    )
 }
 
-{new UIScreen manual_load_start_screen
+{new UIScreen
+   manual_load_start_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1238,13 +1142,12 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    ;; result messages...
 
-   (device_chosen ($device)
+   (device_chosen
+      ($device)
       {xbox_manual_load_handle_errors_and_goto manual_load_screen}
    )
 
@@ -1259,9 +1162,10 @@
    )
 }
 
-{new UIScreen manual_load_no_device_screen
+{new UIScreen
+   manual_load_no_device_screen
    SAVELOAD_DIALOG_SCREEN
-   
+
    (enter
       {session add_sink $this signin_changed}
 
@@ -1273,18 +1177,14 @@
       }
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
          (option1.btn
             {xbox_manual_load_handle_errors_and_goto manual_load_start_screen}
          )
-         (option2.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option2.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -1296,7 +1196,8 @@
    )
 }
 
-{new UIScreen manual_load_screen
+{new UIScreen
+   manual_load_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1310,8 +1211,8 @@
    (MEMCARD_RESULT_MSG
       {switch $result
          (kMCNoCard
-            {xbox_manual_load_handle_errors_and_goto
-               manual_load_storage_missing_screen
+            {xbox_manual_load_handle_errors_and_goto manual_load_storage_missing_screen
+
             }
          )
          (kMCFileNotFound
@@ -1326,15 +1227,12 @@
             {if {! {profile_mgr global_options_pad_set}}
                {do
                   ($profile
-                     {profile_mgr
-                        get_mapped_profile_from_player
-                        $saveload_player_num
-                     }
+                     {profile_mgr get_mapped_profile_from_player $saveload_player_num}
                   )
 
                   ;...but only if we HAVE saved data
                   {if {$profile get_played_before}
-                     {profile_mgr set_global_options_pad 
+                     {profile_mgr set_global_options_pad
                         {joypad_get_players_padnum $saveload_player_num}
                      }
                   }
@@ -1344,7 +1242,8 @@
             {$this setup_msg mc_manual_load_complete}
 
             ;; pause to show the message...
-            {script_task kTaskUISeconds (delay 0.5)
+            {script_task kTaskUISeconds
+               (delay 0.5)
                (script
                   ;; sanity check, make sure nothing egregious has
                   ;; happened in the past 0.5 seconds...
@@ -1363,7 +1262,8 @@
    )
 }
 
-{new UIScreen manual_load_no_file_screen
+{new UIScreen
+   manual_load_no_file_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1372,15 +1272,11 @@
       {$this setup_continue mc_manual_load_no_file}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )
@@ -1392,7 +1288,8 @@
    )
 }
 
-{new UIScreen manual_load_corrupt_screen
+{new UIScreen
+   manual_load_corrupt_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -1401,15 +1298,11 @@
       {$this setup_continue mc_manual_load_corrupt}
    )
 
-   (exit
-      {session remove_sink $this signin_changed}
-   )
+   (exit {session remove_sink $this signin_changed})
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveError}
-         )
+         (option1.btn {on_saveload_done kMetaSaveError})
       }
       kDataUnhandled
    )

@@ -1,92 +1,98 @@
 (difficulties easy medium hard expert)
 (num_gem_slots 5)
 (max_gems_per_chord 3)
-#define MUSICIAN_COMMON_EVENTS
-(idle_realtime idle idle_intense play mellow intense)
-#define MUSICIAN_COMMON_CHECK
-({if
+#define MUSICIAN_COMMON_EVENTS (idle_realtime idle idle_intense play mellow intense)
+#define MUSICIAN_COMMON_CHECK (
+   {if
       {find_elem
          (mellow play intense play_solo idle idle_intense)
-         $mv.val}
-      {if
-         {< $mv.start 1.8}
-         {ugc_error e_mid_animation_event_before_beat_2 $mv.song $mv.val $mv.mbt}}})
+         $mv.val
+      }
+      {if {< $mv.start 1.8}
+         {ugc_error e_mid_animation_event_before_beat_2 $mv.song $mv.val $mv.mbt}
+      }
+   }
+)
 (tracks
    (required EVENTS BEAT)
-   (allowed 'PART DRUMS' 'PART BASS' 'PART GUITAR' 'PART VOCALS' EVENTS VENUE BEAT))
+   (allowed
+      'PART DRUMS'
+      'PART BASS'
+      'PART GUITAR'
+      'PART VOCALS'
+      EVENTS
+      VENUE
+      BEAT
+   )
+)
 (events
-   (BEAT
-      (midi
-         (12 13)))
+   (BEAT (midi (12 13)))
    (EVENTS
-      (midi
-         (24 26))
+      (midi (24 26))
       (required music_start music_end end)
-      (allowed coda crowd_realtime crowd_mellow crowd_normal crowd_intense crowd_noclap crowd_clap section)
+      (allowed
+         coda
+         crowd_realtime
+         crowd_mellow
+         crowd_normal
+         crowd_intense
+         crowd_noclap
+         crowd_clap
+         section
+      )
       (last end)
       (check_init
-         {set
-            $sections_found
-            {array 0}}
-         {set $section_type -1})
+         {set $sections_found {array 0}}
+         {set $section_type -1}
+      )
       (check_term
          {if
             {&&
-               {>
-                  {size $sections_found}
-                  0}
-               {!=
-                  {/ 100 $section_type}
-                  {size $sections_found}}}
-            {ugc_error e_mid_incomplete_list_of_practice_sections $mv.song}}
-         {set $sections_found 0})
+               {> {size $sections_found} 0}
+               {!= {/ 100 $section_type} {size $sections_found}}
+            }
+            {ugc_error e_mid_incomplete_list_of_practice_sections $mv.song}
+         }
+         {set $sections_found 0}
+      )
       (check
-         {switch
-            $mv.val
+         {switch $mv.val
             (section
-               {if_else
-                  {<
-                     {size $mv.data}
-                     3}
+               {if_else {< {size $mv.data} 3}
                   {ugc_error e_mid_badly_formatted_section_event $mv.song $mv.val $mv.mbt}
                   {do
-                     ($section_name
-                        {elem $mv.data 2})
-                     {if_else
-                        {find_elem SECTION_NAMES $section_name}
+                     ($section_name {elem $mv.data 2})
+                     {if_else {find_elem SECTION_NAMES $section_name}
                         {do
-                           {if
-                              {== $section_type -1}
-                              {if
-                                 {has_substr
-                                    $section_name
-                                    "_5_"}
-                                 {set $section_type 5}}
-                              {if
-                                 {has_substr
-                                    $section_name
-                                    "_10_"}
-                                 {set $section_type 10}}
-                              {if
-                                 {has_substr
-                                    $section_name
-                                    "_20_"}
-                                 {set $section_type 20}}}
-                           {if
-                              {!= $section_type -1}
-                              {if
-                                 {!
-                                    {has_substr
-                                       $section_name
-                                       {sprintf
-                                          "_%d_"
-                                          $section_type}}}
-                                 {ugc_error e_mid_section_types_mixed $mv.song}}}
-                           {if_else
-                              {find_elem $sections_found $section_name}
+                           {if {== $section_type -1}
+                              {if {has_substr $section_name "_5_"}
+                                 {set $section_type 5}
+                              }
+                              {if {has_substr $section_name "_10_"}
+                                 {set $section_type 10}
+                              }
+                              {if {has_substr $section_name "_20_"}
+                                 {set $section_type 20}
+                              }
+                           }
+                           {if {!= $section_type -1}
+                              {if {! {has_substr $section_name {sprintf "_%d_" $section_type}}}
+                                 {ugc_error e_mid_section_types_mixed $mv.song}
+                              }
+                           }
+                           {if_else {find_elem $sections_found $section_name}
                               {ugc_error e_mid_duplicate_section $mv.song $section_name $mv.mbt}
-                              {push_back $sections_found $section_name}}}
-                        {ugc_error e_mid_invalid_section_name $mv.song $section_name $mv.mbt}}}})}))
+                              {push_back $sections_found $section_name}
+                           }
+                        }
+                        {ugc_error e_mid_invalid_section_name $mv.song $section_name $mv.mbt}
+                     }
+                  }
+               }
+            )
+         }
+      )
+   )
    (VENUE
       (midi
          (24 26)
@@ -96,92 +102,112 @@
          (61 64)
          (70 73)
          (85 87)
-         (96 110))
-      (allowed chorus verse lighting do_directed_cut do_optional_cut bonusfx bonusfx_optional StrobeOff Strobe6 Strobe8 Strobe10 Strobe12)
+         (96 110)
+      )
+      (allowed
+         chorus
+         verse
+         lighting
+         do_directed_cut
+         do_optional_cut
+         bonusfx
+         bonusfx_optional
+         StrobeOff
+         Strobe6
+         Strobe8
+         Strobe10
+         Strobe12
+      )
       (required)
       (check_init
          {set $mv.chorus FALSE}
          {set $mv.verse FALSE}
-         {set $mv.dircount 0})
+         {set $mv.dircount 0}
+      )
       (check_term
-         {if
-            {> $mv.dircount MAX_DIRCUTS}
-            {set
+         {if {> $mv.dircount MAX_DIRCUTS}
+            {set $freedirs ""}
+            {foreach $i (FREE_DIRCUTS)
+               {set $freedirs
+                  {sprint $freedirs " " $i}
+               }
+            }
+            {ugc_error e_mid_too_many_directed_cuts
+               $mv.song
+               $mv.dircount
+               MAX_DIRCUTS
                $freedirs
-               ""}
-            {foreach
-               $i
-               (FREE_DIRCUTS)
-               {set
-                  $freedirs
-                  {sprint
-                     $freedirs
-                     " "
-                     $i}}}
-            {ugc_error e_mid_too_many_directed_cuts $mv.song $mv.dircount MAX_DIRCUTS $freedirs}})
+            }
+         }
+      )
       (check
-         {switch
-            $mv.val
-            (chorus
-               {set $mv.chorus TRUE})
-            (verse
-               {set $mv.verse TRUE})
+         {switch $mv.val
+            (chorus {set $mv.chorus TRUE})
+            (verse {set $mv.verse TRUE})
             (lighting
-               {if_else
-                  {<
-                     {size $mv.data}
-                     3}
+               {if_else {< {size $mv.data} 3}
                   {ugc_error e_mid_badly_formatted_lighting_event $mv.song $mv.val $mv.mbt}
                   {do
-                     ($adjectives
-                        {elem $mv.data 2})
-                     ($adjectives_string
-                        "")
-                     ($bad_adjectives
-                        {array 0})
-                     {foreach
-                        $adj
-                        $adjectives
-                        {unless
-                           {find_elem LIGHTING_ADJECTIVES $adj}
-                           {push_back $bad_adjectives $adj}}
-                        {if_else
-                           {==
-                              {strlen $adjectives_string}
-                              0}
+                     ($adjectives {elem $mv.data 2})
+                     ($adjectives_string "")
+                     ($bad_adjectives {array 0})
+                     {foreach $adj $adjectives
+                        {unless {find_elem LIGHTING_ADJECTIVES $adj}
+                           {push_back $bad_adjectives $adj}
+                        }
+                        {if_else {== {strlen $adjectives_string} 0}
                            {set $adjectives_string $adj}
-                           {set
-                              $adjectives_string
-                              {sprintf
-                                 "%s %s"
-                                 $adjectives_string
-                                 $adj}}}}
-                     {foreach
-                        $adj
-                        $bad_adjectives
-                        {ugc_error e_mid_bad_lighting_preset $mv.song $adjectives_string $mv.mbt $adj}}
-                     {unless
-                        {'||' $mv.chorus $mv.verse}
-                        {ugc_error e_mid_lighting_before_verse_or_chorus $mv.song $adjectives_string $mv.mbt}}}})
-            ((do_directed_cut do_optional_cut)
-               {if_else
-                  {<
-                     {size $mv.data}
-                     3}
-                  {ugc_error e_mid_badly_formatted_directed_cut_event $mv.song $mv.val $mv.mbt}
+                           {set $adjectives_string
+                              {sprintf "%s %s" $adjectives_string $adj}
+                           }
+                        }
+                     }
+                     {foreach $adj $bad_adjectives
+                        {ugc_error e_mid_bad_lighting_preset
+                           $mv.song
+                           $adjectives_string
+                           $mv.mbt
+                           $adj
+                        }
+                     }
+                     {unless {'||' $mv.chorus $mv.verse}
+                        {ugc_error e_mid_lighting_before_verse_or_chorus
+                           $mv.song
+                           $adjectives_string
+                           $mv.mbt
+                        }
+                     }
+                  }
+               }
+            )
+            (
+               (do_directed_cut do_optional_cut)
+               {if_else {< {size $mv.data} 3}
+                  {ugc_error e_mid_badly_formatted_directed_cut_event
+                     $mv.song
+                     $mv.val
+                     $mv.mbt
+                  }
                   {do
-                     ($cat
-                        {elem $mv.data 2})
-                     {unless
-                        {find_elem
-                           (DIRECTED_CAM_CATS)
-                           $cat}
-                        {ugc_error e_mid_bad_directed_cut_category $mv.song $mv.val $cat $mv.mbt $cat}}
-                     {unless
-                        {find_elem
-                           (FREE_DIRCUTS)
-                           $cat}
-                        {'++' $mv.dircount}}}})}))
+                     ($cat {elem $mv.data 2})
+                     {unless {find_elem (DIRECTED_CAM_CATS) $cat}
+                        {ugc_error e_mid_bad_directed_cut_category
+                           $mv.song
+                           $mv.val
+                           $cat
+                           $mv.mbt
+                           $cat
+                        }
+                     }
+                     {unless {find_elem (FREE_DIRCUTS) $cat}
+                        {'++' $mv.dircount}
+                     }
+                  }
+               }
+            )
+         }
+      )
+   )
    ('PART GUITAR'
       (required)
       (allowed MUSICIAN_COMMON_EVENTS play_solo map)
@@ -201,9 +227,11 @@
          (89 90)
          (101 102)
          116
-         (120 124))
+         (120 124)
+      )
       (check_init)
-      (check MUSICIAN_COMMON_CHECK))
+      (check MUSICIAN_COMMON_CHECK)
+   )
    ('PART BASS'
       (required)
       (allowed MUSICIAN_COMMON_EVENTS play_solo map)
@@ -221,9 +249,11 @@
          (89 90)
          (101 102)
          116
-         (120 124))
+         (120 124)
+      )
       (check_init)
-      (check MUSICIAN_COMMON_CHECK))
+      (check MUSICIAN_COMMON_CHECK)
+   )
    ('PART DRUMS'
       (required)
       (allowed mix ride_side_true ride_side_false MUSICIAN_COMMON_EVENTS)
@@ -242,18 +272,31 @@
          106
          (110 112)
          116
-         (120 124))
+         (120 124)
+      )
       (check_init)
-      (check MUSICIAN_COMMON_CHECK))
+      (check MUSICIAN_COMMON_CHECK)
+   )
    ('PART VOCALS'
       (required)
-      (allowed tambourine_start tambourine_end cowbell_start cowbell_end clap_start clap_end MUSICIAN_COMMON_EVENTS)
+      (allowed
+         tambourine_start
+         tambourine_end
+         cowbell_start
+         cowbell_end
+         clap_start
+         clap_end
+         MUSICIAN_COMMON_EVENTS
+      )
       (midi
          (12 15)
          (36 84)
          (96 97)
          103
          (105 106)
-         116)
+         116
+      )
       (check_init)
-      (check MUSICIAN_COMMON_CHECK)))
+      (check MUSICIAN_COMMON_CHECK)
+   )
+)

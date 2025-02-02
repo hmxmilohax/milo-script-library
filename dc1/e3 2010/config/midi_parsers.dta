@@ -1,54 +1,37 @@
 (init
-   {func
-      rt_test_space
+   {func rt_test_space
       ($before $after)
-      {&&
-         {> $mp.before_delta_sec $before}
-         {> $mp.after_delta_sec $after}}}
-   {func
-      extract_start_offset
+      {&& {> $mp.before_delta_sec $before} {> $mp.after_delta_sec $after}}
+   }
+   {func extract_start_offset
       ($sfx)
-      {if_else
-         {&&
-            $sfx
-            {$sfx
-               size
-               (sfxmaps)}}
+      {if_else {&& $sfx {$sfx size (sfxmaps)}}
          {do
-            ($samp
-               {$sfx
-                  get
-                  (sfxmaps 0 sample)})
-            {if_else
-               {&&
-                  $samp
-                  {$samp
-                     size
-                     (markers)}}
-               {/
-                  {$samp
-                     get
-                     (markers 0 sample)}
-                  {$samp get sample_rate}}
-               0}}
-         0}}
-   {func
-      calculate_lined_beat
+            ($samp {$sfx get (sfxmaps 0 sample)})
+            {if_else {&& $samp {$samp size (markers)}}
+               {/ {$samp get (markers 0 sample)} {$samp get sample_rate}}
+               0
+            }
+         }
+         0
+      }
+   }
+   {func calculate_lined_beat
       ($dest_beat $offset_seconds $audio_speed)
       {seconds_to_beat
-         {-
-            {beat_to_seconds $dest_beat}
-            {'*' $offset_seconds $audio_speed}}}}
-   {new
-      MidiParser
+         {- {beat_to_seconds $dest_beat} {'*' $offset_seconds $audio_speed}}
+      }
+   }
+   {new MidiParser
       events_parser
       (track_name EVENTS)
       (text
-         {unless
-            {has_substr $mp.val crowd_}
-            {$this add_message $mp.data}})}
-   {new
-      MidiParser
+         {unless {has_substr $mp.val crowd_}
+            {$this add_message $mp.data}
+         }
+      )
+   }
+   {new MidiParser
       active_events_parser
       (track_name EVENTS)
       (compress 1)
@@ -59,38 +42,38 @@
                {has_substr $mp.val tut_}
                {&&
                   {has_substr $mp.val crowd_}
-                  {!
-                     {find_elem
-                        (crowd_clap crowd_noclap)
-                        $mp.val}}}}
-            {$this add_message $mp.val}})}
-   {new
-      MidiParser
+                  {! {find_elem (crowd_clap crowd_noclap) $mp.val}}
+               }
+            }
+            {$this add_message $mp.val}
+         }
+      )
+   }
+   {new MidiParser
       world_crowd_parser
       (track_name EVENTS)
       (compress 1)
       (text
-         {if
-            {has_substr $mp.val crowd_}
-            {$this add_message $mp.val}})}
-   {new
-      MidiParser
+         {if {has_substr $mp.val crowd_}
+            {$this add_message $mp.val}
+         }
+      )
+   }
+   {new MidiParser
       song_sections
       (track_name EVENTS)
       (compress 1)
       (text
-         {if
-            {== $mp.val section}
+         {if {== $mp.val section}
             #ifdef HX_PC
-            {if
-               $tool_song
-               {$tool_song
-                  add_section
-                  {elem $mp.data 1}
-                  $mp.start}}
-            #endif})}
-   {new
-      MidiParser
+            {if $tool_song
+               {$tool_song add_section {elem $mp.data 1} $mp.start}
+            }
+            #endif
+         }
+      )
+   }
+   {new MidiParser
       midi_player
       (play_note
          ($val)
@@ -98,82 +81,58 @@
             {&&
                [active]
                {'||'
-                  {<
-                     [play_range_start]
-                     0}
-                  {&&
-                     {>=
-                        $mp.start
-                        [play_range_start]}
-                     {<
-                        $mp.start
-                        [play_range_end]}}}}
+                  {< [play_range_start] 0}
+                  {&& {>= $mp.start [play_range_start]} {< $mp.start [play_range_end]}}
+               }
+            }
             {do
-               ($sample
-                  {elem
-                     [mapping]
-                     $val})
-               {if
-                  $sample
-                  {$sample play}}}})
+               ($sample {elem [mapping] $val})
+               {if $sample
+                  {$sample play}
+               }
+            }
+         }
+      )
       (track_name DRUMS)
       (compress 1)
       (message_self 1)
       (message_type play_note)
-      (mapping
-         ())
+      (mapping ())
       (active 0)
       (play_range_start -1)
       (play_range_end -1)
       (init
-         {resize
-            [mapping]
-            128}
-         {foreach_int
-            $i
-            0
-            128
-            {set_elem
-               [mapping]
-               $i
-               ""}}
-         {if
-            {&&
-               $hamdirector
-               {$hamdirector get_world}}
+         {resize [mapping] 128}
+         {foreach_int $i 0 128
+            {set_elem [mapping] $i ""}
+         }
+         {if {&& $hamdirector {$hamdirector get_world}}
             {do
-               ($midi_bank
-                  {{$hamdirector get_world}
-                     find
-                     midi_bank
-                     0})
-               {if
-                  $midi_bank
-                  {$midi_bank
-                     iterate
+               ($midi_bank {{$hamdirector get_world} find midi_bank 0})
+               {if $midi_bank
+                  {$midi_bank iterate
                      (Sfx midi_sample)
                      $midi_sample
                      {do
-                        ($index
-                           {$midi_sample get index})
-                        {if
-                           {>= $index 0}
-                           {set_elem
-                              [mapping]
-                              $index
-                              $midi_sample}}}}}}})
+                        ($index {$midi_sample get index})
+                        {if {>= $index 0}
+                           {set_elem [mapping] $index $midi_sample}
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      )
       (set_play_range
          ($start $end)
-         {set
-            [play_range_start]
-            $start}
-         {set
-            [play_range_end]
-            $end})
-      (midi
-         {$this add_message $mp.val})}
-   #define MIDI_COUNT_IN_PLAYER_COMMON
-   ((message_self 1)
+         {set [play_range_start] $start}
+         {set [play_range_end] $end}
+      )
+      (midi {$this add_message $mp.val})
+   }
+   #define MIDI_COUNT_IN_PLAYER_COMMON (
+      (message_self 1)
       (message_type play)
       (track_name '')
       (midi)
@@ -181,87 +140,57 @@
       (active 1)
       (play
          ($val)
-         {if
-            {&&
-               $val
-               [active]
-               {!
-                  [ignore_next]}}
-            {$val play}}
-         {set
-            [ignore_next]
-            0})
+         {if {&& $val [active] {! [ignore_next]}}
+            {$val play}
+         }
+         {set [ignore_next] 0}
+      )
       (set_section
          ($s $e)
          {$this clear_events}
-         {if
-            $hud_panel
+         {if $hud_panel
             {do
-               ($sound_bank
-                  {$hud_panel find sound_bank})
+               ($sound_bank {$hud_panel find sound_bank})
                ($mybeat 0)
                ($offsetbeat 0)
-               ($sfx
-                  "")
-               {foreach_int
-                  $i
-                  0
-                  4
-                  {set
-                     $mybeat
-                     {'+'
-                        {round $s}
-                        $i}}
-                  {set
-                     $sfx
-                     {$sound_bank
-                        find
-                        {elem
-                           [count_list]
-                           $i}
-                        0}}
-                  {if
-                     $sfx
-                     {set
-                        $offsetbeat
-                        {calculate_lined_beat
-                           $mybeat
-                           {extract_start_offset $sfx}
-                           [audio_speed]}}
+               ($sfx "")
+               {foreach_int $i 0 4
+                  {set $mybeat {'+' {round $s} $i}}
+                  {set $sfx
+                     {$sound_bank find {elem [count_list] $i} 0}
+                  }
+                  {if $sfx
+                     {set $offsetbeat
+                        {calculate_lined_beat $mybeat {extract_start_offset $sfx} [audio_speed]}
+                     }
                      {$this add_message_se $offsetbeat $offsetbeat $sfx}
-                     {if
-                        {&&
-                           {== $i 0}
-                           {> $e 0}}
-                        {set
-                           $mybeat
-                           {'+'
-                              {round $e}
-                              $i}}
-                        {set
-                           $offsetbeat
-                           {calculate_lined_beat
-                              $mybeat
-                              {extract_start_offset $sfx}
-                              [audio_speed]}}
-                        {$this add_message_se $offsetbeat $offsetbeat $sfx}}}}
-               {$this reset_to_beat $beat}}}))
-   {new
-      MidiParser
+                     {if {&& {== $i 0} {> $e 0}}
+                        {set $mybeat {'+' {round $e} $i}}
+                        {set $offsetbeat
+                           {calculate_lined_beat $mybeat {extract_start_offset $sfx} [audio_speed]}
+                        }
+                        {$this add_message_se $offsetbeat $offsetbeat $sfx}
+                     }
+                  }
+               }
+               {$this reset_to_beat $beat}
+            }
+         }
+      )
+   )
+   {new MidiParser
       count_in_player
       (audio_speed 1)
-      (count_list
-         (5.cue 6.cue 7.cue 8.cue))
-      MIDI_COUNT_IN_PLAYER_COMMON}
-   {new
-      MidiParser
+      (count_list (5.cue 6.cue 7.cue 8.cue))
+      MIDI_COUNT_IN_PLAYER_COMMON
+   }
+   {new MidiParser
       slow_count_in_player
       (audio_speed 0.6)
-      (count_list
-         (5_slow.cue 6_slow.cue 7_slow.cue 8_slow.cue))
-      MIDI_COUNT_IN_PLAYER_COMMON}
-   {new
-      MidiParser
+      (count_list (5_slow.cue 6_slow.cue 7_slow.cue 8_slow.cue))
+      MIDI_COUNT_IN_PLAYER_COMMON
+   }
+   {new MidiParser
       action_bark_player
       (message_self 1)
       (message_type play)
@@ -271,70 +200,49 @@
       (bank_name barks_slow)
       (play
          ($val)
-         {if
-            {&&
-               $val
-               [active]}
-            {$val play}})
+         {if {&& $val [active]}
+            {$val play}
+         }
+      )
       (add_barks
          ($move $prop $start)
-         {if
-            {&& $hud_panel $move}
+         {if {&& $hud_panel $move}
             {do
-               ($sound_bank
-                  {$hud_panel find sound_bank})
-               ($bank
-                  {$sound_bank
-                     find
-                     [bank_name]})
-               ($audio_speed
-                  {audio get speed})
+               ($sound_bank {$hud_panel find sound_bank})
+               ($bank {$sound_bank find [bank_name]})
+               ($audio_speed {audio get speed})
                ($b 0)
-               ($sfx
-                  "")
-               {$move
-                  foreach_keyframe
-                  $move
+               ($sfx "")
+               {$move foreach_keyframe $move
                   $prop
                   $frame
                   $value
-                  {set
-                     $b
-                     {'+'
-                        $start
-                        {/ $frame 480}}}
-                  {set
-                     $sfx
-                     {$bank
-                        find
-                        {sprint
-                           $value
-                           ".cue"}
-                        0}}
-                  {if
-                     $sfx
-                     {set
-                        $b
-                        {calculate_lined_beat
-                           $b
-                           {extract_start_offset $sfx}
-                           $audio_speed}}
-                     {$this add_message_se $b $b $sfx}}}}})
+                  {set $b {'+' $start {/ $frame 480}}}
+                  {set $sfx
+                     {$bank find {sprint $value ".cue"} 0}
+                  }
+                  {if $sfx
+                     {set $b
+                        {calculate_lined_beat $b {extract_start_offset $sfx} $audio_speed}
+                     }
+                     {$this add_message_se $b $b $sfx}
+                  }
+               }
+            }
+         }
+      )
       (set_active
          ($active)
-         {if
-            {!=
-               $active
-               [active]}
-            {set
-               [active]
-               $active}
-            {if_else
-               [active]
+         {if {!= $active [active]}
+            {set [active] $active}
+            {if_else [active]
                {$this reset_to_beat $beat}
-               {$this clear_events}}})}
-   {new
-      MidiParser
+               {$this clear_events}
+            }
+         }
+      )
+   }
+   {new MidiParser
       photo_taker
       (message_self 1)
       (message_type update)
@@ -345,64 +253,50 @@
       (init
          ($start_take_beat $photo_count $show_beat $hide_beat)
          {do
-            ($flash_beat
-               {- $start_take_beat 4})
+            ($flash_beat {- $start_take_beat 4})
             ($take_beat -1)
             {$this clear_events}
-            {set
-               [photo_count]
-               $photo_count}
+            {set [photo_count] $photo_count}
             {$this add_message_se $flash_beat $flash_beat flash}
-            {foreach_int
-               $i
-               0
-               [photo_count]
-               {set
-                  $take_beat
-                  {'+'
-                     $start_take_beat
-                     {/
-                        $i
-                        [take_rate]}}}
-               {$this add_message_se $take_beat $take_beat take}}
+            {foreach_int $i 0 [photo_count]
+               {set $take_beat {'+' $start_take_beat {/ $i [take_rate]}}}
+               {$this add_message_se $take_beat $take_beat take}
+            }
             {$this add_message_se $show_beat $show_beat show}
-            {$this add_message_se $hide_beat $hide_beat hide}})
+            {$this add_message_se $hide_beat $hide_beat hide}
+         }
+      )
       (update
          ($state)
-         {if
-            {&& $hud_panel $hamdirector}
-            {switch
-               $state
-               (flash
-                  {handle
-                     ({$hamdirector get_world}
-                        prepare_photo_take)})
+         {if {&& $hud_panel $hamdirector}
+            {switch $state
+               (flash {handle ({$hamdirector get_world} prepare_photo_take)})
                (take
                   {$hud_panel take_snapshot}
-                  {handle
-                     ({$hamdirector get_world}
-                        photo_take)})
-               (show
-                  {$hud_panel
-                     show_snapshots
-                     1
-                     [photo_count]})
+                  {handle ({$hamdirector get_world} photo_take)}
+               )
+               (show {$hud_panel show_snapshots 1 [photo_count]})
                (hide
                   {$hud_panel show_snapshots 0 0}
-                  {$this clear_events})}})}
-   {new
-      MidiParser
+                  {$this clear_events}
+               )
+            }
+         }
+      )
+   }
+   {new MidiParser
       final_pose_parser
       (track_name '')
       (midi)
       (set_beat
          ($final_beat)
-         {if
-            {>= $final_beat 0.0}
+         {if {>= $final_beat 0.0}
             {$this clear_events}
-            {$this add_message_se $final_beat $final_beat final_pose}})}
-   {new
-      MidiParser
+            {$this add_message_se $final_beat $final_beat final_pose}
+         }
+      )
+   }
+   {new MidiParser
       gameplay_event_scheduler
       (message_self 1)
       (message_type process)
@@ -410,47 +304,53 @@
       (midi)
       (process
          ($data)
-         {switch
-            {type $data}
+         {switch {type $data}
             (4
-               {if
-                  {&&
-                     {$data is_a Sequence}
-                     $hud_panel}
-                  {$hud_panel play $data}})
+               {if {&& {$data is_a Sequence} $hud_panel}
+                  {$hud_panel play $data}
+               }
+            )
             (5
-               {switch
-                  $data
-                  (done
-                     {$this reset})
+               {switch $data
+                  (done {$this reset})
                   (deactivate_timeline
                      {do
-                        ($timeline
-                           {find_obj $hud_panel dynamic_hud})
-                        {if
-                           $timeline
-                           {$timeline deactivate}}})
+                        ($timeline {find_obj $hud_panel dynamic_hud})
+                        {if $timeline
+                           {$timeline deactivate}
+                        }
+                     }
+                  )
                   (highlight_awards
                      {do
-                        ($timeline
-                           {find_obj $hud_panel dynamic_hud})
-                        {if
-                           $timeline
-                           {$timeline highlight_awards}}})
+                        ($timeline {find_obj $hud_panel dynamic_hud})
+                        {if $timeline
+                           {$timeline highlight_awards}
+                        }
+                     }
+                  )
                   (recap
-                     {if
-                        $hud_panel
-                        {$hud_panel feedback_instruction $data}})
+                     {if $hud_panel
+                        {$hud_panel feedback_instruction $data}
+                     }
+                  )
                   (recap_finale
-                     {if
-                        $hud_panel
-                        {$hud_panel feedback_instruction $data}})
-                  {if
-                     {exists game_panel}
-                     {game_panel send_world_message $data 0}}})})
+                     {if $hud_panel
+                        {$hud_panel feedback_instruction $data}
+                     }
+                  )
+                  {if {exists game_panel}
+                     {game_panel send_world_message $data 0}
+                  }
+               }
+            )
+         }
+      )
       (add_world_message
          ($beat $message)
-         {$this add_message_se $beat $beat $message})
-      (reset
-         {$this clear_events})})
+         {$this add_message_se $beat $beat $message}
+      )
+      (reset {$this clear_events})
+   }
+)
 (finish_loading)

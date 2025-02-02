@@ -1,132 +1,119 @@
-{new
-   InboxPanel
+{new InboxPanel
    inbox_panel
-   (file
-      "inbox.milo")
+   (file "inbox.milo")
    (focus songs.lst)
    (read_message_delay 1000)
    (enter
       {data_mine_mgr add_event visit_message_screen}
       {shell_sfx set_interceptor $this}
-      {{$this get_inbox_provider}
-         build_list}
+      {{$this get_inbox_provider} build_list}
       {$this start_msg_timer 0}
-      {songs.lst
-         set_provider
-         {$this get_inbox_provider}}
-      {{$this get_inbox_provider}
-         update_subject_message
+      {songs.lst set_provider {$this get_inbox_provider}}
+      {{$this get_inbox_provider} update_subject_message
          subject.lbl
          message.lbl
-         {songs.lst selected_pos}}
+         {songs.lst selected_pos}
+      }
       {$this update_inline_help}
       {loading.grp set_showing FALSE}
       {scroller.grp set_showing FALSE}
-      {if
-         {>
-            {songs.lst num_data}
-            6}
-         {scroller.grp set_showing TRUE}}
-      {update_participating_user_presence CONTEXT_PRESENCE_RP_EXPLORING_MENU})
-   (exit
-      {shell_sfx clear_interceptor})
+      {if {> {songs.lst num_data} 6}
+         {scroller.grp set_showing TRUE}
+      }
+      {update_participating_user_presence CONTEXT_PRESENCE_RP_EXPLORING_MENU}
+   )
+   (exit {shell_sfx clear_interceptor})
    (show_error
       ($error_token)
-      {error_popup_panel show_popup $error_token inbox_panel})
+      {error_popup_panel show_popup $error_token inbox_panel}
+   )
    (cancel_challenge_complete
       ($dingo_result)
-      {switch
-         $dingo_result
+      {switch $dingo_result
          (kDingoRetSuccess)
          (kDingoRetChallengeAlreadyPlayed
-            {$this show_error error_challenge_cancel_played})
+            {$this show_error error_challenge_cancel_played}
+         )
          (kDingoRetInvalidChallenge
-            {$this show_error error_challenge_cancel_invalid})
-         {$this show_error error_unknown}})
+            {$this show_error error_challenge_cancel_invalid}
+         )
+         {$this show_error error_unknown}
+      }
+   )
    (on_messages_updated
-      {{$this get_inbox_provider}
-         build_list}
-      {{$this get_inbox_provider}
-         update_subject_message
+      {{$this get_inbox_provider} build_list}
+      {{$this get_inbox_provider} update_subject_message
          subject.lbl
          message.lbl
-         {songs.lst selected_pos}}
+         {songs.lst selected_pos}
+      }
       {songs.lst refresh}
       {$this update_inline_help}
-      {if_else
-         {>
-            {songs.lst num_data}
-            6}
+      {if_else {> {songs.lst num_data} 6}
          {scroller.grp set_showing TRUE}
-         {scroller.grp set_showing FALSE}}
+         {scroller.grp set_showing FALSE}
+      }
       {inbox_screen set_focus_panel $this}
-      {loading.grp set_showing FALSE})
+      {loading.grp set_showing FALSE}
+   )
    (SELECT_MSG
       {do
-         ($msg_pos
-            {songs.lst selected_pos})
-         {if
-            {&&
-               {$this is_challenge $msg_pos}
-               {$this is_active_challenge $msg_pos}}
-            {data_mine_mgr
-               add_event
+         ($msg_pos {songs.lst selected_pos})
+         {if {&& {$this is_challenge $msg_pos} {$this is_active_challenge $msg_pos}}
+            {data_mine_mgr add_event
                challenge_message_launched
-               (("challenge_id"
-                     {$this get_challenge_id $msg_pos}))}}
+               (("challenge_id" {$this get_challenge_id $msg_pos}))
+            }
+         }
          {if
             {'||'
-               {&&
-                  {$this is_challenge $msg_pos}
-                  {$this is_active_challenge $msg_pos}}
-               {$this is_song_bonus $msg_pos}}
-            {if_else
-               {$this is_playable $msg_pos}
+               {&& {$this is_challenge $msg_pos} {$this is_active_challenge $msg_pos}}
+               {$this is_song_bonus $msg_pos}
+            }
+            {if_else {$this is_playable $msg_pos}
                {do
                   {shell_sfx play_splash}
                   {loading.grp set_showing TRUE}
                   #ifndef HX_PS3
-                  {$this
-                     mount_current_content
-                     {{$this get_msg_song_metadata $msg_pos}
-                        id}}
+                  {$this mount_current_content {{$this get_msg_song_metadata $msg_pos} id}}
                   #endif
-                  {loading_screen
-                     set_song
-                     {$this get_msg_song_metadata $msg_pos}}
-                  {ui goto_screen powerup_select_screen}}
+                  {loading_screen set_song {$this get_msg_song_metadata $msg_pos}}
+                  {ui goto_screen powerup_select_screen}
+               }
                {do
-                  ($offer_id
-                     {$this get_msg_song_offer_id $msg_pos})
+                  ($offer_id {$this get_msg_song_offer_id $msg_pos})
                   {shell_sfx play_splash}
-                  {if_else
-                     $offer_id
+                  {if_else $offer_id
                      {do
                         {store_offer_fetch_panel set_return_target inbox_screen}
                         {store_offer_fetch_panel set_target_store_offer_id $offer_id}
-                        {data_mine_mgr
-                           add_event
+                        {data_mine_mgr add_event
                            enter_store_from_message
-                           (("message_type"
-                                 {{$this get_inbox_provider}
-                                    get_msg_type
-                                    $msg_pos})
-                              ("song_offer_id"
-                                 $offer_id))}
+                           (
+                              ("message_type" {{$this get_inbox_provider} get_msg_type $msg_pos})
+                              ("song_offer_id" $offer_id)
+                           )
+                        }
                         {ui goto_screen prep_offer_for_store_screen}
-                        {loading.grp set_showing TRUE}}
-                     {$this show_error error_song_not_available_for_purchase}}}}}
-         {if
-            {$this is_buy_full_game $msg_pos}
-            {trial_mgr offer_trial_upgrade $user}}
-         {if
-            {$this is_rbw_upsell $msg_pos}
+                        {loading.grp set_showing TRUE}
+                     }
+                     {$this show_error error_song_not_available_for_purchase}
+                  }
+               }
+            }
+         }
+         {if {$this is_buy_full_game $msg_pos}
+            {trial_mgr offer_trial_upgrade $user}
+         }
+         {if {$this is_rbw_upsell $msg_pos}
             {options_screen set back_screen splash_screen}
-            {ui goto_screen rbworld_link_screen}}})
+            {ui goto_screen rbworld_link_screen}
+         }
+      }
+   )
    (update_inline_help
       {do
-         ($msg_pos
-            {songs.lst selected_pos})
+         ($msg_pos {songs.lst selected_pos})
          {InlineHelp.ihp clear_action_token kAction_Confirm}
          {InlineHelp.ihp clear_action_token kAction_Cancel}
          {InlineHelp.ihp clear_action_token kAction_Start}
@@ -134,117 +121,116 @@
          {InlineHelp.ihp clear_action_token kAction_ShellOption}
          {if_else
             {'||'
-               {&&
-                  {$this is_challenge $msg_pos}
-                  {$this is_active_challenge $msg_pos}}
+               {&& {$this is_challenge $msg_pos} {$this is_active_challenge $msg_pos}}
                {$this is_song_bonus $msg_pos}
                {$this is_buy_full_game $msg_pos}
-               {$this is_rbw_upsell $msg_pos}}
+               {$this is_rbw_upsell $msg_pos}
+            }
             {do
-               {if
-                  {==
-                     {{$this loaded_dir}
-                        get
-                        focus_component}
-                     songs.lst}
-                  {songs.lst set_state kComponentFocused}}
-               {if_else
-                  {$this is_store_offer $msg_pos}
+               {if {== {{$this loaded_dir} get focus_component} songs.lst}
+                  {songs.lst set_state kComponentFocused}
+               }
+               {if_else {$this is_store_offer $msg_pos}
                   {InlineHelp.ihp set_action_token kAction_Confirm store_offer}
-                  {InlineHelp.ihp set_action_token kAction_Confirm inline_help_continue}}}
+                  {InlineHelp.ihp set_action_token kAction_Confirm inline_help_continue}
+               }
+            }
             {do
-               {songs.lst set_state kComponentDisabled}}}
+               {songs.lst set_state kComponentDisabled}
+            }
+         }
          {InlineHelp.ihp set_action_token kAction_Cancel inline_help_back}
          {InlineHelp.ihp set_action_token kAction_Start inline_help_options}
-         {if_else
-            {&&
-               {$this is_challenge $msg_pos}
-               {$this can_cancel_challenge $msg_pos}}
+         {if_else {&& {$this is_challenge $msg_pos} {$this can_cancel_challenge $msg_pos}}
             {InlineHelp.ihp set_action_token kAction_Option decline_challenge}
-            {InlineHelp.ihp clear_action_token kAction_Option}}
+            {InlineHelp.ihp clear_action_token kAction_Option}
+         }
          #ifdef HX_XBOX
-         {if_else
-            {$this is_challenge $msg_pos}
+         {if_else {$this is_challenge $msg_pos}
             {InlineHelp.ihp set_action_token kAction_ShellOption inline_help_gamercard}
-            {InlineHelp.ihp clear_action_token kAction_ShellOption}}
-         #endif})
+            {InlineHelp.ihp clear_action_token kAction_ShellOption}
+         }
+         #endif
+      }
+   )
    (mount_current_content
       ($song_id)
       {do
-         ($content_name
-            {song_mgr content_name $song_id})
-         {if
-            {!=
-               $content_name
-               ""}
-            {content_mgr mount_content $content_name}}})
+         ($content_name {song_mgr content_name $song_id})
+         {if {!= $content_name ""}
+            {content_mgr mount_content $content_name}
+         }
+      }
+   )
    (BUTTON_DOWN_MSG
-      {switch
-         $action
+      {switch $action
          (kAction_PageDown
             {transition_to recommendation_screen}
-            {{background_panel find arrow_rt.flow}
-               activate})
+            {{background_panel find arrow_rt.flow} activate}
+         )
          (kAction_PageUp
-            {data_mine_mgr
-               add_event
-               enter_store
-               (("from_screen"
-                     "messages"))}
-            {transition_to
-               {store_menu_screen get which_store_screen}}
-            {{background_panel find arrow_lt.flow}
-               activate})
-         (kAction_Cancel
-            {ui goto_screen splash_screen})
+            {data_mine_mgr add_event enter_store (("from_screen" "messages"))}
+            {transition_to {store_menu_screen get which_store_screen}}
+            {{background_panel find arrow_lt.flow} activate}
+         )
+         (kAction_Cancel {ui goto_screen splash_screen})
          (kAction_Start
             {options_screen set back_screen inbox_screen}
-            {ui goto_screen options_screen})
+            {ui goto_screen options_screen}
+         )
          (kAction_Option
             {do
-               ($msg_pos
-                  {songs.lst selected_pos})
-               {if
-                  {&&
-                     {$this is_challenge $msg_pos}
-                     {$this can_cancel_challenge $msg_pos}}
+               ($msg_pos {songs.lst selected_pos})
+               {if {&& {$this is_challenge $msg_pos} {$this can_cancel_challenge $msg_pos}}
                   {do
                      {$this cancel_selected_challenge $msg_pos}
                      {loading.grp set_showing TRUE}
-                     {inbox_screen
-                        set_focus_panel
-                        ""}}}})
+                     {inbox_screen set_focus_panel ""}
+                  }
+               }
+            }
+         )
          (kAction_ShellOption
             #ifdef HX_XBOX
             {do
-               ($msg_pos
-                  {songs.lst selected_pos})
-               {if
-                  {$this is_challenge $msg_pos}
-                  {$this show_gamercard $msg_pos}}}
-            #endif)
-         kDataUnhandled})
+               ($msg_pos {songs.lst selected_pos})
+               {if {$this is_challenge $msg_pos}
+                  {$this show_gamercard $msg_pos}
+               }
+            }
+            #endif
+         )
+         kDataUnhandled
+      }
+   )
    (SCROLL_MSG
       {do
-         ($msg_pos
-            {songs.lst selected_pos})
+         ($msg_pos {songs.lst selected_pos})
          {$this start_msg_timer $msg_pos}
-         {{$this get_inbox_provider}
-            update_subject_message
+         {{$this get_inbox_provider} update_subject_message
             subject.lbl
             message.lbl
-            $msg_pos}
-         {$this update_inline_help}})}
-{new
-   UIScreen
+            $msg_pos
+         }
+         {$this update_inline_help}
+      }
+   )
+}
+{new UIScreen
    inbox_screen
-   (panels background_panel shell_music_panel menu_cache_panel inbox_panel error_popup_panel)
+   (panels
+      background_panel
+      shell_music_panel
+      menu_cache_panel
+      inbox_panel
+      error_popup_panel
+   )
    SCREEN_CONTENT_REFRESH
    (header_index 3)
    (focus inbox_panel)
    (enter
       {$this set_focus_panel inbox_panel}
-      {background_panel
-         jump_to_header
-         [header_index]}
-      {background_panel set_offline_mode_headers FALSE})}
+      {background_panel jump_to_header [header_index]}
+      {background_panel set_offline_mode_headers FALSE}
+   )
+}

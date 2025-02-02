@@ -1,18 +1,16 @@
 #include track_panel.dta
 #include mtv_overlay.dta
 
-
 #define LOSE_MUSIC_SLOW_SEC (2)
 
-{new GamePanel game
+{new GamePanel
+   game
    (file "")
-      
+
    ; Called after a new song is loaded and ready to go.
    ; New songs make new parsers, so there you go.
-   (reset 
-      {events_parser add_sink $this}
-   )
-   
+   (reset {events_parser add_sink $this})
+
    (coda
       {if_else {game want_coda}
          {do
@@ -24,7 +22,7 @@
          0 ; eat it
       }
    )
-   
+
    ; Pick the intro camera, and do all that jazz.
    (pick_intro
       ; If we're picking the intro, we know we've finished loading.
@@ -32,18 +30,17 @@
       ; from the pause screen
       ; TODO: should be broken out better
       {{gamemode get game_screen} check_session_state}
-   
-; PGM FIXME - we might need to get this information even though cameras don't exist in PS2
-#ifdef HX_XBOX   ; HWR - Not used in the Pi branch
+
+      ; PGM FIXME - we might need to get this information even though cameras don't exist in PS2
+      #ifdef HX_XBOX ; HWR - Not used in the Pi branch
       {if_else {&& [intro_shot] {! $skip_intro}}
-         {do             
-            {beatmatch set_intro_real_time
-                       {- {[intro_shot] duration_seconds}}}
+         {do
+            {beatmatch set_intro_real_time {- {[intro_shot] duration_seconds}}}
             {handle ($this intro_start)}
-         }   
+         }
          {handle ($this intro_skip)}
       }
-#else
+      #else
       {if_else {! $skip_intro}
          {do
             {beatmatch set_intro_real_time 0}
@@ -51,48 +48,41 @@
          }
          {handle ($this intro_skip)}
       }
-#endif
+      #endif
    )
-   
-   (intro_start             
-      
+
+   (intro_start
       ; Extend!  (this used to be 2 seconds before time zero, now it's
       ; just at time zero)
-      {script_task kTaskSeconds (delay {- 0 {taskmgr seconds}})
+      {script_task kTaskSeconds
+         (delay {- 0 {taskmgr seconds}})
          (script {handle ($this on_extend)})
       }
-      
+
       ; Call intro end at beat zero, we do it here in case we can't
       ; find an acceptable intro shot.
-      {script_task  kTaskBeats
-         (delay {- {taskmgr beat}}) 
-         (script {handle ($this intro_end)}) 
+      {script_task kTaskBeats
+         (delay {- {taskmgr beat}})
+         (script {handle ($this intro_end)})
       }
-      
+
       {$this start_game}
 
       kDataUnhandled
    )
-   
-   (intro_skip
-      {$this start_game}
-      kDataUnhandled
-   )
 
+   (intro_skip {$this start_game} kDataUnhandled)
 
    ; The music has started playing, authored by the audio team.
-   (music_start      
-      {ui music_start}
-      kDataUnhandled
-   )
-   
+   (music_start {ui music_start} kDataUnhandled)
+
    (beat
       {if $debug.beep
          {synth play click}
       }
 
       ; clap to the beat in the peak state
-/* Moved this into Band.cpp
+      /* Moved this into Band.cpp
       {if {&& {gamemode get crowd_reacts} {== [excitement] kExcitementPeak}}
          {script_task kTaskBeats (delay CLAP_DELAY_BEATS)
             (script 
@@ -103,19 +93,27 @@
 */
       kDataUnhandled
    )
-    
-   (excitement ($ex)
+
+   (excitement
+      ($ex)
       ; call the specific trigger
       {if {gamemode get crowd_reacts}
-         {do ($levels (excitement_boot excitement_bad excitement_okay
-                       excitement_great excitement_peak))
+         {do
+            ($levels
+               (excitement_boot
+                  excitement_bad
+                  excitement_okay
+                  excitement_great
+                  excitement_peak
+               )
+            )
             {if {< $ex kNumExcitements}
                {handle ($this {elem $levels $ex})}
             }
          }
       }
-      
-      kDataUnhandled 
+
+      kDataUnhandled
    )
 
    (game_over
@@ -123,8 +121,8 @@
       {beatmatch foreach_active_player $p
          {$p on_game_over}
       }
-      kDataUnhandled      
-   )   
+      kDataUnhandled
+   )
 
    (game_won_common
       {beatmatch set_realtime TRUE}
@@ -132,36 +130,24 @@
       {synth play track_end.cue}
    )
 
-   (game_won
-      {$this game_won_common}
-      kDataUnhandled      
-   )
-   
-   (game_won_band0
-      {$this game_won_common}
-      kDataUnhandled      
-   )
-   
-   (game_won_band1
-      {$this game_won_common}
-      kDataUnhandled      
-   )
-   
-   (game_won_tie
-      {$this game_won_common}
-      kDataUnhandled
-   )         
+   (game_won {$this game_won_common} kDataUnhandled)
+
+   (game_won_band0 {$this game_won_common} kDataUnhandled)
+
+   (game_won_band1 {$this game_won_common} kDataUnhandled)
+
+   (game_won_tie {$this game_won_common} kDataUnhandled)
 
    (game_lost
-		
       {beatmatch set_realtime TRUE}
-;; PORT      
-;;    {game interp_task LOSE_MUSIC_SLOW_MS $speed 1.0 0.0
-;;       {beatmatch set_music_speed $speed}
-;;    }
+      ;; PORT      
+      ;;    {game interp_task LOSE_MUSIC_SLOW_MS $speed 1.0 0.0
+      ;;       {beatmatch set_music_speed $speed}
+      ;;    }
       ;;{print "creating script task\n"}
-      {script_task kTaskBeats (delay LOSE_MUSIC_SLOW_SEC)
-         (script 
+      {script_task kTaskBeats
+         (delay LOSE_MUSIC_SLOW_SEC)
+         (script
             {do
                ;;{print "got to game_lost\n"}
                {beatmatch set_paused TRUE}
@@ -169,25 +155,30 @@
          )
       }
       kDataUnhandled
-   )   
-   
+   )
+
    (game_outro
-   
       {synth stop_all_sfx}
       ; All outro sequences now keep the world animating.
       {band_ui_sink sync_screen ; will push/goto as appropriate
-	  {gamemode get {if_else {$this lost} lose_screen win_screen}}
-	     1 ; we want to be at depth "1", aboce the game screen
+         {gamemode get
+            {if_else {$this lost}
+               lose_screen
+               win_screen
+            }
+         }
+         1 ; we want to be at depth "1", aboce the game screen
       }
-      kDataUnhandled      
-   )  
+      kDataUnhandled
+   )
 
-   (on_pause ($player_num)
+   (on_pause
+      ($player_num)
       {do
-         {if {&&
-
+         {if
+            {&&
                ;make sure the pause screen isn't already showing...
-               {!{ui in_transition}}
+               {! {ui in_transition}}
                {!= pause_screen {ui current_screen}}
 
                {gamecfg is_player_participating $player_num}
@@ -197,8 +188,8 @@
                {{beatmatch player $player_num} can_pause}
 
                ;tutorials don't use this system, so pause_screen == ''
-               {!= {gamemode get pause_screen} ''} 
-             }
+               {!= {gamemode get pause_screen} ''}
+            }
             {pause_panel set player_number $player_num}
             {drum_trainer_pause_panel set player_number $player_num}
             {band_ui_sink set_net_sync FALSE}
@@ -206,54 +197,58 @@
          }
       }
    )
-   
+
    ;-------------------------
    ;HOJ used for failed and saved images
    ;DMS - Oliver please fix this to work with the new save/failed images
-   (game_player_failed ($player)
-	 {world_panel player_failed $player}
+   (game_player_failed
+      ($player)
+      {world_panel player_failed $player}
    )
-   (game_player_saved ($player)
-	 {world_panel player_saved_by $player}
+   (game_player_saved
+      ($player)
+      {world_panel player_saved_by $player}
    )
    ;-------------------------
 }
 
 ; Video world panel
-{new UIPanel world_panel
-#ifdef HX_EE   ;HWR - Video background on PS2 only
+{new UIPanel
+   world_panel
+   #ifdef HX_EE ;HWR - Video background on PS2 only
    (file world/video_world.milo)
    (enter
       {game add_sink $this}
       ;MOSS - video_file.mov will be set and animated by the synth
       {film_grain.filt animate (delay -5) (loop 0 101)}
-      
+
       {video_overlay.mnm set_frame 0}
-	  {video_fadein.mnm set_frame 0}
-	  
-	  ;HWR - Start the video fade-in after a very short delay
-	  ;     (the movie was flashing on the screen for an instant, previously)
-      {script_task kTaskUISeconds (delay .1)
+      {video_fadein.mnm set_frame 0}
+
+      ;HWR - Start the video fade-in after a very short delay
+      ;     (the movie was flashing on the screen for an instant, previously)
+      {script_task kTaskUISeconds
+         (delay .1)
          (script
             {video.mat set diffuse_tex video_texture.tex}
             {video_fadein.mnm animate}
          )
       }
    )
-#else
+   #else
    (file world/static_world.milo)
    (enter
       {game add_sink $this}
-	  {video_overlay.mnm set_frame 0}
+      {video_overlay.mnm set_frame 0}
       {film_grain.filt animate (loop 0 101)}
    )
-#endif
+   #endif
 
    (cycle_film_grain
       {if {exists film_grain.mat}
          {if_else {== {video.mat get next_pass} film_grain.mat}
             {do
-               {video.mat set next_pass ""}   
+               {video.mat set next_pass ""}
                {notify "No Film Grain"}
             }
             {do
@@ -263,181 +258,175 @@
          }
       }
    )
- 
+
    (exit
       {game remove_sink $this}
-#ifdef HX_EE   ;MTC revisit this.  This is bill's code.
+      #ifdef HX_EE ;MTC revisit this.  This is bill's code.
       {video.mat set diffuse_tex video_overlay_texture.tex}
-#endif
+      #endif
    )
-   (load 
-      {game load_crowd_audio}
-   )
-   
-   
+   (load {game load_crowd_audio})
+
    ;-----------------
    ;HOJ player failed/savior
-   
-   (player_failed ($player)
-		{set $pcfg {game get_player_config $player}}
-		{switch {$pcfg get_track_sym}
-			(guitar {player_failed_image.mat set diffuse_tex player_failed_guitar.tex} )
-			(bass   {player_failed_image.mat set diffuse_tex player_failed_bass.tex}  )
-			(drum  {player_failed_image.mat set diffuse_tex player_failed_drums.tex})
-			(vocals {player_failed_image.mat set diffuse_tex player_failed_vocals.tex})
-		}
-		{player_failed.trg trigger}		 
+
+   (player_failed
+      ($player)
+      {set $pcfg {game get_player_config $player}}
+      {switch {$pcfg get_track_sym}
+         (guitar {player_failed_image.mat set diffuse_tex player_failed_guitar.tex})
+         (bass {player_failed_image.mat set diffuse_tex player_failed_bass.tex})
+         (drum {player_failed_image.mat set diffuse_tex player_failed_drums.tex})
+         (vocals {player_failed_image.mat set diffuse_tex player_failed_vocals.tex})
+      }
+      {player_failed.trg trigger}
    )
-   
-   (player_saved_by ($player)
-   		{set $pcfg {game get_player_config $player}}
-		
-		{switch {$pcfg get_track_sym}
-			(guitar {player_saved_image.mat set diffuse_tex player_saved_guitar.tex}  )
-			(bass   {player_saved_image.mat set diffuse_tex player_saved_bass.tex})
-			(drum  {player_saved_image.mat set diffuse_tex player_saved_drums.tex})
-			(vocals {player_saved_image.mat set diffuse_tex player_saved_vocals.tex})
-		}
-		
-		{player_saved.trg trigger}		 
-		
+
+   (player_saved_by
+      ($player)
+      {set $pcfg {game get_player_config $player}}
+
+      {switch {$pcfg get_track_sym}
+         (guitar {player_saved_image.mat set diffuse_tex player_saved_guitar.tex})
+         (bass {player_saved_image.mat set diffuse_tex player_saved_bass.tex})
+         (drum {player_saved_image.mat set diffuse_tex player_saved_drums.tex})
+         (vocals {player_saved_image.mat set diffuse_tex player_saved_vocals.tex})
+      }
+
+      {player_saved.trg trigger}
    )
    ;-------------
-   
+
    (game_lost
-    #ifdef HX_XBOX
-		{game game_outro} 
-	#else
-	;{handle (game game_outro)}
-	{synth stop_all_sfx}
-	
-	{beatmatch foreach_active_player $p
-		{synth play {sprintf "%s_died.cue" {$p instrument}}}
-	 }
-	 
-	{ script_task kTaskSeconds (delay 2) 
-		(script
-			{do
-				{video_overlay.mnm animate}
-				{ script_task kTaskSeconds (delay 2) 
-					(script
-						{do
-							{game set_paused TRUE}
-							{ script_task kTaskSeconds (delay 5) 
-								(script
-									{video_overlay.mnm set_frame 0}
-								)
-							}
-							{handle (game game_outro)}
-							
-						}
-					)
-				}
-			}
-		)
-	}
-	;;-----------------------------------------------------------
-	;HOJ FAIL GAME MOVIE STUFF WAS :
-	;	{synth stop_all_sfx}
-	;	{video_file.mov set movie_file {sprintf "videos/placeholder_movie_act1"}}
-	;	{video_file.mov animate}
-	;	{film_grain.filt animate (loop 0 101)}
-	;	
-	;	{ script_task kTaskSeconds (delay 6) 
-	;		 (script
-	;			{do
-	;				{video_file.mov set movie_file {sprintf "videos/cube"}}
-	;				{video_file.mov animate}
-	;				{film_grain.filt animate (loop 0 101)}
-	;				{ script_task kTaskSeconds (delay 5) 
-	;					(script
-	;						{do
-	;							{game set_paused TRUE}	
-	;							{ script_task kTaskSeconds (delay 1) 
-	;								(script {video_file.mov set movie_file {sprintf "songs/%s/%s" {game get_song} {game get_song}}})
-	;							}
-	;							{handle (game game_outro)}
-	;						}
-	;					)
-	;				}
-	;			}
-	;		)					
-	;	}
-	;;-----------------------------------------------------------
-	#endif
+      #ifdef HX_XBOX
+      {game game_outro}
+      #else
+      ;{handle (game game_outro)}
+      {synth stop_all_sfx}
+
+      {beatmatch foreach_active_player $p
+         {synth play {sprintf "%s_died.cue" {$p instrument}}}
+      }
+
+      {script_task kTaskSeconds
+         (delay 2)
+         (script
+            {do
+               {video_overlay.mnm animate}
+               {script_task kTaskSeconds
+                  (delay 2)
+                  (script
+                     {do
+                        {game set_paused TRUE}
+                        {script_task kTaskSeconds
+                           (delay 5)
+                           (script {video_overlay.mnm set_frame 0})
+                        }
+                        {handle (game game_outro)}
+                     }
+                  )
+               }
+            }
+         )
+      }
+      ;;-----------------------------------------------------------
+      ;HOJ FAIL GAME MOVIE STUFF WAS :
+      ;	{synth stop_all_sfx}
+      ;	{video_file.mov set movie_file {sprintf "videos/placeholder_movie_act1"}}
+      ;	{video_file.mov animate}
+      ;	{film_grain.filt animate (loop 0 101)}
+      ;	
+      ;	{ script_task kTaskSeconds (delay 6) 
+      ;		 (script
+      ;			{do
+      ;				{video_file.mov set movie_file {sprintf "videos/cube"}}
+      ;				{video_file.mov animate}
+      ;				{film_grain.filt animate (loop 0 101)}
+      ;				{ script_task kTaskSeconds (delay 5) 
+      ;					(script
+      ;						{do
+      ;							{game set_paused TRUE}	
+      ;							{ script_task kTaskSeconds (delay 1) 
+      ;								(script {video_file.mov set movie_file {sprintf "songs/%s/%s" {game get_song} {game get_song}}})
+      ;							}
+      ;							{handle (game game_outro)}
+      ;						}
+      ;					)
+      ;				}
+      ;			}
+      ;		)					
+      ;	}
+      ;;-----------------------------------------------------------
+      #endif
       kDataUnhandled
    )
-   (finish_load
-      {crowd_audio post_load}
-   )
+   (finish_load {crowd_audio post_load})
    (game_won
-	#ifdef HX_XBOX
-		{game game_outro} 
-	#else
-		{handle (game game_outro)} 
-	#endif
-      
+      #ifdef HX_XBOX
+      {game game_outro}
+      #else
+      {handle (game game_outro)}
+      #endif
+
       kDataUnhandled
    )
    ; REA - Added handlers for the game win conditions in HTH modes
    (game_won_band0
-	#ifdef HX_XBOX
-		{game game_outro} 
-	#else
-		{handle (game game_outro)} 
-	#endif
-      
+      #ifdef HX_XBOX
+      {game game_outro}
+      #else
+      {handle (game game_outro)}
+      #endif
+
       kDataUnhandled
    )
    (game_won_band1
-	#ifdef HX_XBOX
-		{game game_outro} 
-	#else
-		{handle (game game_outro)} 
-	#endif
-      
+      #ifdef HX_XBOX
+      {game game_outro}
+      #else
+      {handle (game game_outro)}
+      #endif
+
       kDataUnhandled
    )
    (game_won_tie
-	#ifdef HX_XBOX
-		{game game_outro} 
-	#else
-		{handle (game game_outro)} 
-	#endif
-      
+      #ifdef HX_XBOX
+      {game game_outro}
+      #else
+      {handle (game game_outro)}
+      #endif
+
       kDataUnhandled
    )
    ; Give them back to the CharCache before they get deleted!
    (unload
-#ifdef HX_XBOX
+      #ifdef HX_XBOX
       {rnd suspend}
-#endif
+      #endif
       {game unload_crowd_audio}
-   )   
+   )
 }
 
-#define GAME_SCREEN_HANDLERS
-(
+#define GAME_SCREEN_HANDLERS (
    (disable_screen_saver TRUE)
    (delayed_mic_check FALSE)
 
-   (JOYPAD_CONNECT_MSG
-      {$this check_lost_controller}
-   )
-   
+   (JOYPAD_CONNECT_MSG {$this check_lost_controller})
+
    ;returns TRUE if there is a lost controller, and FALSE if not
    (check_lost_controller
       ; TODO cleanup, make some optional handler for screen, rather than 
       ; checking all of them
       {if_else
-          {&&  {! {ui in_transition}} 
-			      {! {game is_game_over}}
-			      {ui current_screen}
-               {!= {ui current_screen} pause_screen}
-               {!= {ui current_screen} {gamemode get confirm_quit_screen}}
-               {!= {ui current_screen} {gamemode get confirm_restart_screen}}
-               {game missing_controllers}
-               {== {session state} kNetInGame}
+         {&&
+            {! {ui in_transition}}
+            {! {game is_game_over}}
+            {ui current_screen}
+            {!= {ui current_screen} pause_screen}
+            {!= {ui current_screen} {gamemode get confirm_quit_screen}}
+            {!= {ui current_screen} {gamemode get confirm_restart_screen}}
+            {game missing_controllers}
+            {== {session state} kNetInGame}
          }
          {do
             {band_ui_sink set_net_sync FALSE}
@@ -449,39 +438,41 @@
       }
    )
 
-   (microphones_changed ($vocalists_mic_changed)
+   (microphones_changed
+      ($vocalists_mic_changed)
       {if $vocalists_mic_changed
          {if {$this player_missing_mic}
-			   {$this pause_for_mic_check}
-			}
+            {$this pause_for_mic_check}
+         }
       }
    )
 
    (pause_for_mic_check
-      {if {&&
+      {if
+         {&&
             {! {ui in_transition}}
             {! {game is_game_over}}
-				{!= {ui current_screen} pause_screen}
-				{!= {ui current_screen} pause_controller_screen}
-          }
-			{band_ui_sink set_net_sync FALSE}
+            {!= {ui current_screen} pause_screen}
+            {!= {ui current_screen} pause_controller_screen}
+         }
+         {band_ui_sink set_net_sync FALSE}
          {ui push_screen pause_mics_screen}
       }
    )
 
    (enter
-	   {band_ui_sink hide_error_dialog} ; REA - should never be shown in game
-		{set $game_pause_on_enter FALSE}
+      {band_ui_sink hide_error_dialog} ; REA - should never be shown in game
+      {set $game_pause_on_enter FALSE}
       {set [delayed_mic_check] FALSE}
       {rnd set_in_game TRUE}
       {session add_sink $this start_game_msg}
       {session add_sink $this start_loading_msg}
       {platform_mgr add_sink $this ui_changed}
-	
-	  {if {== {gamecfg get practice_mode} TRUE}
-		{set [Intransition] FALSE}
-	  }
-	 ; @HACK for tours, We only need this because
+
+      {if {== {gamecfg get practice_mode} TRUE}
+         {set [Intransition] FALSE}
+      }
+      ; @HACK for tours, We only need this because
       ; the parsers are all destroyed.
       ; @TODO Make multi_event into a game state of GamePanel
       ; so it's not quite such an egredious hack.
@@ -500,9 +491,9 @@
             ($player_num {$pcfg get player_num})
             ($theplayer {game get_player $player_num})
             {if {== {$theplayer instrument} vocals}
-				{profile_mgr update_vocal_volume $player_num}
-				{profile_mgr update_mic_gain $player_num}
-			}
+               {profile_mgr update_vocal_volume $player_num}
+               {profile_mgr update_mic_gain $player_num}
+            }
          }
       }
 
@@ -517,80 +508,81 @@
       {platform_mgr remove_sink $this ui_changed}
    )
 
-   (UI_CHANGED_MSG 
-      {$this on_guide_change}
-   )
-   
+   (UI_CHANGED_MSG {$this on_guide_change})
+
    ; check that each player has a mic of some sort
    (player_missing_mic
-      {do ($ret FALSE)
+      {do
+         ($ret FALSE)
          {game foreach_local_player $p
-            {do ($player_num {$p player_num})
+            {do
+               ($player_num {$p player_num})
                ; a participating vocalist?
-               {if {&& {!= $player_num -1}
-                       {game is_player_participating $player_num}
-                       {== {{gamecfg get_player_config $player_num} get_track_sym}
-                          vocals}
-                   }
+               {if
+                  {&&
+                     {!= $player_num -1}
+                     {game is_player_participating $player_num}
+                     {== {{gamecfg get_player_config $player_num} get_track_sym} vocals}
+                  }
                   ; check if assigned mic is connected
-                  {do ($mic_num {joypad_get_players_padnum $player_num})
-                     {if {&& {!= $mic_num -1} 
-                             {! {synth is_mic_connected $mic_num}}}
+                  {do
+                     ($mic_num {joypad_get_players_padnum $player_num})
+                     {if {&& {!= $mic_num -1} {! {synth is_mic_connected $mic_num}}}
                         {set $ret TRUE}
-							}
-						}
-					}
+                     }
+                  }
+               }
             }
          }
          $ret
       }
    )
 
-   (TRANSITION_COMPLETE_MSG	
+   (TRANSITION_COMPLETE_MSG
       {if {! {$this check_lost_controller}}
          ; coming into the game, any mic changes since matchmaking will bring 
          ; up the mics pause panel. Only check if not ALSO missing a controller!
          {unless $fake_controllers
             {if_else {$this player_missing_mic}
                {$this pause_for_mic_check}
-					; After controller check
-					{$this transition_checks}
+               ; After controller check
+               {$this transition_checks}
             }
          }
       }
    )
-   
-	(transition_checks
-		{if_else $game_pause_on_enter
-			{do
-				; go back into pause mode
-				{set $game_pause_on_enter FALSE}
-				{band_ui_sink set_net_sync FALSE}
-				{ui push_screen pause_screen}
-			}
-			{if $game_unpause_on_enter
-				; coming from the pause screen
-				{game set_paused FALSE}
-				{set $game_unpause_on_enter FALSE}
-			}
-		}
-	)
-	
+
+   (transition_checks
+      {if_else $game_pause_on_enter
+         {do
+            ; go back into pause mode
+            {set $game_pause_on_enter FALSE}
+            {band_ui_sink set_net_sync FALSE}
+            {ui push_screen pause_screen}
+         }
+         {if $game_unpause_on_enter
+            ; coming from the pause screen
+            {game set_paused FALSE}
+            {set $game_unpause_on_enter FALSE}
+         }
+      }
+   )
+
    ; so we don't get stuck in a waiting state
    (check_session_state
       {switch {session state} ; assuming we've finished loading by this point
-         (kNetInLobby 
+         (kNetInLobby
             {game set_paused TRUE}
             {session set_all_local_ready_status TRUE}
          )
-         (kNetLoading 
+         (kNetLoading
             {game set_paused TRUE}
             {session done_loading}
          )
          (kNetInGame {game set_paused FALSE})
       }
    )
-   
+
    ; this is how we synch our start across the net
    (start_game_msg
       {game set_paused FALSE}
@@ -604,10 +596,8 @@
          }
       }
    )
-         
-   (start_loading_msg
-      {session done_loading}
-   )
+
+   (start_loading_msg {session done_loading})
 
    ; pause the game if the xBox guide is showing
    (on_guide_change
@@ -623,13 +613,15 @@
 )
 
 ; coop game
-{new UIScreen game_screen
+{new UIScreen
+   game_screen
    (panels game world_panel coop_track_panel mtv_overlay)
    GAME_SCREEN_HANDLERS
 }
 
 ; head-to-head game
-{new UIScreen hth_game_screen
+{new UIScreen
+   hth_game_screen
    (panels game world_panel hth_track_panel mtv_overlay)
    GAME_SCREEN_HANDLERS
 }
@@ -637,38 +629,41 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; stuff used for autmoated vocal testing and weights generation.
 
-{new UIScreen vocal_test_screen
-   (panels )
+{new UIScreen
+   vocal_test_screen
+   (panels)
    (enter
       {content_mgr start_refresh}
       {set [waiting] TRUE}
    )
    (poll
       {if {&& [waiting] {content_mgr refresh_done}}
-        {set [waiting] FALSE}
-        {ui goto_screen vocal_test_game_screen}
+         {set [waiting] FALSE}
+         {ui goto_screen vocal_test_game_screen}
       }
    )
 
    (waiting TRUE)
 }
 
-{new UIScreen vocal_test_game_screen
+{new UIScreen
+   vocal_test_game_screen
    (panels game coop_track_panel mtv_overlay)
    GAME_SCREEN_HANDLERS
 }
 
 ;;;;;;;;;;;;;;;;;;;;
 
-{func set_weights_song ($sym)
+{func set_weights_song
+   ($sym)
    {if_else {has_substr $sym "_short"}
-
       ; short song
-      {do ($song)
+      {do
+         ($song)
          ; lop off the _short
          {search_replace $sym "_short" "" $song}
          {set $song {symbol $song}}
-         
+
          {set $force_song_block song_vocals}
          {game set_song $song}
       }
@@ -681,7 +676,8 @@
    }
 }
 
-{new UIScreen gen_weights_start_screen
+{new UIScreen
+   gen_weights_start_screen
    (panels)
    (enter
       {content_mgr start_refresh}
@@ -689,32 +685,40 @@
    )
    (poll
       {if {&& [waiting] {content_mgr refresh_done}}
-        {set [waiting] FALSE}
-        {set $gen_weights_idx 0}
-        {set_weights_song {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx}}
-        {print "GENERATING WEIGHTS FOR "
-           {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx} "\n"}
-        {ui goto_screen gen_weights_game_screen}
+         {set [waiting] FALSE}
+         {set $gen_weights_idx 0}
+         {set_weights_song {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx}}
+         {print
+            "GENERATING WEIGHTS FOR "
+            {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx}
+            "\n"
+         }
+         {ui goto_screen gen_weights_game_screen}
       }
    )
 
    (waiting TRUE)
 }
 
-{new UIScreen gen_weights_advance_screen
+{new UIScreen
+   gen_weights_advance_screen
    (panels coop_track_panel mtv_overlay)
    (enter
       {coop_track_panel exit}
       {coop_track_panel set_paused TRUE}
       {set_weights_song {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx}}
-      {print "GENERATING WEIGHTS FOR "
-         {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx} "\n"}
+      {print
+         "GENERATING WEIGHTS FOR "
+         {elem (GEN_WEIGHTS_SONGS) $gen_weights_idx}
+         "\n"
+      }
       {ui goto_screen gen_weights_game_screen}
    )
 }
 
-{new UIScreen gen_weights_game_screen
-   (panels game coop_track_panel mtv_overlay )
+{new UIScreen
+   gen_weights_game_screen
+   (panels game coop_track_panel mtv_overlay)
    GAME_SCREEN_HANDLERS
 
    (gen_weights_done
@@ -726,7 +730,8 @@
    )
 }
 
-{new UIScreen gen_weights_done_screen
+{new UIScreen
+   gen_weights_done_screen
    (panels)
 
    (enter
@@ -737,7 +742,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;
 
-{new UIScreen gen_panfiles_start_screen
+{new UIScreen
+   gen_panfiles_start_screen
    (panels)
    (enter
       {content_mgr start_refresh}
@@ -745,18 +751,19 @@
    )
    (poll
       {if {&& [waiting] {content_mgr refresh_done}}
-        {set [waiting] FALSE}
-        {set $gen_panfiles_idx 0}
-        {game set_song {elem (GEN_PANFILE_SONGS) $gen_panfiles_idx}}
-        {print "GENERATING PAN FILE FOR " {game get_song} "\n"}
-        {ui goto_screen gen_panfiles_game_screen}
+         {set [waiting] FALSE}
+         {set $gen_panfiles_idx 0}
+         {game set_song {elem (GEN_PANFILE_SONGS) $gen_panfiles_idx}}
+         {print "GENERATING PAN FILE FOR " {game get_song} "\n"}
+         {ui goto_screen gen_panfiles_game_screen}
       }
    )
 
    (waiting TRUE)
 }
 
-{new UIScreen gen_panfiles_advance_screen
+{new UIScreen
+   gen_panfiles_advance_screen
    (panels coop_track_panel mtv_overlay)
    (enter
       {coop_track_panel exit}
@@ -767,8 +774,9 @@
    )
 }
 
-{new UIScreen gen_panfiles_game_screen
-   (panels game coop_track_panel mtv_overlay )
+{new UIScreen
+   gen_panfiles_game_screen
+   (panels game coop_track_panel mtv_overlay)
    GAME_SCREEN_HANDLERS
 
    (gen_panfiles_done
@@ -780,7 +788,8 @@
    )
 }
 
-{new UIScreen gen_panfiles_done_screen
+{new UIScreen
+   gen_panfiles_done_screen
    (panels)
 
    (enter

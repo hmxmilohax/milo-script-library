@@ -1,513 +1,307 @@
-#define TUTORIAL_STATE_INVALID
-(-1)
-#define TUTORIAL_STATE_ENTER
-(0)
-#define TUTORIAL_STATE_LEVEL_INTRO
-(1)
-#define TUTORIAL_STATE_LEVEL_OUTRO
-(2)
-#define TUTORIAL_STATE_LESSON_INTRO
-(3)
-#define TUTORIAL_STATE_SONG_PLAYING
-(4)
-#define TUTORIAL_STATE_CHALLENGE
-(5)
-#define TUTORIAL_STATE_POST_SUCCESS
-(6)
-#define TUTORIAL_STATE_POST_FAIL
-(7)
-#define TUTORIAL_STATE_SCRIPT
-(8)
-#define TUTORIAL_STATE_GOING_INTERACTIVE
-(9)
-#define TUTORIAL_STATE_GOING_NON_INTERACTIVE
-(10)
-#define TUTORIAL_STATE_TIMELINE
-(11)
-#define TUTORIAL_STATE_FAIL_SCREEN
-(12)
-#define TUTORIAL_ARROW_UP
-(0)
-#define TUTORIAL_ARROW_RIGHT
-(1)
-#define TUTORIAL_ARROW_DOWN
-(2)
-#define TUTORIAL_ARROW_LEFT
-(3)
-#define TUTORIAL_PANEL_PROPERTIES
-((level_num 0)
+#define TUTORIAL_STATE_INVALID (-1)
+#define TUTORIAL_STATE_ENTER (0)
+#define TUTORIAL_STATE_LEVEL_INTRO (1)
+#define TUTORIAL_STATE_LEVEL_OUTRO (2)
+#define TUTORIAL_STATE_LESSON_INTRO (3)
+#define TUTORIAL_STATE_SONG_PLAYING (4)
+#define TUTORIAL_STATE_CHALLENGE (5)
+#define TUTORIAL_STATE_POST_SUCCESS (6)
+#define TUTORIAL_STATE_POST_FAIL (7)
+#define TUTORIAL_STATE_SCRIPT (8)
+#define TUTORIAL_STATE_GOING_INTERACTIVE (9)
+#define TUTORIAL_STATE_GOING_NON_INTERACTIVE (10)
+#define TUTORIAL_STATE_TIMELINE (11)
+#define TUTORIAL_STATE_FAIL_SCREEN (12)
+#define TUTORIAL_ARROW_UP (0)
+#define TUTORIAL_ARROW_RIGHT (1)
+#define TUTORIAL_ARROW_DOWN (2)
+#define TUTORIAL_ARROW_LEFT (3)
+#define TUTORIAL_PANEL_PROPERTIES (
+   (level_num 0)
    (lesson_num 0)
    (track_paused FALSE)
-   (show_timeline_time FALSE))
-#define TUTORIAL_PANEL_ENTER
-({$this set_paused FALSE}
+   (show_timeline_time FALSE)
+)
+#define TUTORIAL_PANEL_ENTER (
+   {$this set_paused FALSE}
    {tutorial_background_panel select_background}
-   {$this
-      goto_level
-      [level_num]}
-   {platform_mgr
-      add_sink
-      $this
-      (ui_changed)}
-   {{{get_track_panel}
-         get_first_track}
-      tut_reset})
-#define TUTORIAL_PANEL_EXIT
-({$this set_uses_harmony TRUE}
+   {$this goto_level [level_num]}
+   {platform_mgr add_sink $this (ui_changed)}
+   {{{get_track_panel} get_first_track} tut_reset}
+)
+#define TUTORIAL_PANEL_EXIT (
+   {$this set_uses_harmony TRUE}
    {coop_track_panel set_paused FALSE}
    {taskmgr clear_tasks}
    {reset_all_callbacks}
    {platform_mgr remove_sink $this ui_changed}
-   {$this enable_guide_track -1})
-#define TUTORIAL_SCREEN_EXIT
-({[focus]
-      unhide_stuff})
-#define TUTORIAL_PANEL_LESSON_HANDLERS
-((set_lesson_data
+   {$this enable_guide_track -1}
+)
+#define TUTORIAL_SCREEN_EXIT ({[focus] unhide_stuff})
+#define TUTORIAL_PANEL_LESSON_HANDLERS (
+   (set_lesson_data
       ($l_num)
-      {set
-         [lesson_num]
-         $l_num}
-      {$this
-         set_lesson
-         {elem
-            [lessons]
-            [lesson_num]}}
-      {if
-         {exists
-            {{$this get_lesson}
-               get
-               challenge}}
-         {$this
-            set_challenge
-            {object
-               {{$this get_lesson}
-                  get
-                  challenge}}}})
-   (update_lesson_data
-      {$this
-         set_lesson_data
-         [lesson_num]})
+      {set [lesson_num] $l_num}
+      {$this set_lesson {elem [lessons] [lesson_num]}}
+      {if {exists {{$this get_lesson} get challenge}}
+         {$this set_challenge {object {{$this get_lesson} get challenge}}}
+      }
+   )
+   (update_lesson_data {$this set_lesson_data [lesson_num]})
    (can_handle_input
       {&&
-         {!=
-            {$this get_tutorial_state}
-            TUTORIAL_STATE_INVALID}
-         {!=
-            {$this get_tutorial_state}
-            TUTORIAL_STATE_ENTER}})
+         {!= {$this get_tutorial_state} TUTORIAL_STATE_INVALID}
+         {!= {$this get_tutorial_state} TUTORIAL_STATE_ENTER}
+      }
+   )
    (can_goto_next_lesson
       {&&
-         {<
-            [lesson_num]
-            {{$this
-                  get_level
-                  [level_num]}
-               get
-               max_lesson}}
-         {{$this get_lesson}
-            can_skip}})
+         {< [lesson_num] {{$this get_level [level_num]} get max_lesson}}
+         {{$this get_lesson} can_skip}
+      }
+   )
    (goto_next_lesson
-      {if_else
-         {!=
-            [lesson_num]
-            {{$this
-                  get_level
-                  [level_num]}
-               get
-               max_lesson}}
-         {if_else
-            {==
-               {$this get_tutorial_state}
-               TUTORIAL_STATE_LEVEL_INTRO}
-            {$this
-               goto_lesson
-               {{$this
-                     get_level
-                     [level_num]}
-                  get
-                  min_lesson}}
-            {$this
-               goto_lesson
-               {'+'
-                  [lesson_num]
-                  1}}}
-         {$this goto_state TUTORIAL_STATE_LEVEL_OUTRO}})
+      {if_else {!= [lesson_num] {{$this get_level [level_num]} get max_lesson}}
+         {if_else {== {$this get_tutorial_state} TUTORIAL_STATE_LEVEL_INTRO}
+            {$this goto_lesson {{$this get_level [level_num]} get min_lesson}}
+            {$this goto_lesson {'+' [lesson_num] 1}}
+         }
+         {$this goto_state TUTORIAL_STATE_LEVEL_OUTRO}
+      }
+   )
    (can_goto_prev_lesson
       {&&
-         {>
-            [lesson_num]
-            {{$this
-                  get_level
-                  [level_num]}
-               get
-               min_lesson}}
-         {{$this get_lesson}
-            can_skip}})
+         {> [lesson_num] {{$this get_level [level_num]} get min_lesson}}
+         {{$this get_lesson} can_skip}
+      }
+   )
    (goto_prev_lesson
-      {if
-         {$this can_goto_prev_lesson}
-         {if_else
-            {==
-               {$this get_tutorial_state}
-               TUTORIAL_STATE_LEVEL_OUTRO}
-            {$this
-               goto_lesson
-               {{$this
-                     get_level
-                     [level_num]}
-                  get
-                  max_lesson}}
-            {$this
-               goto_lesson
-               {-
-                  [lesson_num]
-                  1}}}})
+      {if {$this can_goto_prev_lesson}
+         {if_else {== {$this get_tutorial_state} TUTORIAL_STATE_LEVEL_OUTRO}
+            {$this goto_lesson {{$this get_level [level_num]} get max_lesson}}
+            {$this goto_lesson {- [lesson_num] 1}}
+         }
+      }
+   )
    (goto_level
       ($num)
-      {set
-         [lesson_num]
-         {{$this get_level $num}
-            get
-            min_lesson}}
-      {$this
-         set_lesson_data
-         [lesson_num]}
+      {set [lesson_num] {{$this get_level $num} get min_lesson}}
+      {$this set_lesson_data [lesson_num]}
       {$this goto_state TUTORIAL_STATE_ENTER}
-      {$this set_next_state TUTORIAL_STATE_LEVEL_INTRO})
+      {$this set_next_state TUTORIAL_STATE_LEVEL_INTRO}
+   )
    (goto_lesson
       ($l_num)
-      {set
-         [lesson_num]
-         $l_num}
-      {$this goto_state TUTORIAL_STATE_ENTER})
-   (restart_lesson
-      {$this goto_state TUTORIAL_STATE_ENTER})
+      {set [lesson_num] $l_num}
+      {$this goto_state TUTORIAL_STATE_ENTER}
+   )
+   (restart_lesson {$this goto_state TUTORIAL_STATE_ENTER})
    (retry_lesson
       {$this reset_all}
       {beatmatch jump 0}
-      {$this goto_state TUTORIAL_STATE_ENTER})
-   (restart_level
-      {$this
-         goto_level
-         [level_num]})
+      {$this goto_state TUTORIAL_STATE_ENTER}
+   )
+   (restart_level {$this goto_level [level_num]})
    (get_lesson_title
       ($num)
-      {{elem
-            [lessons]
-            $num}
-         get
-         title})
+      {{elem [lessons] $num} get title}
+   )
    (get_level
       ($num)
-      {elem
-         [levels]
-         $num})
-   (get_num_levels
-      {size
-         [levels]})
-   (get_num_lessons
-      {size
-         [lessons]})
-   (get_timelines
-      [timelines])
-   (push_fail_screen
-      {ui push_screen tutorials_fail_screen})
-   (UI_CHANGED_MSG
-      {$this on_guide_change})
+      {elem [levels] $num}
+   )
+   (get_num_levels {size [levels]})
+   (get_num_lessons {size [lessons]})
+   (get_timelines [timelines])
+   (push_fail_screen {ui push_screen tutorials_fail_screen})
+   (UI_CHANGED_MSG {$this on_guide_change})
    (on_guide_change
       {if
          {&&
             {ui current_screen}
-            {==
-               {{ui current_screen}
-                  focus_panel}
-               $this}
-            {session is_local}}
-         {if_else
-            {platform_mgr guide_showing}
+            {== {{ui current_screen} focus_panel} $this}
+            {session is_local}
+         }
+         {if_else {platform_mgr guide_showing}
             {do
-               {{gamemode get main_panel}
-                  set_paused
-                  TRUE}
-               {{gamemode get main_panel}
-                  pause_tutorial}}
+               {{gamemode get main_panel} set_paused TRUE}
+               {{gamemode get main_panel} pause_tutorial}
+            }
             {do
-               {{gamemode get main_panel}
-                  set_paused
-                  FALSE}
-               {{gamemode get main_panel}
-                  unpause_tutorial}}}}))
-#define TUTORIAL_PANEL_STATE_HANDLERS
-((begin_invalid)
+               {{gamemode get main_panel} set_paused FALSE}
+               {{gamemode get main_panel} unpause_tutorial}
+            }
+         }
+      }
+   )
+)
+#define TUTORIAL_PANEL_STATE_HANDLERS (
+   (begin_invalid)
    (end_invalid)
    (begin_enter
-      {{get_track_panel}
-         set_showing
-         FALSE}
+      {{get_track_panel} set_showing FALSE}
       {streak_meter_challenge set_showing FALSE}
       {$this tut_pause_track}
       {$this reset_all}
-      {$this
-         set_uses_harmony
-         {{$this get_lesson}
-            get
-            uses_harmony}}
-      {meta_performer
-         set_song
-         {{$this get_lesson}
-            get
-            song}}
-      {game
-         start_load_song
-         {meta_performer song}}
+      {$this set_uses_harmony {{$this get_lesson} get uses_harmony}}
+      {meta_performer set_song {{$this get_lesson} get song}}
+      {game start_load_song {meta_performer song}}
       {begin_enter.trig trigger}
-      {$this tut_isolate_vocal_track -1})
+      {$this tut_isolate_vocal_track -1}
+   )
    (end_enter
-      {{get_track_panel}
-         reload}
+      {{get_track_panel} reload}
       {$this setup_fader}
       {$this set_song_volume kDbSilence}
-      {$this
-         update_guide_track
-         {meta_performer song}}
+      {$this update_guide_track {meta_performer song}}
       {game start_song_now}
       {$this handle_new_song}
-      {{gamemode get main_panel}
-         disable_controller}
-      {end_enter.trig trigger})
+      {{gamemode get main_panel} disable_controller}
+      {end_enter.trig trigger}
+   )
    (begin_level_intro
-      {{get_track_panel}
-         set_showing
-         FALSE}
+      {{get_track_panel} set_showing FALSE}
       {$this mute_all_tracks}
-      {level_title.lbl
-         set
-         text_token
-         {{$this
-               get_level
-               [level_num]}
-            get
-            title}}
-      {$this
-         play_vo
-         {{$this
-               get_level
-               [level_num]}
-            get
-            intro_vo}}
+      {level_title.lbl set text_token {{$this get_level [level_num]} get title}}
+      {$this play_vo {{$this get_level [level_num]} get intro_vo}}
       {begin_level_intro.trig trigger}
       {$this disable_controller}
-      {$this tut_pause_track})
-   (end_level_intro
-      {end_level_intro.trig trigger})
+      {$this tut_pause_track}
+   )
+   (end_level_intro {end_level_intro.trig trigger})
    (begin_level_outro
-      {{get_track_panel}
-         set_showing
-         FALSE}
-      {level_title.lbl
-         set
-         text_token
-         {{$this
-               get_level
-               [level_num]}
-            get
-            outro}}
+      {{get_track_panel} set_showing FALSE}
+      {level_title.lbl set text_token {{$this get_level [level_num]} get outro}}
       {$this fade_song_silent 1.0}
       {begin_level_outro.trig trigger}
-      {$this
-         play_vo
-         {{$this
-               get_level
-               [level_num]}
-            get
-            outro_vo}}
-      {$this tut_set_autoplay TRUE})
+      {$this play_vo {{$this get_level [level_num]} get outro_vo}}
+      {$this tut_set_autoplay TRUE}
+   )
    (end_level_outro
       {end_level_outro.trig trigger}
       {{profile_mgr
             get_profile
-            {session_mgr get_leader_user}}
-         set_lesson_complete
-         {{$this
-               get_level
-               [level_num]}
-            get
-            title}})
+            {session_mgr get_leader_user}} set_lesson_complete
+         {{$this get_level [level_num]} get title}
+      }
+   )
    (begin_lesson_intro
-      {{get_track_panel}
-         set_showing
-         FALSE}
-      {{gamemode get main_panel}
-         unmute_all_tracks}
-      {lesson_title.lbl
-         set
-         text_token
-         {{$this get_lesson}
-            get
-            title}}
-      {$this
-         play_vo
-         {{$this get_lesson}
-            get
-            intro_vo}}
+      {{get_track_panel} set_showing FALSE}
+      {{gamemode get main_panel} unmute_all_tracks}
+      {lesson_title.lbl set text_token {{$this get_lesson} get title}}
+      {$this play_vo {{$this get_lesson} get intro_vo}}
       {begin_lesson_intro.trig trigger}
       {$this disable_controller}
       {$this tut_hide streak_meter}
       {$this tut_hide crowd_meter}
       {$this tut_hide scoreboard}
       {$this tut_pause_track}
-      {$this tut_track_out_now})
-   (end_lesson_intro
-      {end_lesson_intro.trig trigger})
+      {$this tut_track_out_now}
+   )
+   (end_lesson_intro {end_lesson_intro.trig trigger})
    (begin_song_playing
-      {{get_track_panel}
-         set_showing
-         TRUE}
+      {{get_track_panel} set_showing TRUE}
       {$this unmute_all_tracks}
       {$this fade_song_in 1.0}
       {$this disable_controller}
       {begin_song_playing.trig trigger}
-      {$this tut_unpause_track})
+      {$this tut_unpause_track}
+   )
    (end_song_playing
       {end_song_playing.trig trigger}
-      {$this enable_guide_track -1})
+      {$this enable_guide_track -1}
+   )
    (begin_challenge
-      {task_text.lbl
-         set
-         text_token
-         {{$this get_lesson}
-            get
-            task_text}}
+      {task_text.lbl set text_token {{$this get_lesson} get task_text}}
       {begin_challenge.trig trigger}
-      {{gamemode get main_panel}
-         unmute_all_tracks}
+      {{gamemode get main_panel} unmute_all_tracks}
       {$this enable_controller}
-      {{{gamemode get main_panel}
-            get_challenge}
-         enter}
-      {{beatmatch active_player 0}
-         set_crowd_rating_active
-         FALSE}
-      {{beatmatch active_player 0}
-         clear_score_histories}
-      {$this
-         trigger_if_exists
-         {sprint
-            "begin_"
-            {{{gamemode get main_panel}
-                  get_challenge}
-               name}
-            ".trig"}})
+      {{{gamemode get main_panel} get_challenge} enter}
+      {{beatmatch active_player 0} set_crowd_rating_active FALSE}
+      {{beatmatch active_player 0} clear_score_histories}
+      {$this trigger_if_exists
+         {sprint "begin_" {{{gamemode get main_panel} get_challenge} name} ".trig"}
+      }
+   )
    (end_challenge
       {end_challenge.trig trigger}
-      {{{gamemode get main_panel}
-            get_challenge}
-         exit}
+      {{{gamemode get main_panel} get_challenge} exit}
       {$this enable_guide_track -1}
-      {$this
-         trigger_if_exists
-         {sprint
-            "end_"
-            {{{gamemode get main_panel}
-                  get_challenge}
-               name}
-            ".trig"}})
+      {$this trigger_if_exists
+         {sprint "end_" {{{gamemode get main_panel} get_challenge} name} ".trig"}
+      }
+   )
    (begin_post_success
       {do
-         ($success_level
-            {{$this get_challenge}
-               success_level})
-         {$this
-            play_vo
-            {elem
-               {{$this get_lesson}
-                  get
-                  success_vo}
-               $success_level}}
-         {success.lbl
-            set
+         ($success_level {{$this get_challenge} success_level})
+         {$this play_vo {elem {{$this get_lesson} get success_vo} $success_level}}
+         {success.lbl set
             text_token
-            {elem
-               {{$this get_lesson}
-                  get
-                  success_text}
-               $success_level}}
+            {elem {{$this get_lesson} get success_text} $success_level}
+         }
          {begin_post_success.trig trigger}
          {$this disable_controller}
-         {$this
-            trigger_if_exists
+         {$this trigger_if_exists
             {sprint
                "success_"
-               {{{gamemode get main_panel}
-                     get_challenge}
-                  name}
-               ".trig"}}})
-   (end_post_success
-      {end_post_success.trig trigger})
+               {{{gamemode get main_panel} get_challenge} name}
+               ".trig"
+            }
+         }
+      }
+   )
+   (end_post_success {end_post_success.trig trigger})
    (begin_post_fail
       {streak_meter_challenge set_showing FALSE}
       {$this tut_pause_track}
-      {$this
-         play_vo
-         {{$this get_lesson}
-            get
-            fail_vo}}
-      {fail.lbl
-         set
-         text_token
-         {{$this get_lesson}
-            get
-            fail_text}}
+      {$this play_vo {{$this get_lesson} get fail_vo}}
+      {fail.lbl set text_token {{$this get_lesson} get fail_text}}
       {begin_post_fail.trig trigger}
       {$this disable_controller}
-      {$this
-         trigger_if_exists
-         {sprint
-            "fail_"
-            {{{gamemode get main_panel}
-                  get_challenge}
-               name}
-            ".trig"}})
-   (end_post_fail
-      {end_post_fail.trig trigger})
+      {$this trigger_if_exists
+         {sprint "fail_" {{{gamemode get main_panel} get_challenge} name} ".trig"}
+      }
+   )
+   (end_post_fail {end_post_fail.trig trigger})
    (begin_script
       {begin_script.trig trigger}
-      {$this disable_controller})
+      {$this disable_controller}
+   )
    (end_script
       {end_script.trig trigger}
-      {$this enable_guide_track -1})
+      {$this enable_guide_track -1}
+   )
    (begin_going_interactive
       {begin_going_interactive.trig trigger}
-      {$this disable_controller})
-   (end_going_interactive
-      {end_going_interactive.trig trigger})
+      {$this disable_controller}
+   )
+   (end_going_interactive {end_going_interactive.trig trigger})
    (begin_going_non_interactive
       {begin_going_non_interactive.trig trigger}
-      {$this disable_controller})
-   (end_going_non_interactive
-      {end_going_non_interactive.trig trigger})
+      {$this disable_controller}
+   )
+   (end_going_non_interactive {end_going_non_interactive.trig trigger})
    (begin_timeline
       {$this tut_pause_track}
       {begin_timeline.trig trigger}
-      {timeline_time.lbl
-         set_showing
-         [show_timeline_time]})
+      {timeline_time.lbl set_showing [show_timeline_time]}
+   )
    (end_timeline
       {end_timeline.trig trigger}
       {timeline_time.lbl set_showing FALSE}
-      {$this enable_guide_track -1})
-   (begin_fail_screen
-      {begin_fail_screen.trig trigger})
-   (end_fail_screen
-      {end_fail_screen.trig trigger})
+      {$this enable_guide_track -1}
+   )
+   (begin_fail_screen {begin_fail_screen.trig trigger})
+   (end_fail_screen {end_fail_screen.trig trigger})
    (goto_timeline_state
       ($timeline_name)
       {$this set_timeline_name $timeline_name}
-      {$this goto_state TUTORIAL_STATE_TIMELINE})
+      {$this goto_state TUTORIAL_STATE_TIMELINE}
+   )
    (goto_state
       ($state)
-      {$this set_state $state})
+      {$this set_state $state}
+   )
    (interactive_transition_done TRUE)
    (non_interactive_transition_done TRUE)
    (reset_all
@@ -515,648 +309,530 @@
       {taskmgr clear_tasks}
       {$this reset_vo}
       {$this clear_all_arrows}
-      {if
-         {exists end_lesson.trig}
-         {end_lesson.trig trigger}}
+      {if {exists end_lesson.trig}
+         {end_lesson.trig trigger}
+      }
       {reset_base.trig trigger}
       {vocals_mic_status_panel set_showing FALSE}
-      {$this enable_guide_track -1})
+      {$this enable_guide_track -1}
+   )
    (trigger_if_exists
       ($trig_name)
-      {if
-         {exists $trig_name}
-         {{$this find $trig_name}
-            trigger}}))
-#define TUTORIAL_PANEL_COMMAND_HANDLERS
-((tut_play_sound
+      {if {exists $trig_name}
+         {{$this find $trig_name} trigger}
+      }
+   )
+)
+#define TUTORIAL_PANEL_COMMAND_HANDLERS (
+   (tut_play_sound
       ($sound_name)
-      {{$this find $sound_name}
-         play})
+      {{$this find $sound_name} play}
+   )
    (tut_play_vo
       ($sound_file)
-      {$this play_vo $sound_file})
+      {$this play_vo $sound_file}
+   )
    (tut_point_arrow
       ($name $direction $offset)
-      {$this
-         point_arrow
-         $direction
-         {$this symbol_to_object $name}
-         $offset})
+      {$this point_arrow $direction {$this symbol_to_object $name} $offset}
+   )
    (tut_remove_arrow
       ($name)
-      {$this
-         remove_arrow
-         {$this symbol_to_object $name}})
+      {$this remove_arrow {$this symbol_to_object $name}}
+   )
    (tut_point_gem_arrow
       ($id $slot $direction $offset)
-      {$this point_gem_arrow $direction $id $slot $offset})
+      {$this point_gem_arrow $direction $id $slot $offset}
+   )
    (tut_remove_gem_arrow
       ($id $slot)
-      {$this remove_gem_arrow $id $slot})
+      {$this remove_gem_arrow $id $slot}
+   )
    (tut_set_interactive)
    (tut_go_interactive
       ($next_state)
       {$this goto_state TUTORIAL_STATE_GOING_INTERACTIVE}
-      {$this set_next_state_string $next_state})
+      {$this set_next_state_string $next_state}
+   )
    (tut_set_non_interactive)
    (tut_go_non_interactive
       ($next_state)
       {$this goto_state TUTORIAL_STATE_GOING_NON_INTERACTIVE}
-      {$this set_next_state_string $next_state})
+      {$this set_next_state_string $next_state}
+   )
    (tut_play_script
       ($script_name)
       {$this goto_state TUTORIAL_STATE_SCRIPT}
-      {$this play_script $script_name})
-   (tut_pause_track
-      PAUSE_TRACK
-      {set
-         [track_paused]
-         TRUE})
-   (tut_unpause_track
-      UNPAUSE_TRACK
-      {set
-         [track_paused]
-         FALSE})
-   (tut_show_track
-      {{get_track_panel}
-         set_showing
-         TRUE})
-   (tut_hide_track
-      {{get_track_panel}
-         set_showing
-         FALSE})
+      {$this play_script $script_name}
+   )
+   (tut_pause_track PAUSE_TRACK {set [track_paused] TRUE})
+   (tut_unpause_track UNPAUSE_TRACK {set [track_paused] FALSE})
+   (tut_show_track {{get_track_panel} set_showing TRUE})
+   (tut_hide_track {{get_track_panel} set_showing FALSE})
    (tut_trigger
       ($trigger_name)
-      {$this trigger $trigger_name})
+      {$this trigger $trigger_name}
+   )
    (tut_show
       ($name)
-      {{$this symbol_to_object $name}
-         set_showing
-         TRUE})
+      {{$this symbol_to_object $name} set_showing TRUE}
+   )
    (tut_hide
       ($name)
-      {{$this symbol_to_object $name}
-         set_showing
-         FALSE})
+      {{$this symbol_to_object $name} set_showing FALSE}
+   )
    (trigger
       ($trigger_name)
-      {{$this symbol_to_object $trigger_name}
-         trigger})
+      {{$this symbol_to_object $trigger_name} trigger}
+   )
    (tut_show_crowd_meter
       {GET_CROWD_METER reset}
-      {GET_CROWD_METER set_showing TRUE})
+      {GET_CROWD_METER set_showing TRUE}
+   )
    (tut_set_crowd_meter
       ($val)
-      {{beatmatch active_player 0}
-         set_crowd_rating
-         $val}
-      {GET_CROWD_METER set value $val})
+      {{beatmatch active_player 0} set_crowd_rating $val}
+      {GET_CROWD_METER set value $val}
+   )
    (tut_move_crowd_meter
       ($start $end $sec)
       {$this tut_set_crowd_meter $end}
-      {{GET_CROWD_METER find crowd_meter.mnm}
-         animate
+      {{GET_CROWD_METER find crowd_meter.mnm} animate
          (units kTaskTutorialSeconds)
          (range $start $end)
-         (period $sec)})
+         (period $sec)
+      }
+   )
    (tut_disable_slot
       ($slot)
-      {{{get_track_panel}
-            get_first_track}
-         disable_slot
-         $slot})
+      {{{get_track_panel} get_first_track} disable_slot $slot}
+   )
    (tut_enable_slot
       ($slot)
-      {{{get_track_panel}
-            get_first_track}
-         enable_slot
-         $slot})
+      {{{get_track_panel} get_first_track} enable_slot $slot}
+   )
    (tut_set_challenge_score
       ($cur $total)
-      {if_else
-         {<= $cur $total}
-         {{streak_meter_challenge find multiplier.lbl}
-            set_int
-            {- $total $cur}}
-         {{streak_meter_challenge find multiplier.lbl}
-            set_int
-            0}}
+      {if_else {<= $cur $total}
+         {{streak_meter_challenge find multiplier.lbl} set_int {- $total $cur}}
+         {{streak_meter_challenge find multiplier.lbl} set_int 0}
+      }
       {streak_meter_challenge set_showing TRUE}
-      {if
-         {== $cur $total}})
+      {if {== $cur $total}
+
+      }
+   )
    (tut_set_autoplay
       ($enable)
-      {{beatmatch active_player 0}
-         set_auto_play
-         $enable})
+      {{beatmatch active_player 0} set_auto_play $enable}
+   )
    (tut_enable_guide_track
       ($part)
-      {$this enable_guide_track $part})
+      {$this enable_guide_track $part}
+   )
    (tut_isolate_vocal_track
       ($t)
-      {if_else
-         {== $t -1}
-         {{{get_track_panel}
-               find
-               vocals}
-            show_all_parts}
-         {{{get_track_panel}
-               find
-               vocals}
-            isolate_vocal_part
-            $t}})
+      {if_else {== $t -1}
+         {{{get_track_panel} find vocals} show_all_parts}
+         {{{get_track_panel} find vocals} isolate_vocal_part $t}
+      }
+   )
    (tut_focus_harmony
-      {vocals_mic_status_panel
-         set_focus
-         {vocals_mic_status_panel find guitar.btn}})
+      {vocals_mic_status_panel set_focus
+         {vocals_mic_status_panel find guitar.btn}
+      }
+   )
    (tut_focus_solo
-      {vocals_mic_status_panel
-         set_focus
-         {vocals_mic_status_panel find bass.btn}})
-   (tut_show_mic_eq
-      {vocals_mic_status_panel show_mic_eq})
-   (tut_show_part_select
-      {vocals_mic_status_panel show_part_select})
+      {vocals_mic_status_panel set_focus {vocals_mic_status_panel find bass.btn}}
+   )
+   (tut_show_mic_eq {vocals_mic_status_panel show_mic_eq})
+   (tut_show_part_select {vocals_mic_status_panel show_part_select})
    (tut_set_overdrive
       ($val)
-      {{beatmatch active_player 0}
-         set_energy_automatically
-         $val})
+      {{beatmatch active_player 0} set_energy_automatically $val}
+   )
    (tut_move_scoreboard_down
       {{{get_track_panel}
             find
-            scoreboard_tutorial.tnm}
-         animate
-         (units kTaskTutorialSeconds)})
+            scoreboard_tutorial.tnm} animate
+         (units kTaskTutorialSeconds)
+      }
+   )
    (tut_move_scoreboard_up
       {{{get_track_panel}
             find
-            scoreboard_tutorial.tnm}
-         animate
+            scoreboard_tutorial.tnm} animate
          (units kTaskTutorialSeconds)
-         (range 1.0 0.0)})
+         (range 1.0 0.0)
+      }
+   )
    (tut_set_crowd_rating_active
       ($active)
-      {{beatmatch active_player 0}
-         set_crowd_rating_active
-         $active})
+      {{beatmatch active_player 0} set_crowd_rating_active $active}
+   )
    (tut_set_vocal_range
       ($min $max $tonic)
-      {{{{get_track_panel}
-               get_first_track}
-            get_dir}
-         set_range
-         $min
-         $max
-         $tonic})
+      {{{{get_track_panel} get_first_track} get_dir} set_range $min $max $tonic}
+   )
    (tut_set_overdrive_energy
       ($in_val $state $instrument)
       {{{{{get_track_panel}
                   get_first_track}
                get_dir}
             get
-            overdrive_meter}
-         force_set_energy
+            overdrive_meter} force_set_energy
          $in_val
          $state
-         $instrument})
+         $instrument
+      }
+   )
    (tut_fade_pitch_arrow
       ($arrow_name $val $period)
       {{{$this symbol_to_object $arrow_name}
             find
-            volume.anim}
-         animate
+            volume.anim} animate
          (dest $val)
          (period $period)
-         (units kTaskTutorialSeconds)})
+         (units kTaskTutorialSeconds)
+      }
+   )
    (tut_show_solo_popup
-      {set
-         $popup
-         {{{{get_track_panel}
-                  get_first_track}
-               get_dir}
-            get
-            player_feedback}}
-      {{$popup find reset.trig}
-         trigger}
-      {{$popup find solo_start.trig}
-         trigger}
-      {{$popup find solo_percent.lbl}
-         set_token_fmt
-         me_percent_format
-         0}
-      {{$popup find percent_growth.tnm}
-         set_frame
-         0}
-      {{$popup find pop.tnm}
-         animate
-         (units kTaskTutorialSeconds)})
+      {set $popup
+         {{{{get_track_panel} get_first_track} get_dir} get player_feedback}
+      }
+      {{$popup find reset.trig} trigger}
+      {{$popup find solo_start.trig} trigger}
+      {{$popup find solo_percent.lbl} set_token_fmt me_percent_format 0}
+      {{$popup find percent_growth.tnm} set_frame 0}
+      {{$popup find pop.tnm} animate (units kTaskTutorialSeconds)}
+   )
    (add_tutorial_event
       ($midi_parser $mp)
       {cond
          ({== $mp.val tut_play_sound}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_play_vo}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_go_interactive}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_set_interactive}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_point_arrow}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}
-               {elem $mp.data 2}
-               {elem $mp.data 3}})
-         ({== $mp.val tut_remove_arrow}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
-         ({== $mp.val tut_point_gem_arrow}
-            {$midi_parser
-               add_message
+            {$midi_parser add_message
                $mp.val
                {elem $mp.data 1}
                {elem $mp.data 2}
                {elem $mp.data 3}
-               {elem $mp.data 4}})
+            }
+         )
+         ({== $mp.val tut_remove_arrow}
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
+         ({== $mp.val tut_point_gem_arrow}
+            {$midi_parser add_message
+               $mp.val
+               {elem $mp.data 1}
+               {elem $mp.data 2}
+               {elem $mp.data 3}
+               {elem $mp.data 4}
+            }
+         )
          ({== $mp.val tut_remove_gem_arrow}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}
-               {elem $mp.data 2}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1} {elem $mp.data 2}}
+         )
          ({== $mp.val tut_play_script}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_play_timeline}
-            {$midi_parser
-               add_message
-               goto_timeline_state
-               {elem $mp.data 1}})
+            {$midi_parser add_message goto_timeline_state {elem $mp.data 1}}
+         )
          ({== $mp.val tut_trigger}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_pause_track}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_unpause_track}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_show_track}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_hide_track}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_track_in}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_track_out}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_track_out_now}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_show}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_hide}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_show_crowd_meter}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_set_crowd_meter}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_move_crowd_meter}
-            {$midi_parser
-               add_message
+            {$midi_parser add_message
                $mp.val
                {elem $mp.data 1}
                {elem $mp.data 2}
-               {elem $mp.data 3}})
+               {elem $mp.data 3}
+            }
+         )
          ({== $mp.val tut_disable_slot}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_set_autoplay}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_enable_guide_track}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_isolate_vocal_track}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_singer_autoplay}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}
-               {elem $mp.data 2}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1} {elem $mp.data 2}}
+         )
          ({== $mp.val tut_focus_harmony}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_focus_solo}
-            {$midi_parser add_message $mp.val})
+            {$midi_parser add_message $mp.val}
+         )
          ({== $mp.val tut_set_overdrive}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_crowd_rating_active}
-            {$midi_parser
-               add_message
-               $mp.val
-               {elem $mp.data 1}})
+            {$midi_parser add_message $mp.val {elem $mp.data 1}}
+         )
          ({== $mp.val tut_set_vocal_range}
-            {$midi_parser
-               add_message
+            {$midi_parser add_message
                $mp.val
                {elem $mp.data 1}
                {elem $mp.data 2}
-               {elem $mp.data 3}})}))
-#define TUTORIAL_PANEL_HANDLERS
-((new_song_loaded
+               {elem $mp.data 3}
+            }
+         )
+      }
+   )
+)
+#define TUTORIAL_PANEL_HANDLERS (
+   (new_song_loaded
       {tutorial_events_parser add_sink $this}
       {$this setup_fader}
-      {$this set_song_volume kDbSilence})
+      {$this set_song_volume kDbSilence}
+   )
    (symbol_to_object
       ($name)
       {cond
-         ({== $name vocals_mic_status_panel}
-            vocals_mic_status_panel)
+         ({== $name vocals_mic_status_panel} vocals_mic_status_panel)
          ({exists $name}
-            {$this find $name})
+            {$this find $name}
+         )
          ({== $name track_panel}
-            {get_track_panel})
+            {get_track_panel}
+         )
          ({== $name pitch_arrow_1}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               pitch_arrow_1})
+            {{{get_track_panel} find vocals} find pitch_arrow_1}
+         )
          ({== $name pitch_arrow_2}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               pitch_arrow_2})
+            {{{get_track_panel} find vocals} find pitch_arrow_2}
+         )
          ({== $name pitch_arrow_3}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               pitch_arrow_3})
+            {{{get_track_panel} find vocals} find pitch_arrow_3}
+         )
          ({== $name bottom_phrase_feedback}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               lead_phrase_feedback_bottom.lbl})
+            {{{get_track_panel} find vocals} find lead_phrase_feedback_bottom.lbl}
+         )
          ({== $name top_phrase_feedback}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               lead_phrase_feedback_top.lbl})
+            {{{get_track_panel} find vocals} find lead_phrase_feedback_top.lbl}
+         )
          ({== $name voc_streak_meter}
-            {{{get_track_panel}
-                  get_first_track}
-               find
-               streak_meter_vox_top})
+            {{{get_track_panel} get_first_track} find streak_meter_vox_top}
+         )
          ({== $name overdrive_meter}
-            {{{{get_track_panel}
-                     get_first_track}
-                  get_dir}
-               get
-               star_power_meter})
+            {{{{get_track_panel} get_first_track} get_dir} get star_power_meter}
+         )
          ({== $name solo_feedback}
-            {{get_track_panel}
-               find
-               player_feedback_01})
+            {{get_track_panel} find player_feedback_01}
+         )
          ({== $name streak_meter}
-            {{{{get_track_panel}
-                     get_first_track}
-                  get_dir}
-               get
-               streak_meter})
+            {{{{get_track_panel} get_first_track} get_dir} get streak_meter}
+         )
          ({== $name crowd_meter}
-            {{get_track_panel}
-               find
-               crowd_meter})
+            {{get_track_panel} find crowd_meter}
+         )
          ({== $name smasher_plate}
-            {{$this get_gem_track_dir}
-               get_smasher_plate})
+            {{$this get_gem_track_dir} get_smasher_plate}
+         )
          ({== $name scoreboard}
-            {{get_track_panel}
-               find
-               scoreboard})
+            {{get_track_panel} find scoreboard}
+         )
          ({== $name vocal_now_bar}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               now_bar.mesh})
+            {{{get_track_panel} find vocals} find now_bar.mesh}
+         )
          ({== $name harmony_select}
-            {vocals_mic_status_panel find guitar.btn})
+            {vocals_mic_status_panel find guitar.btn}
+         )
          ({== $name solo_select}
-            {vocals_mic_status_panel find bass.btn})
+            {vocals_mic_status_panel find bass.btn}
+         )
          ({== $name Background_tubes}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               Background_tubes.mesh})
+            {{{get_track_panel} find vocals} find Background_tubes.mesh}
+         )
          ({== $name phrase_marker}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               phrase_marker.mesh})
+            {{{get_track_panel} find vocals} find phrase_marker.mesh}
+         )
          ({== $name voc_streak_meter}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               streak_meter_vox_bg.mesh})
+            {{{get_track_panel} find vocals} find streak_meter_vox_bg.mesh}
+         )
          ({== $name background_center}
-            {{{get_track_panel}
-                  find
-                  vocals}
-               find
-               pitch_mid_marker.grp})
+            {{{get_track_panel} find vocals} find pitch_mid_marker.grp}
+         )
          ({== $name dynamic_crash_gem}
-            {if_else
-               {{{session_mgr get_leader_user}
-                     get_gameplay_options}
-                  get_lefty}
-               {{$this get_gem_track_dir}
-                  find
-                  drum_red_deploy.mesh}
-               {{$this get_gem_track_dir}
-                  find
-                  drum_green_deploy.mesh}})
+            {if_else {{{session_mgr get_leader_user} get_gameplay_options} get_lefty}
+               {{$this get_gem_track_dir} find drum_red_deploy.mesh}
+               {{$this get_gem_track_dir} find drum_green_deploy.mesh}
+            }
+         )
          ({== $name mic_eq_panel}
-            {vocals_mic_status_panel find arrows.grp})
-         (TRUE '')})
-   (level_done
-      {ui goto_screen meta_loading_tutorial_menu_screen})
+            {vocals_mic_status_panel find arrows.grp}
+         )
+         (TRUE '')
+      }
+   )
+   (level_done {ui goto_screen meta_loading_tutorial_menu_screen})
    (pause_tutorial
       {$this pause_vo}
       {$this pause_guide_track}
-      {if
-         {!
-            [track_paused]}
-         PAUSE_TRACK})
+      {if {! [track_paused]}
+         PAUSE_TRACK
+      }
+   )
    (unpause_tutorial
       {$this unpause_vo}
       {$this unpause_guide_track}
-      {if
-         {!
-            [track_paused]}
-         UNPAUSE_TRACK})
-   (reload
-      {ui goto_screen tutorial_unload_screen})
+      {if {! [track_paused]}
+         UNPAUSE_TRACK
+      }
+   )
+   (reload {ui goto_screen tutorial_unload_screen})
    (unhide_stuff
       {$this tut_track_in_now}
-      {{get_track_panel}
-         set_showing
-         TRUE}
+      {{get_track_panel} set_showing TRUE}
       {streak_meter_challenge set_showing TRUE}
       {$this tut_show streak_meter}
       {$this tut_show crowd_meter}
       {$this tut_show scoreboard}
-      {$this tut_isolate_vocal_track -1})
+      {$this tut_isolate_vocal_track -1}
+   )
    (enable_timeline_time
       ($enable)
-      {set
-         [show_timeline_time]
-         $enable}
-      {if
-         {==
-            {$this get_tutorial_state}
-            TUTORIAL_STATE_TIMELINE}
-         {timeline_time.lbl
-            set_showing
-            [show_timeline_time]}})
+      {set [show_timeline_time] $enable}
+      {if {== {$this get_tutorial_state} TUTORIAL_STATE_TIMELINE}
+         {timeline_time.lbl set_showing [show_timeline_time]}
+      }
+   )
    (set_timeline_time
       ($time)
-      {if
-         [show_timeline_time]
-         {timeline_time.lbl
-            set_float
-            "%0.1f"
-            $time}})
+      {if [show_timeline_time]
+         {timeline_time.lbl set_float "%0.1f" $time}
+      }
+   )
    (tut_track_in
-      {{get_track_panel}
-         play_intro}
-      {$this fade_song_in 1.0})
+      {{get_track_panel} play_intro}
+      {$this fade_song_in 1.0}
+   )
    (tut_track_out
-      {{{beatmatch active_player 0}
-            track}
-         track_out}
-      {$this fade_song_silent 1.0})
-   (tut_track_in_now
-      {{{beatmatch active_player 0}
-            track}
-         track_in_now})
-   (tut_track_out_now
-      {{{beatmatch active_player 0}
-            track}
-         track_out_now})
+      {{{beatmatch active_player 0} track} track_out}
+      {$this fade_song_silent 1.0}
+   )
+   (tut_track_in_now {{{beatmatch active_player 0} track} track_in_now})
+   (tut_track_out_now {{{beatmatch active_player 0} track} track_out_now})
    (tut_fade_song_out
       ($sec)
-      {$this fade_song_down $sec})
+      {$this fade_song_down $sec}
+   )
    (tut_fade_song_down
       ($sec)
-      {$this fade_song_down $sec})
+      {$this fade_song_down $sec}
+   )
    (tut_fade_song_silent
       ($sec)
-      {$this fade_song_silent $sec})
+      {$this fade_song_silent $sec}
+   )
    (tut_fade_song_in
       ($sec)
-      {$this fade_song_in $sec}))
-{new
-   UIPanel
+      {$this fade_song_in $sec}
+   )
+)
+{new UIPanel
    tutorial_background_panel
-   (file
-      "tutorial_background.milo")
+   (file "tutorial_background.milo")
    (select_background
       {do
-         ($leader_user
-            {session_mgr get_leader_user})
-         {switch
-            {$leader_user get_controller_type}
-            (kControllerVocals
-               {background.mesh set mat tutorial_vox_scene.mat})
-            (kControllerDrum
-               {background.mesh set mat tutorial_drum_scene.mat})
-            (kControllerGuitar
-               {background.mesh set mat tutorial_guitar_scene.mat})}})}
-#define TUTORIALS_MAIN_SCREEN_GENERAL_PROPERTIES
-((allow_back FALSE)
+         ($leader_user {session_mgr get_leader_user})
+         {switch {$leader_user get_controller_type}
+            (kControllerVocals {background.mesh set mat tutorial_vox_scene.mat})
+            (kControllerDrum {background.mesh set mat tutorial_drum_scene.mat})
+            (kControllerGuitar {background.mesh set mat tutorial_guitar_scene.mat})
+         }
+      }
+   )
+}
+#define TUTORIALS_MAIN_SCREEN_GENERAL_PROPERTIES (
+   (allow_back FALSE)
    (animate_transition FALSE)
    (BUTTON_DOWN_MSG
       {if_else
          {&&
-            {==
-               $user
-               {{gamemode get main_panel}
-                  get_tutorial_user}}
-            {==
-               {ui current_screen}
-               $this}
-            {{gamemode get main_panel}
-               can_handle_input}}
+            {== $user {{gamemode get main_panel} get_tutorial_user}}
+            {== {ui current_screen} $this}
+            {{gamemode get main_panel} can_handle_input}
+         }
          {do
-            {if
-               {== $action kAction_Start}
+            {if {== $action kAction_Start}
                {input_mgr set_user $user}
-               {ui push_screen pause_screen}}
-            kDataUnhandled}
-         TRUE})
-   (JOYPAD_CONNECT_MSG
-      {$this check_lost_controller})
+               {ui push_screen pause_screen}
+            }
+            kDataUnhandled
+         }
+         TRUE
+      }
+   )
+   (JOYPAD_CONNECT_MSG {$this check_lost_controller})
    (TRANSITION_COMPLETE_MSG
       {$this check_lost_controller}
-      {handle
-         ($this pause_for_mic_check)})
+      {handle ($this pause_for_mic_check)}
+   )
    (check_lost_controller
       {if_else
          {&&
-            {==
-               {ui current_screen}
-               $this}
-            {!
-               {ui in_transition}}
-            {!
-               {input_mgr check_controllers}}}
+            {== {ui current_screen} $this}
+            {! {ui in_transition}}
+            {! {input_mgr check_controllers}}
+         }
          {do
             {ui push_screen pause_controller_screen}
-            TRUE}
-         FALSE}))
+            TRUE
+         }
+         FALSE
+      }
+   )
+)

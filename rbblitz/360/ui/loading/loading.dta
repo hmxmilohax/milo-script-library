@@ -1,12 +1,11 @@
-{new
-   UIPanel
+{new UIPanel
    loading_panel
-   (file
-      "loading.milo")
+   (file "loading.milo")
    (tutorial_tip loading_tip_00)
    (loading_tip_num -1)
    (loading_tips_array
-      ((0 loading_tip_00 1.0)
+      (
+         (0 loading_tip_00 1.0)
          (1 loading_tip_01 1.0)
          (1 loading_tip_02 1.0)
          (1 loading_tip_03 1.0)
@@ -75,192 +74,146 @@
          (3 loading_tip_67 1.0)
          (1 loading_tip_68 1.0)
          (1 loading_tip_69 1.0)
-         (1 loading_tip_70 1.0)))
+         (1 loading_tip_70 1.0)
+      )
+   )
    #ifndef _SHIP
    (BUTTON_DOWN_MSG
-      {if
-         {== $action kAction_ShellOption}
-         {if
-            {==
-               [loading_tip_num]
-               -1}
-            {$this set loading_tip_num 0}}
-         {$this display_loading_tip}})
+      {if {== $action kAction_ShellOption}
+         {if {== [loading_tip_num] -1}
+            {$this set loading_tip_num 0}
+         }
+         {$this display_loading_tip}
+      }
+   )
    #endif
    (display_loading_tip
       {do
          ($chosen_tip
-            {if_else
-               {==
-                  [loading_tip_num]
-                  -1}
+            {if_else {== [loading_tip_num] -1}
                {$this choose_loading_tip}
                {do
-                  {$this
-                     set
+                  {$this set
                      loading_tip_num
-                     {mod
-                        {'+'
-                           [loading_tip_num]
-                           1}
-                        {size
-                           [loading_tips_array]}}}
+                     {mod {'+' [loading_tip_num] 1} {size [loading_tips_array]}}
+                  }
                   {print
                      "Displaying loading tip: "
-                     {elem
-                        {elem
-                           [loading_tips_array]
-                           [loading_tip_num]}
-                        1}
-                     "\n"}
-                  {elem
-                     {elem
-                        [loading_tips_array]
-                        [loading_tip_num]}
-                     1}}})
-         {if
-            {== $chosen_tip invalid}
-            {fail
-               "Error finding valid loading tip!"}}
-         {tip.lbl set_dynamic_controller_token $chosen_tip}})
+                     {elem {elem [loading_tips_array] [loading_tip_num]} 1}
+                     "\n"
+                  }
+                  {elem {elem [loading_tips_array] [loading_tip_num]} 1}
+               }
+            }
+         )
+         {if {== $chosen_tip invalid}
+            {fail "Error finding valid loading tip!"}
+         }
+         {tip.lbl set_dynamic_controller_token $chosen_tip}
+      }
+   )
    (choose_loading_tip
       {do
          ($total_weight 0)
-         ($your_cred
-            {{user_mgr get_participating_user}
-               get_cred})
-         ($num_powerups
-            {$this get_num_unlocked_powerups})
-         ($song_metadata
-            {loading_screen get_song})
-         ($is_tutorial
-            {$song_metadata is_fake_song})
-         {foreach
-            $var
-            [loading_tips_array]
-            {if
-               {>=
-                  $num_powerups
-                  {elem $var 0}}
-               {set
-                  $total_weight
-                  {'+'
-                     $total_weight
-                     {elem $var 2}}}}}
-         {if
-            {<= $total_weight 0}
-            {fail
-               "No valid loading tip for this many powerups unlocked!"}}
+         ($your_cred {{user_mgr get_participating_user} get_cred})
+         ($num_powerups {$this get_num_unlocked_powerups})
+         ($song_metadata {loading_screen get_song})
+         ($is_tutorial {$song_metadata is_fake_song})
+         {foreach $var [loading_tips_array]
+            {if {>= $num_powerups {elem $var 0}}
+               {set $total_weight {'+' $total_weight {elem $var 2}}}
+            }
+         }
+         {if {<= $total_weight 0}
+            {fail "No valid loading tip for this many powerups unlocked!"}
+         }
          {do
-            ($selected_weight
-               {random_float 0 $total_weight})
+            ($selected_weight {random_float 0 $total_weight})
             ($chosen_tip invalid)
-            {foreach
-               $var
-               [loading_tips_array]
-               {if
-                  {&&
-                     {>= $selected_weight 0}
-                     {>=
-                        $num_powerups
-                        {elem $var 0}}}
-                  {set
-                     $selected_weight
-                     {-
-                        $selected_weight
-                        {elem $var 2}}}
-                  {if
-                     {<= $selected_weight 0}
-                     {set
-                        $chosen_tip
-                        {elem $var 1}}}}}
-            {if
-               $is_tutorial
-               {set
-                  $chosen_tip
-                  [tutorial_tip]}}
-            $chosen_tip}})
+            {foreach $var [loading_tips_array]
+               {if {&& {>= $selected_weight 0} {>= $num_powerups {elem $var 0}}}
+                  {set $selected_weight {- $selected_weight {elem $var 2}}}
+                  {if {<= $selected_weight 0}
+                     {set $chosen_tip {elem $var 1}}
+                  }
+               }
+            }
+            {if $is_tutorial
+               {set $chosen_tip [tutorial_tip]}
+            }
+            $chosen_tip
+         }
+      }
+   )
    (get_num_unlocked_powerups
       {do
-         ($powerup_list
-            {lookup_config
-               (powerups list)})
-         ($user
-            {user_mgr get_participating_user})
+         ($powerup_list {lookup_config (powerups list)})
+         ($user {user_mgr get_participating_user})
          ($cred_available
-            {if_else
-               $user
+            {if_else $user
                {$user get_cred}
-               0})
+               0
+            }
+         )
          ($ret 0)
-         {foreach_int
-            $powerup_entry_num
-            1
-            {size $powerup_list}
+         {foreach_int $powerup_entry_num 1 {size $powerup_list}
             {do
-               ($powerup_entry
-                  {elem $powerup_list $powerup_entry_num})
-               ($required_cred
-                  {elem
-                     {find $powerup_entry cred_unlock}
-                     1})
-               ($powerup_type
-                  {elem
-                     {find $powerup_entry type}
-                     1})
-               {if
-                  {&&
-                     {!
-                        {== $powerup_type upgrade}}
-                     {>= $cred_available $required_cred}}
-                  {set
-                     $ret
-                     {'+' $ret 1}}}}}
-         $ret})
-   (set_state_loading
-      {loading_state.ep set state loading})
+               ($powerup_entry {elem $powerup_list $powerup_entry_num})
+               ($required_cred {elem {find $powerup_entry cred_unlock} 1})
+               ($powerup_type {elem {find $powerup_entry type} 1})
+               {if {&& {! {== $powerup_type upgrade}} {>= $cred_available $required_cred}}
+                  {set $ret {'+' $ret 1}}
+               }
+            }
+         }
+         $ret
+      }
+   )
+   (set_state_loading {loading_state.ep set state loading})
    (set_state_waiting_for_button
-      {loading_state.ep set state waiting_for_button})}
-{new
-   LoadingScreen
+      {loading_state.ep set state waiting_for_button}
+   )
+}
+{new LoadingScreen
    loading_screen
    (panels background_night_panel loading_panel game_panel)
    (focus loading_panel)
    (wait_for_button_press FALSE)
-   (get_game
-      {game_panel get_game})
-   (get_event_provider
-      {{loading_panel loaded_dir}
-         find
-         loading_state.ep})
+   (get_game {game_panel get_game})
+   (get_event_provider {{loading_panel loaded_dir} find loading_state.ep})
    (load_mgr_period 26.67)
    (is_load_done FALSE)
    (enter
       {$this set is_load_done FALSE}
       {loading_panel set_state_loading}
       {loading_panel display_loading_tip}
-      {{background_night_panel find spotlights.grp}
-         set_showing
-         FALSE}
-      {recommendation_panel set need_sort_entries TRUE})
+      {{background_night_panel find spotlights.grp} set_showing FALSE}
+      {recommendation_panel set need_sort_entries TRUE}
+   )
    (start_game
       {$this set wait_for_button_press FALSE}
-      {ui goto_screen game_screen})
+      {ui goto_screen game_screen}
+   )
    (load_finished
-      {if_else
-         [wait_for_button_press]
+      {if_else [wait_for_button_press]
          {do
             {$this set is_load_done TRUE}
-            {loading_panel set_state_waiting_for_button}}
-         {$this start_game}})
+            {loading_panel set_state_waiting_for_button}
+         }
+         {$this start_game}
+      }
+   )
    (BUTTON_DOWN_MSG
       {if_else
          {&&
             [is_load_done]
-            {'||'
-               {== $action kAction_Confirm}
-               {== $action kAction_Start}}}
+            {'||' {== $action kAction_Confirm} {== $action kAction_Start}}
+         }
          {do
             {synth play commence.cue}
-            {$this start_game}}
-         kDataUnhandled})}
+            {$this start_game}
+         }
+         kDataUnhandled
+      }
+   )
+}

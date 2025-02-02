@@ -1,12 +1,15 @@
 #define CHEAT_DISPLAY_S (5)
 
-{new Object cheat_display
-   (show ($msg)
+{new Object
+   cheat_display
+   (show
+      ($msg)
       {rnd show_overlay cheats TRUE}
       {rnd reflect cheats {print $msg "\n"}}
 
       {++ [refs]}
-      {script_task kTaskUISeconds (delay CHEAT_DISPLAY_S)
+      {script_task kTaskUISeconds
+         (delay CHEAT_DISPLAY_S)
          (script
             {-- [refs]}
             {if {== [refs] 0}
@@ -16,10 +19,16 @@
       }
    )
 
-   (show_bool ($label $val)
-      {$this show 
-         {sprint $label ": "
-            {if_else $val "ON" "OFF"}
+   (show_bool
+      ($label $val)
+      {$this show
+         {sprint
+            $label
+            ": "
+            {if_else $val
+               "ON"
+               "OFF"
+            }
          }
       }
    )
@@ -28,8 +37,7 @@
    (refs 0)
 }
 
-#define CHAR_OBJECTS
-(
+#define CHAR_OBJECTS (
    {find_obj $world player_drum0 left_hand.dmidi}
    {find_obj $world player_guitar0 main.drv}
    {find_obj $world player_guitar0 strum.dmidi}
@@ -50,14 +58,16 @@
    {find_obj $world player_vocals1 main.drv}
 )
 
-
 {func next_character_driver
-  {if $world
-      {do ($index -1)
-         {foreach $obj ( CHAR_OBJECTS ) 
+   {if $world
+      {do
+         ($index -1)
+         {foreach $obj (CHAR_OBJECTS)
             {if {== $char_debug_driver {++ $index}}
                {unless {char_debug {eval $obj}}
-                  {++ $char_debug_driver}}}
+                  {++ $char_debug_driver}
+               }
+            }
          }
          ; if hit the last one, clear it.
          {if {== $char_debug_driver {++ $index}}
@@ -69,25 +79,20 @@
    }
 }
 
-
 {func A_cheat
    {if_else {meta is_up}
       {do
-         {cheat_display show_bool "Unlock All" 
-            {toggle_unlock_all}
-         }
+         {cheat_display show_bool "Unlock All" {toggle_unlock_all}}
          {update_tour_display}
       }
-      {toggle_crowd_audio}      
+      {toggle_crowd_audio}
    }
 }
 
 {func b_cheat
    {if_else {meta is_up}
       {if {&& {! {gamemode is_solo}} {tour performer}}
-         {cheat_display show 
-            {sprint "Current buzz: " {{tour performer} buzz}}
-         }
+         {cheat_display show {sprint "Current buzz: " {{tour performer} buzz}}}
       }
       {set $debug.beep {! $debug.beep}}
    }
@@ -96,37 +101,39 @@
 ; Cycle free camera between: arena/track/off
 {func cycle_free_camera
    {if $world
-      {switch $free_cam_state 
-         (0 
-            {$world toggle_free_cam $cheat_controller} 
+      {switch $free_cam_state
+         (0
+            {$world toggle_free_cam $cheat_controller}
             {cheat_display show "Free camera: world"}
             {set $free_cam_state 1}
          )
-         (1          
+         (1
             {$world set_free_cam_parent
-                   {find_obj $world player_vocals0 bone_head.mesh}}
+               {find_obj $world player_vocals0 bone_head.mesh}
+            }
             {$world set_free_cam_pos 0 60 0}
             {$world set_free_cam_rot 0 -90 180}
             {cheat_display show "Free camera: vocalist"}
             {set $free_cam_state 2}
          )
-         (2 
-            {$world toggle_free_cam $cheat_controller} 
+         (2
+            {$world toggle_free_cam $cheat_controller}
             {cheat_display show "Free camera: frozen"}
             {set $free_cam_state 3}
-         ) 
+         )
          (3
-            {$world toggle_free_cam $cheat_controller} 
+            {$world toggle_free_cam $cheat_controller}
             {cheat_display show "Free camera: off"}
             {set $free_cam_state 0}
-         ) 
+         )
       }
    }
 }
 
-{func toggle_crowd_meter   
+{func toggle_crowd_meter
    {if {exists beatmatch}
-      {do ($new {! {{beatmatch active_player 0} crowd_rating_active}})
+      {do
+         ($new {! {{beatmatch active_player 0} crowd_rating_active}})
          {band_0 set_crowd_meter_active $new}
          {cheat_display show_bool "Crowd meter" $new}
       }
@@ -141,14 +148,14 @@
             {rnd show_overlay time TRUE}
             {set $cheat.show_time TRUE}
          }
-      }   
+      }
       {beatmatch set_time_paused TRUE}
       {{beatmatch active_player 0} set_crowd_rating_active FALSE}
-      {beatmatch set_shuttle TRUE $cheat_controller}   
+      {beatmatch set_shuttle TRUE $cheat_controller}
    }
 }
 
-{func stop_shuttle   
+{func stop_shuttle
    {beatmatch set_shuttle FALSE}
    {beatmatch set_time_paused FALSE}
    {if $cheat.show_time
@@ -192,7 +199,8 @@
 
 {func toggle_crowd_audio
    {if {exists crowd_audio}
-      {do ($new {! {crowd_audio enabled}})
+      {do
+         ($new {! {crowd_audio enabled}})
          {crowd_audio set_enabled $new}
          {cheat_display show_bool "CrowdAudio" $new}
       }
@@ -203,8 +211,9 @@
    {if_else {> {game get_num_local_players} 1}
       {cycle_multiplayer_auto_play}
       {if {exists beatmatch}
-         {do ($player {beatmatch local_player 0})
-            {if $player 
+         {do
+            ($player {beatmatch local_player 0})
+            {if $player
                {$player set_auto_play {! {$player auto_play}}}
                {cheat_display show_bool "Autoplay" {$player auto_play}}
             }
@@ -223,49 +232,46 @@
    {cheat_display show_bool "Skip Intro" $skip_intro}
 }
 
-#define FOUR_PLAYER_STATES
-(
+#define FOUR_PLAYER_STATES (
    (
       (FALSE FALSE FALSE FALSE "off")
-      (TRUE  TRUE  TRUE  TRUE  "all")
-      (TRUE  FALSE FALSE FALSE "player1")
-      (FALSE TRUE  FALSE FALSE "player2")
-      (FALSE FALSE TRUE  FALSE "player3")
-      (FALSE FALSE FALSE TRUE  "player4")
-      (FALSE TRUE  TRUE  TRUE  "all but player1")
-      (TRUE  FALSE TRUE  TRUE  "all but player2")
-      (TRUE  TRUE  FALSE TRUE  "all but player3")
-      (TRUE  TRUE  TRUE  FALSE "all but player4")
-      (TRUE  TRUE  FALSE FALSE "player1 and player2")
-      (TRUE  FALSE TRUE  FALSE "player1 and player3")
-      (TRUE  FALSE FALSE TRUE  "player1 and player4")
-      (FALSE TRUE  TRUE  FALSE "player2 and player3")
-      (FALSE TRUE  FALSE TRUE  "player2 and player4")
-      (FALSE FALSE TRUE  TRUE  "player3 and player4")
+      (TRUE TRUE TRUE TRUE "all")
+      (TRUE FALSE FALSE FALSE "player1")
+      (FALSE TRUE FALSE FALSE "player2")
+      (FALSE FALSE TRUE FALSE "player3")
+      (FALSE FALSE FALSE TRUE "player4")
+      (FALSE TRUE TRUE TRUE "all but player1")
+      (TRUE FALSE TRUE TRUE "all but player2")
+      (TRUE TRUE FALSE TRUE "all but player3")
+      (TRUE TRUE TRUE FALSE "all but player4")
+      (TRUE TRUE FALSE FALSE "player1 and player2")
+      (TRUE FALSE TRUE FALSE "player1 and player3")
+      (TRUE FALSE FALSE TRUE "player1 and player4")
+      (FALSE TRUE TRUE FALSE "player2 and player3")
+      (FALSE TRUE FALSE TRUE "player2 and player4")
+      (FALSE FALSE TRUE TRUE "player3 and player4")
    )
 )
 
-#define THREE_PLAYER_STATES
-(
+#define THREE_PLAYER_STATES (
    (
       (FALSE FALSE FALSE "off")
-      (TRUE  TRUE  TRUE  "all")
-      (TRUE  FALSE FALSE "player1")
-      (FALSE TRUE  FALSE "player2")
-      (FALSE FALSE TRUE  "player3")
-      (TRUE  TRUE  FALSE "player1 and player2")
-      (TRUE  FALSE TRUE  "player1 and player3")
-      (FALSE TRUE  TRUE  "player2 and player3")
+      (TRUE TRUE TRUE "all")
+      (TRUE FALSE FALSE "player1")
+      (FALSE TRUE FALSE "player2")
+      (FALSE FALSE TRUE "player3")
+      (TRUE TRUE FALSE "player1 and player2")
+      (TRUE FALSE TRUE "player1 and player3")
+      (FALSE TRUE TRUE "player2 and player3")
    )
 )
 
-#define TWO_PLAYER_STATES
-(
+#define TWO_PLAYER_STATES (
    (
       (FALSE FALSE "off")
-      (TRUE  TRUE  "all")
-      (TRUE  FALSE "player1")
-      (FALSE TRUE  "player2")
+      (TRUE TRUE "all")
+      (TRUE FALSE "player1")
+      (FALSE TRUE "player2")
    )
 )
 
@@ -275,41 +281,54 @@
 ;; are not contiguous
 {func cycle_multiplayer_auto_play
    {if {exists beatmatch}
-      {set $multi_table 
-         {switch {game get_num_local_players} 
+      {set $multi_table
+         {switch {game get_num_local_players}
             (2 TWO_PLAYER_STATES)
             (3 THREE_PLAYER_STATES)
             (4 FOUR_PLAYER_STATES)
          }
       }
-      {do ($new_index {mod {+ $multi_auto_index 1} {size $multi_table}})
-           ($state)
+      {do
+         ($new_index {mod {+ $multi_auto_index 1} {size $multi_table}})
+         ($state)
          {set $state {elem $multi_table $new_index}}
          {foreach_int $i 0 {game get_num_local_players}
-            {do ($player {beatmatch local_player $i})
-               {if $player {$player set_auto_play {elem $state $i}}}
+            {do
+               ($player {beatmatch local_player $i})
+               {if $player
+                  {$player set_auto_play {elem $state $i}}
+               }
             }
          }
-         {cheat_display show {sprint "Autoplay: " {elem $state {- {size $state} 1}}}}
+         {cheat_display show
+            {sprint "Autoplay: " {elem $state {- {size $state} 1}}}
+         }
          {set $multi_auto_index $new_index}
       }
    }
 }
 
-{func adjust_crowd_rating ($delta)
+{func adjust_crowd_rating
+   ($delta)
    {if {exists beatmatch}
       {{beatmatch active_player 0} set_crowd_rating
-                           {+ {{beatmatch active_player 0} crowd_rating} $delta}}
+         {+ {{beatmatch active_player 0} crowd_rating} $delta}
+      }
    }
 }
 
-{func fake_player1_cheat ($player)
+{func fake_player1_cheat
+   ($player)
    {set_fake_player1 $player}
-   {cheat_display show {sprint "Faking Player " {+ $player 1} " for Joypad 1"}}
+   {cheat_display show
+      {sprint "Faking Player " {+ $player 1} " for Joypad 1"}
+   }
 }
 
-{func reload_song   
-   {game thread_task kTaskBeats (preserve $ms $auto0 $auto1)
+{func reload_song
+   {game thread_task
+      kTaskBeats
+      (preserve $ms $auto0 $auto1)
       {beatmatch set_time_paused TRUE}
 
       {set $ms {taskmgr ms}}
@@ -317,7 +336,7 @@
       {if {game multiplayer}
          {set $auto1 {{beatmatch active_player 1} auto_play}}
       }
-      
+
       {game load_song {game get_song}}
       {$task wait {! {game is_loaded}}}
       {cheat_display show {sprint "Reloaded song: " {game get_song}}}
@@ -327,8 +346,8 @@
       {game start_song_now}
       {{get_track_panel} set_track_out}
 
-      {beatmatch jump $ms}   
-      {game set_skip_intro FALSE}  ; restore
+      {beatmatch jump $ms}
+      {game set_skip_intro FALSE} ; restore
       {game set_start_paused TRUE} ; restore
 
       {{beatmatch active_player 0} set_auto_play $auto0}
@@ -339,7 +358,8 @@
 }
 
 {func toggle_time_paused
-   {do ($new {! {beatmatch time_paused}})
+   {do
+      ($new {! {beatmatch time_paused}})
       {beatmatch set_time_paused $new}
       {crowd_audio set_paused $new}
    }
@@ -352,7 +372,9 @@
 }
 
 {func reload_track_hud
-   {game thread_task kTaskBeats (preserve $ms)
+   {game thread_task
+      kTaskBeats
+      (preserve $ms)
       {beatmatch set_time_paused TRUE}
       {set $ms {taskmgr ms}}
       {ui goto_screen reload_hud_track}
@@ -360,7 +382,7 @@
       {{get_track_panel} intro_skip}
       {{get_track_panel} set_track_out}
       {beatmatch jump $ms}
-   }      
+   }
 }
 
 #define MUSIC_SPEEDS ((1.0 0.5 0.25 0.1))
@@ -368,8 +390,9 @@
 
 {func cycle_music_speed
    {unless {meta is_up}
-      {do ($new_index {mod {+ $speed_index 1} {size MUSIC_SPEEDS}})
-           ($speed {elem MUSIC_SPEEDS $new_index})
+      {do
+         ($new_index {mod {+ $speed_index 1} {size MUSIC_SPEEDS}})
+         ($speed {elem MUSIC_SPEEDS $new_index})
          {beatmatch set_music_speed $speed}
          {cheat_display show {sprint "Track speed: " $speed}}
          {set $speed_index $new_index}
@@ -377,17 +400,15 @@
    }
 }
 
-{func change_speed ($factor)
-   {if {&& {! {meta is_up} } {exists beatmatch}}
+{func change_speed
+   ($factor)
+   {if {&& {! {meta is_up}} {exists beatmatch}}
       {beatmatch set_music_speed {* {beatmatch music_speed} $factor}}
    }
 }
 
-#define DEBUG_TASK
-(
-   (init      
-      {$this set active FALSE}
-   )
+#define DEBUG_TASK (
+   (init {$this set active FALSE})
 
    (start
       {$this set active TRUE}
@@ -403,16 +424,15 @@
    )
 
    (poll
-      {$this on_poll}     
+      {$this on_poll}
       {if {$this get active}
-         {game delay_task 15 (preserve $this)
-            {$this poll}
-         }      
+         {game delay_task 15 (preserve $this) {$this poll}}
       }
    )
 )
 
-{new Object scoring_debug
+{new Object
+   scoring_debug
    DEBUG_TASK
 
    (on_start {rnd show_overlay score_debug TRUE})
@@ -421,13 +441,15 @@
 
    (on_poll
       {if_else {game is_up}
-         {rnd reflect score_debug
-            {printf "Crowd: %.2f-%.2f Notes: %d-%d-%d Mult: %.2f\n"
+         {rnd reflect
+            score_debug
+            {printf
+               "Crowd: %.2f-%.2f Notes: %d-%d-%d Mult: %.2f\n"
                {{beatmatch active_player 0} raw_crowd_rating}
                {{beatmatch active_player 0} crowd_rating}
                {{beatmatch active_player 0} current_streak}
                {{beatmatch active_player 0} longest_streak}
-               {{beatmatch active_player 0} notes_hit}               
+               {{beatmatch active_player 0} notes_hit}
                {/ {{beatmatch active_player 0} score} {beatmatch base_max_score 0}}
             }
          }
@@ -444,17 +466,23 @@
 }
 
 {func toggle_lights_debug
-   {do ($new_state {! {rnd overlay_showing lights}})
+   {do
+      ($new_state {! {rnd overlay_showing lights}})
       {rnd show_overlay lights $new_state}
    }
 }
 
-{func lights_debug ($msg)
-   {rnd reflect lights {print "Lights: " $msg "\n"}}
+{func lights_debug
+   ($msg)
+   {rnd reflect
+      lights
+      {print "Lights: " $msg "\n"}
+   }
 }
 
 ; add $ to every player in the band
-{func cheat_add_money ($amount)
+{func cheat_add_money
+   ($amount)
    {if {tour performer}
       {{tour performer} cheat_add_money $amount}
       {cheat_display show {sprint "Added " $amount}}
@@ -466,10 +494,11 @@
    }
 }
 
-{func cheat_adjust_buzz ($change)
+{func cheat_adjust_buzz
+   ($change)
    {if {&& {! {gamemode is_solo}} {tour performer}}
       {{tour performer} adjust_buzz $change}
-      {cheat_display show 
+      {cheat_display show
          {sprint "Buzz change: " $change ", new Buzz: " {{tour performer} buzz}}
       }
       {update_tour_display}
@@ -478,7 +507,8 @@
 }
 
 ; increase/decrease the current vehicle level of the band 
-{func cheat_adjust_vehicle ($amt)
+{func cheat_adjust_vehicle
+   ($amt)
    {if {tour performer}
       {{tour performer} cheat_vehicle $amt}
       {cheat_display show {sprintf "New vehicle %s" {{tour performer} vehicle}}}
@@ -487,70 +517,86 @@
 }
 
 ; "win" the currently selected event with average # of stars per song
-{func fake_event_win ($avg_stars)
-   {if {&& {|| {== {ui current_screen} tour_band_event_song_screen}
-               {== {ui current_screen} tour_solo_event_song_screen}}
-           {{tour performer} is_local}}
+{func fake_event_win
+   ($avg_stars)
+   {if
+      {&&
+         {||
+            {== {ui current_screen} tour_band_event_song_screen}
+            {== {ui current_screen} tour_solo_event_song_screen}
+         }
+         {{tour performer} is_local}
+      }
       ;#ifdef HX_XBOX  ;MTC
       ;{do ($money {{tour performer} money})
       ;#else
-      {do ($fame  {{tour performer} town_fame})
-      ;#endif
-          
+      {do
+         ($fame {{tour performer} town_fame})
+         ;#endif
+
          {tour cheat_win_event $avg_stars}
-         
-         {cheat_display show 
-         ;#ifdef HX_XBOX
-         ;   {sprintf "Won %s w/ %d star average (%d fame and %s net)" 
-         ;      {tour event_display_name}
-         ;      $avg_stars
-         ;      {- {{tour performer} town_fame} $fame}
-         ;      {fmt_money {- {{tour performer} money} $money}}
-         ;   }
-         ;#else
-            {sprintf "Won %s w/ %d star average (%d fame)" 
+
+         {cheat_display show
+            ;#ifdef HX_XBOX
+            ;   {sprintf "Won %s w/ %d star average (%d fame and %s net)" 
+            ;      {tour event_display_name}
+            ;      $avg_stars
+            ;      {- {{tour performer} town_fame} $fame}
+            ;      {fmt_money {- {{tour performer} money} $money}}
+            ;   }
+            ;#else
+            {sprintf
+               "Won %s w/ %d star average (%d fame)"
                {tour event_display_name}
                $avg_stars
                {- {{tour performer} town_fame} $fame}
             }
-         ;#endif
+            ;#endif
          }
-      } 
+      }
       {update_tour_display}
    }
 }
 
 ; "win" the currently selected event with average # of stars per song
-{func fake_event_win ($avg_stars)
-   {if {&& {|| {== {ui current_screen} tour_band_event_song_screen}
-               {== {ui current_screen} tour_solo_event_song_screen}}
-           {{tour performer} is_local}}
+{func fake_event_win
+   ($avg_stars)
+   {if
+      {&&
+         {||
+            {== {ui current_screen} tour_band_event_song_screen}
+            {== {ui current_screen} tour_solo_event_song_screen}
+         }
+         {{tour performer} is_local}
+      }
       ;#ifdef HX_XBOX   ;MTC
       ;{do ($money {{tour performer} money})
       ;#else
-      {do ($fame  {{tour performer} town_fame})
-      ;#endif
+      {do
+         ($fame {{tour performer} town_fame})
+         ;#endif
          {tour cheat_win_event $avg_stars}
-       ;#ifdef HX_XBOX   ;MTC  
-       ;  {cheat_display show 
-       ;     {sprintf "Won %s w/ %d star average (%d fame and %s net)" 
-       ;        {tour event_display_name}
-       ;        $avg_stars
-       ;        {- {{tour performer} town_fame} $fame}
-       ;        #ifdef HX_XBOX ;MTC
-       ;        {fmt_money {- {{tour performer} money} $money}}
-       ;       #endif
-       ;     }
-       ;  }
-       ;#else
-         {cheat_display show 
-            {sprintf "Won %s w/ %d star average (%d fame)" 
+         ;#ifdef HX_XBOX   ;MTC  
+         ;  {cheat_display show 
+         ;     {sprintf "Won %s w/ %d star average (%d fame and %s net)" 
+         ;        {tour event_display_name}
+         ;        $avg_stars
+         ;        {- {{tour performer} town_fame} $fame}
+         ;        #ifdef HX_XBOX ;MTC
+         ;        {fmt_money {- {{tour performer} money} $money}}
+         ;       #endif
+         ;     }
+         ;  }
+         ;#else
+         {cheat_display show
+            {sprintf
+               "Won %s w/ %d star average (%d fame)"
                {tour event_display_name}
                $avg_stars
                {- {{tour performer} town_fame} $fame}
             }
          }
-       ;#endif
+         ;#endif
       }
       {update_tour_display}
    }
@@ -562,7 +608,7 @@
          {$p fill_band_energy}
       }
    }
-} 
+}
 
 {func cheat_empty_band_energy
    {if {&& {exists beatmatch} {! {meta is_up}}}
@@ -592,7 +638,8 @@
    }
 }
 
-{func cycle_instrument_override ($player_num)
+{func cycle_instrument_override
+   ($player_num)
    {if_else
       {||
          {== {ui current_screen} {gamemode get matchmaking_screen}}
@@ -607,20 +654,22 @@
          ($new
             {switch $old
                (kControllerGuitar kControllerDrum)
-               (kControllerDrum   kControllerVocals)
+               (kControllerDrum kControllerVocals)
                (kControllerVocals kControllerNone)
                ; default
                kControllerGuitar
             }
          )
-      
+
          {game debug_force_controller $player_num $new}
-         
-         {cheat_display
-            show
+
+         {cheat_display show
             {if_else {== $new kControllerNone}
                {sprint "Player " {+ $player_num 1} " instrument faking cleared."}
-               {sprint "Player " {+ $player_num 1} " instrument faking to "
+               {sprint
+                  "Player "
+                  {+ $player_num 1}
+                  " instrument faking to "
                   {switch $new
                      (kControllerGuitar guitar)
                      (kControllerDrum drum)
@@ -631,7 +680,7 @@
                }
             }
          }
-      
+
          {cond
             ({== {ui current_screen} {gamemode get matchmaking_screen}}
                {{gamemode get matchmaking_screen} joypad_connect $player_num TRUE}
@@ -654,27 +703,29 @@
 
 {func stop_logging
    #ifdef TOUR_LOGGING
-      {$log_tour print "SYSTEM   | CHEATING COMMENCED\n"}
+   {$log_tour print "SYSTEM   | CHEATING COMMENCED\n"}
    #endif
 }
 
-{func fake_win ($num_stars)
+{func fake_win
+   ($num_stars)
    {if_else {game is_up}
-      {if_else {band_0 band_performer} 
+      {if_else {band_0 band_performer}
          {{band_0 band_performer} win $num_stars}
-         {{beatmatch active_player 0} win $num_stars}  
+         {{beatmatch active_player 0} win $num_stars}
       }
       {fake_event_win $num_stars}
    }
    {stop_logging}
 }
 
-{func fake_win_multi ($num_stars)
+{func fake_win_multi
+   ($num_stars)
    {if {game is_up}
       {fake_win $num_stars}
       ; set a flag so we know to win all the remaining songs
       {set $cheat.win_event TRUE}
-   }   
+   }
 }
 
 {func toggle_drum_freestyle
@@ -687,19 +738,31 @@
 
 {set $auto_alternate_buttons FALSE}
 {func toggle_auto_alternate_buttons
-   {set $auto_alternate_buttons {if_else $auto_alternate_buttons FALSE TRUE}}
+   {set $auto_alternate_buttons
+      {if_else $auto_alternate_buttons
+         FALSE
+         TRUE
+      }
+   }
 }
 
 {set $test_guitar_fx 4}
 {func cycle_guitar_fx
    {++ $test_guitar_fx}
-   {if {== $test_guitar_fx 5} {set $test_guitar_fx 0}}
+   {if {== $test_guitar_fx 5}
+      {set $test_guitar_fx 0}
+   }
    {cheat_display show
-      {sprint "guitar fx set to "
-         {elem (wah flanger delay chorus none) $test_guitar_fx}}}
-   {handle (beatmatch foreach_active_player $p
-              {handle ($p update_guitar_fx)}
-           )
+      {sprint
+         "guitar fx set to "
+         {elem
+            (wah flanger delay chorus none)
+            $test_guitar_fx
+         }
+      }
+   }
+   {handle
+      (beatmatch foreach_active_player $p {handle ($p update_guitar_fx)})
    }
 }
 
@@ -708,24 +771,22 @@
 }
 
 {func toggle_bwt_no_min_participants
-   {cheat_display show_bool "BWT No Min Participants" 
+   {cheat_display show_bool
+      "BWT No Min Participants"
       {! $cheat.bwt_no_min_participants}
    }
-   {set $cheat.bwt_no_min_participants
-      {! $cheat.bwt_no_min_participants}
-   }
+   {set $cheat.bwt_no_min_participants {! $cheat.bwt_no_min_participants}}
 }
 
 {func cheat_toggle_difficulty
-   {do ($new_diff -1)
+   {do
+      ($new_diff -1)
       {game foreach_local_player_config $pcfg
          {if {== $new_diff -1}
             {set $new_diff {+ {$pcfg get_difficulty} 1}}
             {set $new_diff {mod $new_diff {size (DIFF_SYMBOLS)}}}
             {cheat_display show
-               {sprint "New Difficulty Set: "
-                  {elem (DIFF_SYMBOLS) $new_diff} 
-               }
+               {sprint "New Difficulty Set: " {elem (DIFF_SYMBOLS) $new_diff}}
             }
          }
          {$pcfg set_difficulty $new_diff}

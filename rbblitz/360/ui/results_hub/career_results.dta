@@ -1,173 +1,135 @@
-{new
-   UIPanel
+{new UIPanel
    career_results_panel
-   (file
-      "career_results.milo")
+   (file "career_results.milo")
    (started_animation FALSE)
    (next_anim_index -1)
    (name_table
-      ((D drums)
+      (
+         (D drums)
          (B bass)
          (G guitar)
          (K keys)
          (V vocals)
-         (GENRE genre)))
+         (GENRE genre)
+      )
+   )
    (BUTTON_DOWN_MSG
-      {switch
-         $action
+      {switch $action
          (kAction_Confirm
             {transition_to leaderboard_results_screen}
-            {shell_sfx play_select})
+            {shell_sfx play_select}
+         )
          (kAction_Cancel
-            {if_else
-               {>
-                  {{{game_panel get_game}
-                        get_results}
-                     get_num_unlocked_powerups}
-                  0}
+            {if_else {> {{{game_panel get_game} get_results} get_num_unlocked_powerups} 0}
                {transition_to results_unlock_screen}
-               {transition_to song_results_screen}}
-            {shell_sfx play_back})})
+               {transition_to song_results_screen}
+            }
+            {shell_sfx play_back}
+         )
+      }
+   )
    (start_up_animations
       {$this set started_animation TRUE}
       {do
-         ($game_results
-            {{game_panel get_game}
-               get_results})
+         ($game_results {{game_panel get_game} get_results})
          ($cur_name)
-         ($upsell_msg
-            {$game_results get_rbw_message})
-         {if_else
-            {==
-               $upsell_msg
-               ""}
+         ($upsell_msg {$game_results get_rbw_message})
+         {if_else {== $upsell_msg ""}
             {upsell_message.lbl set_token_fmt results_temp_upsellmsg}
-            {upsell_message.lbl set_display_text_string $upsell_msg}}
-         {foreach
-            $cur_name
-            [name_table]
+            {upsell_message.lbl set_display_text_string $upsell_msg}
+         }
+         {foreach $cur_name [name_table]
             {do
-               ($row
-                  {object
-                     {elem $cur_name 1}})
-               ($abbreviation
-                  {elem $cur_name 0})
-               ($new_cred_amount
-                  {$game_results get_cred_total $abbreviation})
-               ($cred_increase
-                  {$game_results get_cred_gained $abbreviation})
-               ($gems_hit
-                  {$game_results get_track_gems_hit $abbreviation})
-               ($gems_seen
-                  {$game_results get_track_gems_seen $abbreviation})
-               ($has_track
-                  {$game_results get_track_gems_available $abbreviation})
+               ($row {object {elem $cur_name 1}})
+               ($abbreviation {elem $cur_name 0})
+               ($new_cred_amount {$game_results get_cred_total $abbreviation})
+               ($cred_increase {$game_results get_cred_gained $abbreviation})
+               ($gems_hit {$game_results get_track_gems_hit $abbreviation})
+               ($gems_seen {$game_results get_track_gems_seen $abbreviation})
+               ($has_track {$game_results get_track_gems_available $abbreviation})
                ($accuracy
-                  {if_else
-                     $gems_seen
-                     {round
-                        {/
-                           {'*' 100 $gems_hit}
-                           $gems_seen}}
-                     0})
-               ($is_genre
-                  {== GENRE $abbreviation})
+                  {if_else $gems_seen
+                     {round {/ {'*' 100 $gems_hit} $gems_seen}}
+                     0
+                  }
+               )
+               ($is_genre {== GENRE $abbreviation})
                {$row set cred_increase $cred_increase}
-               {$row
-                  set
-                  cred_total_start
-                  {- $new_cred_amount $cred_increase}}
+               {$row set cred_total_start {- $new_cred_amount $cred_increase}}
                {$row set has_track $has_track}
-               {if
-                  {! $is_genre}
-                  {$row set accuracy_counter $accuracy}}
+               {if {! $is_genre}
+                  {$row set accuracy_counter $accuracy}
+               }
                {$row reset_values}
                {$row update_accuracy}
                {$row update_cred}
                {$row reset_values}
-               {if
-                  {! $has_track}
-                  {{$row find FinalizeValues.flow}
-                     activate}}
-               {if
-                  $is_genre
+               {if {! $has_track}
+                  {{$row find FinalizeValues.flow} activate}
+               }
+               {if $is_genre
                   {do
-                     ($genre_name
-                        {{$game_results get_song_metadata}
-                           genre_token})
+                     ($genre_name {{$game_results get_song_metadata} genre_token})
                      {$row set animating_accuracy FALSE}
-                     {{$row find cred_type.lbl}
-                        set_token_fmt
-                        $genre_name}}}}}
+                     {{$row find cred_type.lbl} set_token_fmt $genre_name}
+                  }
+               }
+            }
+         }
          {$this set next_anim_index 0}
-         {$this start_row_animation}})
+         {$this start_row_animation}
+      }
+   )
    (poll
-      {if
-         {!=
-            [next_anim_index]
-            -1}
+      {if {!= [next_anim_index] -1}
          {do
-            ($name
-               {elem
-                  {elem
-                     [name_table]
-                     [next_anim_index]}
-                  1})
-            ($row
-               {object $name})
-            {if
-               {$row get done_animating}
-               {$this
-                  set
-                  next_anim_index
-                  {'+'
-                     [next_anim_index]
-                     1}}
-               {if_else
-                  {>=
-                     [next_anim_index]
-                     {size
-                        [name_table]}}
+            ($name {elem {elem [name_table] [next_anim_index]} 1})
+            ($row {object $name})
+            {if {$row get done_animating}
+               {$this set next_anim_index {'+' [next_anim_index] 1}}
+               {if_else {>= [next_anim_index] {size [name_table]}}
                   {$this set next_anim_index -1}
-                  {$this start_row_animation}}}}})
+                  {$this start_row_animation}
+               }
+            }
+         }
+      }
+   )
    (start_row_animation
-      {if
-         {>=
-            [next_anim_index]
-            {size
-               [name_table]}}
-         {fail
-            "Index out of bounds!"}}
-      {if
-         {==
-            [next_anim_index]
-            -1}
-         {fail
-            "Invalid row animation!"}}
+      {if {>= [next_anim_index] {size [name_table]}}
+         {fail "Index out of bounds!"}
+      }
+      {if {== [next_anim_index] -1}
+         {fail "Invalid row animation!"}
+      }
       {do
-         ($name
-            {elem
-               {elem
-                  [name_table]
-                  [next_anim_index]}
-               1})
-         ($row
-            {object $name})
-         {if
-            {!
-               {$row get done_animating}}
-            {{$row find UpdateValues.flow}
-               activate}}})
+         ($name {elem {elem [name_table] [next_anim_index]} 1})
+         ($row {object $name})
+         {if {! {$row get done_animating}}
+            {{$row find UpdateValues.flow} activate}
+         }
+      }
+   )
    (enter
-      {if_else
-         [started_animation]
+      {if_else [started_animation]
          {do
             {$this set next_anim_index -1}
-            {set_to_final_values.flow activate}}
-         {$this start_up_animations}})}
-{new
-   UIScreen
+            {set_to_final_values.flow activate}
+         }
+         {$this start_up_animations}
+      }
+   )
+}
+{new UIScreen
    career_results_screen
-   (panels background_night_panel results_shared_panel results_cache_panel game_panel game_fade_out_panel career_results_panel)
+   (panels
+      background_night_panel
+      results_shared_panel
+      results_cache_panel
+      game_panel
+      game_fade_out_panel
+      career_results_panel
+   )
    (header_index 13)
-   (focus career_results_panel)}
+   (focus career_results_panel)
+}

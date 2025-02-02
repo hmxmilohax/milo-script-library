@@ -1,163 +1,151 @@
-{new
-   SongSelectPlaylistCustomizePanel
+{new SongSelectPlaylistCustomizePanel
    song_select_playlist_customize_panel
-   (file
-      "song_select_playlist_customize.milo")
+   (file "song_select_playlist_customize.milo")
    (focus right_hand.hnl)
    (top_index 1)
    (focus_song_index 1)
    (back_token back)
    (tertiary_token playlist_removesong)
    (load
-      {platform_mgr
-         add_sink
-         $this
-         (storage_changed)}
-      {ui_event_mgr
-         add_sink
-         $this
-         (event_dialog_dismiss)})
+      {platform_mgr add_sink $this (storage_changed)}
+      {ui_event_mgr add_sink $this (event_dialog_dismiss)}
+   )
    (enter
       {song_offer_provider set_sort_name by_song}
       {song_offer_provider enter}
       {right_hand.hnl set_provider song_offer_provider}
       {$this refresh}
-      {right_hand.hnl
-         scroll_to_index
-         [focus_song_index]
-         [top_index]}
-      {$this
-         handle_highlight
-         [focus_song_index]}
+      {right_hand.hnl scroll_to_index [focus_song_index] [top_index]}
+      {$this handle_highlight [focus_song_index]}
       {song_info_panel set_song_list_mode TRUE}
-      {song_info_panel set playlist_mode TRUE})
+      {song_info_panel set playlist_mode TRUE}
+   )
    (exit
       {song_offer_provider stop_preview}
       {song_offer_provider exit}
-      {set
-         [top_index]
-         {right_hand.hnl get_top_index}})
+      {set [top_index] {right_hand.hnl get_top_index}}
+   )
    (unload
       {song_offer_provider unload}
       {ui_event_mgr remove_sink $this event_dialog_dismiss}
       {platform_mgr remove_sink $this storage_changed}
-      {saveload_mgr autosave})
+      {saveload_mgr autosave}
+   )
    (NAV_SELECT_MSG
-      {switch
-         $component
-         (right_hand.hnl
-            {$this handle_select_song $index})
+      {switch $component
+         (right_hand.hnl {$this handle_select_song $index})
          (left_hand.hnl
-            {switch
-               $name
-               (playlist_removesong
-                  {$this handle_removesong})
-               (back
-                  {ui
-                     go_back_screen
-                     {{ui current_screen}
-                        get
-                        back}})})})
+            {switch $name
+               (playlist_removesong {$this handle_removesong})
+               (back {ui go_back_screen {{ui current_screen} get back}})
+            }
+         )
+      }
+   )
    (NAV_HIGHLIGHT_MSG
-      {switch
-         $component
-         (right_hand.hnl
-            {$this handle_highlight $index})})
+      {switch $component
+         (right_hand.hnl {$this handle_highlight $index})
+      }
+   )
    (NAV_HIGHLIGHT_SETTLED_MSG
-      {unless
-         {ui in_transition}
-         {switch
-            $component
-            (right_hand.hnl
-               {$this handle_highlight_settled $index})}})
+      {unless {ui in_transition}
+         {switch $component
+            (right_hand.hnl {$this handle_highlight_settled $index})
+         }
+      }
+   )
    (handle_highlight
       ($index)
       {do
-         ($song
-            {song_offer_provider get_token $index})
+         ($song {song_offer_provider get_token $index})
          {song_offer_provider set_highlighted_ix $index}
-         {set
-            [focus_song_index]
-            $index}
-         {if_else
-            {$this is_valid_song $song}
+         {set [focus_song_index] $index}
+         {if_else {$this is_valid_song $song}
             {do
-               ($songid
-                  {song_mgr get_song_id $song})
-               {song_info_panel set_song $song}}
+               ($songid {song_mgr get_song_id $song})
+               {song_info_panel set_song $song}
+            }
             {do
-               {song_info_panel set_song ''}}}})
+               {song_info_panel set_song ''}
+            }
+         }
+      }
+   )
    (handle_highlight_settled
       ($index)
-      {song_info_panel show_full_song_details})
+      {song_info_panel show_full_song_details}
+   )
    (move_on_finish_playlist
       {meta_performer start_playlist}
-      {ui
-         goto_screen
-         {gamemode get seldiff_screen}})
+      {ui goto_screen {gamemode get seldiff_screen}}
+   )
    (update_song_provider
       ($provider)
       {right_hand.hnl set_provider $provider}
-      {right_hand.hnl
-         scroll_to_index
-         [top_index]
-         [top_index]})
+      {right_hand.hnl scroll_to_index [top_index] [top_index]}
+   )
    (update_playlist_song_provider
       ($provider)
-      {songs.lst set_provider $provider})
-   (get_selected_playlist_song_index
-      {right_hand.hnl get_selected})
+      {songs.lst set_provider $provider}
+   )
+   (get_selected_playlist_song_index {right_hand.hnl get_selected})
    (handle_select_song
       ($index)
       {do
-         ($song_token
-            {song_offer_provider get_token $index})
-         {if_else
-            {== $song_token finish_setlist}
-            {if_else
-               {!
-                  {meta_performer is_playlist_playable}}
+         ($song_token {song_offer_provider get_token $index})
+         {if_else {== $song_token finish_setlist}
+            {if_else {! {meta_performer is_playlist_playable}}
                {do
                   {invalid_select.flow activate}
-                  skip_select_anim_and_sound}
-               {$this move_on_finish_playlist}}
-            {if_else
-               {!
-                  {$this is_playlist_full}}
+                  skip_select_anim_and_sound
+               }
+               {$this move_on_finish_playlist}
+            }
+            {if_else {! {$this is_playlist_full}}
                {do
                   {add_song.flow activate}
                   {$this select_song $song_token}
-                  skip_select_anim}
+                  skip_select_anim
+               }
                {do
                   {invalid_select.flow activate}
-                  skip_select_anim_and_sound}}}})
+                  skip_select_anim_and_sound
+               }
+            }
+         }
+      }
+   )
    (handle_removesong
-      {if
-         {!
-            {$this is_playlist_empty}}
+      {if {! {$this is_playlist_empty}}
          {remove_song.flow activate}
-         {$this cancel_song}})
+         {$this cancel_song}
+      }
+   )
    (update_song_list
       {songs.lst refresh}
-      {$this update_playlist_name playlist.lbl})
+      {$this update_playlist_name playlist.lbl}
+   )
    (storage_changed
-      {if_else
-         {!
-            {ui_event_mgr has_active_dialog_event}}
+      {if_else {! {ui_event_mgr has_active_dialog_event}}
          {ui_event_mgr trigger_event storage_changed}
-         {set
-            [storage_changed_error]
-            TRUE}})
+         {set [storage_changed_error] TRUE}
+      }
+   )
    (event_dialog_dismiss
-      {if
-         [storage_changed_error]
+      {if [storage_changed_error]
          {ui_event_mgr trigger_event storage_changed}
-         {set
-            [storage_changed_error]
-            FALSE}})}
-{new
-   HamScreen
+         {set [storage_changed_error] FALSE}
+      }
+   )
+}
+{new HamScreen
    song_select_playlist_customize_screen
-   (panels meta background_panel song_select_playlist_customize_panel song_info_panel)
+   (panels
+      meta
+      background_panel
+      song_select_playlist_customize_panel
+      song_info_panel
+   )
    (focus song_select_playlist_customize_panel)
-   (back song_select_playlist_screen)}
+   (back song_select_playlist_screen)
+}

@@ -1,86 +1,59 @@
-#define AWARDS_ARRAY_1
-(())
-#define AWARDS_ARRAY_2
-(())
-{func
-   choose_award
+#define AWARDS_ARRAY_1 (())
+#define AWARDS_ARRAY_2 (())
+{func choose_award
    ($player $selected_awards)
    {set $available_awards AWARDS_ARRAY_1}
    {resize $available_awards 0}
    {set $temp_awards AWARDS_ARRAY_2}
    {resize $temp_awards 0}
    {do
-      ($my_player
-         {beatmatch player $player})
-      ($track
-         {$my_player instrument})
-      {foreach
-         $descriptor
-         (#include performance_awards.dta)
-         {if
-            {eval
-               {elem $descriptor 0}}
-            {push_back
-               $available_awards
-               {elem $descriptor 1}}}}
-      {if_else
-         {==
-            {size $available_awards}
-            0}
+      ($my_player {beatmatch player $player})
+      ($track {$my_player instrument})
+      {foreach $descriptor (#include performance_awards.dta)
+         {if {eval {elem $descriptor 0}}
+            {push_back $available_awards {elem $descriptor 1}}
+         }
+      }
+      {if_else {== {size $available_awards} 0}
          {push_back $available_awards award_boring}
          {do
-            {if
-               {>
-                  {size $available_awards}
-                  1}
+            {if {> {size $available_awards} 1}
                {do
                   {resize $temp_awards 0}
-                  {foreach
-                     $available
-                     $available_awards
-                     {if
-                        {!
-                           {find_elem $selected_awards $available}}
-                        {push_back $temp_awards $available}}}
-                  {if
-                     {>
-                        {size $temp_awards}
-                        0}
+                  {foreach $available $available_awards
+                     {if {! {find_elem $selected_awards $available}}
+                        {push_back $temp_awards $available}
+                     }
+                  }
+                  {if {> {size $temp_awards} 0}
                      {set $swapper $available_awards}
                      {set $available_awards $temp_awards}
-                     {set $temp_awards $swapper}}}
+                     {set $temp_awards $swapper}
+                  }
+               }
                {do
                   {resize $temp_awards 0}
-                  {foreach
-                     $available
-                     $available_awards
-                     {if
-                        {!=
-                           {{$my_player config}
-                              get
-                              previous_award}
-                           $available}
-                        {push_back $temp_awards $available}}}
-                  {if
-                     {>
-                        {size $temp_awards}
-                        0}
+                  {foreach $available $available_awards
+                     {if {!= {{$my_player config} get previous_award} $available}
+                        {push_back $temp_awards $available}
+                     }
+                  }
+                  {if {> {size $temp_awards} 0}
                      {set $swapper $available_awards}
                      {set $available_awards $temp_awards}
-                     {set $temp_awards $swapper}}}}}}
-      {if
-         {<=
-            {size $available_awards}
-            0}
-         {notify
-            "WARNING: no performance award available!"}}
-      {elem
-         $available_awards
-         {mod
-            {$my_player score}
-            {size $available_awards}}}}}
-{new
-   UIScreen
+                     {set $temp_awards $swapper}
+                  }
+               }
+            }
+         }
+      }
+      {if {<= {size $available_awards} 0}
+         {notify "WARNING: no performance award available!"}
+      }
+      {elem $available_awards {mod {$my_player score} {size $available_awards}}}
+   }
+}
+{new UIScreen
    endgame_waiting_screen
    (panels)
    (entered FALSE)
@@ -88,455 +61,329 @@
       #ifdef HX_WII
       {hmb_allow TRUE}
       #endif
-      {set
-         [entered]
-         TRUE}
-      {game
-         foreach_local_player
-         $p
+      {set [entered] TRUE}
+      {game foreach_local_player $p
          {$p finalize_stats}
-         {session
-            send_to_all
+         {session send_to_all
             {'`'
                ({beatmatch
                      player
                      {','
                         {$p player_num}}}
                   remote_stats
-                  {','
-                     {$p notes_hit}}
-                  {','
-                     {$p longest_streak}}
-                  {','
-                     {$p current_notes_hit_fraction}}
-                  {','
-                     {$p failed_deploy}}
-                  {','
-                     {$p saved_count}}
-                  {','
-                     {$p fill_hit_count}}
-                  {','
-                     {$p strummed_down}}
-                  {','
-                     {$p strummed_up}}
-                  {','
-                     {$p deploy_count}}
-                  {','
-                     {$p score}}
-                  {','
-                     {$p solo_percentage}})}
-            kNetReliable}})
-   (exit
-      {set
-         [entered]
-         FALSE})
+                  {',' {$p notes_hit}}
+                  {',' {$p longest_streak}}
+                  {',' {$p current_notes_hit_fraction}}
+                  {',' {$p failed_deploy}}
+                  {',' {$p saved_count}}
+                  {',' {$p fill_hit_count}}
+                  {',' {$p strummed_down}}
+                  {',' {$p strummed_up}}
+                  {',' {$p deploy_count}}
+                  {',' {$p score}}
+                  {',' {$p solo_percentage}}
+               )
+            }
+            kNetReliable
+         }
+      }
+   )
+   (exit {set [entered] FALSE})
    (poll
-      {if
-         [entered]
+      {if [entered]
          {do
             ($proceed TRUE)
-            {beatmatch
-               foreach_active_player
-               $p
-               {if
-                  {!
-                     {$p stats_finalized}}
-                  {set $proceed FALSE}}}
-            {if
-               {&&
-                  $proceed
-                  {!
-                     {ui in_transition}}}
-               {if
-                  {is_leader_local}
+            {beatmatch foreach_active_player $p
+               {if {! {$p stats_finalized}}
+                  {set $proceed FALSE}
+               }
+            }
+            {if {&& $proceed {! {ui in_transition}}}
+               {if {is_leader_local}
                   {do
-                     ($screen
-                        {gamemode get endgame_screen})
-                     {if
-                        {tour performer}
-                        {{tour performer}
-                           complete_song
-                           {{beatmatch main_performer}
-                              num_stars}
-                           {{beatmatch main_performer}
-                              score}}
+                     ($screen {gamemode get endgame_screen})
+                     {if {tour performer}
+                        {{tour performer} complete_song
+                           {{beatmatch main_performer} num_stars}
+                           {{beatmatch main_performer} score}
+                        }
                         #ifndef _SHIP
-                        {if
-                           $cheat.win_event
-                           {while
-                              {!
-                                 {{tour performer}
-                                    last_song}}
-                              {{tour performer}
-                                 complete_song
-                                 {{beatmatch main_performer}
-                                    num_stars}
-                                 {{beatmatch main_performer}
-                                    score}}}
-                           {set $cheat.win_event FALSE}}
-                        #endif}
-                     {if
-                        {gamemode is_solo}
-                        {game
-                           submit_solo_song_score
-                           {{beatmatch main_performer}
-                              score}}}
-                     {ui goto_screen $screen}}}}}})}
-#define ENDGAME_PANEL_HANDLERS
-(LIMIT_TO_LEADER_SESSION
+                        {if $cheat.win_event
+                           {while {! {{tour performer} last_song}}
+                              {{tour performer} complete_song
+                                 {{beatmatch main_performer} num_stars}
+                                 {{beatmatch main_performer} score}
+                              }
+                           }
+                           {set $cheat.win_event FALSE}
+                        }
+                        #endif
+                     }
+                     {if {gamemode is_solo}
+                        {game submit_solo_song_score {{beatmatch main_performer} score}}
+                     }
+                     {ui goto_screen $screen}
+                  }
+               }
+            }
+         }
+      }
+   )
+}
+#define ENDGAME_PANEL_HANDLERS (
+   LIMIT_TO_LEADER_SESSION
    (submit_coattails_achievement
       ($player_num)
-      {achievements submit $player_num ach_riding_on_coattails})
+      {achievements submit $player_num ach_riding_on_coattails}
+   )
    (trigger_remote_coattails
-      {game
-         foreach_local_player
-         $local_player
-         {$this
-            submit_coattails_achievement
-            {$local_player player_num}}})
+      {game foreach_local_player $local_player
+         {$this submit_coattails_achievement {$local_player player_num}}
+      }
+   )
    (submit_achievements
-      {game
-         foreach_local_player
-         $p
-         {unless
-            {profile_mgr
-               has_profile_map
-               {$p player_num}}
+      {game foreach_local_player $p
+         {unless {profile_mgr has_profile_map {$p player_num}}
             {do
-               ($pnum
-                  {$p player_num})
-               ($pcfg
-                  {$p config})
-               ($p_profile
-                  {profile_mgr get_save_data_from_player $pnum})
-               {if
-                  $p_profile
-                  {if
-                     {!
-                        {gamemode is_hth_arrangement}}
-                     {if
-                        {>=
-                           {$p num_stars}
-                           5}
-                        {achievements submit $pnum ach_killer_performance}}}
-                  {if
-                     {$p_profile is_platinum_artist}
-                     {game
-                        foreach_local_player
-                        $op
+               ($pnum {$p player_num})
+               ($pcfg {$p config})
+               ($p_profile {profile_mgr get_save_data_from_player $pnum})
+               {if $p_profile
+                  {if {! {gamemode is_hth_arrangement}}
+                     {if {>= {$p num_stars} 5}
+                        {achievements submit $pnum ach_killer_performance}
+                     }
+                  }
+                  {if {$p_profile is_platinum_artist}
+                     {game foreach_local_player $op
                         {do
-                           ($opnum
-                              {$op player_num})
-                           {if
-                              {!= $opnum -1}
-                              {unless
-                                 {profile_mgr uses_same_profile $pnum $opnum}
-                                 {$this submit_coattails_achievement $opnum}}}}}
-                     {session
-                        send_to_all
-                        {'`'
-                           ({',' $this}
-                              trigger_remote_coattails)}
-                        kNetReliable}}
-                  {if
-                     {==
-                        100
-                        {int
-                           {'*'
-                              100
-                              {$p notes_hit_fraction}}}}
-                     {if
-                        {==
-                           {$pcfg get_difficulty}
-                           kDifficultyExpert}
-                        {switch
-                           {$pcfg get_track_sym}
-                           (drum
-                              {achievements submit $pnum ach_flawless_drumming})
+                           ($opnum {$op player_num})
+                           {if {!= $opnum -1}
+                              {unless {profile_mgr uses_same_profile $pnum $opnum}
+                                 {$this submit_coattails_achievement $opnum}
+                              }
+                           }
+                        }
+                     }
+                     {session send_to_all
+                        {'`' ({',' $this} trigger_remote_coattails)}
+                        kNetReliable
+                     }
+                  }
+                  {if {== 100 {int {'*' 100 {$p notes_hit_fraction}}}}
+                     {if {== {$pcfg get_difficulty} kDifficultyExpert}
+                        {switch {$pcfg get_track_sym}
+                           (drum {achievements submit $pnum ach_flawless_drumming})
                            (bass
-                              {if
-                                 {&&
-                                    {$p strummed_up}
-                                    {!
-                                       {$p strummed_down}}}
-                                 {achievements submit $pnum ach_flawless_groove}})
-                           (guitar
-                              {achievements submit $pnum ach_flawless_fretwork})
-                           (vocals
-                              {achievements submit $pnum ach_flawless_singing})}}}
+                              {if {&& {$p strummed_up} {! {$p strummed_down}}}
+                                 {achievements submit $pnum ach_flawless_groove}
+                              }
+                           )
+                           (guitar {achievements submit $pnum ach_flawless_fretwork})
+                           (vocals {achievements submit $pnum ach_flawless_singing})
+                        }
+                     }
+                  }
                   {if
                      {&&
                         {gamemode is_hth_arrangement}
                         {gamemode get online_play_required}
-                        {gamemode get ranked}}
+                        {gamemode get ranked}
+                     }
                      {do
-                        ($is_hth_split
-                           {gamemode get separate_parts})
-                        {switch
-                           {beatmatch get_result_for_player $pnum}
-                           (kWon
-                              {$p_profile update_hth_stats TRUE $is_hth_split})
-                           {$p_profile update_hth_stats FALSE $is_hth_split}}
+                        ($is_hth_split {gamemode get separate_parts})
+                        {switch {beatmatch get_result_for_player $pnum}
+                           (kWon {$p_profile update_hth_stats TRUE $is_hth_split})
+                           {$p_profile update_hth_stats FALSE $is_hth_split}
+                        }
                         {do
-                           ($num_wins
-                              {$p_profile get_hth_stats FALSE FALSE})
-                           {if
-                              {>= $num_wins 20}
-                              {achievements submit $pnum ach_score_duel_champ}}}
+                           ($num_wins {$p_profile get_hth_stats FALSE FALSE})
+                           {if {>= $num_wins 20}
+                              {achievements submit $pnum ach_score_duel_champ}
+                           }
+                        }
                         {do
-                           ($num_wins
-                              {$p_profile get_hth_stats FALSE TRUE})
-                           {if
-                              {>= $num_wins 20}
-                              {achievements submit $pnum ach_tug_of_war_champ}}}
+                           ($num_wins {$p_profile get_hth_stats FALSE TRUE})
+                           {if {>= $num_wins 20}
+                              {achievements submit $pnum ach_tug_of_war_champ}
+                           }
+                        }
                         {do
-                           ($num_wins
-                              {$p_profile get_hth_stats TRUE FALSE})
-                           {if
-                              {>= $num_wins 5}
-                              {achievements submit $pnum ach_score_duel_streak}}}
+                           ($num_wins {$p_profile get_hth_stats TRUE FALSE})
+                           {if {>= $num_wins 5}
+                              {achievements submit $pnum ach_score_duel_streak}
+                           }
+                        }
                         {do
-                           ($num_wins
-                              {$p_profile get_hth_stats TRUE TRUE})
-                           {if
-                              {>= $num_wins 5}
-                              {achievements submit $pnum ach_tug_of_war_streak}}}}}}}}})
+                           ($num_wins {$p_profile get_hth_stats TRUE TRUE})
+                           {if {>= $num_wins 5}
+                              {achievements submit $pnum ach_tug_of_war_streak}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   )
    (set_results
-      {heading.lbl
-         set_localized
-         {song_mgr
-            song_name
-            {game get_song}}}
-      {if
-         {!
-            {gamemode is_hth_arrangement}}
-         {score.lbl
-            set_localized
-            {fmt_score
-               {{beatmatch main_performer}
-                  score}}}
-         {stars.lbl
-            set_localized
-            {{beatmatch main_performer}
-               star_rating}}}
-      {if
-         {gamemode is_hth_arrangement}
+      {heading.lbl set_localized {song_mgr song_name {game get_song}}}
+      {if {! {gamemode is_hth_arrangement}}
+         {score.lbl set_localized {fmt_score {{beatmatch main_performer} score}}}
+         {stars.lbl set_localized {{beatmatch main_performer} star_rating}}
+      }
+      {if {gamemode is_hth_arrangement}
          {do
-            ($slot0
-               {hth_track_panel band_to_slot 0})
-            ($slot1
-               {hth_track_panel band_to_slot 1})
-            ($lbl0
-               {sprintf
-                  "win%d.lbl"
-                  $slot0})
-            ($lbl1
-               {sprintf
-                  "win%d.lbl"
-                  $slot1})
-            ($trg0
-               {sprintf
-                  "player%d.trg"
-                  $slot0})
-            ($trg1
-               {sprintf
-                  "player%d.trg"
-                  $slot1})
+            ($slot0 {hth_track_panel band_to_slot 0})
+            ($slot1 {hth_track_panel band_to_slot 1})
+            ($lbl0 {sprintf "win%d.lbl" $slot0})
+            ($lbl1 {sprintf "win%d.lbl" $slot1})
+            ($trg0 {sprintf "player%d.trg" $slot0})
+            ($trg1 {sprintf "player%d.trg" $slot1})
             ($win_token endgame_winner)
-            {if
-               {gamemode get separate_parts}
+            {if {gamemode get separate_parts}
                {do
-                  ($max_delta_points
-                     {beatmatch max_delta_points})
+                  ($max_delta_points {beatmatch max_delta_points})
                   ($score0
-                     {{gamecfg
-                           get_player
-                           {gamecfg get_player_num_from_slot_num $slot0}}
-                        score})
+                     {{gamecfg get_player {gamecfg get_player_num_from_slot_num $slot0}} score}
+                  )
                   ($score1
-                     {{gamecfg
-                           get_player
-                           {gamecfg get_player_num_from_slot_num $slot1}}
-                        score})
+                     {{gamecfg get_player {gamecfg get_player_num_from_slot_num $slot1}} score}
+                  )
                   ($score_diff
-                     {if_else
-                        {< $score0 $score1}
+                     {if_else {< $score0 $score1}
                         {- $score1 $score0}
-                        {- $score0 $score1}})
-                  {set
-                     $win_token
+                        {- $score0 $score1}
+                     }
+                  )
+                  {set $win_token
                      {cond
-                        ({<
-                              $score_diff
-                              {/ $max_delta_points 4}}
-                           hth_narrow_win)
-                        ({<
-                              $score_diff
-                              {/ $max_delta_points 2}}
-                           hth_win)
-                        ({< $score_diff $max_delta_points}
-                           hth_big_win)
-                        (TRUE hth_huge_win)}}}}
-            {switch
-               {beatmatch get_result TRUE}
+                        ({< $score_diff {/ $max_delta_points 4}} hth_narrow_win)
+                        ({< $score_diff {/ $max_delta_points 2}} hth_win)
+                        ({< $score_diff $max_delta_points} hth_big_win)
+                        (TRUE hth_huge_win)
+                     }
+                  }
+               }
+            }
+            {switch {beatmatch get_result TRUE}
                (kWonTie
                   {$lbl0 set text_token tie_token}
                   {$lbl1 set text_token tie_token}
                   {$lbl0 set_showing TRUE}
                   {$lbl1 set_showing TRUE}
                   {$trg0 trigger}
-                  {$trg1 trigger})
+                  {$trg1 trigger}
+               )
                (kWonBand0
                   {$lbl0 set text_token $win_token}
                   {$lbl0 set_showing TRUE}
                   {$lbl1 set_showing FALSE}
-                  {$trg0 trigger})
+                  {$trg0 trigger}
+               )
                (kWonBand1
                   {$lbl1 set text_token $win_token}
                   {$lbl1 set_showing TRUE}
                   {$lbl0 set_showing FALSE}
-                  {$trg1 trigger})}}}
+                  {$trg1 trigger}
+               )
+            }
+         }
+      }
       {do
-         ($selected_awards
-            {array 0})
-         {foreach_int
-            $slot
-            0
-            {players.set
-               size
-               (objects)}
+         ($selected_awards {array 0})
+         {foreach_int $slot 0 {players.set size (objects)}
             {do
-               ($pxy
-                  {players.set
-                     get
-                     (objects $slot)})
-               ($player
-                  {gamecfg get_player_num_from_slot_num $slot})
+               ($pxy {players.set get (objects $slot)})
+               ($player {gamecfg get_player_num_from_slot_num $slot})
                {$pxy set_showing TRUE}
-               {if_else
-                  {!
-                     {beatmatch is_active_player $player}}
-                  {if_else
-                     {'||'
-                        {gamemode is_hth_arrangement}
-                        {gamemode is_solo}}
+               {if_else {! {beatmatch is_active_player $player}}
+                  {if_else {'||' {gamemode is_hth_arrangement} {gamemode is_solo}}
                      {$pxy set_showing FALSE}
                      {do
-                        {{$pxy find player.grp}
-                           set_showing
-                           FALSE}
-                        {if
-                           {$pxy exists no_player.grp}
-                           {{$pxy find no_player.grp}
-                              set_showing
-                              TRUE}}
-                        {if
-                           {$pxy exists no_instrument.lbl}
-                           {{$pxy find no_instrument.lbl}
-                              set_localized
-                              {missing_slot_to_track_icon $slot}}}}}
+                        {{$pxy find player.grp} set_showing FALSE}
+                        {if {$pxy exists no_player.grp}
+                           {{$pxy find no_player.grp} set_showing TRUE}
+                        }
+                        {if {$pxy exists no_instrument.lbl}
+                           {{$pxy find no_instrument.lbl} set_localized
+                              {missing_slot_to_track_icon $slot}
+                           }
+                        }
+                     }
+                  }
                   {do
-                     ($pcfg
-                        {game get_player_config $player})
-                     {if
-                        {$pxy exists no_player.grp}
-                        {{$pxy find no_player.grp}
-                           set_showing
-                           FALSE}}
-                     {{$pxy find player.grp}
-                        set_showing
-                        TRUE}
-                     {if
-                        {$pxy exists player.lbl}
-                        {{$pxy find player.lbl}
-                           set_localized
-                           {$pcfg intro_name}}}
-                     {{$pxy find instrument.lbl}
-                        set_localized
-                        {{$pcfg get_char}
-                           track_icon
-                           {$pcfg get_track_sym}}}
-                     {if
-                        {'||'
-                           {gamemode is_hth_arrangement}
-                           {gamemode is_solo}}
+                     ($pcfg {game get_player_config $player})
+                     {if {$pxy exists no_player.grp}
+                        {{$pxy find no_player.grp} set_showing FALSE}
+                     }
+                     {{$pxy find player.grp} set_showing TRUE}
+                     {if {$pxy exists player.lbl}
+                        {{$pxy find player.lbl} set_localized {$pcfg intro_name}}
+                     }
+                     {{$pxy find instrument.lbl} set_localized
+                        {{$pcfg get_char} track_icon {$pcfg get_track_sym}}
+                     }
+                     {if {'||' {gamemode is_hth_arrangement} {gamemode is_solo}}
                         {do
-                           {if
-                              {gamemode is_hth_arrangement}
+                           {if {gamemode is_hth_arrangement}
                               {{sprintf
                                     "score%i.lbl"
-                                    $slot}
-                                 set_localized
-                                 {if_else
-                                    {gamemode separate_parts}
+                                    $slot} set_localized
+                                 {if_else {gamemode separate_parts}
                                     ""
-                                    {fmt_score
-                                       {{$pcfg player}
-                                          score}}}}}}}
-                     {if
-                        {$pxy exists noteshit.lbl}
-                        {{$pxy find noteshit.lbl}
-                           set_localized
+                                    {fmt_score {{$pcfg player} score}}
+                                 }
+                              }
+                           }
+                        }
+                     }
+                     {if {$pxy exists noteshit.lbl}
+                        {{$pxy find noteshit.lbl} set_localized
                            {sprintf
                               {localize percent_format}
-                              {int
-                                 {'*'
-                                    100
-                                    {{$pcfg player}
-                                       notes_hit_fraction}}}}}}
-                     {if
-                        {$pxy exists streak.lbl}
-                        {{$pxy find streak.lbl}
-                           set_localized
-                           {if_else
-                              {==
-                                 {{$pcfg player}
-                                    instrument}
-                                 vocals}
+                              {int {'*' 100 {{$pcfg player} notes_hit_fraction}}}
+                           }
+                        }
+                     }
+                     {if {$pxy exists streak.lbl}
+                        {{$pxy find streak.lbl} set_localized
+                           {if_else {== {{$pcfg player} instrument} vocals}
                               {sprintf
                                  {localize eg_phrase_streak_format}
-                                 {{$pcfg player}
-                                    longest_streak}}
-                              {sprintf
-                                 {localize eg_streak_format}
-                                 {{$pcfg player}
-                                    longest_streak}}}}}
-                     {if
-                        {$pxy exists difficulty.lbl}
-                        {{$pxy find difficulty.lbl}
-                           set
-                           text_token
-                           {$pcfg get_difficulty_sym}}}
-                     {if
-                        {$pxy exists award.lbl}
-                        {if_else
-                           {'||'
-                              {gamemode is_hth_arrangement}
-                              {gamemode is_solo}}
-                           {{$pxy find award.lbl}
-                              set_showing
-                              FALSE}
+                                 {{$pcfg player} longest_streak}
+                              }
+                              {sprintf {localize eg_streak_format} {{$pcfg player} longest_streak}}
+                           }
+                        }
+                     }
+                     {if {$pxy exists difficulty.lbl}
+                        {{$pxy find difficulty.lbl} set text_token {$pcfg get_difficulty_sym}}
+                     }
+                     {if {$pxy exists award.lbl}
+                        {if_else {'||' {gamemode is_hth_arrangement} {gamemode is_solo}}
+                           {{$pxy find award.lbl} set_showing FALSE}
                            {do
-                              ($some_award
-                                 {choose_award $player $selected_awards})
+                              ($some_award {choose_award $player $selected_awards})
                               {push_back $selected_awards $some_award}
                               {$pcfg set previous_award $some_award}
-                              {{$pxy find award.lbl}
-                                 set_localized
-                                 {localize_token $some_award}}
-                              {{$pxy find award.lbl}
-                                 set_showing
-                                 TRUE}}}}}}}}}))
-{new
-   UIPanel
-   endgame_background_panel
-   (file
-      "endgame_background_og.milo")}
-{new
-   UIPanel
+                              {{$pxy find award.lbl} set_localized {localize_token $some_award}}
+                              {{$pxy find award.lbl} set_showing TRUE}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   )
+)
+{new UIPanel endgame_background_panel (file "endgame_background_og.milo")}
+{new UIPanel
    qp_endgame_panel
-   (file
-      "qp_endgame_og.milo")
+   (file "qp_endgame_og.milo")
    (focus continue.btn)
    ENDGAME_PANEL_HANDLERS
    (enter
@@ -545,118 +392,117 @@
       {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
       {do
          ($frame
-            {if_else
-               {gamemode get is_solo}
+            {if_else {gamemode get is_solo}
                1
-               0})
+               0
+            }
+         )
          {player0.tnm set_frame $frame}
          {player01.tnm set_frame $frame}
          {player02.tnm set_frame $frame}
-         {player03.tnm set_frame $frame}})
-   (exit
-      {platform_mgr set_notify_ui_location kOSNotifyTopRight})}
-{new
-   UIPanel
+         {player03.tnm set_frame $frame}
+      }
+   )
+   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
+}
+{new UIPanel
    qp_hth_endgame_panel
-   (file
-      "qp_hth_endgame_og.milo")
+   (file "qp_hth_endgame_og.milo")
    (focus continue.btn)
    ENDGAME_PANEL_HANDLERS
    (enter
       {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
       {$this set_results}
       {$this submit_achievements}
-      {if
-         {gamemode get ranked}
+      {if {gamemode get ranked}
          {band_ui_sink set block_mode kBlockRankedResults}
-         {band_ui_sink set_net_sync FALSE}}
-      {helpbar set_limit_to_player_num -1})
-   (update_true_skill
-      ($skill0 $skill1))
-   (exit
-      {platform_mgr set_notify_ui_location kOSNotifyTopRight})}
-#define QP_ENDGAME_SCREEN_HANDLERS
-((helpbar
-      {if_else
-         {'||'
-            {is_leader_local}
-            {gamemode get ranked}}
+         {band_ui_sink set_net_sync FALSE}
+      }
+      {helpbar set_limit_to_player_num -1}
+   )
+   (update_true_skill ($skill0 $skill1))
+   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
+}
+#define QP_ENDGAME_SCREEN_HANDLERS (
+   (helpbar
+      {if_else {'||' {is_leader_local} {gamemode get ranked}}
          ('' helpbar_finishsong)
-         (helpbar_back '')})
+         (helpbar_back '')
+      }
+   )
    (helpbar_waiting
-      {if_else
-         {'||'
-            {is_leader_local}
-            {gamemode get ranked}}
+      {if_else {'||' {is_leader_local} {gamemode get ranked}}
          0
-         shell_waiting_for_leader})
+         shell_waiting_for_leader
+      }
+   )
    (BUTTON_DOWN_MSG
-      {switch
-         $button
+      {switch $button
          #ifdef HX_XBOX
          (kPad_R1
-            {if
-               {!
-                  {gamemode get ranked}}
-               {band_ui_sink set_net_sync FALSE}}
-            {if
-               {gamemode get online_play_required}
-               {ui
-                  goto_screen
-                  [more_details_screen]}})
+            {if {! {gamemode get ranked}}
+               {band_ui_sink set_net_sync FALSE}
+            }
+            {if {gamemode get online_play_required}
+               {ui goto_screen [more_details_screen]}
+            }
+         )
          #endif
-         kDataUnhandled})
+         kDataUnhandled
+      }
+   )
    (SELECT_START_MSG
-      {if_else
-         {!
-            {gamemode is_hth_arrangement}}
+      {if_else {! {gamemode is_hth_arrangement}}
          {ui goto_screen highscores_screen}
-         {ui goto_screen qp_complete_screen}}
-      kDataUnhandled))
-{new
-   UIScreen
+         {ui goto_screen qp_complete_screen}
+      }
+      kDataUnhandled
+   )
+)
+{new UIScreen
    qp_endgame_screen
    (panels endgame_background_panel qp_endgame_panel helpbar)
    (focus qp_endgame_panel)
    QP_ENDGAME_SCREEN_HANDLERS
    (more_details_screen qp_coop_details_endgame_screen)
-   (enter
-      {helpbar set_limit_to_player_num -1})}
-{new
-   UIScreen
+   (enter {helpbar set_limit_to_player_num -1})
+}
+{new UIScreen
    qp_hth_endgame_screen
    (panels qp_hth_endgame_panel helpbar)
    (focus qp_hth_endgame_panel)
    QP_ENDGAME_SCREEN_HANDLERS
    (more_details_screen qp_hth_details_endgame_screen)
-   (enter
-      {helpbar set_limit_to_player_num -1})}
-{new
-   UIScreen
+   (enter {helpbar set_limit_to_player_num -1})
+}
+{new UIScreen
    qp_coop_details_endgame_screen
-   (panels endgame_background_panel qp_endgame_panel more_details_panel helpbar)
+   (panels
+      endgame_background_panel
+      qp_endgame_panel
+      more_details_panel
+      helpbar
+   )
    (focus more_details_panel)
-   (leave
-      {ui goto_screen qp_endgame_screen})
+   (leave {ui goto_screen qp_endgame_screen})
    (exit
-      {if
-         {!
-            {gamemode get ranked}}
-         {band_ui_sink set_net_sync TRUE}})}
-{new
-   UIScreen
+      {if {! {gamemode get ranked}}
+         {band_ui_sink set_net_sync TRUE}
+      }
+   )
+}
+{new UIScreen
    qp_hth_details_endgame_screen
    (panels qp_hth_endgame_panel more_details_panel helpbar)
    (focus more_details_panel)
-   (leave
-      {ui goto_screen qp_hth_endgame_screen})
+   (leave {ui goto_screen qp_hth_endgame_screen})
    (exit
-      {if
-         {!
-            {gamemode get ranked}}
-         {band_ui_sink set_net_sync TRUE}})}
-{new
-   UIPanel
+      {if {! {gamemode get ranked}}
+         {band_ui_sink set_net_sync TRUE}
+      }
+   )
+}
+{new UIPanel
    qp_complete_panel
    (file complete_og.milo)
    LIMIT_TO_LEADER_SESSION
@@ -664,83 +510,82 @@
       {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
       {$this set_focus comp_selsong.btn}
       {session add_sink $this remote_player_left_msg}
-      {$this set_up_buttons})
+      {$this set_up_buttons}
+   )
    (exit
       {platform_mgr set_notify_ui_location kOSNotifyTopRight}
-      {session remove_sink $this remote_player_left_msg})
+      {session remove_sink $this remote_player_left_msg}
+   )
    (set_up_buttons
-      {if
-         {<
-            {session num_players}
-            {gamemode get min_players}}
+      {if {< {session num_players} {gamemode get min_players}}
          {$this disable comp_restart.btn}
          {$this disable comp_selsong.btn}
-         {$this set_focus comp_quit.btn}})
-   (REMOTE_PLAYER_LEFT_MSG
-      {$this set_up_buttons})
+         {$this set_focus comp_quit.btn}
+      }
+   )
+   (REMOTE_PLAYER_LEFT_MSG {$this set_up_buttons})
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (comp_restart.btn
-            {session
-               send_to_all
-               (game_restart)
-               kNetReliable}
-            {game_restart})
-         (comp_selsong.btn
-            {ui goto_screen meta_loading_continue_screen})
+            {session send_to_all (game_restart) kNetReliable}
+            {game_restart}
+         )
+         (comp_selsong.btn {ui goto_screen meta_loading_continue_screen})
          (comp_quit.btn
             {band_ui_sink set_net_sync FALSE}
-            {ui goto_screen meta_loading_main_screen})})}
-{new
-   UIScreen
+            {ui goto_screen meta_loading_main_screen}
+         )
+      }
+   )
+}
+{new UIScreen
    qp_complete_screen
    (panels qp_complete_panel helpbar)
    (focus qp_complete_panel)
    (helpbar
-      {if_else
-         {is_leader_local}
+      {if_else {is_leader_local}
          ('' helpbar_select)
-         (helpbar_leave_session '')})
-   (enter
-      {helpbar set_limit_to_player_num -1})
-   HELPBAR_WAITING_FOR_LEADER}
-{new
-   UIPanel
+         (helpbar_leave_session '')
+      }
+   )
+   (enter {helpbar set_limit_to_player_num -1})
+   HELPBAR_WAITING_FOR_LEADER
+}
+{new UIPanel
    complete_ranked_panel
    (file complete_ranked_og.milo)
    (enter
       {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
-      {$this set_focus comp_new_match.btn})
-   (exit
-      {platform_mgr set_notify_ui_location kOSNotifyTopRight})
+      {$this set_focus comp_new_match.btn}
+   )
+   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
    (SELECT_MSG
-      {switch
-         $component
-         (comp_new_match.btn
-            {ui goto_screen meta_loading_matchmaking_screen})
-         (comp_quit.btn
-            {ui goto_screen meta_loading_main_screen})})}
-{new
-   UIScreen
+      {switch $component
+         (comp_new_match.btn {ui goto_screen meta_loading_matchmaking_screen})
+         (comp_quit.btn {ui goto_screen meta_loading_main_screen})
+      }
+   )
+}
+{new UIScreen
    qp_complete_ranked_screen
    (panels complete_ranked_panel helpbar)
    (focus complete_ranked_panel)
-   (helpbar
-      ('' helpbar_select))}
+   (helpbar ('' helpbar_select))
+}
 #ifndef HX_XBOX
-{new
-   UIScreen
+{new UIScreen
    endgame_autosave_start_screen
    (TRANSITION_COMPLETE_MSG
       {do
          ($ui_screen_name qp_complete_screen)
-         {if
-            {tour performer}
-            {if_else
-               {{tour performer}
-                  is_winning}
+         {if {tour performer}
+            {if_else {{tour performer} is_winning}
                {set $ui_screen_name meta_loading_tour_win_screen}
-               {set $ui_screen_name meta_loading_continue_screen}}}
-         {ui goto_screen $ui_screen_name}})}
+               {set $ui_screen_name meta_loading_continue_screen}
+            }
+         }
+         {ui goto_screen $ui_screen_name}
+      }
+   )
+}
 #endif

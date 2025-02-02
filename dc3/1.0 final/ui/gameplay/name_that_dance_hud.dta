@@ -1,48 +1,30 @@
-#define NTD_STATE_LOADING
-(1)
-#define NTD_STATE_SWIPE
-(2)
-#define NTD_STATE_DANCE
-(3)
-#define NTD_STATE_SCORE
-(4)
-#define NTD_STATE_COUNT_IN
-(5)
-#define NTD_STATE_GAME_OVER
-(6)
-#define NTD_MOVE_DETECT_THRESHHOLD
-(0.75)
-#define RESULT_SUCCESS
-(1)
-#define RESULT_FAIL
-(2)
-#define RESULT_TIMEOUT_SWIPE
-(3)
-#define RESULT_TIMEOUT_DANCE
-(4)
-#define MOVE_LIST_SIZE
-(12)
+#define NTD_STATE_LOADING (1)
+#define NTD_STATE_SWIPE (2)
+#define NTD_STATE_DANCE (3)
+#define NTD_STATE_SCORE (4)
+#define NTD_STATE_COUNT_IN (5)
+#define NTD_STATE_GAME_OVER (6)
+#define NTD_MOVE_DETECT_THRESHHOLD (0.75)
+#define RESULT_SUCCESS (1)
+#define RESULT_FAIL (2)
+#define RESULT_TIMEOUT_SWIPE (3)
+#define RESULT_TIMEOUT_DANCE (4)
+#define MOVE_LIST_SIZE (12)
 (name_that_dance_scriptobj
    (do_detection FALSE)
    (row_count 3)
    (col_count 4)
-   (score_curve
-      "")
+   (score_curve "")
    (move_dir)
    (panel_dir)
    (song_measures)
-   (card_set
-      ())
-   (row_set
-      ())
-   (visible_cards
-      ())
+   (card_set ())
+   (row_set ())
+   (visible_cards ())
    (beat_round)
    (on_measure)
-   (move_list
-      ())
-   (move_list_valid
-      ())
+   (move_list ())
+   (move_list_valid ())
    (play_state NTD_STATE_LOADING)
    (dancer 0)
    (steal 0)
@@ -55,1343 +37,858 @@
    (swipe_pending)
    (player_scores_hidden)
    (title_hidden)
-   (player_scores
-      (0 0))
+   (player_scores (0 0))
    (game_is_over FALSE)
    (log_cat 1)
    (log
       ($category $array)
-      {if
-         {&
-            $category
-            [log_cat]}
-         {print
-            "name_that_dance_scriptobj:"}
-         {foreach
-            $element
-            $array
-            {print $element}}
-         {print
-            "\n"}})
+      {if {& $category [log_cat]}
+         {print "name_that_dance_scriptobj:"}
+         {foreach $element $array
+            {print $element}
+         }
+         {print "\n"}
+      }
+   )
    (enter
       ($song_measures)
-      {set
-         [move_dir]
-         {$hud_panel get moves_dir}}
-      {set
-         [song_measures]
-         $song_measures}
-      {set
-         [game_is_over]
-         FALSE}
-      {set
-         [rounds]
-         0}
-      {master
-         add_sink
+      {set [move_dir] {$hud_panel get moves_dir}}
+      {set [song_measures] $song_measures}
+      {set [game_is_over] FALSE}
+      {set [rounds] 0}
+      {master add_sink $this (beat)}
+      {hamprovider add_sink
          $this
-         (beat)}
-      {hamprovider
-         add_sink
-         $this
-         ((post_move_finished on_post_move_finished)
-            (post_sides_switched on_side_moved))
+         (
+            (post_move_finished on_post_move_finished)
+            (post_sides_switched on_side_moved)
+         )
          kSinkModeHandle
-         FALSE}
+         FALSE
+      }
       {hamprovider set game_stage omg}
-      {set
-         [panel_dir]
-         {find_obj $hud_panel twelve_card_hud}}
-      {set
-         [score_curve]
-         {find_obj
-            [panel_dir]
-            score_curve.anim}}
-      {resize
-         [move_list_valid]
-         0}
-      {resize
-         [move_list]
-         0}
-      {resize
-         [card_set]
-         0}
+      {set [panel_dir] {find_obj $hud_panel twelve_card_hud}}
+      {set [score_curve] {find_obj [panel_dir] score_curve.anim}}
+      {resize [move_list_valid] 0}
+      {resize [move_list] 0}
+      {resize [card_set] 0}
       {$this init_cards}
       {$this enter_state_loading}
-      {set_elem
-         [player_scores]
-         0
-         0}
-      {set_elem
-         [player_scores]
-         1
-         0}
+      {set_elem [player_scores] 0 0}
+      {set_elem [player_scores] 1 0}
       {$this set_score 1 0}
       {$this set_score 0 0}
-      {$this
-         log
+      {$this log 1 ("enter" ", song measures=" [song_measures])}
+      {$this log
          1
-         ("enter"
-            ", song measures="
-            [song_measures])}
-      {$this
-         log
+         (
+            "player 0 on side "
+            {{gamedata getp 0 provider} get
+               side
+            }
+         )
+      }
+      {$this log
          1
-         ("player 0 on side "
-            {{gamedata getp 0 provider}
-               get
-               side})}
-      {$this
-         log
-         1
-         ("player 1 on side "
-            {{gamedata getp 1 provider}
-               get
-               side})})
+         (
+            "player 1 on side "
+            {{gamedata getp 1 provider} get
+               side
+            }
+         )
+      }
+   )
    (get_is_right_player
       ($player_index)
       {do
          ($result
-            {==
-               kSkeletonRight
-               {{gamedata getp $player_index provider}
-                  get
-                  side}})
-         {if_else
-            $result
-            {$this
-               log
-               2
-               ("player "
-                  $player_index
-                  " is on right")}
-            {$this
-               log
-               2
-               ("player "
-                  $player_index
-                  " is not on right")}}
-         $result})
+            {== kSkeletonRight
+               {{gamedata getp $player_index provider} get
+                  side
+               }
+            }
+         )
+         {if_else $result
+            {$this log 2 ("player " $player_index " is on right")}
+            {$this log 2 ("player " $player_index " is not on right")}
+         }
+         $result
+      }
+   )
    (set_score
       ($player_index $score)
-      {if_else
-         {$this get_is_right_player $player_index}
-         {{find_obj
-               [panel_dir]
-               rightscore.lbl}
-            set_int
-            $score}
-         {{find_obj
-               [panel_dir]
-               leftscore.lbl}
-            set_int
-            $score}})
+      {if_else {$this get_is_right_player $player_index}
+         {{find_obj [panel_dir] rightscore.lbl} set_int $score}
+         {{find_obj [panel_dir] leftscore.lbl} set_int $score}
+      }
+   )
    (set_points_label
       ($score)
-      {{find_obj
-            [panel_dir]
-            points.lbl}
-         set_int
-         $score})
+      {{find_obj [panel_dir] points.lbl} set_int $score}
+   )
    (exit
       {hamprovider remove_sink $this}
       {master remove_sink $this}
-      {$this
-         run_flow
-         [panel_dir]
-         reset.flow})
+      {$this run_flow [panel_dir] reset.flow}
+   )
    (cheat_swipe
       ($player_index)
-      {$this
-         log
-         2
-         ("cheat_swipe "
-            $player_index)}
-      {$this player_swipe $player_index})
+      {$this log 2 ("cheat_swipe " $player_index)}
+      {$this player_swipe $player_index}
+   )
    (cheat_move
       ($success)
-      {$this
-         log
-         2
-         ("cheat_move "
-            $success)}
-      {if
-         {==
-            [play_state]
-            NTD_STATE_DANCE}
+      {$this log 2 ("cheat_move " $success)}
+      {if {== [play_state] NTD_STATE_DANCE}
          {do
             ($card_info)
             ($cheat_card_index -1)
             ($card_idx 0)
-            {foreach
-               $card_info
-               [card_set]
-               {if
-                  {== -1 $cheat_card_index}
-                  {if
-                     {elem $card_info 3}
-                     {set $cheat_card_index $card_idx}}}
-               {'++' $card_idx}}
-            {$this
-               log
-               1
-               ("cheat_move end dance")}
-            {$this
-               end_dance
+            {foreach $card_info [card_set]
+               {if {== -1 $cheat_card_index}
+                  {if {elem $card_info 3}
+                     {set $cheat_card_index $card_idx}
+                  }
+               }
+               {'++' $card_idx}
+            }
+            {$this log 1 ("cheat_move end dance")}
+            {$this end_dance
                $cheat_card_index
-               {if_else $success RESULT_SUCCESS RESULT_FAIL}}}})
+               {if_else $success
+                  RESULT_SUCCESS
+                  RESULT_FAIL
+               }
+            }
+         }
+      }
+   )
    (player_swipe
       ($player_index)
-      {if
-         {&&
-            {!
-               [swipe_pending]}
-            {==
-               [play_state]
-               NTD_STATE_SWIPE}}
-         {set
-            [dancer]
-            $player_index}
-         {set
-            [swipe_pending]
-            TRUE}})
+      {if {&& {! [swipe_pending]} {== [play_state] NTD_STATE_SWIPE}}
+         {set [dancer] $player_index}
+         {set [swipe_pending] TRUE}
+      }
+   )
    (on_ui_nav_mode_change
-      {$this
-         log
-         1
-         ("on_ui_nav_mode_change:"
-            {taskmgr beat})})
+      {$this log 1 ("on_ui_nav_mode_change:" {taskmgr beat})}
+   )
    (on_post_move_finished
-      {$this
-         log
+      {$this log
          1
-         ("on_post_move_finished:"
+         (
+            "on_post_move_finished:"
             ", beat_round="
             [beat_round]
             ", state_beat="
-            [state_beats])}
-      {$this check_scoring})
+            [state_beats]
+         )
+      }
+      {$this check_scoring}
+   )
    (on_side_moved
-      {$this
-         log
+      {$this log 1 ("on_side_moved:" {taskmgr beat})}
+      {$this log
          1
-         ("on_side_moved:"
-            {taskmgr beat})}
-      {$this
-         log
+         (
+            "player 0 on side "
+            {{gamedata getp 0 provider} get
+               side
+            }
+         )
+      }
+      {$this log
          1
-         ("player 0 on side "
-            {{gamedata getp 0 provider}
-               get
-               side})}
-      {$this
-         log
-         1
-         ("player 1 on side "
-            {{gamedata getp 1 provider}
-               get
-               side})})
+         (
+            "player 1 on side "
+            {{gamedata getp 1 provider} get
+               side
+            }
+         )
+      }
+   )
    (run_flow
       ($dir $flow_name)
       {do
-         ($flow
-            {find_obj $dir $flow_name})
-         {if_else
-            $flow
+         ($flow {find_obj $dir $flow_name})
+         {if_else $flow
             {$flow activate}
-            {$this
-               log
-               2
-               ("flow not found: "
-                  $flow_name)}}})
+            {$this log 2 ("flow not found: " $flow_name)}
+         }
+      }
+   )
    (move_name_from_card_index
       ($card_index)
       {do
-         ($card_info
-            {elem
-               [card_set]
-               $card_index})
-         {{elem $card_info 1}
-            display_name}})
+         ($card_info {elem [card_set] $card_index})
+         {{elem $card_info 1} display_name}
+      }
+   )
    (poll
-      {if
-         {&&
-            [do_detection]
-            {==
-               [play_state]
-               NTD_STATE_DANCE}}
+      {if {&& [do_detection] {== [play_state] NTD_STATE_DANCE}}
          {do
             ($ham_move)
             ($raw_detection_val 0)
             ($normalized_result 0)
             ($anim_name
-               {if_else
-                  {$this
-                     get_is_right_player
-                     [dancer]}
+               {if_else {$this get_is_right_player [dancer]}
                   "bar_right.anim"
-                  "bar_left.anim"})
+                  "bar_left.anim"
+               }
+            )
             ($card)
             ($card_index)
             ($card_info)
             {set $card_index 0}
-            {$this
-               log
-               1
-               ("move poll check cards")}
-            {foreach
-               $card_info
-               [card_set]
-               {set
-                  $card
-                  {elem $card_info 0}}
+            {$this log 1 ("move poll check cards")}
+            {foreach $card_info [card_set]
+               {set $card {elem $card_info 0}}
                {if
                   {&&
                      {elem $card_info 4}
-                     {'||'
-                        [enable_all_move_detection]
-                        {elem $card_info 3}}}
-                  {set
-                     $ham_move
-                     {elem $card_info 1}}
-                  {set
-                     $raw_detection_val
-                     {[move_dir]
-                        active_detector_result
-                        [dancer]
-                        $ham_move}}
-                  {set
-                     $normalized_result
-                     {if_else
-                        $ham_move
+                     {'||' [enable_all_move_detection] {elem $card_info 3}}
+                  }
+                  {set $ham_move {elem $card_info 1}}
+                  {set $raw_detection_val
+                     {[move_dir] active_detector_result [dancer] $ham_move}
+                  }
+                  {set $normalized_result
+                     {if_else $ham_move
                         {detect_frac_to_rating_frac $raw_detection_val $ham_move}
-                        0.0}}
-                  {$this
-                     log
+                        0.0
+                     }
+                  }
+                  {$this log
                      1
-                     ("detect result"
-                        ", card="
-                        $card_index
-                        ", val="
-                        $normalized_result)}
-                  {if
-                     [score_curve]
-                     {set
-                        $normalized_result
-                        {[score_curve]
-                           value_from_frame
+                     ("detect result" ", card=" $card_index ", val=" $normalized_result)
+                  }
+                  {if [score_curve]
+                     {set $normalized_result
+                        {[score_curve] value_from_frame
                            [panel_dir]
                            (some_value)
-                           $normalized_result}}}
-                  {{find_obj $card $anim_name}
-                     set_frame
-                     $normalized_result}}
-               {'++' $card_index}}}})
+                           $normalized_result
+                        }
+                     }
+                  }
+                  {{find_obj $card $anim_name} set_frame $normalized_result}
+               }
+               {'++' $card_index}
+            }
+         }
+      }
+   )
    (check_scoring
-      {if
-         {&&
-            [do_detection]
-            {==
-               [play_state]
-               NTD_STATE_DANCE}}
+      {if {&& [do_detection] {== [play_state] NTD_STATE_DANCE}}
          {do
             ($ham_move)
             ($raw_detection_val 0)
             ($normalized_result 0)
             ($card)
-            ($passed_valid_move_index
-               "")
-            ($passed_invalid_move_index
-               "")
+            ($passed_valid_move_index "")
+            ($passed_invalid_move_index "")
             ($card_index)
             ($card_info)
             {set $card_index 0}
-            {$this
-               log
-               1
-               ("move poll check cards")}
-            {foreach
-               $card_info
-               [card_set]
-               {set
-                  $card
-                  {elem $card_info 0}}
+            {$this log 1 ("move poll check cards")}
+            {foreach $card_info [card_set]
+               {set $card {elem $card_info 0}}
                {if
                   {&&
                      {elem $card_info 4}
-                     {'||'
-                        [enable_all_move_detection]
-                        {elem $card_info 3}}}
-                  {set
-                     $ham_move
-                     {elem $card_info 1}}
-                  {set
-                     $raw_detection_val
-                     {[move_dir]
-                        last_detector_result
-                        [dancer]
-                        $ham_move}}
-                  {set
-                     $normalized_result
-                     {if_else
-                        $ham_move
+                     {'||' [enable_all_move_detection] {elem $card_info 3}}
+                  }
+                  {set $ham_move {elem $card_info 1}}
+                  {set $raw_detection_val
+                     {[move_dir] last_detector_result [dancer] $ham_move}
+                  }
+                  {set $normalized_result
+                     {if_else $ham_move
                         {detect_frac_to_rating_frac $raw_detection_val $ham_move}
-                        0.0}}
-                  {$this
-                     log
+                        0.0
+                     }
+                  }
+                  {$this log
                      1
-                     ("detect result"
-                        ", card="
-                        $card_index
-                        ", val="
-                        $normalized_result)}
-                  {if
-                     {== $normalized_result 1.0}
-                     {set $normalized_result 0.0}}
-                  {if
-                     [score_curve]
-                     {set
-                        $normalized_result
-                        {[score_curve]
-                           value_from_frame
+                     ("detect result" ", card=" $card_index ", val=" $normalized_result)
+                  }
+                  {if {== $normalized_result 1.0}
+                     {set $normalized_result 0.0}
+                  }
+                  {if [score_curve]
+                     {set $normalized_result
+                        {[score_curve] value_from_frame
                            [panel_dir]
                            (some_value)
-                           $normalized_result}}}
+                           $normalized_result
+                        }
+                     }
+                  }
                   {if
                      {&&
                         {< $normalized_result 1.0}
-                        {> $normalized_result NTD_MOVE_DETECT_THRESHHOLD}}
-                     {if_else
-                        {elem $card_info 3}
+                        {> $normalized_result NTD_MOVE_DETECT_THRESHHOLD}
+                     }
+                     {if_else {elem $card_info 3}
                         {set $passed_valid_move_index $card_index}
-                        {set $passed_invalid_move_index $card_index}}}}
-               {'++' $card_index}}
-            {if_else
-               $passed_valid_move_index
+                        {set $passed_invalid_move_index $card_index}
+                     }
+                  }
+               }
+               {'++' $card_index}
+            }
+            {if_else $passed_valid_move_index
                {do
-                  {$this
-                     log
+                  {$this log
                      1
-                     ("move poll passed valid: "
+                     (
+                        "move poll passed valid: "
                         $passed_valid_move_index
                         " "
-                        {$this move_name_from_card_index $passed_valid_move_index})}
-                  {$this end_dance $passed_valid_move_index RESULT_SUCCESS}}
-               {if
-                  $passed_invalid_move_index
-                  {$this
-                     log
+                        {$this move_name_from_card_index $passed_valid_move_index}
+                     )
+                  }
+                  {$this end_dance $passed_valid_move_index RESULT_SUCCESS}
+               }
+               {if $passed_invalid_move_index
+                  {$this log
                      1
-                     ("move poll passed valid: "
+                     (
+                        "move poll passed valid: "
                         $passed_invalid_move_index
                         " "
-                        {$this move_name_from_card_index $passed_invalid_move_index})}
-                  {$this end_dance $passed_invalid_move_index RESULT_FAIL}}}}})
+                        {$this move_name_from_card_index $passed_invalid_move_index}
+                     )
+                  }
+                  {$this end_dance $passed_invalid_move_index RESULT_FAIL}
+               }
+            }
+         }
+      }
+   )
    (beat
-      {'++'
-         [state_beats]}
-      {set
-         [beat_round]
-         {round
-            {taskmgr beat}}}
-      {set
-         [on_measure]
-         {mod
-            [state_beats]
-            4}}
-      {$this
-         log
+      {'++' [state_beats]}
+      {set [beat_round] {round {taskmgr beat}}}
+      {set [on_measure] {mod [state_beats] 4}}
+      {$this log
          1
-         ("on_beat "
-            [beat_round]
-            ", on_measure "
-            [on_measure])}
-      {switch
-         [play_state]
-         (NTD_STATE_LOADING
-            {$this process_state_loading})
-         (NTD_STATE_SWIPE
-            {$this process_state_swipe})
-         (NTD_STATE_DANCE
-            {$this process_state_dance})
-         (NTD_STATE_SCORE
-            {$this process_state_score})
-         (NTD_STATE_GAME_OVER
-            {$this process_state_game_over})})
+         ("on_beat " [beat_round] ", on_measure " [on_measure])
+      }
+      {switch [play_state]
+         (NTD_STATE_LOADING {$this process_state_loading})
+         (NTD_STATE_SWIPE {$this process_state_swipe})
+         (NTD_STATE_DANCE {$this process_state_dance})
+         (NTD_STATE_SCORE {$this process_state_score})
+         (NTD_STATE_GAME_OVER {$this process_state_game_over})
+      }
+   )
    (enter_state_loading
-      {set
-         [play_state]
-         NTD_STATE_LOADING}
-      {set
-         [beat_round]
-         {round
-            {taskmgr beat}}}
-      {set
-         [player_scores_hidden]
-         FALSE}
-      {set
-         [title_hidden]
-         FALSE}
-      {set
-         [steal]
-         FALSE}
+      {set [play_state] NTD_STATE_LOADING}
+      {set [beat_round] {round {taskmgr beat}}}
+      {set [player_scores_hidden] FALSE}
+      {set [title_hidden] FALSE}
+      {set [steal] FALSE}
       {do
-         ($measure_beat
-            {mod
-               [beat_round]
-               4})
-         ($beats_until_next_measure
-            {mod
-               {- 4 $measure_beat}
-               4})
-         {set
-            [state_beats]
-            {- 0 $beats_until_next_measure}}}
-      {$this
-         log
+         ($measure_beat {mod [beat_round] 4})
+         ($beats_until_next_measure {mod {- 4 $measure_beat} 4})
+         {set [state_beats] {- 0 $beats_until_next_measure}}
+      }
+      {$this log
          1
-         ("enter state loading"
+         (
+            "enter state loading"
             ", beat="
             [beat_round]
             ", state beat="
-            [state_beats])}
-      {if
-         {>
-            1
-            [rounds]}
-         {$this
-            run_flow
-            [panel_dir]
-            "activate.flow"}}
-      {{find_obj
-            [panel_dir]
-            beat.anim}
-         animate
-         (loop 0 3840)}
-      {if
-         {<=
-            1
-            [rounds]}
-         {$this
-            show_card_result
-            [dance_card_index]
-            [dance_result]
-            [dance_score]}})
+            [state_beats]
+         )
+      }
+      {if {> 1 [rounds]}
+         {$this run_flow [panel_dir] "activate.flow"}
+      }
+      {{find_obj [panel_dir] beat.anim} animate (loop 0 3840)}
+      {if {<= 1 [rounds]}
+         {$this show_card_result [dance_card_index] [dance_result] [dance_score]}
+      }
+   )
    (process_state_loading
-      {if
-         {<=
-            1
-            [rounds]}
-         {if
-            {==
-               5
-               [state_beats]}
-            {$this
-               run_flow
-               [panel_dir]
-               scores_show.flow}}
-         {if
-            {==
-               7
-               [state_beats]}
-            {mini_game_mgr
-               get_move_options
-               [move_list_valid]
-               [move_list]}}
-         {if
-            {$hamdirector is_world_loaded}
-            {if
-               {&&
-                  {!
-                     [player_scores_hidden]}
-                  {<=
-                     14
-                     [state_beats]}}
-               {set
-                  [player_scores_hidden]
-                  TRUE}
-               {if_else
-                  {>
-                     [max_rounds]
-                     [rounds]}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     scores_hide.flow}
-                  {$this enter_state_game_over}}}}}
-      {if
-         {==
-            0
-            [rounds]}
-         {if
-            {==
-               1
-               [state_beats]}
-            {mini_game_mgr
-               get_move_options
-               [move_list_valid]
-               [move_list]}}
-         {if
-            {$hamdirector is_world_loaded}
-            {if
-               {&&
-                  {!
-                     [title_hidden]}
-                  {<=
-                     14
-                     [state_beats]}}
-               {set
-                  [title_hidden]
-                  TRUE}
-               {$this
-                  run_flow
-                  [panel_dir]
-                  hide_title.flow}}}}
-      {if
-         {&&
-            {<=
-               15
-               [state_beats]}
-            {==
-               3
-               {mod
-                  [state_beats]
-                  4}}}
+      {if {<= 1 [rounds]}
+         {if {== 5 [state_beats]}
+            {$this run_flow [panel_dir] scores_show.flow}
+         }
+         {if {== 7 [state_beats]}
+            {mini_game_mgr get_move_options [move_list_valid] [move_list]}
+         }
+         {if {$hamdirector is_world_loaded}
+            {if {&& {! [player_scores_hidden]} {<= 14 [state_beats]}}
+               {set [player_scores_hidden] TRUE}
+               {if_else {> [max_rounds] [rounds]}
+                  {$this run_flow [panel_dir] scores_hide.flow}
+                  {$this enter_state_game_over}
+               }
+            }
+         }
+      }
+      {if {== 0 [rounds]}
+         {if {== 1 [state_beats]}
+            {mini_game_mgr get_move_options [move_list_valid] [move_list]}
+         }
+         {if {$hamdirector is_world_loaded}
+            {if {&& {! [title_hidden]} {<= 14 [state_beats]}}
+               {set [title_hidden] TRUE}
+               {$this run_flow [panel_dir] hide_title.flow}
+            }
+         }
+      }
+      {if {&& {<= 15 [state_beats]} {== 3 {mod [state_beats] 4}}}
          {game reset_detection}
          {$this reset_cards}
          {do
-            ($genre_token
-               {movemgr
-                  get_genre_token_name
-                  {mini_game_mgr get_category}})
+            ($genre_token {movemgr get_genre_token_name {mini_game_mgr get_category}})
             {{find_obj
                   [panel_dir]
-                  instruction.lbl}
-               set_token_fmt
+                  instruction.lbl} set_token_fmt
                ntd_dance_criteria_1
-               $genre_token}}
-         {$this
-            set_points_label
-            {$this calc_score RESULT_SUCCESS FALSE}}
-         {$this
-            run_flow
-            [panel_dir]
-            show_cards.flow}}
-      {if
-         {&&
-            {<=
-               16
-               [state_beats]}
-            {==
-               0
-               {mod
-                  [state_beats]
-                  4}}}
-         {$this enter_state_swipe}})
+               $genre_token
+            }
+         }
+         {$this set_points_label
+            {$this calc_score RESULT_SUCCESS FALSE}
+         }
+         {$this run_flow [panel_dir] show_cards.flow}
+      }
+      {if {&& {<= 16 [state_beats]} {== 0 {mod [state_beats] 4}}}
+         {$this enter_state_swipe}
+      }
+   )
    (enter_state_swipe
-      {$this
-         log
-         1
-         ("enter state swipe"
-            ", beat="
-            [beat_round])}
-      {set
-         [play_state]
-         NTD_STATE_SWIPE}
-      {set
-         [state_beats]
-         0}
-      {set
-         [dance_result]
-         0}
-      {set
-         [steal]
-         0}
-      {set
-         [swipe_pending]
-         FALSE}
-      {$this process_state_swipe})
+      {$this log 1 ("enter state swipe" ", beat=" [beat_round])}
+      {set [play_state] NTD_STATE_SWIPE}
+      {set [state_beats] 0}
+      {set [dance_result] 0}
+      {set [steal] 0}
+      {set [swipe_pending] FALSE}
+      {$this process_state_swipe}
+   )
    (process_state_swipe
-      {if_else
-         [swipe_pending]
+      {if_else [swipe_pending]
          {$this enter_state_dance}
          {do
-            {if
-               {==
-                  0
-                  [state_beats]}
-               {$this flip_up_all_cards}}
-            {if
-               {<
-                  0
-                  [state_beats]}
-               {if
-                  {>
-                     12
-                     {size
-                        [visible_cards]}}
+            {if {== 0 [state_beats]}
+               {$this flip_up_all_cards}
+            }
+            {if {< 0 [state_beats]}
+               {if {> 12 {size [visible_cards]}}
                   {$this hide_random_card}
-                  {$this
-                     set_points_label
-                     {$this calc_score RESULT_SUCCESS FALSE}}}}
-            {if
-               {==
-                  16
-                  [state_beats]}
-               {$this
-                  log
-                  1
-                  ("process swipe"
-                     "end dance timeout")}
-               {$this
-                  run_flow
-                  [panel_dir]
-                  hide_swipe.flow}
-               {$this end_dance -1 RESULT_TIMEOUT_SWIPE}}}})
+                  {$this set_points_label
+                     {$this calc_score RESULT_SUCCESS FALSE}
+                  }
+               }
+            }
+            {if {== 16 [state_beats]}
+               {$this log 1 ("process swipe" "end dance timeout")}
+               {$this run_flow [panel_dir] hide_swipe.flow}
+               {$this end_dance -1 RESULT_TIMEOUT_SWIPE}
+            }
+         }
+      }
+   )
    (enter_state_dance
-      {set
-         [play_state]
-         NTD_STATE_DANCE}
-      {set
-         [do_detection]
-         FALSE}
+      {set [play_state] NTD_STATE_DANCE}
+      {set [do_detection] FALSE}
       {do
-         ($measure_beat
-            {mod
-               {round
-                  {taskmgr beat}}
-               4})
-         ($beats_until_next_measure
-            {mod
-               {- 4 $measure_beat}
-               4})
-         {set
-            [state_beats]
-            {- 0 $beats_until_next_measure}}}
+         ($measure_beat {mod {round {taskmgr beat}} 4})
+         ($beats_until_next_measure {mod {- 4 $measure_beat} 4})
+         {set [state_beats] {- 0 $beats_until_next_measure}}
+      }
       {do
          ($card_info)
          ($card)
          ($anim)
-         {foreach
-            $card_info
-            [card_set]
-            {set
-               $card
-               {elem $card_info 0}}
-            {set
-               $anim
-               {find_obj
-                  {elem $card_info 0}
-                  spin_card.anim}}
-            {if
-               {==
-                  0
-                  {$anim frame}}
-               {if_else
-                  {==
-                     0
-                     [dancer]}
+         {foreach $card_info [card_set]
+            {set $card {elem $card_info 0}}
+            {set $anim {find_obj {elem $card_info 0} spin_card.anim}}
+            {if {== 0 {$anim frame}}
+               {if_else {== 0 [dancer]}
                   {$this run_flow $card player0.flow}
-                  {$this run_flow $card player1.flow}}
+                  {$this run_flow $card player1.flow}
+               }
                {$this run_flow $card player_flip.flow}
                {$this show_move_detection_meters $card TRUE}
-               {if
-                  {!
-                     [steal]}
-                  {if
-                     {'||'
-                        [enable_all_move_detection]
-                        {elem $card_info 3}}
-                     {[move_dir]
-                        enable_detector
-                        {elem $card_info 1}}}}
-               {$anim
-                  animate
-                  (range 0 10)}}}}
+               {if {! [steal]}
+                  {if {'||' [enable_all_move_detection] {elem $card_info 3}}
+                     {[move_dir] enable_detector {elem $card_info 1}}
+                  }
+               }
+               {$anim animate (range 0 10)}
+            }
+         }
+      }
       {do
-         ($beat_anim
-            {find_obj
-               [panel_dir]
-               beat.anim})
+         ($beat_anim {find_obj [panel_dir] beat.anim})
          ($frame
-            {if_else
-               {==
-                  0
-                  [dancer]}
+            {if_else {== 0 [dancer]}
                0
-               1000})
+               1000
+            }
+         )
          {$beat_anim stop_animation}
-         {$beat_anim set_frame $frame}}
-      {if_else
-         [steal]
-         {if_else
-            {$this
-               get_is_right_player
-               [dancer]}
-            {$this
-               run_flow
-               [panel_dir]
-               right_player_steal.flow}
-            {$this
-               run_flow
-               [panel_dir]
-               left_player_steal.flow}}
-         {if_else
-            {$this
-               get_is_right_player
-               [dancer]}
-            {$this
-               run_flow
-               [panel_dir]
-               right_player_dance.flow}
-            {$this
-               run_flow
-               [panel_dir]
-               left_player_dance.flow}}}
-      {$this
-         log
-         1
-         ("enter_state_dance"
-            ", beat="
-            {round
-               {taskmgr beat}})}
-      {$this process_state_dance})
+         {$beat_anim set_frame $frame}
+      }
+      {if_else [steal]
+         {if_else {$this get_is_right_player [dancer]}
+            {$this run_flow [panel_dir] right_player_steal.flow}
+            {$this run_flow [panel_dir] left_player_steal.flow}
+         }
+         {if_else {$this get_is_right_player [dancer]}
+            {$this run_flow [panel_dir] right_player_dance.flow}
+            {$this run_flow [panel_dir] left_player_dance.flow}
+         }
+      }
+      {$this log 1 ("enter_state_dance" ", beat=" {round {taskmgr beat}})}
+      {$this process_state_dance}
+   )
    (process_state_dance
       {do
          ($count_in_beat
-            {if_else
-               [steal]
+            {if_else [steal]
                4
-               0})
-         {if
-            {==
-               $count_in_beat
-               [state_beats]}
-            {$this
-               run_flow
-               [panel_dir]
-               do_count_in.flow}}}
-      {if
-         {==
-            1
-            [state_beats]}
-         {set
-            [do_detection]
-            TRUE}}
-      {if
-         {==
-            {'*'
-               4
-               [max_dance_measures]}
-            [state_beats]}
-         {$this
-            log
-            1
-            ("process state dance timeout")}
-         {$this end_dance -1 RESULT_TIMEOUT_DANCE}})
+               0
+            }
+         )
+         {if {== $count_in_beat [state_beats]}
+            {$this run_flow [panel_dir] do_count_in.flow}
+         }
+      }
+      {if {== 1 [state_beats]}
+         {set [do_detection] TRUE}
+      }
+      {if {== {'*' 4 [max_dance_measures]} [state_beats]}
+         {$this log 1 ("process state dance timeout")}
+         {$this end_dance -1 RESULT_TIMEOUT_DANCE}
+      }
+   )
    (end_dance
       ($card_index $result)
-      {$this
-         log
-         1
-         ("end_dance"
-            ", beat="
-            [beat_round])}
-      {set
-         [dance_result]
-         $result}
-      {set
-         [dance_card_index]
-         $card_index}
-      {set
-         [dance_score]
-         {$this
-            calc_score
-            $result
-            [steal]}}
-      {switch
-         [dance_result]
+      {$this log 1 ("end_dance" ", beat=" [beat_round])}
+      {set [dance_result] $result}
+      {set [dance_card_index] $card_index}
+      {set [dance_score]
+         {$this calc_score $result [steal]}
+      }
+      {switch [dance_result]
          (RESULT_SUCCESS
-            {[move_dir]
-               disable_all_detectors}
+            {[move_dir] disable_all_detectors}
             {$this update_scores}
-            {$this enter_state_loading})
+            {$this enter_state_loading}
+         )
          (RESULT_TIMEOUT_SWIPE
             {$this update_scores}
-            {$this enter_state_loading})
+            {$this enter_state_loading}
+         )
          (RESULT_FAIL
-            {if_else
-               [steal]
+            {if_else [steal]
                {do
-                  {[move_dir]
-                     disable_all_detectors}
+                  {[move_dir] disable_all_detectors}
                   {$this update_scores}
-                  {$this enter_state_loading}}
+                  {$this enter_state_loading}
+               }
                {do
-                  {set
-                     [steal]
-                     TRUE}
-                  {set
-                     [dancer]
-                     {-
-                        1
-                        [dancer]}}
-                  {$this enter_state_dance}}})
+                  {set [steal] TRUE}
+                  {set [dancer] {- 1 [dancer]}}
+                  {$this enter_state_dance}
+               }
+            }
+         )
          (RESULT_TIMEOUT_DANCE
-            {if_else
-               [steal]
+            {if_else [steal]
                {do
-                  {[move_dir]
-                     disable_all_detectors}
+                  {[move_dir] disable_all_detectors}
                   {$this update_scores}
-                  {$this enter_state_loading}}
+                  {$this enter_state_loading}
+               }
                {do
-                  {set
-                     [steal]
-                     TRUE}
-                  {set
-                     [dancer]
-                     {-
-                        1
-                        [dancer]}}
-                  {$this enter_state_dance}}})})
+                  {set [steal] TRUE}
+                  {set [dancer] {- 1 [dancer]}}
+                  {$this enter_state_dance}
+               }
+            }
+         )
+      }
+   )
    (enter_state_game_over
-      {set
-         [play_state]
-         NTD_STATE_GAME_OVER}
-      {set
-         [state_beats]
-         0}
+      {set [play_state] NTD_STATE_GAME_OVER}
+      {set [state_beats] 0}
       {do
-         ($diff
-            {-
-               {elem
-                  [player_scores]
-                  0}
-               {elem
-                  [player_scores]
-                  1}})
+         ($diff {- {elem [player_scores] 0} {elem [player_scores] 1}})
          {cond
             ({< 0 $diff}
-               {if_else
-                  {$this get_is_right_player 0}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_right_player.flow}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_left_player.flow}})
+               {if_else {$this get_is_right_player 0}
+                  {$this run_flow [panel_dir] victory_right_player.flow}
+                  {$this run_flow [panel_dir] victory_left_player.flow}
+               }
+            )
             ({> 0 $diff}
-               {if_else
-                  {$this get_is_right_player 1}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_right_player.flow}
-                  {$this
-                     run_flow
-                     [panel_dir]
-                     victory_left_player.flow}})
+               {if_else {$this get_is_right_player 1}
+                  {$this run_flow [panel_dir] victory_right_player.flow}
+                  {$this run_flow [panel_dir] victory_left_player.flow}
+               }
+            )
             ({== 0 $diff}
-               {$this
-                  run_flow
-                  [panel_dir]
-                  victory_none.flow})}})
+               {$this run_flow [panel_dir] victory_none.flow}
+            )
+         }
+      }
+   )
    (process_state_game_over
-      {if
-         {==
-            [show_game_over_beats]
-            [state_beats]}
-         {if
-            {!
-               [game_is_over]}
-            {set
-               [game_is_over]
-               TRUE}
-            {$this
-               log
-               1
-               ("game is over")}}})
+      {if {== [show_game_over_beats] [state_beats]}
+         {if {! [game_is_over]}
+            {set [game_is_over] TRUE}
+            {$this log 1 ("game is over")}
+         }
+      }
+   )
    (calc_score
       ($result $steal)
       {do
          ($score 0)
-         {if
-            {== RESULT_SUCCESS $result}
-            {set
-               $score
-               {'*'
-                  [score_base]
-                  {'+'
-                     1
-                     {size
-                        [visible_cards]}}}}
-            {if
-               $steal
-               {set
-                  $score
-                  {'*'
-                     $score
-                     [score_mod_steal]}}}}
-         {int $score}})
+         {if {== RESULT_SUCCESS $result}
+            {set $score {'*' [score_base] {'+' 1 {size [visible_cards]}}}}
+            {if $steal
+               {set $score {'*' $score [score_mod_steal]}}
+            }
+         }
+         {int $score}
+      }
+   )
    (update_scores
-      {set
-         [rounds]
-         {'++'
-            [rounds]}}
+      {set [rounds] {'++' [rounds]}}
       {set_elem
          [player_scores]
          [dancer]
-         {'+'
-            [dance_score]
-            {elem
-               [player_scores]
-               [dancer]}}}
-      {$this
-         set_score
-         [dancer]
-         {elem
-            [player_scores]
-            [dancer]}})
+         {'+' [dance_score] {elem [player_scores] [dancer]}}
+      }
+      {$this set_score [dancer] {elem [player_scores] [dancer]}}
+   )
    (card_index_from_rc
       ($row $col)
-      {'+'
-         $col
-         {'*'
-            $row
-            [col_count]}})
+      {'+' $col {'*' $row [col_count]}}
+   )
    (card_col_from_index
       ($index)
-      {mod
-         $index
-         [col_count]})
+      {mod $index [col_count]}
+   )
    (card_row_from_index
       ($index)
-      {int
-         {/
-            $index
-            [col_count]}})
+      {int {/ $index [col_count]}}
+   )
    (set_card_move
       ($idx $move_variant $score)
       {do
-         ($move
-            {movemgr get_ham_move $move_variant})
-         ($clip
-            {movemgr get_char_clip $move_variant})
-         ($card_info
-            {elem
-               [card_set]
-               $idx})
-         ($card
-            {elem $card_info 0})
-         ($tex
-            {$move get tex})
-         ($mat
-            {find_obj $card icon.mat})
-         ($ica
-            {find_obj $card icon_state.anim})
-         ($lbl
-            {find_obj $card move_name.lbl})
-         ($iconman
-            {find_obj $card iconman.iconman})
-         ($iconman_anim
-            {find_obj $card iconman.anim})
-         {$this
-            log
+         ($move {movemgr get_ham_move $move_variant})
+         ($clip {movemgr get_char_clip $move_variant})
+         ($card_info {elem [card_set] $idx})
+         ($card {elem $card_info 0})
+         ($tex {$move get tex})
+         ($mat {find_obj $card icon.mat})
+         ($ica {find_obj $card icon_state.anim})
+         ($lbl {find_obj $card move_name.lbl})
+         ($iconman {find_obj $card iconman.iconman})
+         ($iconman_anim {find_obj $card iconman.anim})
+         {$this log
             2
-            ("set_card_move "
-               $card
-               " "
-               $move)}
+            ("set_card_move " $card " " $move)
+         }
          {set_elem $card_info 1 $move}
-         {set_elem
-            $card_info
-            2
-            [state_beats]}
+         {set_elem $card_info 2 [state_beats]}
          {set_elem $card_info 3 $score}
          {set_elem $card_info 4 TRUE}
          {$lbl set_move_name $move}
          {$mat set diffuse_tex $tex}
-         {$ica
-            set_frame
-            {$move get tex_state}}
+         {$ica set_frame {$move get tex_state}}
          {$iconman set char_clip $clip}
-         {$iconman_anim
-            animate
-            (loop 0 3840)}
-         {if_else
-            [show_valid_cards]
+         {$iconman_anim animate (loop 0 3840)}
+         {if_else [show_valid_cards]
             {$this show_move_valid $card $score}
-            {$this run_flow $card set_card_invalid.flow}}
+            {$this run_flow $card set_card_invalid.flow}
+         }
          {$this run_flow $card flip_over.flow}
-         {$this show_move_detection_meters $card FALSE}})
+         {$this show_move_detection_meters $card FALSE}
+      }
+   )
    (flip_over_card
       ($card_info $delay)
       {{find_obj
             {elem $card_info 0}
-            spin_card.anim}
-         animate
+            spin_card.anim} animate
          (delay $delay)
-         (range 0 5)}
+         (range 0 5)
+      }
       {set_elem $card_info 4 FALSE}
-      {[move_dir]
-         disable_detector
-         {elem $card_info 1}})
+      {[move_dir] disable_detector {elem $card_info 1}}
+   )
    (init_cards
       {do
          ($card)
-         {resize
-            [row_set]
-            0}
-         {foreach_int
-            $row
-            0
-            [row_count]
-            {push_back
-               [row_set]
-               {array
-                  (FALSE FALSE)}}
-            {foreach_int
-               $col
-               0
-               [col_count]
-               {set
-                  $card
+         {resize [row_set] 0}
+         {foreach_int $row 0 [row_count]
+            {push_back [row_set] {array (FALSE FALSE)}}
+            {foreach_int $col 0 [col_count]
+               {set $card
                   {find_obj
                      [panel_dir]
-                     {sprintf
-                        "flashcard%d%d"
-                        $row
-                        $col}}}
+                     {sprintf "flashcard%d%d" $row $col}
+                  }
+               }
                {push_back
                   [card_set]
                   {array
-                     ($card
-                        ""
-                        0
-                        0
-                        FALSE)}}}}})
+                     ($card "" 0 0 FALSE)
+                  }
+               }
+            }
+         }
+      }
+   )
    (reset_cards
       {do
          ($idx 0)
          ($move)
-         ($card_info
-            ())
+         ($card_info ())
          ($card_idx)
-         ($all_cards
-            ())
+         ($all_cards ())
          ($score)
          ($row)
          {resize $all_cards 0}
-         {foreach_int
-            $idx
-            0
-            {size
-               [card_set]}
-            {push_back $all_cards $idx}}
+         {foreach_int $idx 0 {size [card_set]}
+            {push_back $all_cards $idx}
+         }
          {random_sort $all_cards}
-         {foreach_int
-            $row
-            0
-            [row_count]
-            {set_elem
-               {elem
-                  [row_set]
-                  $row}
-               0
-               FALSE}
-            {set_elem
-               {elem
-                  [row_set]
-                  $row}
-               1
-               TRUE}}
+         {foreach_int $row 0 [row_count]
+            {set_elem {elem [row_set] $row} 0 FALSE}
+            {set_elem {elem [row_set] $row} 1 TRUE}
+         }
          {set $card_idx 0}
-         {foreach
-            $move
-            [move_list_valid]
-            {$this
-               set_card_move
-               {elem $all_cards $card_idx}
-               $move
-               [score_base]}
-            {set
-               $row
-               {$this
-                  card_row_from_index
-                  {elem $all_cards $card_idx}}}
-            {set_elem
-               {elem
-                  [row_set]
-                  $row}
-               0
-               TRUE}
-            {'++' $card_idx}}
-         {resize
-            [visible_cards]
-            0}
+         {foreach $move [move_list_valid]
+            {$this set_card_move {elem $all_cards $card_idx} $move [score_base]}
+            {set $row {$this card_row_from_index {elem $all_cards $card_idx}}}
+            {set_elem {elem [row_set] $row} 0 TRUE}
+            {'++' $card_idx}
+         }
+         {resize [visible_cards] 0}
          {set $idx 0}
-         {while
-            {<
-               $card_idx
-               {size
-                  [card_set]}}
-            {set
-               $move
-               {elem
-                  [move_list]
-                  $idx}}
-            {$this
-               set_card_move
-               {elem $all_cards $card_idx}
-               $move
-               0}
-            {push_back
-               [visible_cards]
-               {elem $all_cards $card_idx}}
+         {while {< $card_idx {size [card_set]}}
+            {set $move {elem [move_list] $idx}}
+            {$this set_card_move {elem $all_cards $card_idx} $move 0}
+            {push_back [visible_cards] {elem $all_cards $card_idx}}
             {'++' $idx}
-            {'++' $card_idx}}})
+            {'++' $card_idx}
+         }
+      }
+   )
    (flip_up_all_cards
       {do
-         ($card_info
-            ())
+         ($card_info ())
          ($card)
          ($delay)
          ($row)
          ($col)
          ($index)
-         {foreach_int
-            $col
-            0
-            [col_count]
-            {foreach_int
-               $row
-               0
-               [row_count]
-               {set
-                  $index
-                  {$this card_index_from_rc $row $col}}
-               {set
-                  $card_info
-                  {elem
-                     [card_set]
-                     $index}}
-               {set
-                  $card
-                  {elem $card_info 0}}
+         {foreach_int $col 0 [col_count]
+            {foreach_int $row 0 [row_count]
+               {set $index
+                  {$this card_index_from_rc $row $col}
+               }
+               {set $card_info {elem [card_set] $index}}
+               {set $card {elem $card_info 0}}
                {$this run_flow $card player_neutral.flow}
-               {{find_obj $card spin_card.anim}
-                  animate
-                  (delay $delay)
-                  (range 5 10)}
-               {$this show_move_detection_meters $card FALSE}}
-            {set
-               $delay
-               {'+' $delay 2.0e-2}}}})
+               {{find_obj $card spin_card.anim} animate (delay $delay) (range 5 10)}
+               {$this show_move_detection_meters $card FALSE}
+            }
+            {set $delay {'+' $delay 2.0e-2}}
+         }
+      }
+   )
    (hide_random_card
       {do
          ($card_index)
-         {if
-            {size
-               [visible_cards]}
-            {set
-               $card_index
-               {random_elem
-                  [visible_cards]}}
-            {remove_elem
-               [visible_cards]
-               $card_index}
-            {$this
-               flip_over_card
-               {elem
-                  [card_set]
-                  $card_index}
-               0}}})
+         {if {size [visible_cards]}
+            {set $card_index {random_elem [visible_cards]}}
+            {remove_elem [visible_cards] $card_index}
+            {$this flip_over_card {elem [card_set] $card_index} 0}
+         }
+      }
+   )
    (show_card_result
       ($card_index $result $score)
-      {$this
-         log
+      {$this log
          1
-         ("show_card_result"
+         (
+            "show_card_result"
             ", card="
             $card_index
             ",result="
             $result
             ", score="
-            $score)}
-      {if_else
-         {== -1 $card_index}
-         {$this
-            run_flow
-            [panel_dir]
-            show_timeout.flow}
-         {if_else
-            {== RESULT_SUCCESS $result}
+            $score
+         )
+      }
+      {if_else {== -1 $card_index}
+         {$this run_flow [panel_dir] show_timeout.flow}
+         {if_else {== RESULT_SUCCESS $result}
             {do
-               ($card_info
-                  {elem
-                     [card_set]
-                     $card_index})
-               ($card
-                  {elem $card_info 0})
-               {{find_obj $card score.lbl}
-                  set_int
-                  $score}
+               ($card_info {elem [card_set] $card_index})
+               ($card {elem $card_info 0})
+               {{find_obj $card score.lbl} set_int $score}
                {{find_obj
                      {elem
                         {elem
                            [card_set]
                            $card_index}
                         0}
-                     show_result.anim}
-                  animate}}
+                     show_result.anim} animate
+
+               }
+            }
             {do
-               ($card_info
-                  {elem
-                     [card_set]
-                     $card_index})
-               ($card
-                  {elem $card_info 0})
-               {{find_obj $card score.lbl}
-                  set_token_fmt
-                  ntd_score}
+               ($card_info {elem [card_set] $card_index})
+               ($card {elem $card_info 0})
+               {{find_obj $card score.lbl} set_token_fmt ntd_score}
                {{find_obj
                      {elem
                         {elem
                            [card_set]
                            $card_index}
                         0}
-                     show_result.anim}
-                  animate}}}})
+                     show_result.anim} animate
+
+               }
+            }
+         }
+      }
+   )
    (show_move_detection_meters
       ($card $show)
       {do
-         ($right_side_player
-            {$this
-               get_is_right_player
-               [dancer]})
-         {{find_obj $card right_meter.grp}
-            set
+         ($right_side_player {$this get_is_right_player [dancer]})
+         {{find_obj $card right_meter.grp} set
             showing
-            {&& $show $right_side_player}}
-         {{find_obj $card left_meter.grp}
-            set
+            {&& $show $right_side_player}
+         }
+         {{find_obj $card left_meter.grp} set
             showing
-            {&&
-               $show
-               {! $right_side_player}}}
-         {{find_obj $card bar_right.anim}
-            set_frame
-            0.0}
-         {{find_obj $card bar_left.anim}
-            set_frame
-            0.0}})
+            {&& $show {! $right_side_player}}
+         }
+         {{find_obj $card bar_right.anim} set_frame 0.0}
+         {{find_obj $card bar_left.anim} set_frame 0.0}
+      }
+   )
    (show_move_valid
       ($card $is_valid)
-      {if_else
-         $is_valid
+      {if_else $is_valid
          {$this run_flow $card set_card_valid.flow}
-         {$this run_flow $card set_card_invalid.flow}}))
+         {$this run_flow $card set_card_invalid.flow}
+      }
+   )
+)
 #merge ..\..\config\name_that_dance_config.dta

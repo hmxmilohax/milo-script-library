@@ -1,56 +1,47 @@
-{new
-   MoviePanel
+{new MoviePanel
    intro_movie_panel
    (preload FALSE)
    (audio TRUE)
    (loop FALSE)
    (update_presence TRUE)
    (videos intro)
-   (movie_done
-      {ui goto_screen intro_to_splash_screen})
-   (enter
-      {platform_mgr disable_xmp}
-      kDataUnhandled)
+   (movie_done {ui goto_screen intro_to_splash_screen})
+   (enter {platform_mgr disable_xmp} kDataUnhandled)
    (BUTTON_DOWN_MSG
-      {if
-         {'||'
-            {== $button kPad_Start}
-            {== $button kPad_X}}
-         {ui goto_screen intro_to_splash_screen}})}
-{new
-   UIScreen
+      {if {'||' {== $button kPad_Start} {== $button kPad_X}}
+         {ui goto_screen intro_to_splash_screen}
+      }
+   )
+}
+{new UIScreen
    intro_movie_screen
    (panels intro_movie_panel)
-   (focus intro_movie_panel)}
-{new
-   UIScreen
+   (focus intro_movie_panel)
+}
+{new UIScreen
    intro_to_splash_screen
    (panels)
-   (TRANSITION_COMPLETE_MSG
-      {ui goto_screen splash_screen})}
-{new
-   MoviePanel
+   (TRANSITION_COMPLETE_MSG {ui goto_screen splash_screen})
+}
+{new MoviePanel
    movie_panel
    (preload TRUE)
    (audio FALSE)
    (loop TRUE)
    (update_presence FALSE)
-   (videos background)}
-{new
-   UIPanel
+   (videos background)
+}
+{new UIPanel
    fx
    (file
-      {if_else
-         {==
-            {rnd aspect}
-            kRegularAspect}
+      {if_else {== {rnd aspect} kRegularAspect}
          "fx_standard.milo"
-         "fx_widescreen.milo"})
+         "fx_widescreen.milo"
+      }
+   )
    (in_transition FALSE)
    (enter
-      {set
-         [in_transition]
-         FALSE}
+      {set [in_transition] FALSE}
       {fade.mnm stop_animation}
       {movie_09.mov stop_animation}
       {movie_15.mov stop_animation}
@@ -58,916 +49,862 @@
       {fade.mnm set_frame 25}
       {movie_09.mov set_frame 16}
       {movie_15.mov set_frame 22}
-      {movie_17.mov set_frame 21})
+      {movie_17.mov set_frame 21}
+   )
    (fade_in
       {$this choose_movie}
-      {set
-         [in_transition]
-         FALSE}
+      {set [in_transition] FALSE}
       {fade.mnm stop_animation}
-      {fade.mnm
-         animate
-         (range 0 25)})
+      {fade.mnm animate (range 0 25)}
+   )
    (fade_out
       {$this choose_movie}
-      {set
-         [in_transition]
-         TRUE}
-      {fade.mnm
-         animate
-         (range 25 0)})
-   (is_faded_out
-      {==
-         {fade.mnm frame}
-         0})
+      {set [in_transition] TRUE}
+      {fade.mnm animate (range 25 0)}
+   )
+   (is_faded_out {== {fade.mnm frame} 0})
    (choose_movie
       {do
          ($num 0)
          ($rand_idx 0)
          ($movie_idx)
          ($movie)
-         {$this
-            iterate
+         {$this iterate EventTrigger $m {'++' $num}}
+         {set $rand_idx {random_int 0 $num}}
+         {$this iterate
             EventTrigger
             $m
-            {'++' $num}}
-         {set
-            $rand_idx
-            {random_int 0 $num}}
-         {$this
-            iterate
-            EventTrigger
-            $m
-            {if
-               {== $movie_idx $rand_idx}
-               {set $movie $m}}
-            {'++' $movie_idx}}
-         {$movie trigger}})}
-{new
-   UIPanel
+            {if {== $movie_idx $rand_idx}
+               {set $movie $m}
+            }
+            {'++' $movie_idx}
+         }
+         {$movie trigger}
+      }
+   )
+}
+{new UIPanel
    splash_panel
-   (file
-      "splash.milo")
+   (file "splash.milo")
    (focus start.btn)
    (player_num -1)
    (last_player_num -1)
    (attract_mode_timeout
       {elem
          {find $syscfg attract time_to_enter}
-         1})
+         1
+      }
+   )
    (enter_time 0.0)
    (attract_timeout_done FALSE)
    (enter
-      {set
-         [enter_time]
-         {taskmgr ui_seconds}}
-      {set
-         [attract_timeout_done]
-         FALSE}
+      {set [enter_time] {taskmgr ui_seconds}}
+      {set [attract_timeout_done] FALSE}
       {meta music_start}
-      {content_mgr start_refresh})
+      {content_mgr start_refresh}
+   )
    (poll
       {if
          {&&
-            {!
-               [attract_timeout_done]}
-            {>
-               {-
-                  {taskmgr ui_seconds}
-                  [enter_time]}
-               [attract_mode_timeout]}
-            {!
-               {ui in_transition}}
-            {==
-               {ui current_screen}
-               splash_screen}}
-         {set
-            [attract_timeout_done]
-            TRUE}
+            {! [attract_timeout_done]}
+            {> {- {taskmgr ui_seconds} [enter_time]} [attract_mode_timeout]}
+            {! {ui in_transition}}
+            {== {ui current_screen} splash_screen}
+         }
+         {set [attract_timeout_done] TRUE}
          {meta music_stop}
          {platform_mgr disable_xmp}
-         {ui goto_screen attract_screen}})
+         {ui goto_screen attract_screen}
+      }
+   )
    (BUTTON_DOWN_MSG
-      {if_else
-         {== $button kPad_Start}
+      {if_else {== $button kPad_Start}
          {$this button_down kPad_X $player_num}
-         kDataUnhandled})
+         kDataUnhandled
+      }
+   )
    (SELECT_START_MSG
-      {set
-         [attract_timeout_done]
-         TRUE}
-      {set
-         [last_player_num]
-         $player_num}
+      {set [attract_timeout_done] TRUE}
+      {set [last_player_num] $player_num}
       {ui goto_screen main_screen}
-      kDataUnhandled)}
-{new
-   UIScreen
+      kDataUnhandled
+   )
+}
+{new UIScreen
    splash_screen
    (panels meta movie_panel splash_panel fx)
    (focus splash_panel)
-   (enter
-      {char_cache cache_update})}
-{new
-   UIScreen
+   (enter {char_cache cache_update})
+}
+{new UIScreen
    unlock_all_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize_token unlock_all_msg}})
-   (SELECT_MSG
-      {ui pop_screen})}
-#define COMMON_FIRST_TIME_STUFF
-({if
-      {!
-         {ui in_transition}}
+   (enter {dialog_panel set_ok {localize_token unlock_all_msg}})
+   (SELECT_MSG {ui pop_screen})
+}
+#define COMMON_FIRST_TIME_STUFF (
+   {if {! {ui in_transition}}
       {do
-         ($dest_screen
-            {get_intro_screen})
+         ($dest_screen {get_intro_screen})
          ($is_in_first_time_screen
             {find_elem
-               (auto_load_screen first_time_screen first_time_vocals_screen first_time_guitar_screen first_time_drum_screen)
-               {ui current_screen}})
-         {if_else
-            {!= '' $dest_screen}
-            {if_else
-               $is_in_first_time_screen
+               (auto_load_screen
+                  first_time_screen
+                  first_time_vocals_screen
+                  first_time_guitar_screen
+                  first_time_drum_screen
+               )
+               {ui current_screen}
+            }
+         )
+         {if_else {!= '' $dest_screen}
+            {if_else $is_in_first_time_screen
                {ui goto_screen $dest_screen}
-               {ui push_screen $dest_screen}}
-            {if_else
-               $is_in_first_time_screen
+               {ui push_screen $dest_screen}
+            }
+            {if_else $is_in_first_time_screen
                {autosave_goto_pop}
-               {autosave}}}}})
-{func
-   get_intro_screen
+               {autosave}
+            }
+         }
+      }
+   }
+)
+{func get_intro_screen
    {do
       ($result '')
-      {if_else
-         {!
-            {main_panel is_up}}
+      {if_else {! {main_panel is_up}}
          ''
          {do
-            ($controllers
-               (drum guitar vocals))
+            ($controllers (drum guitar vocals))
             ($screens
-               (first_time_drum_screen first_time_guitar_screen first_time_vocals_screen))
-            {foreach_int
-               $i
-               0
-               3
+               (first_time_drum_screen first_time_guitar_screen first_time_vocals_screen)
+            )
+            {foreach_int $i 0 3
                {if
                   {&&
-                     {!=
-                        {splash_panel get last_player_num}
-                        -1}
+                     {!= {splash_panel get last_player_num} -1}
                      {==
-                        {gamecfg
-                           get_instrument_from_controller
-                           {splash_panel get last_player_num}}
-                        {elem $controllers $i}}
-                     {!
-                        {{elem $screens $i}
-                           get
-                           considered}}
-                     {profile_mgr
-                        first_timer
-                        {elem $controllers $i}}}
-                  {set
-                     $result
-                     {elem $screens $i}}}
-               {{elem $screens $i}
-                  set
-                  considered
-                  TRUE}
-               {if
-                  {!= $result ''}
-                  {set $i 3}}}
-            {if
-               {== $result ''}
+                        {gamecfg get_instrument_from_controller {splash_panel get last_player_num}}
+                        {elem $controllers $i}
+                     }
+                     {! {{elem $screens $i} get considered}}
+                     {profile_mgr first_timer {elem $controllers $i}}
+                  }
+                  {set $result {elem $screens $i}}
+               }
+               {{elem $screens $i} set considered TRUE}
+               {if {!= $result ''}
+                  {set $i 3}
+               }
+            }
+            {if {== $result ''}
                {if
                   {&&
-                     {!=
-                        {splash_panel get last_player_num}
-                        -1}
-                     {!
-                        {first_time_screen get considered}}
-                     {profile_mgr first_timer}}
-                  {set $result first_time_screen}}
-               {first_time_screen set considered TRUE}}}}
-      $result}}
-#define FIRST_TIME_SCREEN_HANDLERS
-((considered FALSE)
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
-   (SIGNIN_CHANGED_MSG
-      {ui pop_screen})
-   (SELECT_MSG COMMON_FIRST_TIME_STUFF))
-#define FIRST_TIME_PANEL_HANDLERS
-((enter
-      {green.lbl
-         set
+                     {!= {splash_panel get last_player_num} -1}
+                     {! {first_time_screen get considered}}
+                     {profile_mgr first_timer}
+                  }
+                  {set $result first_time_screen}
+               }
+               {first_time_screen set considered TRUE}
+            }
+         }
+      }
+      $result
+   }
+}
+#define FIRST_TIME_SCREEN_HANDLERS (
+   (considered FALSE)
+   (exit {platform_mgr remove_sink $this signin_changed})
+   (SIGNIN_CHANGED_MSG {ui pop_screen})
+   (SELECT_MSG COMMON_FIRST_TIME_STUFF)
+)
+#define FIRST_TIME_PANEL_HANDLERS (
+   (enter
+      {green.lbl set
          text_token
-         {if_else
-            {platform_mgr is_enter_cancel_swapped}
+         {if_else {platform_mgr is_enter_cancel_swapped}
             how_to_back
-            how_to_forward}}
-      {red.lbl
-         set
-         text_token
-         {if_else
-            {platform_mgr is_enter_cancel_swapped}
             how_to_forward
-            how_to_back}}))
-{new
-   UIPanel
+         }
+      }
+      {red.lbl set
+         text_token
+         {if_else {platform_mgr is_enter_cancel_swapped}
+            how_to_forward
+            how_to_back
+         }
+      }
+   )
+)
+{new UIPanel
    first_time_drum_panel
-   (file
-      "first_time_drum.milo")
+   (file "first_time_drum.milo")
    (focus ok.btn)
-   FIRST_TIME_PANEL_HANDLERS}
-{new
-   UIScreen
+   FIRST_TIME_PANEL_HANDLERS
+}
+{new UIScreen
    first_time_drum_screen
    (panels first_time_drum_panel helpbar)
    (focus first_time_drum_panel)
-   (helpbar
-      ('' helpbar_continue))
+   (helpbar ('' helpbar_continue))
    FIRST_TIME_SCREEN_HANDLERS
    (enter
       {profile_mgr set_not_first_timers drum}
-      {platform_mgr add_sink $this signin_changed})}
-{new
-   UIPanel
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+{new UIPanel
    first_time_guitar_panel
-   (file
-      "first_time_guitar.milo")
+   (file "first_time_guitar.milo")
    (focus ok.btn)
-   FIRST_TIME_PANEL_HANDLERS}
-{new
-   UIScreen
+   FIRST_TIME_PANEL_HANDLERS
+}
+{new UIScreen
    first_time_guitar_screen
    (panels first_time_guitar_panel helpbar)
    (focus first_time_guitar_panel)
-   (helpbar
-      ('' helpbar_continue))
+   (helpbar ('' helpbar_continue))
    FIRST_TIME_SCREEN_HANDLERS
    (enter
       {profile_mgr set_not_first_timers guitar}
-      {platform_mgr add_sink $this signin_changed})}
-{new
-   UIPanel
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+{new UIPanel
    first_time_vocals_panel
-   (file
-      "first_time_vocals.milo")
+   (file "first_time_vocals.milo")
    (focus ok.btn)
-   FIRST_TIME_PANEL_HANDLERS}
-{new
-   UIScreen
+   FIRST_TIME_PANEL_HANDLERS
+}
+{new UIScreen
    first_time_vocals_screen
    (panels first_time_vocals_panel helpbar)
    (focus first_time_vocals_panel)
-   (helpbar
-      ('' helpbar_continue))
+   (helpbar ('' helpbar_continue))
    FIRST_TIME_SCREEN_HANDLERS
    (enter
       {profile_mgr set_not_first_timers vocals}
-      {platform_mgr add_sink $this signin_changed})}
-{new
-   UIScreen
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+{new UIScreen
    first_time_screen
    (panels dialog_panel)
    (focus dialog_panel)
    FIRST_TIME_SCREEN_HANDLERS
    (enter
-      {dialog_panel
-         set_ok
-         {localize_token calibration_notice}}
+      {dialog_panel set_ok {localize_token calibration_notice}}
       {profile_mgr set_not_first_timers}
-      {platform_mgr add_sink $this signin_changed})}
-#define MAIN_SCREEN_TRANSITION_HANDLER
-((TRANSITION_COMPLETE_MSG
-      {unless
-         {band_ui_sink has_event}
-         {main_panel attempt_to_autoload}}
-      kDataUnhandled)
-   (on_dismiss_event
-      {main_panel attempt_to_autoload}))
-{new
-   UIPanel
+      {platform_mgr add_sink $this signin_changed}
+   )
+}
+#define MAIN_SCREEN_TRANSITION_HANDLER (
+   (TRANSITION_COMPLETE_MSG
+      {unless {band_ui_sink has_event}
+         {main_panel attempt_to_autoload}
+      }
+      kDataUnhandled
+   )
+   (on_dismiss_event {main_panel attempt_to_autoload})
+)
+{new UIPanel
    main_panel
-   (file
-      "main.milo")
+   (file "main.milo")
    (mode_focus solo.btn)
    (msg_last_frame 0)
    (finished_loading FALSE)
    (load
-      {if
-         {fx is_up}
-         {fx fade_out}})
+      {if {fx is_up}
+         {fx fade_out}
+      }
+   )
    (enter
-      {$this
-         set_focus
-         [mode_focus]}
+      {$this set_focus [mode_focus]}
       {session add_sink $this signin_changed}
       {profile_mgr add_sink $this profile_activated_msg}
       {memcardmgr add_sink $this save_load_all_complete_msg}
-      {if
-         {!=
-            {ui current_screen}
-            main_leaderboard_screen}
-         {session clear}}
+      {if {!= {ui current_screen} main_leaderboard_screen}
+         {session clear}
+      }
       {tour clear_performer}
       {gamemode set_mode init}
-      {set
-         [msg_last_frame]
-         0}
-      {if
-         {!=
-            {ui current_screen}
-            main_leaderboard_screen}
-         {game reset_config}}
-      {meta music_start})
+      {set [msg_last_frame] 0}
+      {if {!= {ui current_screen} main_leaderboard_screen}
+         {game reset_config}
+      }
+      {meta music_start}
+   )
    (exit
       {fx fade_out}
       {session remove_sink $this signin_changed}
       {profile_mgr remove_sink $this profile_activated_msg}
-      {memcardmgr remove_sink $this save_load_all_complete_msg})
+      {memcardmgr remove_sink $this save_load_all_complete_msg}
+   )
    (poll
       {if
          {&&
             [finished_loading]
-            {!
-               {ui in_transition}}
+            {! {ui in_transition}}
             {$this is_up}
             {ui current_screen}
-            {{ui current_screen}
-               has_panel
-               main_panel}}
+            {{ui current_screen} has_panel main_panel}
+         }
          COMMON_FIRST_TIME_STUFF
-         {set
-            [finished_loading]
-            FALSE}})
-   (signin_changed
-      {$this attempt_to_autoload})
-   (profile_activated_msg
-      {$this attempt_to_autoload})
+         {set [finished_loading] FALSE}
+      }
+   )
+   (signin_changed {$this attempt_to_autoload})
+   (profile_activated_msg {$this attempt_to_autoload})
    (attempt_to_autoload
       {if
          {&&
-            {!
-               {band_ui_sink is_forced_transition_active}}
+            {! {band_ui_sink is_forced_transition_active}}
             {ui current_screen}
-            {{ui current_screen}
-               has_panel
-               main_panel}}
-         {autoload_deferred_save}})
-   (save_load_all_complete_msg
-      {set
-         [finished_loading]
-         TRUE}
-      kDataUnhandled)
+            {{ui current_screen} has_panel main_panel}
+         }
+         {autoload_deferred_save}
+      }
+   )
+   (save_load_all_complete_msg {set [finished_loading] TRUE} kDataUnhandled)
    (BUTTON_DOWN_MSG
-      {if_else
-         {content_mgr refresh_done}
+      {if_else {content_mgr refresh_done}
          kDataUnhandled
-         TRUE})
+         TRUE
+      }
+   )
    (FOCUS_MSG
-      {if
-         $new_focus
-         {set
-            [mode_focus]
-            {$new_focus name}}})
+      {if $new_focus
+         {set [mode_focus] {$new_focus name}}
+      }
+   )
    (SELECT_START_MSG
-      {switch
-         $component
-         (solo.btn
-            {ui goto_screen main_solomode_screen})
-         (multi.btn
-            {ui goto_screen main_multimode_screen})
+      {switch $component
+         (solo.btn {ui goto_screen main_solomode_screen})
+         (multi.btn {ui goto_screen main_multimode_screen})
          (tutorial.btn
             {synth reset_mics_changed}
-            {ui goto_screen training_menu_screen})
-         (options.btn
-            {ui goto_screen options_screen})
+            {ui goto_screen training_menu_screen}
+         )
+         (options.btn {ui goto_screen options_screen})
          (community.btn
             #ifdef HX_PS3
             {gamemode set_mode ps3_community}
             #endif
-            {goto_after_network_connect main_community_screen FALSE})}
-      kDataUnhandled)}
-{new
-   UIPanel
-   main_lower3rd_panel
-   (file
-      "pat_rock_3.milo")}
-{new
-   UIScreen
+            {goto_after_network_connect main_community_screen FALSE}
+         )
+      }
+      kDataUnhandled
+   )
+}
+{new UIPanel main_lower3rd_panel (file "pat_rock_3.milo")}
+{new UIScreen
    main_screen
    (panels meta movie_panel main_lower3rd_panel main_panel fx)
    (focus main_panel)
    (back splash_screen)
    (access_all
-      {$this
-         enable
-         {main_panel find solo.btn}}
-      {$this
-         enable
-         {main_panel find multi.btn}}
-      {$this
-         enable
-         {main_panel find tutorial.btn}})
+      {$this enable {main_panel find solo.btn}}
+      {$this enable {main_panel find multi.btn}}
+      {$this enable {main_panel find tutorial.btn}}
+   )
    MAIN_SCREEN_TRANSITION_HANDLER
    (enter
       {gamemode set_mode init}
-      {char_cache cache_update})}
-{new
-   UIScreen
+      {char_cache cache_update}
+   )
+}
+{new UIScreen
    main_band_signin_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
    (enter
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token main_band_tour_need_to_signin}
          {localize main_tour_signin_button}
          {localize main_tour_cancel_button}
-         opt1.btn}
-      {platform_mgr add_sink $this signin_changed})
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
+         opt1.btn
+      }
+      {platform_mgr add_sink $this signin_changed}
+   )
+   (exit {platform_mgr remove_sink $this signin_changed})
    (SELECT_MSG
-      {switch
-         $component
-         (opt1.btn
-            {platform_mgr signin 1})
-         (opt2.btn
-            {ui pop_screen})})
-   (signin_changed
-      {ui pop_screen})}
-{new
-   UIScreen
+      {switch $component
+         (opt1.btn {platform_mgr signin 1})
+         (opt2.btn {ui pop_screen})
+      }
+   )
+   (signin_changed {ui pop_screen})
+}
+{new UIScreen
    main_solo_signin_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
    (enter
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token main_solo_tour_need_to_signin}
          {localize main_tour_signin_button}
          {localize main_tour_cancel_button}
-         opt1.btn}
-      {platform_mgr add_sink $this signin_changed})
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
+         opt1.btn
+      }
+      {platform_mgr add_sink $this signin_changed}
+   )
+   (exit {platform_mgr remove_sink $this signin_changed})
    (SELECT_MSG
-      {switch
-         $component
-         (opt1.btn
-            {platform_mgr signin 1})
-         (opt2.btn
-            {ui pop_screen})})
-   (signin_changed
-      {ui pop_screen})}
-{new
-   UIScreen
+      {switch $component
+         (opt1.btn {platform_mgr signin 1})
+         (opt2.btn {ui pop_screen})
+      }
+   )
+   (signin_changed {ui pop_screen})
+}
+{new UIScreen
    main_solo_qp_signin_guest_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
    (enter
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token main_solo_qp_signin_not_guest}
          {localize main_tour_signin_button}
          {localize main_tour_cancel_button}
-         opt1.btn}
-      {platform_mgr add_sink $this signin_changed})
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
+         opt1.btn
+      }
+      {platform_mgr add_sink $this signin_changed}
+   )
+   (exit {platform_mgr remove_sink $this signin_changed})
    (SELECT_MSG
-      {switch
-         $component
-         (opt1.btn
-            {platform_mgr signin 1})
-         (opt2.btn
-            {ui pop_screen})})
-   (signin_changed
-      {ui pop_screen})}
-{new
-   UIScreen
+      {switch $component
+         (opt1.btn {platform_mgr signin 1})
+         (opt2.btn {ui pop_screen})
+      }
+   )
+   (signin_changed {ui pop_screen})
+}
+{new UIScreen
    main_solo_signin_not_guest_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
    (enter
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token main_solo_tour_signin_not_guest}
          {localize main_tour_signin_button}
          {localize main_tour_cancel_button}
-         opt1.btn}
-      {platform_mgr add_sink $this signin_changed})
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
+         opt1.btn
+      }
+      {platform_mgr add_sink $this signin_changed}
+   )
+   (exit {platform_mgr remove_sink $this signin_changed})
    (SELECT_MSG
-      {switch
-         $component
-         (opt1.btn
-            {platform_mgr signin 1})
-         (opt2.btn
-            {ui pop_screen})})
-   (signin_changed
-      {ui pop_screen})}
-{new
-   SessionPanel
+      {switch $component
+         (opt1.btn {platform_mgr signin 1})
+         (opt2.btn {ui pop_screen})
+      }
+   )
+   (signin_changed {ui pop_screen})
+}
+{new SessionPanel
    main_solomode_panel
-   (file
-      "main_solomode.milo")
+   (file "main_solomode.milo")
    (focus quickplay.btn)
    (login_status kDesirable)
-   (load
-      {main_panel set mode_focus solo.btn})
-   (exit
-      {synth reset_mics_changed})
+   (load {main_panel set mode_focus solo.btn})
+   (exit {synth reset_mics_changed})
    (SELECT_START_MSG
-      {if_else
-         {gamecfg is_missing_mic $player_num FALSE}
+      {if_else {gamecfg is_missing_mic $player_num FALSE}
          {do
             {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
-            {ui push_screen vocalist_must_have_mic_screen}}
+            {ui push_screen vocalist_must_have_mic_screen}
+         }
          {do
-            {switch
-               $component
+            {switch $component
                (quickplay.btn
                   {cond
                      ({&&
                            {platform_mgr is_player_signed_in $player_num}
                            {platform_mgr is_player_a_guest $player_num}}
                         {main_solo_qp_signin_guest_screen set player_num $player_num}
-                        {ui push_screen main_solo_qp_signin_guest_screen})
+                        {ui push_screen main_solo_qp_signin_guest_screen}
+                     )
                      (TRUE
                         {gamemode set_mode qp_solo $player_num}
                         {$this wait_for_session_ready}
-                        {session_mgr
-                           add_local_player
+                        {session_mgr add_local_player
                            $player_num
-                           {gamecfg get_controller_type_from_controller $player_num}})})
+                           {gamecfg get_controller_type_from_controller $player_num}
+                        }
+                     )
+                  }
+               )
                (tour.btn
                   {cond
                      ({!
                            {platform_mgr is_player_signed_in $player_num}}
                         {main_solo_signin_screen set player_num $player_num}
-                        {ui push_screen main_solo_signin_screen})
+                        {ui push_screen main_solo_signin_screen}
+                     )
                      ({&&
                            {platform_mgr is_player_signed_in $player_num}
                            {platform_mgr is_player_a_guest $player_num}}
                         {main_solo_signin_not_guest_screen set player_num $player_num}
-                        {ui push_screen main_solo_signin_not_guest_screen})
+                        {ui push_screen main_solo_signin_not_guest_screen}
+                     )
                      (TRUE
                         {gamemode set_mode tour_solo $player_num}
                         {$this wait_for_session_ready}
-                        {session_mgr
-                           add_local_player
+                        {session_mgr add_local_player
                            $player_num
-                           {gamecfg get_controller_type_from_controller $player_num}})})}
-            kDataUnhandled}})
+                           {gamecfg get_controller_type_from_controller $player_num}
+                        }
+                     )
+                  }
+               )
+            }
+            kDataUnhandled
+         }
+      }
+   )
    (session_ready_complete_msg
       {gamecfg auto_assign_missing_slots}
       {do
-         ($player_num
-            {gamemode get player_num})
-         {if_else
-            {gamemode get auto_choose_char}
+         ($player_num {gamemode get player_num})
+         {if_else {gamemode get auto_choose_char}
             {do
-               ($pcfg
-                  {game get_player_config $player_num})
-               {$pcfg
-                  set_char
-                  {available_prefab
-                     $player_num
-                     {$pcfg get_controller_sym}}}
-               {goto_after_network_connect qp_selsong_screen FALSE}}
-            {goto_after_network_connect
-               {gamemode get matchmaking_screen}
-               FALSE}}})}
-{new
-   UIScreen
+               ($pcfg {game get_player_config $player_num})
+               {$pcfg set_char {available_prefab $player_num {$pcfg get_controller_sym}}}
+               {goto_after_network_connect qp_selsong_screen FALSE}
+            }
+            {goto_after_network_connect {gamemode get matchmaking_screen} FALSE}
+         }
+      }
+   )
+}
+{new UIScreen
    main_solomode_screen
-   (panels meta movie_panel main_lower3rd_panel main_panel main_solomode_panel fx)
+   (panels
+      meta
+      movie_panel
+      main_lower3rd_panel
+      main_panel
+      main_solomode_panel
+      fx
+   )
    (focus main_solomode_panel)
    (back main_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
-   (enter
-      {char_cache cache_update})}
-{new
-   UIPanel
+   (enter {char_cache cache_update})
+}
+{new UIPanel
    main_multimode_panel
-   (file
-      "main_multimode.milo")
+   (file "main_multimode.milo")
    (mode_focus bandqp.btn)
-   (load
-      {main_panel set mode_focus multi.btn})
-   (enter
-      {$this
-         set_focus
-         [mode_focus]})
+   (load {main_panel set mode_focus multi.btn})
+   (enter {$this set_focus [mode_focus]})
    (SELECT_START_MSG
-      {switch
-         $component
-         (bandqp.btn
-            {ui goto_screen main_bandcoop_screen})
+      {switch $component
+         (bandqp.btn {ui goto_screen main_bandcoop_screen})
          (bandtour.btn
             {cond
                ({!
                      {platform_mgr is_player_signed_in $player_num}}
                   {main_solo_signin_screen set player_num $player_num}
-                  {ui push_screen main_band_signin_screen})
+                  {ui push_screen main_band_signin_screen}
+               )
                (TRUE
                   {main_panel set mode_focus multi.btn}
                   {main_multimode_panel set mode_focus bandtour.btn}
                   {gamemode set_mode tour_world_local}
                   {char_cache cache_update}
-                  {goto_after_network_connect tour_band_sel_screen FALSE})})
-         (headtohead.btn
-            {ui goto_screen main_hth_split_screen})
-         (headtohead_pro.btn
-            {ui goto_screen main_hth_pro_screen})}
-      kDataUnhandled)}
-{new
-   UIScreen
+                  {goto_after_network_connect tour_band_sel_screen FALSE}
+               )
+            }
+         )
+         (headtohead.btn {ui goto_screen main_hth_split_screen})
+         (headtohead_pro.btn {ui goto_screen main_hth_pro_screen})
+      }
+      kDataUnhandled
+   )
+}
+{new UIScreen
    main_multimode_screen
-   (panels meta movie_panel main_lower3rd_panel main_panel main_multimode_panel fx)
+   (panels
+      meta
+      movie_panel
+      main_lower3rd_panel
+      main_panel
+      main_multimode_panel
+      fx
+   )
    (focus main_multimode_panel)
    (back main_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
-   (enter
-      {char_cache cache_update})}
-#define MAIN_HTH_PANEL_HANDLERS
-(#ifdef HX_PS3
-   (file
-      "main_hth_ps3.milo")
+   (enter {char_cache cache_update})
+}
+#define MAIN_HTH_PANEL_HANDLERS (
+   #ifdef HX_PS3
+   (file "main_hth_ps3.milo")
    #else
-   (file
-      "main_hth.milo")
+   (file "main_hth.milo")
    #endif
    (focus local.btn)
    (enter
-      {if
-         {profile_mgr get_all_unlocked}
+      {if {profile_mgr get_all_unlocked}
          {$this set_focus local.btn}
          {unranked.btn set_state kDisabled}
          #ifndef HX_PS3
          {ranked.btn set_state kDisabled}
-         #endif})
+         #endif
+      }
+   )
    (SELECT_START_MSG
       {do
          ($dest_screen
-            {if_else
-               {gamemode get ranked}
+            {if_else {gamemode get ranked}
                {gamemode get main_mode_screen}
-               {gamemode get matchmaking_screen}})
-         {if_else
-            {!
-               {gamemode get local_network}}
+               {gamemode get matchmaking_screen}
+            }
+         )
+         {if_else {! {gamemode get local_network}}
             {goto_after_network_connect $dest_screen TRUE}
-            {ui goto_screen $dest_screen}}}
-      kDataUnhandled))
-{new
-   UIPanel
+            {ui goto_screen $dest_screen}
+         }
+      }
+      kDataUnhandled
+   )
+)
+{new UIPanel
    main_hth_split_panel
    MAIN_HTH_PANEL_HANDLERS
    (mode_focus local.btn)
    (load
       {main_panel set mode_focus multi.btn}
-      {main_multimode_panel set mode_focus headtohead.btn})}
-{new
-   UIScreen
+      {main_multimode_panel set mode_focus headtohead.btn}
+   )
+}
+{new UIScreen
    main_hth_split_screen
-   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_split_panel fx)
+   (panels
+      meta
+      movie_panel
+      main_lower3rd_panel
+      main_panel
+      main_hth_split_panel
+      fx
+   )
    (focus main_hth_split_panel)
    (back main_multimode_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
    (SELECT_START_MSG
-      {gamemode
-         set_mode
-         {switch
-            $component
+      {gamemode set_mode
+         {switch $component
             (local.btn qp_hth_local_split)
             (unranked.btn qp_hth_unranked_split)
-            (ranked.btn qp_hth_ranked_split)}
-         $player_num}
-      kDataUnhandled)}
-{new
-   UIPanel
+            (ranked.btn qp_hth_ranked_split)
+         }
+         $player_num
+      }
+      kDataUnhandled
+   )
+}
+{new UIPanel
    main_hth_panel
    MAIN_HTH_PANEL_HANDLERS
    (mode_focus local.btn)
    (load
       {main_panel set mode_focus multi.btn}
-      {main_multimode_panel set mode_focus headtohead_pro.btn})}
-{new
-   UIScreen
+      {main_multimode_panel set mode_focus headtohead_pro.btn}
+   )
+}
+{new UIScreen
    main_hth_pro_screen
    (panels meta movie_panel main_lower3rd_panel main_panel main_hth_panel fx)
    (focus main_hth_panel)
    (back main_multimode_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
    (SELECT_START_MSG
-      {gamemode
-         set_mode
-         {switch
-            $component
+      {gamemode set_mode
+         {switch $component
             (local.btn qp_hth_local)
             (unranked.btn qp_hth_unranked)
-            (ranked.btn qp_hth_ranked)}
-         $player_num}
-      kDataUnhandled)}
-{new
-   UIPanel
+            (ranked.btn qp_hth_ranked)
+         }
+         $player_num
+      }
+      kDataUnhandled
+   )
+}
+{new UIPanel
    main_hth_seldiff_panel
-   (file
-      "main_hth_seldiff.milo")
+   (file "main_hth_seldiff.milo")
    (difficulty
       {elem
          (DIFF_SYMBOLS)
          {elem
             {find $syscfg tour solo default_difficulty}
-            1}})
-   (enter
-      {$this
-         set_focus
-         {sprint
-            [difficulty]
-            ".btn"}})
+            1
+         }
+      }
+   )
+   (enter {$this set_focus {sprint [difficulty] ".btn"}})
    (SELECT_START_MSG
-      {set
-         [difficulty]
-         {basename
-            {$component name}}}
-      {ui
-         goto_screen
-         {gamemode get matchmaking_screen}})}
-{new
-   UIScreen
+      {set [difficulty] {basename {$component name}}}
+      {ui goto_screen {gamemode get matchmaking_screen}}
+   )
+}
+{new UIScreen
    main_hth_split_ranked_seldiff_screen
-   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel fx)
+   (panels
+      meta
+      movie_panel
+      main_lower3rd_panel
+      main_panel
+      main_hth_seldiff_panel
+      fx
+   )
    (focus main_hth_seldiff_panel)
    (back main_hth_split_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
    (SELECT_START_MSG
       {gamemode set_mode qp_hth_ranked_split $player_num}
-      kDataUnhandled)}
-{new
-   UIScreen
+      kDataUnhandled
+   )
+}
+{new UIScreen
    main_hth_unsplit_ranked_seldiff_screen
-   (panels meta movie_panel main_lower3rd_panel main_panel main_hth_seldiff_panel fx)
+   (panels
+      meta
+      movie_panel
+      main_lower3rd_panel
+      main_panel
+      main_hth_seldiff_panel
+      fx
+   )
    (focus main_hth_seldiff_panel)
    (back main_hth_pro_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
    (SELECT_START_MSG
       {gamemode set_mode qp_hth_ranked $player_num}
-      kDataUnhandled)}
-{new
-   UIPanel
+      kDataUnhandled
+   )
+}
+{new UIPanel
    main_bandcoop_panel
-   (file
-      "main_bandcoop.milo")
+   (file "main_bandcoop.milo")
    (focus local.btn)
    (enter
-      {if
-         {profile_mgr get_all_unlocked}
-         {if
-            {==
-               kFocused
-               {online.btn get_state}}
-            {$this set_focus local.btn}}
-         {online.btn set_state kDisabled}})
+      {if {profile_mgr get_all_unlocked}
+         {if {== kFocused {online.btn get_state}}
+            {$this set_focus local.btn}
+         }
+         {online.btn set_state kDisabled}
+      }
+   )
    (load
       {main_panel set mode_focus multi.btn}
-      {main_multimode_panel set mode_focus bandqp.btn})
+      {main_multimode_panel set mode_focus bandqp.btn}
+   )
    (SELECT_START_MSG
-      {gamemode
-         set_mode
-         {switch
-            $component
+      {gamemode set_mode
+         {switch $component
             (local.btn qp_coop_local)
-            (online.btn qp_coop_online)}
-         $player_num}
-      {if_else
-         {!
-            {gamemode get local_network}}
-         {goto_after_network_connect
-            {gamemode get matchmaking_screen}
-            TRUE}
-         {ui
-            goto_screen
-            {gamemode get matchmaking_screen}}}
-      kDataUnhandled)}
-{new
-   UIScreen
+            (online.btn qp_coop_online)
+         }
+         $player_num
+      }
+      {if_else {! {gamemode get local_network}}
+         {goto_after_network_connect {gamemode get matchmaking_screen} TRUE}
+         {ui goto_screen {gamemode get matchmaking_screen}}
+      }
+      kDataUnhandled
+   )
+}
+{new UIScreen
    main_bandcoop_screen
-   (panels meta movie_panel main_lower3rd_panel main_panel main_bandcoop_panel fx)
+   (panels
+      meta
+      movie_panel
+      main_lower3rd_panel
+      main_panel
+      main_bandcoop_panel
+      fx
+   )
    (focus main_bandcoop_panel)
    (back main_multimode_screen)
    MAIN_SCREEN_TRANSITION_HANDLER
-   (enter
-      {char_cache cache_update})}
-{new
-   CreditsPanel
+   (enter {char_cache cache_update})
+}
+{new CreditsPanel
    credits_panel
-   (file
-      "credits.milo")
+   (file "credits.milo")
    (poll
-      {if
-         {!
-            {credits.lst is_scrolling}}
-         {if
-            {!
-               {ui in_transition}}
-            {handle
-               (ui credits_done)}}})}
-{new
-   UIScreen
+      {if {! {credits.lst is_scrolling}}
+         {if {! {ui in_transition}}
+            {handle (ui credits_done)}
+         }
+      }
+   )
+}
+{new UIScreen
    credits_screen
    (panels meta credits_panel helpbar)
    (focus credits_panel)
    (back community_specialfeatures_screen)
    (scroll_sfx FALSE)
-   (helpbar
-      (helpbar_back))
+   (helpbar (helpbar_back))
    (enter
       {meta music_stop}
-      {platform_mgr disable_xmp})
-   (credits_done
-      {ui goto_screen community_specialfeatures_screen})}
-{new
-   MoviePanel
+      {platform_mgr disable_xmp}
+   )
+   (credits_done {ui goto_screen community_specialfeatures_screen})
+}
+{new MoviePanel
    attract_movie_panel
    (preload FALSE)
    (loop FALSE)
    (audio TRUE)
    (update_presence TRUE)
    (videos attract)
-   (movie_done
-      {ui goto_screen splash_screen})
+   (movie_done {ui goto_screen splash_screen})
    (BUTTON_DOWN_MSG
-      {if
-         {'||'
-            {== $button kPad_Start}
-            {== $button kPad_X}
-            {== $button kPad_Tri}}
-         {ui goto_screen splash_screen}})}
-{new
-   UIPanel
-   attract_overlay_panel
-   (file
-      "attract_overlay.milo")}
-{new
-   UIScreen
+      {if {'||' {== $button kPad_Start} {== $button kPad_X} {== $button kPad_Tri}}
+         {ui goto_screen splash_screen}
+      }
+   )
+}
+{new UIPanel attract_overlay_panel (file "attract_overlay.milo")}
+{new UIScreen
    attract_screen
    (panels meta attract_movie_panel attract_overlay_panel)
    (focus attract_movie_panel)
-   (enter
-      {char_cache cache_clear})}
-{new
-   UIScreen
+   (enter {char_cache cache_clear})
+}
+{new UIScreen
    vocalist_must_have_mic_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (message band_vocalist_needs_mic)
    (enter
-      {dialog_panel
-         set_custom
-         {localize_token
-            [message]}
+      {dialog_panel set_custom
+         {localize_token [message]}
          ""
          {localize_token RETURN}
-         opt2.btn}
-      {dialog_panel
-         disable
-         {dialog_panel find opt1.btn}}
-      {gamecfg
-         set
-         joining_allowed
-         {!
-            {gamecfg get joining_allowed}}}
-      {platform_mgr add_sink $this signin_changed})
+         opt2.btn
+      }
+      {dialog_panel disable {dialog_panel find opt1.btn}}
+      {gamecfg set joining_allowed {! {gamecfg get joining_allowed}}}
+      {platform_mgr add_sink $this signin_changed}
+   )
    (exit
       {platform_mgr remove_sink $this signin_changed}
-      {gamecfg
-         set
-         joining_allowed
-         {!
-            {gamecfg get joining_allowed}}}
-      {dialog_panel
-         enable
-         {dialog_panel find opt1.btn}})
-   (SIGNIN_CHANGED_MSG
-      {ui pop_screen})
-   (SELECT_MSG
-      {ui pop_screen})}
+      {gamecfg set joining_allowed {! {gamecfg get joining_allowed}}}
+      {dialog_panel enable {dialog_panel find opt1.btn}}
+   )
+   (SIGNIN_CHANGED_MSG {ui pop_screen})
+   (SELECT_MSG {ui pop_screen})
+}

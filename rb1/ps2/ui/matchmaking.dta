@@ -1,69 +1,62 @@
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; DEBUG
 #define PRINT_SLOT (print "[" [slot] ", " [slot_num] ", " [player_num] "] ")
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Common Matchmaking Stuff
-{new CharSelectPanel practice_space_panel
-   (file 
-    #ifndef HX_XBOX
-		"practice_space_og.milo"
-	#else
-		"practice_space.milo"
-    #endif
+{new CharSelectPanel
+   practice_space_panel
+   (file
+      #ifndef HX_XBOX
+      "practice_space_og.milo"
+      #else
+      "practice_space.milo"
+      #endif
    )
-   
-#ifdef HX_XBOX            ; PGM
-   (enter
-      {$this refresh}   
-   )
-   
+
+   #ifdef HX_XBOX ; PGM
+   (enter {$this refresh})
+
    (refresh
-      {do ($is_bwt {&& {tour performer} {! {gamemode is_solo}}})
+      {do
+         ($is_bwt {&& {tour performer} {! {gamemode is_solo}}})
          ; update/hide the band logo
          {logo.mesh set_showing $is_bwt}
          {if $is_bwt
             {logo.rndtex set force FALSE} ; don't update every frame
-            {logo.rndtex set proxy {{tour performer} logo_patch}}            
+            {logo.rndtex set proxy {{tour performer} logo_patch}}
          }
-         
+
          ; hide/show the medium, hard, expert award records
          {foreach_int $diff kDifficultyMedium {size (DIFF_SYMBOLS)}
-            {do ($diff_sym {elem (DIFF_SYMBOLS) $diff})
-                ($album {sprintf "album_%s.mesh" $diff_sym})
+            {do
+               ($diff_sym {elem (DIFF_SYMBOLS) $diff})
+               ($album {sprintf "album_%s.mesh" $diff_sym})
                {$album set_showing
-                  {&& $is_bwt
-                     {>= {{tour performer} win_difficulty}
-                        $diff
-                     }
-                  }
+                  {&& $is_bwt {>= {{tour performer} win_difficulty} $diff}}
                }
-            }   
+            }
          }
       }
    )
-#endif
+   #endif
 }
 
-
 #define MATCHMAKING_LOAD_CHAR_METHODS (
-   (load_char ($char)
-   )
-   
+   (load_char ($char))
+
    (load_char_from_list
       {if {[char_provider] is_non_prefab_char {char.lst selected_pos}}
          {$this load_char {[char_provider] get_char {char.lst selected_pos}}}
       }
    )
-   
+
    (release_char
       {{game get_player_config [player_num]} set_char 0}
       {session_mgr update_band_leader}
       {{gamemode get matchmaking_screen} export_all update}
    )
-   
+
    ; called from CharSelectPanel
    (show_char
       {||
@@ -77,9 +70,7 @@
 
 #define MATCHMAKING_CHOOSE_GENDER (
    (choose_gender
-      (init
-         {$this set_focus male.btn}
-      )
+      (init {$this set_focus male.btn})
       (FOCUS_MSG
          ; start loading up a new character for this player
          {charcreator_panel request [player_num] {basename {$new_focus name}}}
@@ -111,18 +102,14 @@
 )
 
 {func autoload_allowed
-   {&&
-      {== {session mode} kNetLocal}
-      {! {session_mgr is_finding}}
-   }
+   {&& {== {session mode} kNetLocal} {! {session_mgr is_finding}}}
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Matchmaking - init ready_leader state
 
-#define MM_READY_LEADER_BUTTON_FOCUS
-(
+#define MM_READY_LEADER_BUTTON_FOCUS (
    ;; determine who gets focus...
    {if {is_leader_local}
       {if_else
@@ -133,15 +120,9 @@
             {! {band_ui_sink get invite_accepted}}
             {||
                ; hth unranked
-               {&&
-                  {gamemode get is_hth_arrangement}
-                  {! {gamemode get ranked}}
-               }
+               {&& {gamemode get is_hth_arrangement} {! {gamemode get ranked}}}
                ; band qp
-               {&&
-                  {gamemode get is_band_arrangement}
-                  {! {gamemode get is_bwt}}
-               }
+               {&& {gamemode get is_band_arrangement} {! {gamemode get is_bwt}}}
                ; bwt start new or known remote
                {&&
                   {gamemode get is_bwt}
@@ -160,22 +141,22 @@
    }
 )
 
-{func release_char ($panel)
+{func release_char
+   ($panel)
    {$panel release_char}
    ;; Skip char select if we are in auto-choose mode
- #ifdef HX_XBOX
-	; Not an option in OG - REA
+   #ifdef HX_XBOX
+   ; Not an option in OG - REA
    {if {gamemode get auto_choose_char}
       {$panel remove_player}
    }
- #else 
-	{$panel remove_player} ;We always want it to default to auto-choose. MTC
- #endif
+   #else
+   {$panel remove_player} ;We always want it to default to auto-choose. MTC
+   #endif
 
    ;; eat this message  
    ;TRUE
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -184,7 +165,7 @@
 {func mm_hide_search
    {$this disable search.btn}
    {search.btn set_showing FALSE}
-   
+
    {$this disable search_continue.btn}
    {search_continue.btn set_showing FALSE}
 
@@ -192,12 +173,19 @@
    {$this enable continue.btn}
 }
 
-{func mm_set_search ($text_token $show_search $enable_search)
+{func mm_set_search
+   ($text_token $show_search $enable_search)
    {search.btn set text_token $text_token}
    {if_else $show_search
       {do
          {search.btn set_showing TRUE}
-         {$this {if_else $enable_search enable disable} search.btn}
+         {$this
+            {if_else $enable_search
+               enable
+               disable
+            }
+            search.btn
+         }
       }
       ; else
       {do
@@ -214,7 +202,8 @@
    {$this enable continue.btn}
 }
 
-{func mm_set_search_continue ($text_token $show_search $enable_search)
+{func mm_set_search_continue
+   ($text_token $show_search $enable_search)
    {$this disable search.btn}
    {search.btn set_showing FALSE}
    {search.btn set text_token $text_token}
@@ -223,7 +212,13 @@
    {if_else $show_search
       {do
          {search_continue.btn set_showing TRUE}
-         {$this {if_else $enable_search enable disable} search_continue.btn}
+         {$this
+            {if_else $enable_search
+               enable
+               disable
+            }
+            search_continue.btn
+         }
       }
       ; else
       {do
@@ -236,8 +231,7 @@
    {continue.btn set_showing FALSE}
 }
 
-#define MATCHMAKING_UPDATE_COMMON
-(
+#define MATCHMAKING_UPDATE_COMMON (
    ;; manage title.lbl
    {do
       ($is_hth {gamemode get is_hth_arrangement})
@@ -266,16 +260,12 @@
                      {localize mm_title_choose_local_hth}
                   )
                   ;; hth net, leader remote
-                  (TRUE
-                     {localize mm_title_choose_opponent}
-                  )
+                  (TRUE {localize mm_title_choose_opponent})
                }
             )
             ({gamemode get is_bwt}
                {switch {tour bwtmode}
-                  (kMetaTour_StartNew
-                     {localize mm_title_join_band}
-                  )
+                  (kMetaTour_StartNew {localize mm_title_join_band})
                   (kMetaTour_KnownLocal
                      {if_else {&& {tour performer} {{tour performer} is_finalized}}
                         {{tour performer} band_name}
@@ -284,7 +274,8 @@
                      }
                   )
                   ;; an invite should have kMetaTour_KnownRemote, so we're all good
-                  ((kMetaTour_UnknownRemote kMetaTour_KnownRemote)
+                  (
+                     (kMetaTour_UnknownRemote kMetaTour_KnownRemote)
                      {if_else {|| {== {gamecfg get leader_num} -1} {is_leader_local}}
                         ; then
                         {localize mm_title_choose_local_band}
@@ -308,11 +299,9 @@
                      {localize mm_title_join_band}
                   }
                   ; else
-                  {sprintf {localize mm_title_gamertags_band_fmt}
-                     {{gamecfg get_player_config {gamecfg get leader_num}}
-                        get
-                        player_name
-                     }
+                  {sprintf
+                     {localize mm_title_gamertags_band_fmt}
+                     {{gamecfg get_player_config {gamecfg get leader_num}} get player_name}
                   }
                }
             )
@@ -324,8 +313,8 @@
       {instrument_join.lbl set_showing FALSE}
       ; else
       {do
-		   ; REA - 
-         {join_icon.lbl set_localized 
+         ; REA - 
+         {join_icon.lbl set_localized
             {switch {cnv_instrumenttoicon [slot]}
                (G "g")
                (D "1")
@@ -333,16 +322,15 @@
                "A"
             }
          }
-         {cancel_icon.lbl set_localized 
+         {cancel_icon.lbl set_localized
             {switch {cnv_instrumenttoicon [slot]}
                (G "r")
                (D "2")
                (V "Y")
                "B"
             }
-         }			
-		 
-		
+         }
+
          {instrument_join.lbl set_localized {cnv_instrumenttoicon [slot]}}
          {instrument_join.lbl set_showing TRUE}
          {instrument_active.lbl set_localized {cnv_instrumenttoicon [slot]}}
@@ -382,22 +370,17 @@
             {nojoin.grp set_showing FALSE}
             {gamertag_list.grp set_showing TRUE}
          }
-		 
-			;;HOJ removing button icons from panel if in head-to-head
-		  {if {gamemode is_hth_arrangement}
-			  {do
-				{join_icon.lbl set_showing FALSE}
-			  }
-		  }
-		  
-		
+
+         ;;HOJ removing button icons from panel if in head-to-head
+         {if {gamemode is_hth_arrangement}
+            {do
+               {join_icon.lbl set_showing FALSE}
+            }
+         }
+
          ;; If we are finding net players, or we have net players,
          ;;   then limit the rest of the slots to remote only...
-         {if
-            {||
-               {session_mgr is_finding}
-               {!= {session mode} kNetLocal}
-            }
+         {if {|| {session_mgr is_finding} {!= {session mode} kNetLocal}}
             ; then
             {canjoin.grp set_showing FALSE}
             {nojoin.grp set_showing TRUE}
@@ -406,11 +389,7 @@
 
          ;; Tiny bit hacky: if we're playing hth online, always
          ;;   limit the rest of the slots to remote old...
-         {if
-            {&&
-               {== {gamemode get max_local_players} 1}
-               {> [slot_num] 0}
-            }
+         {if {&& {== {gamemode get max_local_players} 1} {> [slot_num] 0}}
             ; then
             {canjoin.grp set_showing FALSE}
             {nojoin.grp set_showing TRUE}
@@ -454,14 +433,13 @@
       {do
          {join.grp set_showing FALSE}
          {gamertag_list.grp set_showing FALSE}
-		 
-   		  ;;HOJ removing button icons from panel if in head-to-head
-		  {if {gamemode is_hth_arrangement}
-			  {do
-				{join_icon.lbl set_showing FALSE}
-			  }
-		  }
-		  
+
+         ;;HOJ removing button icons from panel if in head-to-head
+         {if {gamemode is_hth_arrangement}
+            {do
+               {join_icon.lbl set_showing FALSE}
+            }
+         }
       }
    }
 
@@ -471,12 +449,12 @@
       {$this update_char_hints_grp}
    }
    #endif
-	
-#ifdef HX_XBOX ; REA - Live? whats that? sounds like some new fangled technobabble
+
+   #ifdef HX_XBOX ; REA - Live? whats that? sounds like some new fangled technobabble
    {live_enabled.grp set_showing {|| $has_online $remote}}
-#else
+   #else
    {live_enabled.grp set_showing FALSE}
-#endif
+   #endif
 
    ;; Update "Participating" Visuals (including GamerTag)
    {if_else {!= [player_num] -1}
@@ -499,11 +477,12 @@
 
    ;; Update Character Name
    ;HWR - Reworked a bit to exclude lines that were crashing on disc
-#ifndef HX_XBOX  ;Pi branch
+   #ifndef HX_XBOX ;Pi branch
    {character_name.grp set_showing FALSE}
-#else  ;Hx branch
+   #else ;Hx branch
    {if_else {!= [player_num] -1}
-      {do ($char {{game get_player_config [player_num]} get_char})
+      {do
+         ($char {{game get_player_config [player_num]} get_char})
          {if_else $char
             {do
                {character_name.grp set_showing TRUE}
@@ -522,7 +501,7 @@
       ; else
       {character_name.grp set_showing FALSE}
    }
-#endif
+   #endif
 
    ;; Update profile sharing info
    {if_else
@@ -544,8 +523,7 @@
          {share_profile.lbl set_localized
             {sprintf
                {localize
-                  {if_else
-                     {platform_mgr is_player_a_guest [player_num]}
+                  {if_else {platform_mgr is_player_a_guest [player_num]}
                      ; then
                      matchmaker_profile_share_guest_fmt
                      ; else
@@ -560,29 +538,29 @@
       {share_profile.grp set_showing FALSE}
    }
 
-#ifdef HX_XBOX
+   #ifdef HX_XBOX
    {leader.grp set_showing
       {&&
          $leader
-         $has_char      ; not char chooser
-         {! $part_sel}  ; not part sel
+         $has_char ; not char chooser
+         {! $part_sel} ; not part sel
       }
    }
-#else
-	{leader.grp set_showing $leader} ; REA - Changes to matchmaking displays
-	{leader_buttons.grp set_showing $leader}
-	{kick.btn set_showing FALSE}
-	{invite.btn set_showing FALSE}
-	{search.btn set_showing FALSE}
-	{choose_char.btn set_showing FALSE}
-	{search_continue.btn set_showing FALSE}
-	{continue.btn set_showing $leader}
+   #else
+   {leader.grp set_showing $leader} ; REA - Changes to matchmaking displays
+   {leader_buttons.grp set_showing $leader}
+   {kick.btn set_showing FALSE}
+   {invite.btn set_showing FALSE}
+   {search.btn set_showing FALSE}
+   {choose_char.btn set_showing FALSE}
+   {search_continue.btn set_showing FALSE}
+   {continue.btn set_showing $leader}
    {leader_frame.grp set_showing $leader}
-	;{non_leader_frame.grp set_showing {! $leader}} REA - bug 150, guess we don't want to show these anymore
-	;{no_leader.grp set_showing {! $leader}}
+   ;{non_leader_frame.grp set_showing {! $leader}} REA - bug 150, guess we don't want to show these anymore
+   ;{no_leader.grp set_showing {! $leader}}
    {popup_ribbon.mesh set_showing $leader}
-#endif
-#ifdef HX_XBOX ; REA - All new stuff
+   #endif
+   #ifdef HX_XBOX ; REA - All new stuff
    {leader_banner.grp set_showing {&& $leader {! {gamemode get ranked}}}}
 
    {do
@@ -590,27 +568,28 @@
          {&& $has_char {! $session_busy} {== {gamecfg get leader_num} -1}}
       )
       {no_leader.grp set_showing $show_no_leader}
-      {$this {if_else $show_no_leader enable disable} continue_no_leader.btn}
+      {$this
+         {if_else $show_no_leader
+            enable
+            disable
+         }
+         continue_no_leader.btn
+      }
    }
 
-   {non_leader.grp set_showing {&& $has_char {! $session_busy} {! $leader}}}
+   {non_leader.grp set_showing
+      {&& $has_char {! $session_busy} {! $leader}}
+   }
 
    {if_else
       {&&
          $has_char
          {! $session_busy}
-         {&&
-            {! {session_mgr is_finding}}
-            {== {session mode} kNetLocal}
-         }
+         {&& {! {session_mgr is_finding}} {== {session mode} kNetLocal}}
       }
       ; then
       {do
-         {if_else
-            {||
-               {== {gamecfg get leader_num} -1}
-               {! $leader}
-            }
+         {if_else {|| {== {gamecfg get leader_num} -1} {! $leader}}
             ; then
             {do
                {$this disable choose_char.btn}
@@ -620,7 +599,6 @@
             {do
                {$this enable choose_char.btn}
                {$this disable choose_char_non_leader.btn}
-
             }
          }
       }
@@ -630,7 +608,7 @@
          {$this disable choose_char_non_leader.btn}
       }
    }
-#endif
+   #endif
 
    ;; Update Character chooser
    {$this update_char_provider}
@@ -652,19 +630,12 @@
 
    {remote.mnm set_frame $remote} ; 0 or 1
 
-#ifdef HX_XBOX
+   #ifdef HX_XBOX
    {if $leader
       {do
-         ($show
-            {!
-               {||
-                  $session_busy
-                  {gamemode get local_network}
-               }
-            }
-         )
+         ($show {! {|| $session_busy {gamemode get local_network}}})
          ($invite_kick_show
-            {&& 
+            {&&
                $show
                {! {gamemode get ranked}}
                {||
@@ -688,7 +659,7 @@
                {||
                   ; We can find more players if we're by
                   ; ourselves or everyone is ready
-                  {== {session num_players} 1} 
+                  {== {session num_players} 1}
                   {{gamemode get matchmaking_screen} all_ready}
                }
                {> {session num_open_slots} 0}
@@ -706,7 +677,7 @@
                   {||
                      ; We can invite more players if we're by
                      ; ourselves or everyone is ready
-                     {== {session num_players} 1} 
+                     {== {session num_players} 1}
                      {{gamemode get matchmaking_screen} all_ready}
                   }
                   {> {session num_open_slots} 0}
@@ -722,7 +693,8 @@
          }
 
          ; enabled/disabled state of kick button
-         {do ($enable_kick FALSE)
+         {do
+            ($enable_kick FALSE)
             ;; only enable kick if there are remote players...
             {gamecfg foreach_player_config $pcfg
                {if {! {$pcfg is_local_player}}
@@ -730,8 +702,16 @@
                }
             }
             ; but don't enable if we're not showing
-            {unless $invite_kick_show {set $enable_kick FALSE}}
-            {$this {if_else $enable_kick enable disable} kick.btn}
+            {unless $invite_kick_show
+               {set $enable_kick FALSE}
+            }
+            {$this
+               {if_else $enable_kick
+                  enable
+                  disable
+               }
+               kick.btn
+            }
          }
 
          ; set search button text
@@ -772,9 +752,7 @@
                      }
                   )
                   ; else
-                  (TRUE
-                     {fail "Unknown MM combination of invite and game mode\n"}
-                  )
+                  (TRUE {fail "Unknown MM combination of invite and game mode\n"})
                }
             )
             ({&& {! {gamemode get is_bwt}} {gamemode get is_hth_arrangement}}
@@ -822,7 +800,7 @@
          }
       }
    }
-#endif
+   #endif
 
    ;; Update the continue button's text (continue vs. waiting)
    {do
@@ -853,34 +831,34 @@
          {session set_invites_allowed FALSE}
       }
    }
-   
+
    ; show/hide gender selection
    {gendersel.grp set_showing [choose_gender]}
 
    ;update the helpbar whenever things change
    #ifndef HX_XBOX
-		{helpbar set_limit_to_player_num -1}
-		{if {! {gamemode is_hth_arrangement}}
-			{helpbar set_use_all_controllers TRUE}
-		}
+   {helpbar set_limit_to_player_num -1}
+   {if {! {gamemode is_hth_arrangement}}
+      {helpbar set_use_all_controllers TRUE}
+   }
    #endif
    {helpbar set_config
-   #ifdef HX_XBOX
-      {if_else {&&   {gamemode get online_play_required}
-                     {> {session num_players} 0}
-                     {! {gamemode get ranked}}
-               }
+      #ifdef HX_XBOX
+      {if_else
+         {&&
+            {gamemode get online_play_required}
+            {> {session num_players} 0}
+            {! {gamemode get ranked}}
+         }
          ;show the details icon
          (helpbar_back helpbar_select helpbar_details)
          ;else don't show the details icon
          (helpbar_back helpbar_select)
       }
-   #else
+      #else
       (helpbar_back helpbar_select)
-   #endif
+      #endif
    }
-   
-  
 
    ;; TODO: clean this up, this feels very hacky
    ;; if we are not the leader, and nothing has focus, that's bad...
@@ -896,7 +874,6 @@
    }
 )
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Matchmaking Popup Screen Handlers
 #define MATCHMAKING_POPUP_ENTER (
@@ -909,34 +886,33 @@
       {platform_mgr remove_sink $this signin_changed}
       {gamecfg set joining_allowed TRUE}
    )
-   
-   (signin_changed
-      {ui pop_screen}
-   )
+
+   (signin_changed {ui pop_screen})
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Kick Player Screen
 
-{new DialogPanel kick_player_panel
+{new DialogPanel
+   kick_player_panel
    (file player_names_dialog.milo)
    (focus players.lst)
    (player_num {local_to_leader_player_num})
    (helpbar (helpbar_back helpbar_select))
-   
+
    (BUTTON_DOWN_MSG
       {if_else {== $button kPad_Tri}
          {ui pop_screen}
-         kDataUnhandled         
+         kDataUnhandled
       }
    )
-   
+
    (SELECT_START_MSG
       {remote_players_provider kick_player {players.lst selected_pos}}
       {ui pop_screen}
       kDataUnhandled
    )
-   
+
    (REMOTE_PLAYER_LEFT_MSG
       {if_else {== {session mode} kNetLocal}
          {ui pop_screen} ; no one left to kick, take us out of here
@@ -946,17 +922,17 @@
          }
       }
    )
-   
+
    (NEW_REMOTE_PLAYER_MSG
       {remote_players_provider refresh_player_list}
       {players.lst set_dirty}
    )
-   
+
    (TRANSITION_COMPLETE_MSG
       {title.lbl set text_token kick_player}
       {session add_sink $this}
       {players.lst set_provider remote_players_provider}
-      
+
       {if {== {session mode} kNetLocal} ; The remote player left before we got here
          {ui pop_screen}
       }
@@ -968,95 +944,89 @@
    )
 }
 
-{new UIScreen kick_player_screen
+{new UIScreen
+   kick_player_screen
    (panels kick_player_panel)
-   (focus kick_player_panel)   
+   (focus kick_player_panel)
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; More Details Screen (show gamercard, Xbox only)
 
-{new DialogPanel more_details_panel
+{new DialogPanel
+   more_details_panel
    (file player_names_dialog.milo)
    (focus players.lst)
-   (helpbar ()) 
-   
+   (helpbar ())
+
    (BUTTON_DOWN_MSG
       {if_else {== $button kPad_Tri}
          {{ui current_screen} leave}
-         kDataUnhandled         
+         kDataUnhandled
       }
    )
-   
+
    (SELECT_START_MSG
-      {session_players_provider show_gamercard {players.lst selected_pos} $player_num}
+      {session_players_provider show_gamercard
+         {players.lst selected_pos}
+         $player_num
+      }
       kDataUnhandled
    )
-   
-   (session_disabled
-      {{ui current_screen} leave}
-   )
-   
+
+   (session_disabled {{ui current_screen} leave})
+
    (REMOTE_PLAYER_LEFT_MSG
       {session_players_provider refresh_player_list}
       {players.lst set_dirty}
    )
-   
+
    (NEW_REMOTE_PLAYER_MSG
       {session_players_provider refresh_player_list}
       {players.lst set_dirty}
    )
-   
+
    (enter
       {title.lbl set text_token more_details_panel_title}
       {players.lst set_provider session_players_provider}
       {set [helpbar] ('' helpbar_details)}
    )
-   
+
    (TRANSITION_COMPLETE_MSG
       {session add_sink $this}
       {if {session disabled}
          {{ui current_screen} leave}
       }
    )
-   
+
    (exit
       {session remove_sink $this}
       {session_players_provider cleanup}
    )
 }
 
-{new UIScreen more_details_screen
+{new UIScreen
+   more_details_screen
    (panels more_details_panel)
    (focus more_details_panel)
-   
-   (leave
-      {ui pop_screen}
-   )
-   (exit
-      {band_ui_sink set_net_sync TRUE}
-   )
+
+   (leave {ui pop_screen})
+   (exit {band_ui_sink set_net_sync TRUE})
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{new UIPanel selchannel_panel
+{new UIPanel
+   selchannel_panel
    (file "selchanneldialog.milo")
-   
+
    (enter
-      {channels.lst set_data (
-                              'Fun'
-                              'QA'
-                              'Design Meeting'
-                              'Debug'
-                              'A'
-                              'B'
-                              'C'
-                              'D'
-                             )}
+      {channels.lst set_data
+         ('Fun' 'QA' 'Design Meeting' 'Debug' 'A' 'B' 'C' 'D')
+      }
       {$this set_focus channels.lst}
    )
-   
+
    (SELECT_START_MSG
       {gamecfg set channel {channels.lst selected_pos}}
 
@@ -1071,17 +1041,18 @@
       }
       {ui pop_screen}
    )
-   
+
    (BUTTON_DOWN_MSG
       {if_else {== $button kPad_Tri}
          {ui pop_screen}
-         kDataUnhandled         
+         kDataUnhandled
       }
    )
 }
 
-{new UIScreen selchannel_screen
+{new UIScreen
+   selchannel_screen
    (panels selchannel_panel)
-   
+
    (focus selchannel_panel)
 }

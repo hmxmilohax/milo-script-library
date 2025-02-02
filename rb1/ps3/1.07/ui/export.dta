@@ -1,188 +1,174 @@
-{set
-   $export_messages
-   (export_tip1 export_tip2 export_tip3 export_tip4 export_tip5)}
-{new
-   UIScreen
+{set $export_messages
+   (export_tip1 export_tip2 export_tip3 export_tip4 export_tip5)
+}
+{new UIScreen
    export_initialize_screen
    (panels)
    (enter
       {content_mgr start_refresh}
-      {set
-         [waiting]
-         TRUE})
+      {set [waiting] TRUE}
+   )
    (poll
-      {if
-         {&&
-            [waiting]
-            {content_mgr refresh_done}}
-         {set
-            [waiting]
-            FALSE}
-         {ui goto_screen export_welcome_screen}})
-   (waiting TRUE)}
-{new
-   UIScreen
+      {if {&& [waiting] {content_mgr refresh_done}}
+         {set [waiting] FALSE}
+         {ui goto_screen export_welcome_screen}
+      }
+   )
+   (waiting TRUE)
+}
+{new UIScreen
    meta_loading_options_screen
    META_LOADING_SCREEN_HANDLERS
    (clear_game_state FALSE)
    (session_leaving_early FALSE)
-   (next_screen options_screen)}
-{new
-   UIScreen
+   (next_screen options_screen)
+}
+{new UIScreen
    export_welcome_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token export_welcome_msg}
          {localize export_welcome_export_button}
          {localize export_welcome_cancel_button}
-         opt1.btn})
+         opt1.btn
+      }
+   )
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (opt1.btn
-            {if_else
-               {license_mgr is_export_license_valid}
+            {if_else {license_mgr is_export_license_valid}
                {ui goto_screen export_export_screen}
                #ifdef HX_XBOX
                {if_else
                   {'||'
-                     {!
-                        {platform_mgr is_player_signed_into_live $player_num}}
-                     {platform_mgr is_player_a_guest $player_num}}
+                     {! {platform_mgr is_player_signed_into_live $player_num}}
+                     {platform_mgr is_player_a_guest $player_num}
+                  }
                   {do
                      {export_signin_screen set signin_player_num $player_num}
-                     {ui goto_screen export_signin_screen}}
-                  {ui goto_screen export_acquire_license_screen}}
+                     {ui goto_screen export_signin_screen}
+                  }
+                  {ui goto_screen export_acquire_license_screen}
+               }
                #else
                {ui goto_screen export_acquire_license_screen}
-               #endif})
-         (opt2.btn
-            {ui goto_screen meta_loading_options_screen})})}
-{new
-   UIScreen
+               #endif
+            }
+         )
+         (opt2.btn {ui goto_screen meta_loading_options_screen})
+      }
+   )
+}
+{new UIScreen
    export_signin_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (waiting FALSE)
    (signin_player_num -1)
    (enter
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token
             {if_else
                {&&
-                  {platform_mgr
-                     is_player_signed_in
-                     [signin_player_num]}
-                  {platform_mgr
-                     is_player_a_guest
-                     [signin_player_num]}}
+                  {platform_mgr is_player_signed_in [signin_player_num]}
+                  {platform_mgr is_player_a_guest [signin_player_num]}
+               }
                export_need_to_signin_not_guest
-               export_need_to_signin}}
+               export_need_to_signin
+            }
+         }
          {localize main_tour_signin_button}
          {localize main_tour_cancel_button}
-         opt1.btn}
-      {platform_mgr add_sink $this signin_changed})
+         opt1.btn
+      }
+      {platform_mgr add_sink $this signin_changed}
+   )
    (check_signin_and_license
-      {dialog_panel
-         set_msg
-         {localize export_check_status}}
+      {dialog_panel set_msg {localize export_check_status}}
       {content_mgr start_refresh}
-      {set
-         [waiting]
-         TRUE})
+      {set [waiting] TRUE}
+   )
    (poll
-      {if
-         {&&
-            [waiting]
-            {content_mgr refresh_done}}
-         {set
-            [waiting]
-            FALSE}
-         {if_else
-            {license_mgr is_export_license_valid}
+      {if {&& [waiting] {content_mgr refresh_done}}
+         {set [waiting] FALSE}
+         {if_else {license_mgr is_export_license_valid}
             {ui goto_screen export_export_screen}
-            {ui goto_screen export_acquire_license_screen}}})
-   (exit
-      {platform_mgr remove_sink $this signin_changed})
+            {ui goto_screen export_acquire_license_screen}
+         }
+      }
+   )
+   (exit {platform_mgr remove_sink $this signin_changed})
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (opt1.btn
             {export_signin_screen set signin_player_num $player_num}
-            {platform_mgr signin 1 TRUE})
-         (opt2.btn
-            {ui goto_screen meta_loading_options_screen})})
+            {platform_mgr signin 1 TRUE}
+         )
+         (opt2.btn {ui goto_screen meta_loading_options_screen})
+      }
+   )
    (signin_changed
       {if_else
          {'||'
-            {!
-               {platform_mgr
-                  is_player_signed_into_live
-                  [signin_player_num]}}
-            {platform_mgr
-               is_player_a_guest
-               [signin_player_num]}}
+            {! {platform_mgr is_player_signed_into_live [signin_player_num]}}
+            {platform_mgr is_player_a_guest [signin_player_num]}
+         }
          {export_signin_screen enter}
-         {export_signin_screen check_signin_and_license}})}
-{new
-   AcquireLicenseScreen
+         {export_signin_screen check_signin_and_license}
+      }
+   )
+}
+{new AcquireLicenseScreen
    export_acquire_license_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
       #ifdef HX_XBOX
-      {dialog_panel
-         set_custom
+      {dialog_panel set_custom
          {localize_token export_license_needed_msg}
          {localize export_license_purchase_button}
          {localize export_license_cancel_button}
-         opt1.btn}
+         opt1.btn
+      }
       #else
-      {dialog_panel
-         set_ok
-         {localize_token export_license_needed_msg}}
-      #endif)
+      {dialog_panel set_ok {localize_token export_license_needed_msg}}
+      #endif
+   )
    (go_success
-      {dialog_panel
-         set_ok
-         {localize_token export_license_continue_msg}})
-   (go_signin
-      {ui goto_screen export_signin_screen})
+      {dialog_panel set_ok {localize_token export_license_continue_msg}}
+   )
+   (go_signin {ui goto_screen export_signin_screen})
    #ifdef HX_XBOX
    (SELECT_MSG
-      {switch
-         $component
-         (opt1.btn
-            {$this acquire_license $player_num})
-         (opt2.btn
-            {ui goto_screen meta_loading_options_screen})
-         (ok.btn
-            {ui goto_screen export_export_screen})})
+      {switch $component
+         (opt1.btn {$this acquire_license $player_num})
+         (opt2.btn {ui goto_screen meta_loading_options_screen})
+         (ok.btn {ui goto_screen export_export_screen})
+      }
+   )
    #else
-   (SELECT_MSG
-      {ui goto_screen meta_loading_options_screen})
-   #endif}
-{new
-   UIPanel
+   (SELECT_MSG {ui goto_screen meta_loading_options_screen})
+   #endif
+}
+{new UIPanel
    export_export_panel
    DIALOG_PANEL_HANDLERS
    (file export.milo)
    (limit none)
    (update_progress
       ($step $count $song)
-      {set
-         $filt_step
-         {if_else
-            {>= $step $count}
+      {set $filt_step
+         {if_else {>= $step $count}
             {- $count 1}
-            $step}}
+            $step
+         }
+      }
       {progress.sld set_num_steps $count}
       {progress.sld set_current $filt_step}
-      {songmsg.lbl set_localized $song})
+      {songmsg.lbl set_localized $song}
+   )
    (set_cancel
       ($msg $button)
       {msg.lbl set_localized $msg}
@@ -193,10 +179,9 @@
       {ok.btn set_localized $button}
       {ok.btn set_showing TRUE}
       {wait.grp set_showing TRUE}
-      {wait.grp
-         animate
-         (loop)}
-      {$this set_focus ok.btn})
+      {wait.grp animate (loop)}
+      {$this set_focus ok.btn}
+   )
    (set_no_cancel
       ()
       {opt1.btn set_showing FALSE}
@@ -205,10 +190,9 @@
       {no.btn set_showing FALSE}
       {ok.btn set_showing FALSE}
       {wait.grp set_showing FALSE}
-      {set
-         [helpbar]
-         ('' helpbar_continue)}
-      {$this set_focus msg.lbl})
+      {set [helpbar] ('' helpbar_continue)}
+      {$this set_focus msg.lbl}
+   )
    (set_no_cancel_msg
       ($msg)
       {msg.lbl set_localized $msg}
@@ -218,135 +202,114 @@
       {no.btn set_showing FALSE}
       {ok.btn set_showing FALSE}
       {wait.grp set_showing FALSE}
-      {set
-         [helpbar]
-         ('' helpbar_continue)}
-      {$this set_focus msg.lbl})
+      {set [helpbar] ('' helpbar_continue)}
+      {$this set_focus msg.lbl}
+   )
    (clear_extras
-      {$this
-         set_meanwhile
-         ""}
-      {wait.grp set_showing FALSE})
+      {$this set_meanwhile ""}
+      {wait.grp set_showing FALSE}
+   )
    (set_meanwhile
       ($msg)
       {meanwhile.lbl set_showing TRUE}
-      {meanwhile.lbl set_localized $msg})}
-{new
-   ExportScreen
+      {meanwhile.lbl set_localized $msg}
+   )
+}
+{new ExportScreen
    export_export_screen
    (panels export_export_panel)
    (focus export_export_panel)
    (enter
-      {export_export_panel
-         set_no_cancel_msg
-         {localize export_process_msg}}
-      {export_export_panel
-         set_title
-         {localize export_process_title}}
-      {export_export_panel
-         update_progress
-         0
-         50
-         "..."}
-      {export_export_panel
-         set_meanwhile
-         {localize export_first_meanwhile}})
+      {export_export_panel set_no_cancel_msg {localize export_process_msg}}
+      {export_export_panel set_title {localize export_process_title}}
+      {export_export_panel update_progress 0 50 "..."}
+      {export_export_panel set_meanwhile {localize export_first_meanwhile}}
+   )
    (reset_look
-      {export_export_panel
-         set_cancel
+      {export_export_panel set_cancel
          {localize export_process_msg}
-         {localize export_cancel}}
-      {export_export_panel
-         set_title
-         {localize export_process_title}})
-   (no_cancel
-      {export_export_panel set_no_cancel})
+         {localize export_cancel}
+      }
+      {export_export_panel set_title {localize export_process_title}}
+   )
+   (no_cancel {export_export_panel set_no_cancel})
    (update_meanwhile
-      {export_export_panel
-         set_meanwhile
-         {localize_token
-            {random_elem $export_messages}}})
+      {export_export_panel set_meanwhile
+         {localize_token {random_elem $export_messages}}
+      }
+   )
    (update_progress
       ($step $count $song)
-      {export_export_panel
-         set_cancel
+      {export_export_panel set_cancel
          {localize export_process_msg}
-         {localize export_cancel}}
-      {export_export_panel update_progress $step $count $song})
+         {localize export_cancel}
+      }
+      {export_export_panel update_progress $step $count $song}
+   )
    (update_search)
    (update_write)
    (go_error
       {export_export_panel clear_extras}
-      {export_export_panel
-         set_custom
+      {export_export_panel set_custom
          {localize export_error}
          {localize export_continue}
          {localize export_cancel}
-         opt1.btn})
+         opt1.btn
+      }
+   )
    (go_insufficient_memory
       {export_export_panel clear_extras}
-      {export_export_panel
-         set_ok
-         {localize_token export_insufficient_memory}})
+      {export_export_panel set_ok {localize_token export_insufficient_memory}}
+   )
    (go_selectcancel
       {export_export_panel clear_extras}
       #ifdef HX_XBOX
-      {export_export_panel
-         set_custom
+      {export_export_panel set_custom
          {localize export_selectcancel_msg}
          {localize export_selectdevice}
          {localize export_cancel}
-         opt1.btn}
+         opt1.btn
+      }
       #else
-      {export_export_panel
-         set_ok
-         {localize_token export_nospace_msg}}
-      #endif)
+      {export_export_panel set_ok {localize_token export_nospace_msg}}
+      #endif
+   )
    (go_nospace
       {export_export_panel clear_extras}
       #ifdef HX_XBOX
-      {export_export_panel
-         set_custom
+      {export_export_panel set_custom
          {localize export_nospace_msg}
          {localize export_selectdevice}
          {localize export_cancel}
-         opt1.btn}
+         opt1.btn
+      }
       #else
-      {export_export_panel
-         set_ok
-         {localize_token export_nospace_msg}}
-      #endif)
+      {export_export_panel set_ok {localize_token export_nospace_msg}}
+      #endif
+   )
    (go_cancel
       {export_export_panel clear_extras}
-      {export_export_panel
-         set_yesno
+      {export_export_panel set_yesno
          {localize_token export_confirm_cancel_msg}
-         no.btn})
-   (go_exit
-      {ui goto_screen meta_loading_options_screen})
-   (go_success
-      {ui goto_screen export_success_screen})
+         no.btn
+      }
+   )
+   (go_exit {ui goto_screen meta_loading_options_screen})
+   (go_success {ui goto_screen export_success_screen})
    (SELECT_MSG
-      {switch
-         $component
-         (opt1.btn
-            {$this choose_opt 0})
-         (yes.btn
-            {$this choose_opt 0})
-         (opt2.btn
-            {$this choose_opt 1})
-         (no.btn
-            {$this choose_opt 1})
-         (ok.btn
-            {$this choose_opt 1})})}
-{new
-   UIScreen
+      {switch $component
+         (opt1.btn {$this choose_opt 0})
+         (yes.btn {$this choose_opt 0})
+         (opt2.btn {$this choose_opt 1})
+         (no.btn {$this choose_opt 1})
+         (ok.btn {$this choose_opt 1})
+      }
+   )
+}
+{new UIScreen
    export_success_screen
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {localize_token export_success_msg}})
-   (SELECT_MSG
-      {ui goto_screen meta_loading_options_screen})}
+   (enter {dialog_panel set_ok {localize_token export_success_msg}})
+   (SELECT_MSG {ui goto_screen meta_loading_options_screen})
+}

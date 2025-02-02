@@ -1,74 +1,68 @@
 #ifndef HX_PS3
-{new
-   TokenRedemptionPanel
+{new TokenRedemptionPanel
    token_redemption_panel
-   (file
-      "token_redemption_xbox.milo")
+   (file "token_redemption_xbox.milo")
    (focus redeem.btn)
    (enter
       {$this set_focus redeem.btn}
-      {original_all.grp set_showing TRUE})
-   (exit
-      {virtual_keyboard clear_callback})
+      {original_all.grp set_showing TRUE}
+   )
+   (exit {virtual_keyboard clear_callback})
    (BUTTON_DOWN_MSG
-      {if_else
-         {&&
-            {== $action kAction_Cancel}
-            {==
-               {$this focus_name}
-               "offers.lst"}}
+      {if_else {&& {== $action kAction_Cancel} {== {$this focus_name} "offers.lst"}}
          {do
             {offers.lst set_provider offers.lst}
             {all.grp set_showing FALSE}
             {original_all.grp set_showing TRUE}
-            {$this set_focus redeem.btn}}
-         kDataUnhandled})
+            {$this set_focus redeem.btn}
+         }
+         kDataUnhandled
+      }
+   )
    (SELECT_MSG
-      {switch
-         $component
+      {switch $component
          (redeem.btn
             {$this wait}
-            {virtual_keyboard
-               show_keyboard
+            {virtual_keyboard show_keyboard
                $user
                16
                {localize token_input_vk_title}
                {localize token_input_vk_desc}
                ""
                $this
-               kVkNormalEntry})
+               kVkNormalEntry
+            }
+         )
          #ifndef HX_WII
          (offers.lst
-            {$this
-               show_purchase_ui_for_offer
-               {offers.lst selected_pos}
-               $user})
+            {$this show_purchase_ui_for_offer {offers.lst selected_pos} $user}
+         )
          #endif
          (find.btn
             #ifdef HX_WII
             {ui goto_screen token_redemption_offers_prep_screen}
-            #endif)
+            #endif
+         )
          {print
             "token_redemption_panel unhandled select message on "
             $component
-            "\n"}})
+            "\n"
+         }
+      }
+   )
    (virtual_keyboard_result_msg
       ($ok $str)
-      {if_else
-         $ok
-         {$this
-            get_offers_for_token
-            $str
-            {store_panel get store_user}}
-         {$this set_idle}})
+      {if_else $ok
+         {$this get_offers_for_token $str {store_panel get store_user}}
+         {$this set_idle}
+      }
+   )
    (token_redemption_msg
       ($sym)
-      {print
-         "token_redemption_panel handle msg: "
-         $sym
-         "\n"}
+      {print "token_redemption_panel handle msg: " $sym "\n"}
       {token_redemption_dialog_screen set msg_sym $sym}
-      {ui push_screen token_redemption_dialog_screen})
+      {ui push_screen token_redemption_dialog_screen}
+   )
    (token_offers_ready
       #ifdef HX_WII
       {store_panel set_store_mode token}
@@ -78,29 +72,24 @@
       {original_all.grp set_showing FALSE}
       {offers.lst set_provider $this}
       {$this set_focus offers.lst}
-      #endif)
-   (checkout_finished
-      ($purchase_made))}
-{new
-   BandScreen
+      #endif
+   )
+   (checkout_finished ($purchase_made))
+}
+{new BandScreen
    token_redemption_net_error_dialog_screen
    (panels dialog_panel)
    (focus dialog_panel)
-   (enter
-      {dialog_panel
-         set_ok
-         {platform_mgr get_net_error_string}})
+   (enter {dialog_panel set_ok {platform_mgr get_net_error_string}})
    (SELECT_MSG
       {platform_mgr clear_net_error}
-      {ui pop_screen store_root_screen})}
-#define TOKEN_INTRO_STATE_RC_CONNECTING
-(0)
-#define TOKEN_INTRO_STATE_RC_ERROR_WAIT_UNPAUSE
-(1)
-#define TOKEN_INTRO_STATE_DONE
-(2)
-{new
-   BandScreen
+      {ui pop_screen store_root_screen}
+   )
+}
+#define TOKEN_INTRO_STATE_RC_CONNECTING (0)
+#define TOKEN_INTRO_STATE_RC_ERROR_WAIT_UNPAUSE (1)
+#define TOKEN_INTRO_STATE_DONE (2)
+{new BandScreen
    token_redemption_screen_intro
    (panels meta sv2_panel token_redemption_panel store_panel)
    (focus store_panel)
@@ -109,138 +98,113 @@
    (back_to_store_root 0)
    (state TOKEN_INTRO_STATE_RC_CONNECTING)
    (enter
-      {set
-         [started_connection]
-         0}
-      {set
-         [started_commerce]
-         0}
-      {set
-         [back_to_store_root]
-         0}
-      {set
-         [state]
-         TOKEN_INTRO_STATE_RC_CONNECTING}
-      {store_panel please_wait})
-   (exit
-      {store_panel please_dont_wait})
+      {set [started_connection] 0}
+      {set [started_commerce] 0}
+      {set [back_to_store_root] 0}
+      {set [state] TOKEN_INTRO_STATE_RC_CONNECTING}
+      {store_panel please_wait}
+   )
+   (exit {store_panel please_dont_wait})
    (poll
       {if
          {&&
-            {!
-               {ui in_transition}}
-            {==
-               $this
-               {ui current_screen}}
-            {==
-               [back_to_store_root]
-               0}}
-         {switch
-            [state]
+            {! {ui in_transition}}
+            {== $this {ui current_screen}}
+            {== [back_to_store_root] 0}
+         }
+         {switch [state]
             (TOKEN_INTRO_STATE_RC_CONNECTING
-               {if_else
-                  {platform_mgr has_net_error}
+               {if_else {platform_mgr has_net_error}
                   {$this rc_connection_failed}
-                  {if_else
-                     {==
-                        {rock_central state}
-                        kRCOnline}
-                     {if_else
-                        {commerce_mgr is_paused}
+                  {if_else {== {rock_central state} kRCOnline}
+                     {if_else {commerce_mgr is_paused}
                         {$this commerce_unpause}
-                        {$this okay_done}}
-                     {if_else
-                        {commerce_mgr is_paused}
+                        {$this okay_done}
+                     }
+                     {if_else {commerce_mgr is_paused}
                         {$this wait_or_connect}
-                        {$this commerce_pause}}}})
+                        {$this commerce_pause}
+                     }
+                  }
+               }
+            )
             (TOKEN_INTRO_STATE_RC_ERROR_WAIT_UNPAUSE
-               {if
-                  {!
-                     {commerce_mgr is_paused}}
-                  {set
-                     [state]
-                     TOKEN_INTRO_STATE_DONE}
-                  {set
-                     [back_to_store_root]
-                     1}
-                  {ui push_screen token_redemption_net_error_dialog_screen}})}})
+               {if {! {commerce_mgr is_paused}}
+                  {set [state] TOKEN_INTRO_STATE_DONE}
+                  {set [back_to_store_root] 1}
+                  {ui push_screen token_redemption_net_error_dialog_screen}
+               }
+            )
+         }
+      }
+   )
    (rock_central_op_complete_msg
       {print
          "token_redemption_screen_intro: rock_central_op_complete_msg "
          $success
-         "\n"}
-      {if_else
-         {==
-            {rock_central state}
-            kRCOnline}
-         {if
-            {commerce_mgr is_paused}
-            {$this commerce_unpause}}
-         {$this rc_connection_failed}}
-      1)
+         "\n"
+      }
+      {if_else {== {rock_central state} kRCOnline}
+         {if {commerce_mgr is_paused}
+            {$this commerce_unpause}
+         }
+         {$this rc_connection_failed}
+      }
+      1
+   )
    (wait_or_connect
-      {if_else
-         {==
-            [started_connection]
-            0}
+      {if_else {== [started_connection] 0}
          {do
-            {print
-               "token_redemption_screen_intro: start connection to rock central\n"}
+            {print "token_redemption_screen_intro: start connection to rock central\n"}
             {platform_mgr run_net_start_utility}
-            {set
-               [started_connection]
-               1}}
-         {if
-            {==
-               {rock_central state}
-               kRCFailed}
-            {$this rc_connection_failed}}})
+            {set [started_connection] 1}
+         }
+         {if {== {rock_central state} kRCFailed}
+            {$this rc_connection_failed}
+         }
+      }
+   )
    (rc_connection_failed
-      {set
-         [state]
-         TOKEN_INTRO_STATE_RC_ERROR_WAIT_UNPAUSE}
-      {if
-         {commerce_mgr is_paused}
-         {$this commerce_unpause}})
+      {set [state] TOKEN_INTRO_STATE_RC_ERROR_WAIT_UNPAUSE}
+      {if {commerce_mgr is_paused}
+         {$this commerce_unpause}
+      }
+   )
    (commerce_pause
-      {if
-         {commerce_mgr pause}
-         {rock_central block_login 0}})
+      {if {commerce_mgr pause}
+         {rock_central block_login 0}
+      }
+   )
    (commerce_unpause
       {rock_central block_login 1}
-      {if
-         {==
-            [started_commerce]
-            0}
-         {set
-            [started_commerce]
-            {commerce_mgr unpause}}})
+      {if {== [started_commerce] 0}
+         {set [started_commerce] {commerce_mgr unpause}}
+      }
+   )
    (okay_done
-      {print
-         "token_redemption_screen_intro: okay_done\n"}
-      {ui goto_screen token_redemption_screen})}
-{new
-   BandScreen
+      {print "token_redemption_screen_intro: okay_done\n"}
+      {ui goto_screen token_redemption_screen}
+   )
+}
+{new BandScreen
    token_redemption_screen
    (panels meta sv2_panel token_redemption_panel store_panel)
    (focus token_redemption_panel)
-   (back store_root_screen)}
-{new
-   BandScreen
+   (back store_root_screen)
+}
+{new BandScreen
    token_redemption_dialog_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (msg_sym '')
-   (enter
-      {dialog_panel
-         set_ok
-         [msg_sym]})
+   (enter {dialog_panel set_ok [msg_sym]})
    (SELECT_MSG
       {cond
          ({==
                [msg_sym]
                token_redemption_error}
-            {ui pop_screen store_root_screen})
+            {ui pop_screen store_root_screen}
+         )
          ({==
                [msg_sym]
                token_redemption_ready}
@@ -250,46 +214,42 @@
             {ui pop_screen store_menu_screen}
             #else
             {ui pop_screen token_redemption_offers_prep_screen}
-            #endif)
-         {ui pop_screen token_redemption_screen}})}
-{new
-   BandScreen
+            #endif
+         )
+         {ui pop_screen token_redemption_screen}
+      }
+   )
+}
+{new BandScreen
    token_redemption_offers_prep_screen
    (panels meta sv2_panel store_panel token_redemption_panel)
    (focus store_panel)
    (back store_root_screen)
    (enter
       {store_panel please_wait}
-      {token_redemption_panel
-         get_previous_offers
-         {store_panel get store_user}})
-   (exit
-      {store_panel please_dont_wait})}
+      {token_redemption_panel get_previous_offers {store_panel get store_user}}
+   )
+   (exit {store_panel please_dont_wait})
+}
 #else
-{new
-   TokenRedemptionPanel
+{new TokenRedemptionPanel
    token_redemption_panel
-   (file
-      "token_redemption_ps3.milo")
+   (file "token_redemption_ps3.milo")
    (focus offers.lst)
-   (enter
-      {offers.lst set_provider $this})
-   (refresh_offers
-      {offers.lst refresh})
+   (enter {offers.lst set_provider $this})
+   (refresh_offers {offers.lst refresh})
    (BUTTON_DOWN_MSG
-      {if_else
-         {!
-            {$this user_can_do_input}}
+      {if_else {! {$this user_can_do_input}}
          TRUE
-         kDataUnhandled})
-   (SELECT_MSG
-      {$this
-         select_list_ix
-         {offers.lst selected_data}})}
-{new
-   BandScreen
+         kDataUnhandled
+      }
+   )
+   (SELECT_MSG {$this select_list_ix {offers.lst selected_data}})
+}
+{new BandScreen
    token_redemption_screen
    (panels meta sv2_panel token_redemption_panel)
    (focus token_redemption_panel)
-   (back main_hub_screen)}
+   (back main_hub_screen)
+}
 #endif

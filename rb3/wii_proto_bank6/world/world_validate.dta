@@ -1,23 +1,16 @@
-#define WORLD_OBJECT_VALIDATE
-((custom_start_trigger '')
+#define WORLD_OBJECT_VALIDATE (
+   (custom_start_trigger '')
    (start_test_preset
       ($pst)
-      {if
-         $pst
-         {if
-            {exists test_light_preset_anim}
-            {delete test_light_preset_anim}}
-         {$pst
-            animate
-            (name test_light_preset_anim)
-            (loop
-               0
-               {$pst end_frame})}
-         {if
-            {exists test_light_preset_task}
-            {delete test_light_preset_task}}
-         {if
-            {$pst get manual}
+      {if $pst
+         {if {exists test_light_preset_anim}
+            {delete test_light_preset_anim}
+         }
+         {$pst animate (name test_light_preset_anim) (loop 0 {$pst end_frame})}
+         {if {exists test_light_preset_task}
+            {delete test_light_preset_task}
+         }
+         {if {$pst get manual}
             {$pst reset_events}
             {$pst first}
             {thread_task
@@ -27,80 +20,75 @@
                (script
                   {$pst next}
                   {$task sleep 4}
-                  {$task loop})}}})
+                  {$task loop}
+               )
+            }
+         }
+      }
+   )
    (stop_test_preset
-      {if
-         {exists test_light_preset_anim}
-         {delete test_light_preset_anim}}
-      {if
-         {exists test_light_preset_task}
-         {delete test_light_preset_task}})
+      {if {exists test_light_preset_anim}
+         {delete test_light_preset_anim}
+      }
+      {if {exists test_light_preset_task}
+         {delete test_light_preset_task}
+      }
+   )
    (test_preset_blending
       ($pst1 $pst2 $time)
-      {if_else
-         {&& $pst1 $pst2}
+      {if_else {&& $pst1 $pst2}
          {$this force_two_presets $pst1 $pst2 $time}
-         {notify
-            "Both test presets must be entered before testing animation."}})
+         {notify "Both test presets must be entered before testing animation."}
+      }
+   )
    (find_preset_type
       ($type $excite $adjective)
       {set $found 0}
-      {$this
-         iterate
+      {$this iterate
          LightPreset
          $preset
-         {if
-            {==
-               {$preset get category}
-               $type}
-            {if_else
-               {!= $adjective ''}
-               {foreach
-                  $adj
-                  {$preset get_array adjectives}
-                  {if
-                     {== $adj $adjective}
-                     {set $found 1}}}
-               {set $found 1}}}}
-      $found)
+         {if {== {$preset get category} $type}
+            {if_else {!= $adjective ''}
+               {foreach $adj {$preset get_array adjectives}
+                  {if {== $adj $adjective}
+                     {set $found 1}
+                  }
+               }
+               {set $found 1}
+            }
+         }
+      }
+      $found
+   )
    (translate_excite
       ($excite)
-      {switch
-         $excite
-         (0
-            "kExcitementBoot")
-         (1
-            "kExcitementBad")
-         (2
-            "kExcitementOkay")
-         (3
-            "kExcitementGreat")
-         (4
-            "kExcitementPeak")})
+      {switch $excite
+         (0 "kExcitementBoot")
+         (1 "kExcitementBad")
+         (2 "kExcitementOkay")
+         (3 "kExcitementGreat")
+         (4 "kExcitementPeak")
+      }
+   )
    (check_has_any_presets
       ($min_excite $max_excite $categories $adjective)
-      {foreach_int
-         $excitement
-         $min_excite
-         $max_excite
+      {foreach_int $excitement $min_excite $max_excite
          {do
             ($found 0)
-            {foreach
-               $type
-               $categories
-               {if
-                  {$this find_preset_type $type $excitement $adjective}
-                  {set $found 1}}}
-            {if
-               {!= $found 1}
-               {if_else
-                  {== $adjective ''}
+            {foreach $type $categories
+               {if {$this find_preset_type $type $excitement $adjective}
+                  {set $found 1}
+               }
+            }
+            {if {!= $found 1}
+               {if_else {== $adjective ''}
                   {notify
                      $path
                      " has no LightPreset for excitement level "
                      {$this translate_excite $excitement}
                      " from these categories: "
-                     $categories}
+                     $categories
+                  }
                   {notify
                      $path
                      " has no LightPreset for adjective "
@@ -108,250 +96,208 @@
                      ", excitement level "
                      {$this translate_excite $excitement}
                      " from these categories: "
-                     $categories}}}}})
+                     $categories
+                  }
+               }
+            }
+         }
+      }
+   )
    (validate_cameras
       {set $cameras.validating 1}
-      {$this
-         iterate_self
+      {$this iterate_self
          BandCamShot
          $shot
-         {if
-            {==
-               {$shot get category}
-               TEST_CAM}
+         {if {== {$shot get category} TEST_CAM}
             {notify
                {path_name $shot}
-               " is category TEST_CAM, please delete or make into a real camera."}}
+               " is category TEST_CAM, please delete or make into a real camera."
+            }
+         }
          {do
-            ($next_shots
-               {$shot list_all_next_shots})
-            {foreach_int
-               $i
-               0
-               {size $next_shots}
+            ($next_shots {$shot list_all_next_shots})
+            {foreach_int $i 0 {size $next_shots}
                {do
-                  ($next
-                     {elem $next_shots $i})
-                  {if
-                     {!=
-                        {$next get category}
-                        NEXT_SHOT}
+                  ($next {elem $next_shots $i})
+                  {if {!= {$next get category} NEXT_SHOT}
                      {notify
                         {path_name $next}
                         " is a next shot of "
                         $shot
-                        " and needs to be category NEXT_SHOT"}}}}}}
+                        " and needs to be category NEXT_SHOT"
+                     }
+                  }
+               }
+            }
+         }
+      }
       {do
-         ($err
-            {sprint
-               {path_name $this}
-               " no BandCamShot:"})
-         ($camera.cats
-            {array
-               (VENUE_CAM_CATS COOP_CAM_CATS DIRECTED_CAM_CATS)})
-         {foreach
-            $cat
+         ($err {sprint {path_name $this} " no BandCamShot:"})
+         ($camera.cats {array (VENUE_CAM_CATS COOP_CAM_CATS DIRECTED_CAM_CATS)})
+         {foreach $cat
             {cond
                ({has_substr
                      {path_name $this}
                      "arena_09"}
-                  (WIN_FINALE))
-               {eval
-                  ()}}
-            {push_back $camera.cats $cat}}
-         {$this check_categories $err}}
-      {set $cameras.validating 0})
+                  (WIN_FINALE)
+               )
+               {eval ()}
+            }
+            {push_back $camera.cats $cat}
+         }
+         {$this check_categories $err}
+      }
+      {set $cameras.validating 0}
+   )
    (check_categories
       ($err)
       {do
-         ($err2
-            "")
+         ($err2 "")
          ($found 0)
-         {foreach
-            $check.cat
-            $camera.cats
+         {foreach $check.cat $camera.cats
             {if_else
-               {$this
-                  check_facings
-                  {sprint
-                     $err
-                     " "
-                     $check.cat}}
+               {$this check_facings
+                  {sprint $err " " $check.cat}
+               }
                {set $found 1}
                {strcat
                   $err2
-                  {if_else
-                     $err2
-                     {sprint
-                        " + "
-                        $check.cat}
-                     $check.cat}}}}
-         {if
-            {&& $err2 $found}
-            {notify
-               $err
-               " "
-               $err2}}
-         $found})
+                  {if_else $err2
+                     {sprint " + " $check.cat}
+                     $check.cat
+                  }
+               }
+            }
+         }
+         {if {&& $err2 $found}
+            {notify $err " " $err2}
+         }
+         $found
+      }
+   )
    (check_facings
       ($err)
       {do
-         ($err2
-            "")
+         ($err2 "")
          ($found 0)
-         {foreach
-            $check.facing
+         {foreach $check.facing
             {if_else
                {&&
-                  {has_any_substr
-                     $check.cat
-                     ("coop_"
-                        "h2h")}
-                  {!
-                     {has_substr
-                        $check.cat
-                        "_behind"}}}
-               ("kBCSBFacingLeft"
-                  "kBCSBFacingRight")
-               ("kBCSBAllFacing")}
+                  {has_any_substr $check.cat ("coop_" "h2h")}
+                  {! {has_substr $check.cat "_behind"}}
+               }
+               ("kBCSBFacingLeft" "kBCSBFacingRight")
+               ("kBCSBAllFacing")
+            }
             {if_else
-               {$this
-                  check_configs
-                  {sprint
-                     $err
-                     " "
-                     $check.facing}}
+               {$this check_configs
+                  {sprint $err " " $check.facing}
+               }
                {set $found 1}
                {strcat
                   $err2
-                  {if_else
-                     $err2
-                     {sprint
-                        " | "
-                        $check.facing}
-                     $check.facing}}}}
-         {if
-            {&& $err2 $found}
-            {notify
-               $err
-               " "
-               $err2}}
-         $found})
+                  {if_else $err2
+                     {sprint " | " $check.facing}
+                     $check.facing
+                  }
+               }
+            }
+         }
+         {if {&& $err2 $found}
+            {notify $err " " $err2}
+         }
+         $found
+      }
+   )
    (check_configs
       ($err)
       {do
-         ($err2
-            "")
+         ($err2 "")
          ($found 0)
-         {foreach
-            $check.config
-            {if_else
-               {has_substr
-                  $check.cat
-                  "h2h"}
+         {foreach $check.config
+            {if_else {has_substr $check.cat "h2h"}
                ()
-               ("kBCSBCoopBG"
-                  "kBCSBCoopBK"
-                  "kBCSBCoopGK")}
+               ("kBCSBCoopBG" "kBCSBCoopBK" "kBCSBCoopGK")
+            }
             {if
                {==
                   kDataUnhandled
-                  {switch
-                     $check.config
-                     ("kBCSBCoopBG"
-                        {find_exists
-                           (COOP_BG_REMAP)
-                           $check.cat})
-                     ("kBCSBCoopBK"
-                        {find_exists
-                           (COOP_BK_REMAP)
-                           $check.cat})
-                     ("kBCSBCoopGK"
-                        {find_exists
-                           (COOP_GK_REMAP)
-                           $check.cat})
-                     kDataUnhandled}}
+                  {switch $check.config
+                     ("kBCSBCoopBG" {find_exists (COOP_BG_REMAP) $check.cat})
+                     ("kBCSBCoopBK" {find_exists (COOP_BK_REMAP) $check.cat})
+                     ("kBCSBCoopGK" {find_exists (COOP_GK_REMAP) $check.cat})
+                     kDataUnhandled
+                  }
+               }
                {if_else
-                  {$this
-                     check_platforms
-                     {sprint
-                        $err
-                        " "
-                        $check.config}}
+                  {$this check_platforms
+                     {sprint $err " " $check.config}
+                  }
                   {set $found 1}
                   {strcat
                      $err2
-                     {if_else
-                        $err2
-                        {sprint
-                           " | "
-                           $check.config}
-                        $check.config}}}}}
-         {if
-            {&& $err2 $found}
-            {notify
-               $err
-               " "
-               $err2}}
-         $found})
+                     {if_else $err2
+                        {sprint " | " $check.config}
+                        $check.config
+                     }
+                  }
+               }
+            }
+         }
+         {if {&& $err2 $found}
+            {notify $err " " $err2}
+         }
+         $found
+      }
+   )
    (check_platforms
       ($err)
       {do
-         ($err2
-            "")
+         ($err2 "")
          ($found 0)
-         {foreach
-            $check.platform_name
-            ("kPlatformXbox"
-               "kPlatformPS3")
+         {foreach $check.platform_name ("kPlatformXbox" "kPlatformPS3")
             {if_else
-               {$this
-                  check_camera
-                  {sprint
-                     $err
-                     " "
-                     $check.platform_name}}
+               {$this check_camera
+                  {sprint $err " " $check.platform_name}
+               }
                {set $found 1}
                {strcat
                   $err2
-                  {if_else
-                     $err2
-                     {sprint
-                        " | "
-                        $check.platform_name}
-                     $check.platform_name}}}}
-         {if
-            {&& $err2 $found}
-            {notify
-               $err
-               " "
-               $err2}}
-         $found})
+                  {if_else $err2
+                     {sprint " | " $check.platform_name}
+                     $check.platform_name
+                  }
+               }
+            }
+         }
+         {if {&& $err2 $found}
+            {notify $err " " $err2}
+         }
+         $found
+      }
+   )
    (check_camera
       ($err)
       {do
          ($match
             {array
-               ((flags_any
-                     {macro_elem $check.facing})
-                  (flags_any
-                     {macro_elem $check.config})
+               (
+                  (flags_any {macro_elem $check.facing})
+                  (flags_any {macro_elem $check.config})
                   (platform_only
-                     {if_else
-                        {==
-                           $check.platform_name
-                           "kPlatformXbox"}
+                     {if_else {== $check.platform_name "kPlatformXbox"}
                         (2 0)
-                        (4 0)}))})
-         {if
-            {has_any_substr
-               $check.cat
-               ("coop_"
-                  "h2h")}
-            {push_back
-               $match
-               (min_time 0)}
-            {push_back
-               $match
-               (max_time 0)}}
-         {$this find_shot $check.cat $match}}))
+                        (4 0)
+                     }
+                  )
+               )
+            }
+         )
+         {if {has_any_substr $check.cat ("coop_" "h2h")}
+            {push_back $match (min_time 0)}
+            {push_back $match (max_time 0)}
+         }
+         {$this find_shot $check.cat $match}
+      }
+   )
+)

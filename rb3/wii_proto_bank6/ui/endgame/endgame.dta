@@ -1,164 +1,133 @@
 #include endgame_helpers.dta
-{new
-   NextSongPanel
+{new NextSongPanel
    coop_endgame_panel
-   (file
-      "coop_endgame.milo")
-   (details_showing
-      (0 0 0 0))
+   (file "coop_endgame.milo")
+   (details_showing (0 0 0 0))
    (network_mic_setup 1)
-   (allowed_transition_actions
-      (5))
+   (allowed_transition_actions (5))
    (min_time 5.0)
    ENDGAME_PANEL_HANDLERS
    (enter
       {platform_mgr set_notify_ui_location 1}
       {$this set_results}
-      {instarank.grp
-         set_showing
-         {gamemode get insta_rank}}
-      {if
-         {gamemode get insta_rank}
-         {if_else
-            {meta_performer has_instarank_data}
+      {instarank.grp set_showing {gamemode get insta_rank}}
+      {if {gamemode get insta_rank}
+         {if_else {meta_performer has_instarank_data}
             {$this set_instarank}
             {do
                {instarank.lbl set text_token ir_fetching}
-               {instarank_warning.lbl set_showing 0}}}}
-      {help.ihp
-         set_config
-         ()}
-      {songs.lbl
-         set_token_fmt
+               {instarank_warning.lbl set_showing 0}
+            }
+         }
+      }
+      {help.ihp set_config ()}
+      {songs.lbl set_token_fmt
          tour_event_songs
          {meta_performer num_completed}
-         {meta_performer num_songs}}
-      {if
-         {&&
-            {gamemode get loop_setlist}
-            {meta_performer is_set_complete}}
-         {meta_performer restart}}
-      {if_else
-         {meta_performer is_set_complete}
+         {meta_performer num_songs}
+      }
+      {if {&& {gamemode get loop_setlist} {meta_performer is_set_complete}}
+         {meta_performer restart}
+      }
+      {if_else {meta_performer is_set_complete}
          {do
             {next_song_name.lbl set_showing 0}
             {no_part_icons.lbl set_showing 0}
             {no_part_message.lbl set_showing 0}
-            {if
-               {is_leader_local}
-               {help.ihp
-                  set_config
-                  ((1 endgame_hb_finishsong))}}}
+            {if {is_leader_local}
+               {help.ihp set_config ((1 endgame_hb_finishsong))}
+            }
+         }
          {do
-            ($icons
-               "")
+            ($icons "")
             {next_song_name.lbl set_showing 1}
-            {next_song_name.lbl
-               set_song_name
-               {meta_performer song}}
+            {next_song_name.lbl set_song_name {meta_performer song}}
             {no_part_icons.lbl set_showing 1}
             {no_part_message.lbl set_showing 1}
-            {user_mgr
-               foreach_user
-               $user
-               {if
-                  {!
-                     {meta_performer
-                        part_plays_in_song
-                        {$user get_track_sym}}}
-                  {switch
-                     {$user get_track_sym}
-                     (guitar
-                        {strcat
-                           $icons
-                           "G"})
-                     (drum
-                        {strcat
-                           $icons
-                           "D"})
-                     (vocals
-                        {strcat
-                           $icons
-                           "V"})
-                     (bass
-                        {strcat
-                           $icons
-                           "B"})}}}
-            {if_else
-               {==
-                  $icons
-                  ""}
+            {user_mgr foreach_user $user
+               {if {! {meta_performer part_plays_in_song {$user get_track_sym}}}
+                  {switch {$user get_track_sym}
+                     (guitar {strcat $icons "G"})
+                     (drum {strcat $icons "D"})
+                     (vocals {strcat $icons "V"})
+                     (bass {strcat $icons "B"})
+                  }
+               }
+            }
+            {if_else {== $icons ""}
                {do
                   {no_part_icons.lbl set_showing 0}
-                  {no_part_message.lbl set_showing 0}}
+                  {no_part_message.lbl set_showing 0}
+               }
                {do
                   {no_part_icons.lbl set_showing 1}
                   {no_part_message.lbl set_showing 1}
-                  {no_part_icons.lbl set_token_fmt missing_instrument_icons $icons}}}
-            {if
-               {is_leader_local}
-               {help.ihp
-                  set_config
-                  {if_else
-                     {$this can_skip}
-                     ((3 skip_next_song)
-                        (1 continue))
-                     ((1 continue))}}}}}
-      {foreach_int
-         $slot
-         0
-         {players.set
-            size
-            (objects)}
-         {$this set_detailed_results_showing $slot 0 0}}
+                  {no_part_icons.lbl set_token_fmt missing_instrument_icons $icons}
+               }
+            }
+            {if {is_leader_local}
+               {help.ihp set_config
+                  {if_else {$this can_skip}
+                     (
+                        (3 skip_next_song)
+                        (1 continue)
+                     )
+                     ((1 continue))
+                  }
+               }
+            }
+         }
+      }
+      {foreach_int $slot 0 {players.set size (objects)}
+         {$this set_detailed_results_showing $slot 0 0}
+      }
       {overshell set_active_status 2}
-      {meta_performer add_sink $this})
+      {meta_performer add_sink $this}
+   )
    (exit
       {platform_mgr set_notify_ui_location 0}
-      {meta_performer remove_sink $this})
+      {meta_performer remove_sink $this}
+   )
    (exit_complete
-      {unless
-         {meta_performer is_set_complete}
+      {unless {meta_performer is_set_complete}
          {net_sync set_ui_state 13}
-         {overshell set_active_status 3}})
+         {overshell set_active_status 3}
+      }
+   )
    (is_detailed_results_showing
       ($slot)
-      {elem
-         [details_showing]
-         $slot})
+      {elem [details_showing] $slot}
+   )
    (set_detailed_results_showing
       ($slot $val $animate)
-      {set_elem
-         [details_showing]
-         $slot
-         $val}
-      {with
-         {players.set
-            get
-            (objects $slot)}
-         {if_else
-            $animate
-            {if_else
-               $val
+      {set_elem [details_showing] $slot $val}
+      {with {players.set get (objects $slot)}
+         {if_else $animate
+            {if_else $val
                {show_details.trg trigger}
-               {hide_details.trg trigger}}
-            {if_else
-               $val
+               {hide_details.trg trigger}
+            }
+            {if_else $val
                {show_details.trg play_end_of_anims}
-               {hide_details.trg play_end_of_anims}}}})
+               {hide_details.trg play_end_of_anims}
+            }
+         }
+      }
+   )
    (flip_detailed_results
       ($slot)
-      {if_else
-         {$this is_detailed_results_showing $slot}
+      {if_else {$this is_detailed_results_showing $slot}
          {$this set_detailed_results_showing $slot 0 1}
-         {$this set_detailed_results_showing $slot 1 1}})
+         {$this set_detailed_results_showing $slot 1 1}
+      }
+   )
    (can_skip
       {&&
-         {!
-            {meta_performer is_set_complete}}
-         {!
-            {meta_performer is_last_song}}
-         {gamemode get can_skip_songs}})
+         {! {meta_performer is_set_complete}}
+         {! {meta_performer is_last_song}}
+         {gamemode get can_skip_songs}
+      }
+   )
    (BUTTON_UP_MSG
       {cond
          ({&&
@@ -166,120 +135,107 @@
                   {== $action 6}
                   {== $action 8}}
                {beatmatch is_active_user $user}}
-            {$this
-               scroll_expanded_details
-               {$user get_slot_num}
-               0})
-         kDataUnhandled})
+            {$this scroll_expanded_details {$user get_slot_num} 0}
+         )
+         kDataUnhandled
+      }
+   )
    (BUTTON_DOWN_MSG
       {cond
-         ({ui in_transition}
-            1)
+         ({ui in_transition} 1)
          ({&&
                {== $action 5}
                {beatmatch is_active_user $user}}
-            {$this
-               flip_detailed_results
-               {$user get_slot_num}})
+            {$this flip_detailed_results {$user get_slot_num}}
+         )
          ({&&
                {== $action 6}
                {beatmatch is_active_user $user}
                {$this
                   is_detailed_results_showing
                   {$user get_slot_num}}}
-            {$this
-               scroll_expanded_details
-               {$user get_slot_num}
-               -1})
+            {$this scroll_expanded_details {$user get_slot_num} -1}
+         )
          ({&&
                {== $action 8}
                {beatmatch is_active_user $user}
                {$this
                   is_detailed_results_showing
                   {$user get_slot_num}}}
-            {$this
-               scroll_expanded_details
-               {$user get_slot_num}
-               1})
-         ({!
-               {overshell all_slots_ready_to_play}}
-            kDataUnhandled)
+            {$this scroll_expanded_details {$user get_slot_num} 1}
+         )
+         ({! {overshell all_slots_ready_to_play}} kDataUnhandled)
          ({&&
                {== $action 1}
                {!
                   {meta_performer is_set_complete}}}
-            {help.ihp
-               set_config
-               ()}
-            {ui goto_screen preload_nextsong_screen})
+            {help.ihp set_config ()}
+            {ui goto_screen preload_nextsong_screen}
+         )
          ({&&
                {== $action 3}
                {$this can_skip}}
             {meta_performer skip_song}
-            {next_song_name.lbl
-               set_song_name
-               {meta_performer song}}
-            {if
-               {&&
-                  {is_leader_local}
-                  {meta_performer is_last_song}}
-               {help.ihp
-                  set_config
-                  ((1 continue))}})
+            {next_song_name.lbl set_song_name {meta_performer song}}
+            {if {&& {is_leader_local} {meta_performer is_last_song}}
+               {help.ihp set_config ((1 continue))}
+            }
+         )
          ({&&
                {== $action 1}
                {meta_performer is_set_complete}}
             {play_instr_sfx $user button_select}
-            {ui
-               goto_screen
-               {if_else
-                  {&&
-                     {gamemode in_mode tour}}
-                  {if_else
-                     {tour is_playing_encore}
+            {ui goto_screen
+               {if_else {&& {gamemode in_mode tour}}
+                  {if_else {tour is_playing_encore}
                      meta_loading_continue_screen
-                     tour_results_screen}
-                  complete_screen}})
-         kDataUnhandled})}
-{new
-   BandScreen
+                     tour_results_screen
+                  }
+                  complete_screen
+               }
+            }
+         )
+         kDataUnhandled
+      }
+   )
+}
+{new BandScreen
    coop_endgame_screen
    (panels GAME_SCREEN_PANELS coop_endgame_panel)
    (focus coop_endgame_panel)
-   (TRANSITION_COMPLETE_MSG
-      {net_sync enable})}
-{new
-   GameTimePanel
-   game_time_panel
-   (load
-      {game set multi_event 1})}
-{new
-   BandScreen
+   (TRANSITION_COMPLETE_MSG {net_sync enable})
+}
+{new GameTimePanel game_time_panel (load {game set multi_event 1})}
+{new BandScreen
    preload_nextsong_screen
-   (panels game_time_panel GAME_SCREEN_PANELS coop_endgame_panel preload_panel)
-   (focus coop_endgame_panel)}
-{new
-   BandScreen
+   (panels
+      game_time_panel
+      GAME_SCREEN_PANELS
+      coop_endgame_panel
+      preload_panel
+   )
+   (focus coop_endgame_panel)
+}
+{new BandScreen
    preload_failed_nextsong_screen
    (panels game_time_panel GAME_SCREEN_PANELS coop_endgame_panel)
    (focus coop_endgame_panel)
    (TRANSITION_COMPLETE_MSG
       {meta_performer skip_song}
-      {{coop_endgame_panel find next_song_name.lbl}
-         set_song_name
-         {meta_performer song}}
-      {ui goto_screen preload_nextsong_screen})}
-{new
-   BandScreen
+      {{coop_endgame_panel find next_song_name.lbl} set_song_name
+         {meta_performer song}
+      }
+      {ui goto_screen preload_nextsong_screen}
+   )
+}
+{new BandScreen
    load_nextsong_screen
    (panels game_time_panel world_panel coop_endgame_panel)
    (focus coop_endgame_panel)
    (TRANSITION_COMPLETE_MSG
-      {song_mgr
-         add_recent_song
-         {meta_performer song}}
+      {song_mgr add_recent_song {meta_performer song}}
       {$banddirector load_game_song 1}
       {coop_track_panel set_paused 1}
-      {ui
-         goto_screen
-         {gamemode get game_screen}})}
+      {ui goto_screen {gamemode get game_screen}}
+   )
+}

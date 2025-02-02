@@ -27,7 +27,8 @@
 ; Starts the SaveLoad subsystems
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{func manual_save_start ($player_num)
+{func manual_save_start
+   ($player_num)
    {wii_saveload_begin_async}
 
    {set $save_load_mode kManualSave}
@@ -37,7 +38,8 @@
    {push_save_screen_no_overwrite}
 }
 
-{func manual_load_start ($player_num)
+{func manual_load_start
+   ($player_num)
    {wii_saveload_begin_async}
 
    {set $save_load_mode kManualLoad}
@@ -51,7 +53,8 @@
    }
 }
 
-{func wii_autosave_start ($goto_type $next_screen)
+{func wii_autosave_start
+   ($goto_type $next_screen)
    {if {! $saveload_ui_is_up}
       {set $save_load_mode kAutoSave}
 
@@ -64,7 +67,8 @@
 
             {set $saveload_player_num 0}
             {switch $saveload_goto_type
-               ((kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
+               (
+                  (kMetaNextTypeGotoPop kMetaNextTypeGotoGoto kMetaNextTypeGotoPopGoto)
                   {goto_save_screen_with_overwrite}
                )
                ; default
@@ -77,7 +81,8 @@
    }
 }
 
-{func wii_autoload_start  ($goto_type $next_screen)
+{func wii_autoload_start
+   ($goto_type $next_screen)
    ; Has autoload already completed? ($autoload_complete is only inside this block)
    {if {&& {! $saveload_ui_is_up} {! $autoload_complete}}
       {set $save_load_mode kAutoLoad}
@@ -99,7 +104,9 @@
 
 {func wii_saveload_begin_async
    {if $saveload_ui_is_up
-      {fail "wii_saveload_begin called, but $saveload_ui_is_up is already true\n"}
+      {fail
+         "wii_saveload_begin called, but $saveload_ui_is_up is already true\n"
+      }
    }
 
    {set $progressive_scan_previous_setting {profile_mgr get_progressive_scan}}
@@ -110,31 +117,31 @@
 ;; DEFINES
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-#define SAVE_HELPBAR
-(
-	{if {helpbar_dialog is_up}
-		{helpbar_dialog set_config ('' helpbar_select)}
-		{helpbar_dialog set_limit_to_player_num -1}
-		}
-		  {script_task kTaskUISeconds (delay 1.5)
-		(script
-			{if {helpbar_dialog is_up}
-			 {helpbar_dialog set_config ('' helpbar_select)}
-			 {helpbar_dialog set_limit_to_player_num -1}
-			}
-		)
-	}
+#define SAVE_HELPBAR (
+   {if {helpbar_dialog is_up}
+      {helpbar_dialog set_config ('' helpbar_select)}
+      {helpbar_dialog set_limit_to_player_num -1}
+   }
+   {script_task kTaskUISeconds
+      (delay 1.5)
+      (script
+         {if {helpbar_dialog is_up}
+            {helpbar_dialog set_config ('' helpbar_select)}
+            {helpbar_dialog set_limit_to_player_num -1}
+         }
+      )
+   }
 )
 
-#define SAVE_HELPBAR_CONTINUE
-(
+#define SAVE_HELPBAR_CONTINUE (
    {helpbar reset_icons}
    {if {helpbar_dialog is_up}
       {helpbar_dialog set_config ('' helpbar_continue)}
       {helpbar_dialog set_limit_to_player_num -1}
    }
 
-   {script_task kTaskUISeconds (delay 1.5)
+   {script_task kTaskUISeconds
+      (delay 1.5)
       (script
          {if {helpbar_dialog is_up}
             {helpbar_dialog set_config ('' helpbar_continue)}
@@ -148,9 +155,10 @@
 ;; SCREENS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{new UIScreen save_screen
+{new UIScreen
+   save_screen
    SAVELOAD_DIALOG_SCREEN
-   
+
    ; public properties
 
    (overwrite 0)
@@ -162,7 +170,7 @@
    (done_saving FALSE)
    (done_polling FALSE)
    (long FALSE)
-   
+
    (enter
       {set [enter_time] {taskmgr ui_seconds}}
       {set [save_time] 0.0}
@@ -177,7 +185,6 @@
 
    (MEMCARD_RESULT_MSG
       {switch $result
-
          ; no errors
          (kMCNoError
             {set [done_saving] TRUE}
@@ -188,12 +195,12 @@
          ; default - all other errors 
          {set [done_polling] TRUE}
          {ui goto_screen save_failed_screen}
-         
       }
    )
 }
 
-{new UIScreen manual_load_screen
+{new UIScreen
+   manual_load_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
@@ -204,54 +211,52 @@
 
    (MEMCARD_RESULT_MSG
       {switch $result
+         ; no errors
+         (kMCNoError
+            {$this setup_msg mc_manual_load_complete}
+            {$this set_title mc_title_loading}
 
-			; no errors
-			(kMCNoError
-				{$this setup_msg mc_manual_load_complete}
-				{$this set_title mc_title_loading}
+            {profile_mgr set_global_options_pad 0}
 
-				{profile_mgr set_global_options_pad 0}
+            {script_task kTaskUISeconds
+               (delay 1.5)
+               (script {on_saveload_done kMetaSaveLoaded})
+            }
+         )
 
-				{script_task kTaskUISeconds (delay 1.5)
-					(script
-						{on_saveload_done kMetaSaveLoaded}
-					)
-				}
-			)
-			
          ; default - all other errors 
          {ui goto_screen load_failed_screen}
       }
    )
 }
 
-{new UIScreen load_failed_screen
-	SAVELOAD_DIALOG_SCREEN_HELP
-
-	(enter
-		SAVE_HELPBAR_CONTINUE
-		{$this setup_continue mc_load_failed}
-		{$this set_title mc_title_caution}
-	)
-
-	(SELECT_START_MSG
-		{switch $component
-			(option1.btn
-				{on_saveload_done kMetaSaveError}
-			)
-		}
-		kDataUnhandled
-	)
-}
-
-{new UIScreen save_not_enough_space_screen
+{new UIScreen
+   load_failed_screen
    SAVELOAD_DIALOG_SCREEN_HELP
 
    (enter
-		SAVE_HELPBAR
+      SAVE_HELPBAR_CONTINUE
+      {$this setup_continue mc_load_failed}
+      {$this set_title mc_title_caution}
+   )
+
+   (SELECT_START_MSG
+      {switch $component
+         (option1.btn {on_saveload_done kMetaSaveError})
+      }
+      kDataUnhandled
+   )
+}
+
+{new UIScreen
+   save_not_enough_space_screen
+   SAVELOAD_DIALOG_SCREEN_HELP
+
+   (enter
+      SAVE_HELPBAR
       {$this setup_2btn
          ; Message
-			mc_save_not_enough_space
+         mc_save_not_enough_space
          ; Buttons
          mc_button_exit_to_menu
          mc_button_continue_no_save
@@ -267,20 +272,19 @@
          (option1.btn
             ;; quit game
          )
-         (option2.btn
-            {ui goto_screen disable_autosave_screen}
-         )
+         (option2.btn {ui goto_screen disable_autosave_screen})
       }
       kDataUnhandled
    )
 }
 
-{new UIScreen disable_autosave_screen
+{new UIScreen
+   disable_autosave_screen
    SAVELOAD_DIALOG_SCREEN_HELP
 
    (enter
-	SAVE_HELPBAR
-		
+      SAVE_HELPBAR
+
       {$this setup_2btn
          ; Message
          mc_save_autoload_disable
@@ -295,7 +299,7 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn   
+         (option1.btn
             {profile_mgr set_autosave_enabled FALSE}
             {on_saveload_done kMetaSaveError} ; disable autosave
          )
@@ -307,53 +311,55 @@
    )
 }
 
-{new UIScreen manual_load_no_file_screen
+{new UIScreen
+   manual_load_no_file_screen
    SAVELOAD_DIALOG_SCREEN_HELP
 
    (enter
-		SAVE_HELPBAR_CONTINUE
-		{$this setup_msg mc_manual_load_no_file}
+      SAVE_HELPBAR_CONTINUE
+      {$this setup_msg mc_manual_load_no_file}
       {$this set_title mc_title_loading}
    )
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn
-            {on_saveload_done kMetaSaveUnchanged}
-         )
+         (option1.btn {on_saveload_done kMetaSaveUnchanged})
       }
       kDataUnhandled
    )
 }
 
-{new UIScreen save_complete_screen
+{new UIScreen
+   save_complete_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
       {$this setup_msg mc_save_complete}
       {$this set_title mc_title_saving}
    )
-   
+
    (TRANSITION_COMPLETE_MSG
-      {script_task kTaskUISeconds (delay 1.5)
+      {script_task kTaskUISeconds
+         (delay 1.5)
          (script
-				{do
-					{if {helpbar is_up}
-						{helpbar unhide_helpbar}
-					}
-					{on_saveload_done kMetaSaveLoaded}
-				}
+            {do
+               {if {helpbar is_up}
+                  {helpbar unhide_helpbar}
+               }
+               {on_saveload_done kMetaSaveLoaded}
+            }
          )
-      } 
+      }
    )
 }
 
-{new UIScreen manual_load_confirm_screen
+{new UIScreen
+   manual_load_confirm_screen
    SAVELOAD_DIALOG_SCREEN_HELP
 
    (enter
-		SAVE_HELPBAR
-		{$this setup_2btn
+      SAVE_HELPBAR
+      {$this setup_2btn
          mc_manual_load_confirm_unsaved
          mc_button_yes
          mc_button_no
@@ -364,52 +370,43 @@
 
    (SELECT_START_MSG
       {switch $component
-         (option1.btn 
-            {ui goto_screen manual_load_screen}
-         )
-         (option2.btn
-            {on_saveload_done kMetaSaveUnchanged}
-         )
+         (option1.btn {ui goto_screen manual_load_screen})
+         (option2.btn {on_saveload_done kMetaSaveUnchanged})
          kDataUnhandled
       }
    )
 }
 
-{new UIScreen save_failed_screen
-	SAVELOAD_DIALOG_SCREEN_HELP
+{new UIScreen
+   save_failed_screen
+   SAVELOAD_DIALOG_SCREEN_HELP
 
-	(enter
-		SAVE_HELPBAR_CONTINUE
-		{$this setup_continue mc_save_failed_no_disable}
-		{$this set_title mc_title_caution}
-	)
+   (enter
+      SAVE_HELPBAR_CONTINUE
+      {$this setup_continue mc_save_failed_no_disable}
+      {$this set_title mc_title_caution}
+   )
 
-	(SELECT_START_MSG
-		{switch $component
-			(option1.btn
-				{on_saveload_done kMetaSaveError}
-			)
-		}
-		kDataUnhandled
-	)
+   (SELECT_START_MSG
+      {switch $component
+         (option1.btn {on_saveload_done kMetaSaveError})
+      }
+      kDataUnhandled
+   )
 }
 
-{new UIScreen progressive_scan_warning_screen
+{new UIScreen
+   progressive_scan_warning_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (enter
-      SAVE_HELPBAR_CONTINUE      
-      {dialog_panel set_yesno
-         {setup_msg mc_progressive_scan_warning}
-         no.btn
-      }
+      SAVE_HELPBAR_CONTINUE
+      {dialog_panel set_yesno {setup_msg mc_progressive_scan_warning} no.btn}
    )
 
    (SELECT_MSG
       {switch $component
-         (yes.btn
-            {ui goto_screen progressive_scan_intro_continue_screen}
-         )
+         (yes.btn {ui goto_screen progressive_scan_intro_continue_screen})
          (no.btn
             {profile_mgr set_progressive_scan FALSE}
             {goto_next_save_screen}
@@ -419,59 +416,57 @@
    )
 }
 
-{new UIScreen progressive_scan_intro_continue_screen
+{new UIScreen
+   progressive_scan_intro_continue_screen
    (panels dialog_panel)
    (focus dialog_panel)
 
    (enter
-      SAVE_HELPBAR_CONTINUE      
+      SAVE_HELPBAR_CONTINUE
       {dialog_panel set_ok mc_progressive_scan_warning}
       {dialog_panel set_title progressive_scan_notice_title}
    )
-   
+
    (SELECT_MSG
       {profile_mgr set_progressive_scan TRUE}
       {ui goto_screen progressive_scan_intro_confirm_screen}
    )
 }
 
-
-{new UIScreen auto_load_screen
+{new UIScreen
+   auto_load_screen
    SAVELOAD_DIALOG_SCREEN
 
    (enter
       {$this setup_msg mc_auto_load_looking}
       {$this set_title mc_title_checking}
       {memcardmgr select_device $saveload_player_num TRUE $this}
-      {memcardmgr load_game $saveload_player_num} 
+      {memcardmgr load_game $saveload_player_num}
    )
    ;; load result messages...
 
    (MEMCARD_RESULT_MSG
-		{script_task kTaskUISeconds (delay 1.5) ;;
-		(script ;;
+      {script_task kTaskUISeconds
+         (delay 1.5) ;;
+         (script ;;
+            {switch $result
+               (kMCNoError
+                  {$this setup_msg mc_auto_load_complete}
+                  {$this set_title mc_title_loading}
 
-      {switch $result
-         (kMCNoError
-            {$this setup_msg mc_auto_load_complete}
-            {$this set_title mc_title_loading}
+                  ;; Use this profile's options (TODO PS3 revisions???)
+                  {profile_mgr set_global_options_pad 0}
 
-            ;; Use this profile's options (TODO PS3 revisions???)
-            {profile_mgr set_global_options_pad 0}
-
-            {script_task kTaskUISeconds (delay 1.5)
-               (script
-                  {on_saveload_done kMetaSaveLoaded}
+                  {script_task kTaskUISeconds
+                     (delay 1.5)
+                     (script {on_saveload_done kMetaSaveLoaded})
+                  }
                )
+               ; default
+               {ui goto_screen load_failed_screen}
             }
-         )
-         ; default
-         {ui goto_screen load_failed_screen}
-      }
-      
-      ) ;;
+         ) ;;
       } ;;
-      
    )
 }
 
@@ -479,7 +474,8 @@
 ; SUPPORT FUNCTIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-{func on_saveload_done ($state)
+{func on_saveload_done
+   ($state)
    {memcardmgr saveload_profile_complete $saveload_player_num $state}
    {wii_saveload_cleanup_and_shutdown}
 }
@@ -488,14 +484,15 @@
    {memcardmgr saveload_all_complete}
 
    ; If progressive scan is enabled, insert the warning message before exiting
-   {if_else {&& 
-                ; only happen if we're loading
-                {|| {== $save_load_mode kManualLoad} {== $save_load_mode kAutoLoad}}
-                ; and if progressive scan is enabled
-                {profile_mgr get_progressive_scan} 
-                ; and it's different than the previous setting
-                {!= {profile_mgr get_progressive_scan} $progressive_scan_previous_setting}
-            } 
+   {if_else
+      {&&
+         ; only happen if we're loading
+         {|| {== $save_load_mode kManualLoad} {== $save_load_mode kAutoLoad}}
+         ; and if progressive scan is enabled
+         {profile_mgr get_progressive_scan}
+         ; and it's different than the previous setting
+         {!= {profile_mgr get_progressive_scan} $progressive_scan_previous_setting}
+      }
       ;then
       {ui goto_screen progressive_scan_warning_screen}
       ;else
@@ -507,12 +504,11 @@
    {if_else $saveload_ui_is_up
       {do
          {switch $saveload_goto_type
-            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
+            (
+               (kMetaNextTypePushPopGoto kMetaNextTypeGotoPopGoto)
                {ui pop_screen $saveload_goto_screen}
             )
-            (kMetaNextTypeGotoGoto
-               {ui goto_screen $saveload_goto_screen}
-            )
+            (kMetaNextTypeGotoGoto {ui goto_screen $saveload_goto_screen})
             ; default
             {ui pop_screen}
          }
@@ -523,15 +519,12 @@
       ; else
       {do
          {switch $saveload_goto_type
-            ((kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto)
+            (
+               (kMetaNextTypePushPopGoto kMetaNextTypeGotoGoto)
                {ui goto_screen $saveload_goto_screen}
             )
-            (kMetaNextTypeGotoPopGoto
-               {ui pop_screen $saveload_goto_screen}
-            )
-            (kMetaNextTypeGotoPop
-               {ui pop_screen}
-            )
+            (kMetaNextTypeGotoPopGoto {ui pop_screen $saveload_goto_screen})
+            (kMetaNextTypeGotoPop {ui pop_screen})
             ; default, do nothing (nothing pushed, so nothing to pop)
          }
       }

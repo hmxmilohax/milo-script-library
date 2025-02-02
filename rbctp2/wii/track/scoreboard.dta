@@ -2,27 +2,19 @@
    (types
       (scoreboard
          (editor
-            (reset
-               script
-               (script
-                  {$this reset}))
+            (reset script (script {$this reset}))
             (test_score
                int
-               (post_sync
-                  {$this
-                     set_score
-                     [test_score]})
-               (help
-                  "Current score."))
+               (post_sync {$this set_score [test_score]})
+               (help "Current score.")
+            )
             (star_scores
                (array int)
-               (post_sync
-                  {$this update_star_scores})
-               (help
-                  "Scores for each star level."))
-            (sound
-               bool
-               "Play a sound when the stars change"))
+               (post_sync {$this update_star_scores})
+               (help "Scores for each star level.")
+            )
+            (sound bool "Play a sound when the stars change")
+         )
          (current_star 0)
          (test_score 0)
          (previous_score 0)
@@ -31,240 +23,116 @@
          (sweep_pct 0)
          (max_score 100)
          (max_stars 6)
-         (star_scores
-            (20 40 60 80 100 120))
+         (star_scores (20 40 60 80 100 120))
          (last_star 0)
          (gold 0)
-         (stars
-            ("star1"
-               "star2"
-               "star3"
-               "star4"
-               "star5"))
+         (stars ("star1" "star2" "star3" "star4" "star5"))
          (sound FALSE)
          (reset
-            {if
-               {!=
-                  {size
-                     [star_scores]}
-                  0}
-               {set
-                  [current_star]
-                  0}
-               {set
-                  [last_star]
-                  0}
-               {set
-                  [previous_score]
-                  0}
-               {set
-                  [delta_score]
-                  0}
-               {set
-                  [gold]
-                  0}
-               {foreach
-                  $star
-                  [stars]
+            {if {!= {size [star_scores]} 0}
+               {set [current_star] 0}
+               {set [last_star] 0}
+               {set [previous_score] 0}
+               {set [delta_score] 0}
+               {set [gold] 0}
+               {foreach $star [stars]
                   {$star set showing 0}
                   {$star set_frame 0}
-                  {{$star find reset.trig}
-                     trigger}}
-               {stars_offset.tnm set_frame 0}}
+                  {{$star find reset.trig} trigger}
+               }
+               {stars_offset.tnm set_frame 0}
+            }
             {$this set_score 0}
-            {set
-               [test_score]
-               0}
-            {if
-               {exists gold.grp}
-               {gold.grp set_showing FALSE}})
+            {set [test_score] 0}
+            {if {exists gold.grp}
+               {gold.grp set_showing FALSE}
+            }
+         )
          (set_score
             ($in_val)
-            {if
-               {!=
-                  {size
-                     [star_scores]}
-                  0}
-               {if
-                  {==
-                     [score]
-                     0}
-                  {{elem
-                        [stars]
-                        0}
-                     set
-                     showing
-                     1}}
-               {if
-                  {!=
-                     $in_val
-                     [score]}
-                  {if_else
-                     {==
-                        [current_star]
-                        0}
-                     {set
-                        [delta_score]
-                        {elem
-                           [star_scores]
-                           [current_star]}}
+            {if {!= {size [star_scores]} 0}
+               {if {== [score] 0}
+                  {{elem [stars] 0} set showing 1}
+               }
+               {if {!= $in_val [score]}
+                  {if_else {== [current_star] 0}
+                     {set [delta_score] {elem [star_scores] [current_star]}}
                      {do
-                        {set
-                           [previous_score]
-                           {elem
-                              [star_scores]
-                              {-
-                                 [current_star]
-                                 1}}}
-                        {set
-                           [delta_score]
-                           {-
-                              {elem
-                                 [star_scores]
-                                 [current_star]}
-                              [previous_score]}}}}
-                  {if_else
-                     {!=
-                        [last_star]
-                        1}
+                        {set [previous_score] {elem [star_scores] {- [current_star] 1}}}
+                        {set [delta_score]
+                           {- {elem [star_scores] [current_star]} [previous_score]}
+                        }
+                     }
+                  }
+                  {if_else {!= [last_star] 1}
                      {do
-                        {set
-                           [sweep_pct]
-                           {/
-                              {-
-                                 $in_val
-                                 [previous_score]}
-                              [delta_score]}}
-                        {if
-                           {<=
-                              [sweep_pct]
-                              0.95}
-                           {{{elem
-                                    [stars]
-                                    [current_star]}
-                                 find
-                                 sweep.mnm}
-                              set_frame
-                              [sweep_pct]}}
-                        {if
-                           {>=
-                              $in_val
-                              {elem
-                                 [star_scores]
-                                 [current_star]}}
-                           {{{elem
-                                    [stars]
-                                    [current_star]}
-                                 find
-                                 sweep.mnm}
-                              set_frame
-                              1}
-                           {{{elem
-                                    [stars]
-                                    [current_star]}
-                                 find
-                                 full.trig}
-                              trigger}
+                        {set [sweep_pct] {/ {- $in_val [previous_score]} [delta_score]}}
+                        {if {<= [sweep_pct] 0.95}
+                           {{{elem [stars] [current_star]} find sweep.mnm} set_frame [sweep_pct]}
+                        }
+                        {if {>= $in_val {elem [star_scores] [current_star]}}
+                           {{{elem [stars] [current_star]} find sweep.mnm} set_frame 1}
+                           {{{elem [stars] [current_star]} find full.trig} trigger}
                            {$this play_star_sound}
-                           {set
-                              [current_star]
-                              {'+'
-                                 [current_star]
-                                 1}}
-                           {if
-                              {==
-                                 [current_star]
-                                 [max_stars]}
-                              {set
-                                 [last_star]
-                                 1}}
-                           {if
-                              {!=
-                                 [last_star]
-                                 1}
-                              {{elem
-                                    [stars]
-                                    [current_star]}
-                                 set
-                                 showing
-                                 1}
-                              {stars_offset.tnm
-                                 animate
-                                 (dest
-                                    {'*'
-                                       [current_star]
-                                       10})}
+                           {set [current_star] {'+' [current_star] 1}}
+                           {if {== [current_star] [max_stars]}
+                              {set [last_star] 1}
+                           }
+                           {if {!= [last_star] 1}
+                              {{elem [stars] [current_star]} set showing 1}
+                              {stars_offset.tnm animate (dest {'*' [current_star] 10})}
                               {{{elem
                                        [stars]
                                        [current_star]}
                                     find
-                                    sweep.mnm}
-                                 set_frame
-                                 {-
-                                    [sweep_pct]
-                                    1}}}}}
+                                    sweep.mnm} set_frame
+                                 {- [sweep_pct] 1}
+                              }
+                           }
+                        }
+                     }
                      {do
-                        {if
-                           {>=
-                              $in_val
-                              {elem
-                                 [star_scores]
-                                 [max_stars]}}
-                           {if
-                              {&&
-                                 {!
-                                    [gold]}
-                                 {exists gold.grp}}
+                        {if {>= $in_val {elem [star_scores] [max_stars]}}
+                           {if {&& {! [gold]} {exists gold.grp}}
                               {gold.grp set_showing TRUE}
                               {$this play_star_sound}
-                              {set
-                                 [gold]
-                                 1}}}}}}}
-            {if
-               {&&
-                  {!=
-                     $in_val
-                     [score]}
-                  {exists score.txt}}
-               {score.txt
-                  set_text
-                  {sprintf
-                     "%s"
-                     {fmt_score $in_val}}}}
-            {set
-               [score]
-               $in_val})
+                              {set [gold] 1}
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+            {if {&& {!= $in_val [score]} {exists score.txt}}
+               {score.txt set_text {sprintf "%s" {fmt_score $in_val}}}
+            }
+            {set [score] $in_val}
+         )
          (set_star_score
             ($star_index $score)
-            {if
-               {<
-                  $star_index
-                  {size
-                     [star_scores]}}
-               {set_elem
-                  [star_scores]
-                  $star_index
-                  $score}})
+            {if {< $star_index {size [star_scores]}}
+               {set_elem [star_scores] $star_index $score}
+            }
+         )
          (update_star_scores
-            {foreach_int
-               $i
-               0
-               {size
-                  [star_scores]}
-               {$this
-                  set_star_score
-                  $i
-                  {elem
-                     [star_scores]
-                     $i}}})
+            {foreach_int $i 0 {size [star_scores]}
+               {$this set_star_score $i {elem [star_scores] $i}}
+            }
+         )
          (play_star_sound
-            {if
-               [sound]
-               {if_else
-                  {exists game}
+            {if [sound]
+               {if_else {exists game}
                   {do
-                     {if
-                        {gamemode get play_star_sfx}
-                        {play_game_seq achieve_star.cue}}}
+                     {if {gamemode get play_star_sfx}
+                        {play_game_seq achieve_star.cue}
+                     }
+                  }
                   {do
-                     {synth play achieve_star.cue}}}}))))
+                     {synth play achieve_star.cue}
+                  }
+               }
+            }
+         )
+      )
+   )
+)
