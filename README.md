@@ -58,11 +58,6 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Guitar Hero II** | 060620 (OPM) | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero II** | 060901 (Retail) | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero Encore: Rocks the 80's** | 070518 (Deluge) | PS2 | Known (old-style DTB) | :white_check_mark: |
-
-
-
-
-
 | **TBRB/RB2 Demo Loader** | 090714 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 100119 (Bank 6) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 100316 (Bank 5) | Wii | Known (new-style DTB) | :white_check_mark: |
