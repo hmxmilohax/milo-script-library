@@ -1,0 +1,212 @@
+; script for tutorial
+
+#camera.dta
+#lights.dta
+#singer.dta
+#stage_chars.dta
+#crowd.dta 
+#fx.dta
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; timing events from midi file
+
+[BOX_NOTETUBES -320 -85 640 105]
+[BOX_LYRICS -320 -175 640 64]
+[BOX_PHRASEMETER -320 -55 170 20]
+[BOX_CROWDMETER 125 -10 185 110]
+[BOX_COMBO -137 -44 190 68]
+[BOX_PITCHARROW -292 -90 85 100]
+[BOX_SCORE -310 240 150 65]
+[ARROW_NOWBAR -248 -95]
+
+(tut_notetubes_box_on
+   {the_hud show_tut_box BOX_NOTETUBES {localize "tut_note_tubes"} 0 65}
+)
+
+(tut_lyrics_box_on
+   {the_hud show_tut_box BOX_LYRICS}
+)
+
+(tut_phrasemeter_box_on
+   {the_hud show_tut_box BOX_PHRASEMETER {localize "tut_phrase_meter"} 0 65}
+   {level set_score_phrases 1}
+)
+
+(tut_crowdmeter_box_on
+   {the_hud show_tut_box BOX_CROWDMETER {localize "tut_crowd_meter"} 0 75}
+)
+
+(tut_combo_box_on
+   {the_hud show_tut_box BOX_COMBO}
+)
+
+(tut_pitcharrow_box_on
+   {the_hud show_tut_box BOX_PITCHARROW {localize "tut_pitch_arrow"} 20 90}
+   {level set_show_arrow TRUE}
+)
+
+(tut_nowbar_arrow_on
+   {the_hud show_tut_arrow ARROW_NOWBAR {localize "tut_now_bar"} kCenter}
+)
+
+(tut_score_box_on
+   {the_hud show_tut_box BOX_SCORE {localize "tut_score"} 0 -40}
+)
+
+(tut_arrow_off
+   {the_hud hide_tut_arrow}
+)
+
+(tut_box_off
+   {the_hud hide_tut_box}
+)
+
+(tut_crowdmeter_peak {level set_excitement 2.0} )
+(tut_crowdmeter_green {level set_excitement 0.75} )
+(tut_crowdmeter_yellow {level set_excitement 0.5} )
+(tut_crowdmeter_red {level set_excitement 0.25} )
+(tut_crowdmeter_boot {level set_excitement -1.0} )
+
+(tut_limit_rating_lousy {level set_limit_rating 0} )
+(tut_limit_rating_bad {level set_limit_rating 1} )
+(tut_limit_rating_ok {level set_limit_rating 2} )
+(tut_limit_rating_good {level set_limit_rating 3} )
+(tut_limit_rating_great {level set_limit_rating -1} )
+
+(tut_interactive1_demo {level set_score_phrases 1})
+(tut_interactive1_start {tut_interactive1_start})
+(tut_interactive2_start {tut_interactive2_start})
+
+(tut_msg_welcome       {the_hud show_message {localize "tut_welcome"} 4000})
+(tut_msg_getready      {the_hud show_message {localize "tut_getready"}})
+(tut_msg_ready         {the_hud show_message {localize "tut_ready"}})
+(tut_msg_go            {the_hud show_message {localize "tut_go"}})
+(tut_msg_listenclosely {the_hud show_message {localize "tut_listen_closely"}})
+(tut_msg_onemore       {the_hud show_message {localize "tut_one_more"}})
+(tut_msg_lastone       {the_hud show_message {localize "tut_last_one"}})
+(tut_msg_complete      {the_hud show_message {localize "tut_complete"}})
+
+(tut_stop_mic {the_synth set_mic_volume 0})
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; called at end of every phrase; handles logic for interactive loops
+(phrase_end
+   {when {!= $tut_interactive 0}
+      {print {make_string "phrase rating: %i  count: %i\n" $level.phrase_rating    $tut_loop_count}}
+      {play_sfx  
+         {+ {+ {* {- $tut_interactive 1} 50} {* $level.phrase_rating 10}} $tut_loop_count}
+         3000
+      }
+      {set $tut_loop_count {+ $tut_loop_count 1}}
+      {when {== $tut_loop_count $tut_loop_max} {tut_loop_end}}
+   }
+)
+
+(init
+
+   {set $tut_loop_count 0}  ; number of iterations
+   {set $tut_loop_max 0}    ; max number of iterations
+   {set $tut_interactive 0} ; which interactive section? (0 (none), 1, or 2)
+
+   {level set_pitch_detection 0}
+   {level set_score_phrases 0}
+   {level set_accum_phrases 0}
+   {level set_show_arrow FALSE}
+
+   {defun tut_loop_end
+      {print "loop end\n"}
+      {level set_score_phrases 0}
+      {level set_accum_phrases 0}
+      {level set_pitch_detection 0}
+      {set $tut_interactive 0}
+   } 
+
+   {defun tut_interactive1_start
+      {print "loop 1 start\n"}
+      {level set_score_phrases 1}
+      {level set_pitch_detection 1}
+      {set $tut_loop_count 0}
+      {set $tut_loop_max 3}
+      {set $tut_interactive 1}
+   }
+
+   {defun tut_interactive2_start
+      {print "loop 2 start\n"}
+      {level set_score_phrases 1}
+      {level set_accum_phrases 1}
+      {level set_pitch_detection 1}
+      {set $tut_loop_count 0}
+      {set $tut_loop_max 3}
+      {set $tut_interactive 2}
+   }
+
+   {defun tut_adjust_volume
+
+      ; adjust vox
+      {level start_vox_volume_adjust}
+
+      {set $tut_i 700}
+      {while {< $tut_i 2700}
+         {delay_task $tut_i {level vox_volume_adjust -1}}
+         {set $tut_i {+ $tut_i 100}}
+      }
+   
+      {set $tut_i 3200}
+      {while {< $tut_i 5200}
+         {delay_task $tut_i {level vox_volume_adjust 1}}
+         {set $tut_i {+ $tut_i 100}}
+      }
+
+      ; adjust music
+      {delay_task 6300 {level start_music_volume_adjust}}
+
+      {set $tut_i 7000}
+      {while {< $tut_i 8000}
+         {delay_task $tut_i {level music_volume_adjust -1}}
+         {set $tut_i {+ $tut_i 100}}
+      }
+   
+      {set $tut_i 8500}
+      {while {< $tut_i 9500}
+         {delay_task $tut_i {level music_volume_adjust 1}}
+         {set $tut_i {+ $tut_i 100}}
+      }
+
+      {delay_task 10500 {level end_volume_adjust}}
+   }
+
+
+
+   ;;;;;;;;;;;;;;;;;;;;;
+   ; timed events
+
+   ; headset diagram
+   {delay_task {bar 8:1:0} {the_hud show_tut_mic_dialog 0}}
+   {delay_task {bar 9:1:0} {the_hud show_tut_mic_dialog 1}}
+   {delay_task {bar 10:1:0} {the_hud show_tut_mic_dialog 0}}
+   {delay_task {bar 11:1:0} {the_hud hide_tut_mic_dialog}}
+
+   ; phrase marker
+   {delay_task {level time_to_tick 117700}
+      {the_hud show_tut_box_in_staff 119605 0 65 100}
+   }
+   {delay_task {level time_to_tick 120200}
+      {the_hud hide_tut_box}
+   }
+   {delay_task {level time_to_tick 120250}
+      {the_hud show_tut_box_in_staff 124015 0 65 100}
+   }
+
+   ; start talking about points
+   {delay_task {level time_to_tick 127800} {level set_accum_phrases TRUE}}
+
+   ; combo section
+   {delay_task {level time_to_tick 155500} {level set_force_streak TRUE}}
+   {delay_task {level time_to_tick 167000} {level set_force_streak FALSE}}
+
+   {delay_task {level time_to_tick 189000} {tut_adjust_volume}}
+
+)
+

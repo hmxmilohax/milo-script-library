@@ -1,0 +1,216 @@
+; Stage characters' script
+;
+; VARIABLES:
+;   arena.stage_chars     array of stage character objects (set by c code)
+;   arena.stage_char_idx  current stage character during events (set in this
+;                         script)
+;   arena.stage_char      as above, but actual object (not index)
+;
+
+(init
+
+   {defun stage_play_anim (locals $a)
+      {set $a {stage_chars find_stage_char_anim $arena.stage_char_idx}}
+      {if {!= "" $a}
+         {$arena.stage_char play_anim $a kAnimBuffer}
+         {print
+            "WARNING: stage_chars.dta could not find anim for char "
+            $arena.stage_char_idx " .  Looping.\n"
+         }
+      }
+   }
+
+   ;----------------------------------------------------------------------
+
+   {defun stage_playing_change (args $inst $playing)
+      {set $arena.stage_char_idx {- {num_elems $arena.stage_chars} 1}}
+      {while {>= $arena.stage_char_idx 0}
+         {when {== $inst {elem $arena.stage_char_insts $arena.stage_char_idx}}
+            {set
+               $arena.stage_char
+               {elem $arena.stage_chars $arena.stage_char_idx}
+            }
+            {stage_chars set_stage_char_playing $arena.stage_char_idx $playing}
+            {when
+               {&&
+                  $arena.game_over
+                  $arena.game_won
+                  {! $playing}
+                  {! $db.practice_mode}
+               }
+               {stage_chars set_stage_char_special
+                  $arena.stage_char_idx
+                  kSpecialWin
+               }
+            }
+            {stage_play_anim}
+         }
+         {set $arena.stage_char_idx {- $arena.stage_char_idx 1}}
+      }
+   }
+
+   ;----------------------------------------------------------------------
+
+   {defun stage_set_special (args $inst $special)
+      {set $arena.stage_char_idx {- {num_elems $arena.stage_chars} 1}}
+      {while {>= $arena.stage_char_idx 0}
+         {when {== $inst {elem $arena.stage_char_insts $arena.stage_char_idx}}
+            {set
+               $arena.stage_char
+               {elem $arena.stage_chars $arena.stage_char_idx}
+            }
+            {stage_chars set_stage_char_special $arena.stage_char_idx $special}
+            {stage_play_anim}
+         }
+         {set $arena.stage_char_idx {- $arena.stage_char_idx 1}}
+      }
+   }
+
+   ;----------------------------------------------------------------------
+   ; kick 'em all into motion
+
+   {when {is_object Amp_Guitar.view} {Amp_Guitar.view set_showing FALSE}}
+   {when {is_object Amp_Bass.view} {Amp_Bass.view set_showing FALSE}}
+   {set $arena.stage_char_idx {- {num_elems $arena.stage_chars} 1}}
+   
+   {while {>= $arena.stage_char_idx 0}
+      {set $arena.stage_char {elem $arena.stage_chars $arena.stage_char_idx}}
+      {stage_chars set_stage_char_special $arena.stage_char_idx kSpecialNone}
+      {stage_play_anim}
+      {switch {elem $arena.stage_char_insts $arena.stage_char_idx}
+         (guitar
+            {when {is_object Amp_Guitar.view}
+               {Amp_Guitar.view set_showing TRUE}
+            }
+         )
+         (bass
+            {when {is_object Amp_Bass.view}
+               {Amp_Bass.view set_showing TRUE}
+            }
+         )
+      }
+      {set $arena.stage_char_idx {- $arena.stage_char_idx 1}}
+   }
+)
+
+;----------------------------------------------------------------------
+
+(gtr_on     {stage_playing_change guitar TRUE})
+(gtr_off    {stage_playing_change guitar FALSE})
+(drum_on    {stage_playing_change drums TRUE})
+(drum_off   {stage_playing_change drums FALSE})
+(bass_on    {stage_playing_change bass TRUE})
+(bass_off   {stage_playing_change bass FALSE})
+(keys_on    {stage_playing_change keys TRUE})
+(keys_off   {stage_playing_change keys FALSE})
+(dj_on      {stage_playing_change dj TRUE})
+(dj_off     {stage_playing_change dj FALSE})
+(dance_on   {stage_playing_change dance TRUE})
+(dance_off  {stage_playing_change dance FALSE})
+
+;----------------------------------------------------------------------
+
+(gtr_solo_1
+   {when {! $arena.game_over}
+      {stage_set_special guitar kSpecialSolo1}
+   }
+)
+(gtr_solo_2
+   {when {! $arena.game_over}
+      {stage_set_special guitar kSpecialSolo2}
+   }
+)
+(gtr_solo_3
+   {when {! $arena.game_over}
+      {stage_set_special guitar kSpecialSolo3}
+   }
+)
+(gtr_solo_4
+   {when {! $arena.game_over}
+      {stage_set_special guitar kSpecialSolo4}
+   }
+)
+(gtr_solo_off
+   {when {! $arena.game_over}
+      {stage_set_special guitar kSpecialNone}
+   }
+)
+
+;----------------------------------------------------------------------
+
+(keys_solo_1
+   {when {! $arena.game_over}
+      {stage_set_special keys kSpecialSolo1}
+   }
+)
+(keys_solo_2
+   {when {! $arena.game_over}
+      {stage_set_special keys kSpecialSolo2}
+   }
+)
+(keys_solo_3
+   {when {! $arena.game_over}
+      {stage_set_special keys kSpecialSolo3}
+   }
+)
+(keys_solo_4
+   {when {! $arena.game_over}
+      {stage_set_special keys kSpecialSolo4}
+   }
+)
+(keys_solo_off
+   {when {! $arena.game_over}
+      {stage_set_special keys kSpecialNone}
+   }
+)
+
+;----------------------------------------------------------------------
+
+(stage_char_anim_change
+   ; sets $arena.stage_char and $arena.stage_char_idx
+   {stage_play_anim}
+)
+
+;----------------------------------------------------------------------
+
+(game_over
+   {if $arena.game_won
+      {set $s kSpecialWin}
+      {set $s kSpecialLose}
+   }
+   {set $arena.stage_char_idx {- {num_elems $arena.stage_chars} 1}}
+   {while {>= $arena.stage_char_idx 0}
+      {set $arena.stage_char {elem $arena.stage_chars $arena.stage_char_idx}}
+      {if $db.practice_mode
+         {exec
+            ; just stop playing
+            {when {stage_chars get_stage_char_playing $arena.stage_char_idx}
+               {stage_chars set_stage_char_playing $arena.stage_char_idx FALSE}
+               {stage_play_anim}
+            }
+         }
+         {exec
+            ; normal sequence
+            {when
+               {||
+                  {! $arena.game_won}
+                  {!
+                     {stage_chars get_stage_char_playing $arena.stage_char_idx}
+                  }
+               }
+               {stage_chars set_stage_char_special $arena.stage_char_idx $s}
+               {stage_play_anim}
+            }
+         }
+      }
+      {set $arena.stage_char_idx {- $arena.stage_char_idx 1}}
+   }
+)
+
+;----------------------------------------------------------------------
+
+;(pad_x  {fire gtr_solo_1})
+;(pad_circle {fire gtr_solo_2})
+;(pad_square {fire keys_solo_1})
+;(pad_tri {fire gtr_solo_off} {fire keys_solo_off})
+

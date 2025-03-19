@@ -1,0 +1,254 @@
+; control crowd
+
+[BAD_CROWD_ANIMS
+(
+   (CR_idle_03 CR_idle_03)
+   (CR_bad_01 CR_bad_01)
+   (CR_idle_01 CR_idle_01)
+   (CR_FM_bad_02 CR_bad_02)
+   (CR_idle_02 CR_idle_02)
+   (CR_FM_bad_03 CR_bad_03)
+   (CR_idle_04 CR_idle_04)
+   (CR_idle_05 CR_idle_05)
+)
+]
+
+[OK_CROWD_ANIMS
+(
+   CR_idle_01
+   CR_OK_medium_01 
+   CR_idle_02
+   CR_OK_medium_02
+   CR_idle_03
+   CR_OK_medium_03
+   CR_idle_04
+   CR_idle_05
+)
+]
+
+[GOOD_CROWD_ANIMS
+(
+   (CR_good_medium_01 CR_good_medium_01)
+   (CR_FM_good_02 CR_good_02)
+   (CR_good_03 CR_good_03)
+)
+]
+
+[GREAT_CROWD_ANIMS
+(
+   CR_great_fast_01
+   CR_great_02
+   CR_great_03
+)
+]
+
+[CLAP_CROWD_ANIMS
+(
+   (CR_FM_good_clap_02 CR_good_clap_02)
+   (CR_FM_good_clap_03 CR_good_clap_03)
+   (CR_FM_good_clap_04 CR_good_clap_04)
+)
+]
+
+[CHEER_CROWD_ANIMS
+(
+   (CR_FM_cheer_clap_01 CR_cheer_clap_01)
+   (CR_FM_cheer_clap_02 CR_cheer_clap_02)
+)
+]
+
+(init
+   {defun animate_crowd (args $bad $good $great) 
+                        (locals $i $char $offset $claps $not_clap)
+
+      ; number of good and great chars
+      {set $not_clap {* {- 1.0 $crowd.clappers} {crowd num_chars}}}
+      {set $bad {* $bad $not_clap}}
+      {set $good {* $good $not_clap}}
+      {set $great {* $great $not_clap}}
+      {set $clap {* $crowd.clappers {crowd num_chars}}}
+      {set $char 0}
+
+      ; have gender
+      {set $i 0}
+      {while {>= $bad 1}
+         {set $offset {random_float -120.0 120.0}}
+         {set $bad {- $bad 1}}
+         {crowd animate_char $char 
+            {elem {elem BAD_CROWD_ANIMS $i} {crowd gender $char}} 
+            $offset
+         }
+         {set $i {+ $i 1}}
+         {when {== $i {num_elems BAD_CROWD_ANIMS}} {set $i 0}}
+         {set $char {+ $char 1}}
+      }
+
+      ; have gender
+      {set $i 0}
+      {while {>= $good 1}
+         {set $offset {random_float -120.0 120.0}}
+         {set $good {- $good 1}}
+         {crowd animate_char $char 
+            {elem {elem GOOD_CROWD_ANIMS $i} {crowd gender $char}}
+            $offset
+         }
+         {set $i {+ $i 1}}
+         {when {== $i {num_elems GOOD_CROWD_ANIMS}} {set $i 0}}
+         {set $char {+ $char 1}}
+      }
+
+      {set $i 0}
+      {while {>= $great 1}
+         {set $offset {* 480.0 {random_int -1 2}}}
+         {set $great {- $great 1}}
+         {crowd animate_char $char {elem GREAT_CROWD_ANIMS $i} $offset}
+         {set $i {+ $i 1}}
+         {when {== $i {num_elems GREAT_CROWD_ANIMS}} {set $i 0}}
+         {set $char {+ $char 1}}
+      }
+
+      ; have gender
+      {set $i 0}
+      {if $arena.game_won
+         {set $claps CHEER_CROWD_ANIMS}
+         {set $claps CLAP_CROWD_ANIMS}
+      }
+      {while {>= $clap 1}
+         {set $clap {- $clap 1}}
+         {crowd animate_char $char 
+            {elem {elem $claps $i} {crowd gender $char}} 
+            $offset
+         }
+         {set $i {+ $i 1}}
+         {when {== $i {num_elems $claps}} {set $i 0}}
+         {set $char {+ $char 1}}
+      }
+
+      ; the rest are okay
+      {set $i 0}
+      {while {< $char {crowd num_chars}}
+         {set $offset {random_float -120.0 120.0}}
+         {crowd animate_char $char {elem OK_CROWD_ANIMS $i} $offset}
+         {set $i {+ $i 1}}
+         {when {== $i {num_elems OK_CROWD_ANIMS}} {set $i 0}}
+         {set $char {+ $char 1}}
+      }
+   }
+
+   {defun update_crowd
+      ; fix crowd size 
+      {switch $arena.excitement
+         (kExcitementBoot {crowd set_sizes 0 0})
+         (kExcitementBad {crowd set_sizes .25 .25})
+         (kExcitementOkay
+            {if {== $db.rule_set kRuleKaraoke} 
+               {crowd set_sizes 1 1}
+               {crowd set_sizes .5 .5}
+            }
+         )
+         (kExcitementGreat {crowd set_sizes 1 1})
+         (kExcitementPeak {crowd set_sizes 1 1})
+      }
+      
+      ; new anims
+      {switch $arena.excitement
+         (kExcitementBoot {animate_crowd 1 0 0})
+         (kExcitementBad {animate_crowd 1 0 0})
+         (kExcitementOkay 
+            {if {== $db.rule_set kRuleKaraoke} 
+               {animate_crowd 0 .5 .1}
+               {animate_crowd 0 .25 0}
+            }
+         )
+         (kExcitementGreat 
+            {animate_crowd 0 .1 .9}
+         )
+         (kExcitementPeak 
+            {animate_crowd 0 .1 .9}
+         )
+      }
+   }
+
+   {defun update_clappers
+      {if 
+         {||
+            {&& $arena.game_won {>= $arena.excitement kExcitementOkay}}
+            {&& $crowd.in_chorus {>= $arena.excitement kExcitementGreat}}
+         }
+         {set $crowd.clappers 0.75}
+         {set $crowd.clappers 0.0}
+      }
+   }
+
+   ; start crowd (start large)
+   {set $crowd.in_chorus FALSE}
+   {set $crowd.clappers 0.0}
+
+   {crowd set_sizes 1 1}
+
+   ; cheer on karaoke intro
+   {if {== $db.rule_set kRuleKaraoke} 
+      {exec
+         {set $arena.game_won TRUE}
+         {set $crowd.clappers 0.3}
+         {animate_crowd 0 .2 .1}
+         {set $arena.game_won FALSE}
+      }
+      {animate_crowd 0 .25 0}
+   }
+)
+
+(excitement
+   {update_clappers}
+   {update_crowd}
+)
+
+(game_over
+   {update_clappers}
+   {update_crowd}
+)
+
+(chorus
+   {set $crowd.in_chorus TRUE}
+   {set $old $crowd.clappers}
+   {update_clappers}
+   {when {!= $old $crowd.clappers}
+      {set $camera.probability 1.0}
+      {fire check_shot}
+      {update_crowd}
+   }
+)
+
+(bridge
+   {set $crowd.in_chorus FALSE}
+   {set $old $crowd.clappers}
+   {update_clappers}
+   {when {!= $old $crowd.clappers}
+      {set $camera.probability 1.0}
+      {fire check_shot}
+      {update_crowd}
+   }
+)
+
+(verse
+   {set $crowd.in_chorus FALSE}
+   {set $old $crowd.clappers}
+   {update_clappers}
+   {when {!= $old $crowd.clappers}
+      {set $camera.probability 1.0}
+      {when {== {venue cam_msg} "Begin"} ;; hack for karaoke mode; songs w/short intro
+         {set $camera.next_tick 0}
+      }
+      {fire check_shot}
+      {update_crowd}
+   }
+)
+
+/* Problem with changing animation w/o camera cut
+(intro_end
+   {when {== $db.rule_set kRuleKaraoke} 
+      {set $crowd.clappers 0}
+      {animate_crowd 0 .5 .1}
+   }
+)
+*/
