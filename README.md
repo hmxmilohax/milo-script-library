@@ -7,35 +7,35 @@ Some games (namely *Rock Band* for the PS2 and the *Amplitude* PS2 OPM demo) fea
 If you need this stuff, you should also join the MiloHax Discord, where people can help you out and we can all chat about modding Milo and whatnot: https://discord.gg/WWmsQvHSC6
 
 ## Extraction status
-Here are some tables for games that fit within our scope and where they're at as far as being added to the repo. :white_check_mark: means they're in the repo, **Available** means we have them, but they're not yet added, and :x: means we don't have raw scripts for that game, usually because they haven't yet been cracked or because no one has a dump of the disc.
+Here are some tables for games that fit within our scope and where they're at as far as being added to the repo. :white_check_mark: means they're in the repo, :x: means we have them, but they're not yet added, and :heavy_minus_sign: means we don't have raw scripts for that game, usually because the file formats haven't yet been cracked.
 
 ### Official Releases
 | Game | Platform | Script Format | Status |
 | ---- | -------- | ------------- | ------ |
 | **FreQuency** | PS2 | Known (Python 1) | :white_check_mark: |
 | **Amplitude 2003** | PS2 | Known (Amp-style DTB) | :white_check_mark: |
-| **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (DTA) | :x:<br>:white_check_mark: |
-| **Karaoke Revolution Volume 2** | PS2 | Unknown | :x: |
-| **Karaoke Revolution Volume 3** | PS2 | Unknown | :x: |
-| **Eyetoy: Antigrav** | PS2 | TBD | TBD |
-| **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign: |
+| **Karaoke Revolution** | PS2<br>Xbox | Unknown<br>Known (Raw DTA) | :x:<br>:white_check_mark: |
+| **Karaoke Revolution Volume 2** | PS2 | Unknown | :heavy_minus_sign: |
+| **Karaoke Revolution Volume 3** | PS2 | Unknown | :heavy_minus_sign: |
+| **Eyetoy: Antigrav** | PS2 | TBD | :x: |
+| **Karaoke Revolution Party** | PS2<br>Gamecube<br>Xbox | Known (old-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:heavy_minus_sign: |
 | **Guitar Hero** | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero II** | PS2<br>Xbox 360 | Known (old-style DTB)<br>Known (new-style DTB) | :white_check_mark:<br>:white_check_mark: |
 | **Guitar Hero Encore: Rocks the 80's** | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Phase** | iPod | Known (old-style DTB) | :white_check_mark: |
-| **Rock Band** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB)<br>*(DTAs for the<br>PS2 version available)* | :white_check_mark:<br>:white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
+| **Rock Band** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB and has raw DTA, all others<br>use new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
 | **Rock Band Track Pack Volume 1** | PS2<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:white_check_mark: |
-| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :heavy_minus_sign:<br>:white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
-| **AC/DC Live: Rock Band Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign:<br>:heavy_minus_sign: |
-| **Rock Band Track Pack Volume 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign:<br>:white_check_mark: |
-| **Rock Band Track Pack: Classic Rock** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign:<br>:white_check_mark: |
-| **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign:<br>:white_check_mark: |
-| **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:heavy_minus_sign: |
-| **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign:<br>:white_check_mark: |
-| **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:heavy_minus_sign:<br>:heavy_minus_sign: |
-| **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:heavy_minus_sign: |
+| **Rock Band 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
+| **AC/DC Live: Rock Band Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:x: |
+| **Rock Band Track Pack Volume 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
+| **Rock Band Track Pack: Classic Rock** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
+| **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
+| **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:x: |
+| **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
+| **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:x:<br>:x: |
+| **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:x: |
 | **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
-| **Rock Band Country Track Pack 2** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :heavy_minus_sign:<br>:heavy_minus_sign:<br>:white_check_mark: |
+| **Rock Band Country Track Pack 2** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :x:<br>:x:<br>:white_check_mark: |
 | **Dance Central** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 2** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band Blitz** | PS3<br>Xbox 360 | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark: |
@@ -92,6 +92,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band 3** | 100829 (Bank 2) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 100901 (Bank 8) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 101019 (Bank 1) | Wii | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band Music Store** | 110120 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 2** | 110725 (Takehome) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band Blitz** | 120605 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 3** | 120829 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
