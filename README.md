@@ -40,24 +40,43 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band VR** | PC | Known (v3 DTA_DTA) | Extracted[^2][^3] |
 | **Amplitude 2016** | PS3<br>PS4/5 | Known (v3 DTA_DTA) | Extracted[^2] |
 
-### Prototypes and Demos
+### Prototypes, Demos and Extra's
 | Game | Build (YYMMDD) | Platform | Script Format | Status |
 | ---- | ----- | -------- | ------------- | ------ |
-| **FreQuency** | 260901 (r179) | PS2 | Known (Python 1) | :white_check_mark: |
+| **FreQuency** | 010730 (USA Demo) | PS2 | Known (Python 1) | :white_check_mark: |
+| **FreQuency** | 010926 (r179) | PS2 | Known (Python 1) | :white_check_mark: |
+| **FreQuency** | 011118 (OPM Demo) | PS2 | Known (Python 1) | :x: |
+| **FreQuency** | 020512 (EU Demo) | PS2 | Known (Python 1) | :x: |
+| **FreQuency** | 020526 (FreQnet Demo) | PS2 | Known (Python 1) | :x: |
+| **Amplitude 2003** | 021218 (USA Demo)| PS2 | Known (DTA) | :x: |
+| **Amplitude 2003** | 030702 (Deluge) | PS2 | Known (Amp-style DTB) | :white_check_mark: |
+| **Amplitude 2003** | 030318 (FreQnet Demo) | PS2 | Known (Amp-style DTB) | :white_check_mark: |
 | **Amplitude 2003** | 021212 (OPM)| PS2 | Known (DTA) | :white_check_mark: |
-| **Amplitude 2003** | 030702 (Deluge) | PS2 | Known (Amp-style DTB) | :heavy_minus_sign: |
+| **Amplitude 2003** | 030527 (EU Proto) | PS2 | Unknown | :x: |
+| **Amplitude 2003** | 030622 (EU Demo) | PS2 | Unknown | :x: |
 | **Amplitude 2003** | 030826 (P.O.D) | PS2 | Unknown | :x: |
-| **Karaoke Revolution** | Deluge prototype 1 | PS2 | Unknown | :x: |
-| **Karaoke Revolution** | Deluge prototype 2 | PS2 | Unknown | :x: |
-| **Karaoke Revolution** | Deluge prototype 3 | PS2 | Unknown | :x: |
-| **Karaoke Revolution Volume 2** | Deluge prototype 1 | PS2 | Unknown | :x: |
-| **Karaoke Revolution Volume 2** | Deluge prototype 2 | PS2 | Unknown | :x: |
-| **Karaoke Revolution Volume 3** | Deluge prototype | PS2 | Unknown | :x: |
-| **Karaoke Revolution Party** | Deluge prototype | PS2 | Known (old-style DTB) | :heavy_minus_sign: |
+| **Karaoke Revolution** | 030718 (Deluge 1) | PS2| Unknown | :x: |
+| **Karaoke Revolution** | 030904(Deluge 2) | PS2| Unknown | :x: |
+| **Karaoke Revolution** | 040817 (Deluge 3)| Xbox | Raw DTA | :white_check_mark: |
+| **Karaoke Revolution** | 040908 (Deluge 4) | Xbox | Raw DTA | :white_check_mark: |
+| **Karaoke Revolution Volume 2** | 040412 (Deluge 1) | PS2 | Unknown | :x: |
+| **Karaoke Revolution Volume 2** | 040518 (Deluge 2) | PS2 | Unknown | :x: |
+| **Karaoke Revolution Volume 3** | 040817 (Deluge) | PS2 | Unknown | :x: |
+| **EyeToy: AntiGrav** | 040908 (Deluge) | PS2 | Known (old-style DTB) | :x: |
+| **Karaoke Revolution Party** | 050813 (Deluge 1) | PS2 | Known (old-style DTB) | :x: |
+| **Karaoke Revolution Party** | 050825 (Deluge 2) | PS2 | Known (old-style DTB) | :x: |
 | **Guitar Hero** | 050903 (Deluge) | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero II** | 060620 (OPM) | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero II** | 060901 (Retail) | PS2 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero II** | 070126 (Demo) | Xbox 360 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero II** | 070209 (Demo) | Xbox 360 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero Deluxe 1.0** | 210517 | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero Encore: Rocks the 80's** | 070518 (Deluge) | PS2 | Known (old-style DTB) | :white_check_mark: |
+| **Rock Band 2** | 080826 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 2** | 081006 | Wii | Known (new-style DTB) | :white_check_mark: |
+| **The Beatles Rock Band** | 090619 (Demo) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **The Beatles Rock Band** | 090714 (Demo) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 2** | 090714 (Demo) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **TBRB/RB2 Demo Loader** | 090714 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 100119 (Bank 6) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 100316 (Bank 5) | Wii | Known (new-style DTB) | :white_check_mark: |
@@ -67,6 +86,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band 3** | 100901 (Bank 8) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 101019 (Bank 1) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 2** | 110725 (Takehome) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band Blitz** | 120605 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 3** | 120829 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 
 
