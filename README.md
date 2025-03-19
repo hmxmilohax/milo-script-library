@@ -41,12 +41,12 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Amplitude 2016** | PS3<br>PS4/5 | Known (v3 DTA_DTA) | Extracted[^2] |
 
 ### Prototypes and Demos
-| Game | Build | Platform | Script Format | Status |
+| Game | Build (YYMMDD) | Platform | Script Format | Status |
 | ---- | ----- | -------- | ------------- | ------ |
-| **FreQuency** | R179 prototype | PS2 | Known (Python 1) | :white_check_mark: |
-| **Amplitude 2003** | OPM prototype | PS2 | Known (DTA) | :white_check_mark: |
-| **Amplitude 2003** | Deluge prototype | PS2 | Known (Amp-style DTB) | :heavy_minus_sign: |
-| **Amplitude 2003** | Space demo | PS2 | Unknown | :x: |
+| **FreQuency** | 260901 (r179) | PS2 | Known (Python 1) | :white_check_mark: |
+| **Amplitude 2003** | 021212 (OPM)| PS2 | Known (DTA) | :white_check_mark: |
+| **Amplitude 2003** |  | 030702 (Deluge) | Known (Amp-style DTB) | :heavy_minus_sign: |
+| **Amplitude 2003** | 030826 (P.O.D) | PS2 | Unknown | :x: |
 | **Karaoke Revolution** | Deluge prototype 1 | PS2 | Unknown | :x: |
 | **Karaoke Revolution** | Deluge prototype 2 | PS2 | Unknown | :x: |
 | **Karaoke Revolution** | Deluge prototype 3 | PS2 | Unknown | :x: |
@@ -54,10 +54,10 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Karaoke Revolution Volume 2** | Deluge prototype 2 | PS2 | Unknown | :x: |
 | **Karaoke Revolution Volume 3** | Deluge prototype | PS2 | Unknown | :x: |
 | **Karaoke Revolution Party** | Deluge prototype | PS2 | Known (old-style DTB) | :heavy_minus_sign: |
-| **Guitar Hero** | Deluge prototype | PS2 | Known (old-style DTB) | :white_check_mark: |
-| **Guitar Hero II** | OPM prototype | PS2 | Known (old-style DTB) | :white_check_mark: |
-| **Guitar Hero II** | Retail prototype | PS2 | Known (old-style DTB) | :white_check_mark: |
-| **Guitar Hero Encore: Rocks the 80's** | Deluge prototype | PS2 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero** | 050903 (Deluge) | PS2 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero II** | 060620 (OPM) | PS2 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero II** | 060901 (Retail) | PS2 | Known (old-style DTB) | :white_check_mark: |
+| **Guitar Hero Encore: Rocks the 80's** | 070518 (Deluge) | PS2 | Known (old-style DTB) | :white_check_mark: |
 
 These tables are not exhaustive. Harmonix released many games and many updates for those games, so this is subject to change and addition as the time goes on. Please let me know about omissions.
 
