@@ -59,6 +59,22 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Guitar Hero II** | 060901 (Retail) | PS2 | Known (old-style DTB) | :white_check_mark: |
 | **Guitar Hero Encore: Rocks the 80's** | 070518 (Deluge) | PS2 | Known (old-style DTB) | :white_check_mark: |
 
+
+
+
+
+| **TBRB/RB2 Demo Loader** | 090714 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 3** | 100119 (Bank 6) | Wii | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 3** | 100316 (Bank 5) | Wii | Known (new-style DTB) | :white_check_mark: |
+| **Dance Central** | 100607 (E3) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Dance Central** | 100810 (Takehome) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 3** | 100829 (Bank 2) | Wii | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 3** | 100901 (Bank 8) | Wii | Known (new-style DTB) | :white_check_mark: |
+| **Rock Band 3** | 101019 (Bank 1) | Wii | Known (new-style DTB) | :white_check_mark: |
+| **Dance Central 2** | 110725 (Takehome) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+| **Dance Central 3** | 120829 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
+
+
 These tables are not exhaustive. Harmonix released many games and many updates for those games, so this is subject to change and addition as the time goes on. Please let me know about omissions.
 
 [^1]: Due to a slightly unsupported ARK type, some DTA files in rivals are not accurate to the update and may be from a pre-rivals build
