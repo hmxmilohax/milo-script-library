@@ -1,0 +1,276 @@
+; This is the default configuration file.  It defines initialization parameters
+; for all modules.  It is loaded in SystemInit() before modules are initted.
+; Modules access it through GetSystemConfig().
+;
+; An application may override these default parameters with its own 
+; configuration file, by passing it to SystemInit().  It is merged with the
+; default configuration file before modules are initted.
+
+#macros.dta
+
+(system
+   (init_script 
+      #init_script.dta
+   )
+   (iop_modules
+      ("iop/scrtchpd.irx")
+      ("iop/sio2man.irx")
+      ("iop/mcman.irx")
+      ("iop/mcserv.irx")
+      ("iop/usbd.irx" "thpri=10,11") ; thread priorities changed to work around bug in lgaud.irx
+      ("iop/usbkb.irx" "keybd=1" "debug=0")
+      ("iop/padman.irx")
+      ("iop/msifrpc.irx")
+      ("iop/libsd.irx")
+      ("iop/mtapman.irx")
+      ("iop/sdrdrv.irx")
+      ("iop/cdvdstm.irx")
+   )
+   (profiler
+      (enabled FALSE) ; note that profiling always disabled in SHIP builds
+      (buffer_size 8192)  ; how many data points to sample per UI update
+      (sample_rate k4KHz)  ; how often to sample EE performance
+                           ; can be k1KHz, k2KHz, k4KHz, k10KHz, k20KHz
+   )
+   (language english)  ; language setting when running on the tool
+)
+
+(mem
+   (heaps_xbox
+      (main 22570000)
+      (data   500000)
+   )
+   (heaps_pc
+      (main 27070000)
+      (data   500000)
+   )
+   (heaps_ps2
+      (main 22570000)
+      (rnd   4450000 TRUE)
+      (data   500000)
+   )
+   (pool
+      ;; we want to set big_hunk as large as possible (but not too large) so
+      ;; that the pool allocator will not have to resort to using small_hunk
+      ;; allocations. In other words, the memtrack report should show PoolChunk
+      ;; to have as few NumAllocs as possible, ideally 2. Doing this will
+      ;; greatly reduce fragmentation.
+      (big_hunk 3000000)
+      (small_hunk 50000)
+   )
+
+   (disable_mgr FALSE)
+   (enable_tracking FALSE)
+   (track_stl FALSE)         ;; break down stl tracking by name?
+   (check_consistency FALSE)
+)
+
+(joypad
+   (deadzone 24) ; out of 256
+   (threshold 0.75) ; 0 to 1
+
+   (ignore 1 2 3 4 5 6 7) ;; ignore input from these joypads
+
+   ; button repeat
+   (hold_ms 500)
+   (repeat_ms 50)
+)
+
+(file
+   (buf_size 8192)
+)
+
+(synth
+   (use_null_synth FALSE)
+
+   (iop_modules
+      ("iop/lgaud.irx" "rpc=0") ; not using lgaud on EE, so no need for RPC
+      ("iop/synth_%.irx" 
+          ;"spew Bank_IOP.cpp"
+          ;"spew ControlClient.cpp"
+          ;"spew MicXfer_IOP.cpp"
+          ;"spew Mic_IOP.cpp"
+          ;"spew MidiSynth_IOP.cpp"
+          ;"spew Midi_IOP.cpp"
+          ;"spew VAGStream_IOP.cpp"
+          ;"spew VAGStreamMgr_IOP.cpp"
+      )
+   )
+
+   ; microphone defaults
+   (mic
+      (gain 0.10)
+      (volume 0.9)
+      (fx TRUE)
+      (dma FALSE)
+      (compressor TRUE 0.5 0.7)
+   )
+
+   ; FX defaults
+   ; 
+   ; "mode" can be one of kFXOff, kFXRoom, kFXSmallStudio, kFXMedStudio, 
+   ;    kFXLargeStudio, kFXHall, kFXSpace, kFXEcho, kFXDelay, kFXPipe
+   ; "volume" can be 0.0 to 1.0
+   ; "delay" and "feedback" can be 0.0 to 1.0; only relevant when mode is 
+   ;    kFXEcho or kFXDelay.
+
+   (fx
+      (chain TRUE) ; if true, all output of core 0 gets core 1 FX
+
+      (core_0
+         (mode kFXHall)
+         (volume 0.10)
+         (delay 0.0)
+         (feedback 0.0)
+      )
+      (core_1
+         (mode kFXEcho)
+         (volume 0.11)
+         (delay 0.6)
+         (feedback 0.42)
+      )
+   )
+)
+
+;; Quick-cheats work if a player's joypad is in "left shift mode" (L1 and L2
+;; down) or "right shift mode" (R1 and R2). Long cheats require the sequence 
+;; to be pressed in order and fast. Keyboard cheats can be specified either by
+;; key-code (e.g. 27 or KB_ESC) or one-letter string (e.g. "a").
+;;
+;; button & key codes are defined in default_macros.dta
+
+(quick-cheats
+   ;; examples:
+   ;;(kPad_Tri {test 1})
+   ;;(kPad_Square {test 2})
+
+   ; left shift mode: L1 and L2
+   (left 
+      (kPad_DLeft  {heap_report}) ; generate a summary report
+      (kPad_DRight {heap_dump})   ; generate a full heap dump
+      (kPad_DUp {heap_alloc_dump})
+      (kPad_DDown  {the_rnd toggle_heapnum})    ; toggle heap display
+
+      (kPad_Select {the_rnd screen_dump screendump})
+      (kPad_R3     {the_rnd save_objects debug.rnd})
+      (kPad_Tri    {the_rnd toggle_text_panes})
+      (kPad_Square {the_rnd toggle_stats})
+      (kPad_X      {the_rnd toggle_timers})
+   )
+
+   ; right shift mode: R1 and R2
+   (right
+   )
+
+   ; keyboard cheats
+   (keyboard
+   )
+)
+
+(long-cheats
+   ;; examples:
+   ;;(kPad_L1 kPad_L2 kPad_R1 kPad_R2 
+   ;; kPad_DLeft kPad_DUp kPad_DDown kPad_DRight {test 3} TRUE)
+   ;;(kPad_Tri kPad_Tri kPad_Tri kPad_Tri {test 4} FALSE)
+)
+
+
+(spew
+   ;  Examples
+   ; (file ( outputs "console" "foo.txt" ) ( channels 1 4 5))
+   ; (foo ( outputs "bar.txt" ) ( channels SPEW_ALL_CHANNELS ))
+   ; (test)
+   ; Channels:
+   ; CHANNEL 6: state change messages
+   ; CHANNEL 7: timing information
+)
+
+(math
+   (sin_table_size 64)
+)
+
+(timer
+; Uncomment timer names you wish to update and display
+;     only about 20 can fit on display
+
+; rndps2 timers 
+   ; flush
+   ; gs_sync
+
+; rndobj timers 
+   ; anim
+   ; updateworldxfm
+   ; draw
+   ; sync
+   cycle
+)
+
+(rnd
+   (bpp 32)
+   (width 640)
+   (height 480)
+   (title "Rnd Program")
+   (show_timers FALSE)
+   (timer_maxms 50)
+   (full_screen FALSE)
+   (clear_color 0.0 0.0 0.0)
+   (panes_showing TRUE) ; overridden in SHIP builds.
+   (panes
+      (rate (lines 1) (showing TRUE))
+      (stats (lines 10) (showing FALSE))
+   )
+)
+
+(ui
+   ; allowable load groups (first one is default)
+   (allowable_groups front_end always intro)
+
+   ; list the shared .rnd files here
+   ; (shared_rnd_files    )
+
+   ; Objects which are allowed to already exist when the
+   ; shared_rnd_files are loaded
+   (allowed_rnd_merges)
+
+   (button_select
+      (num_flashes 2)
+      (frames_selected 50.0)
+      (frames_normal 40.0)
+   )
+
+  ; frames for the enter/exit transition animations.  Note that
+  ; it is legal to have a decreasing frame interval, and to
+  ; re-use part of it.  For example, enter could go 0->100 and
+  ; exit 100->0.
+
+  (panel_enter_start_frame 0.0)
+  (panel_enter_stop_frame 240.0)
+  (panel_exit_start_frame 241.0)
+  (panel_exit_stop_frame 300.0)
+
+   ; This can be used to override the .UI files' starting screen.  If
+   ; you're testing a particular screen, and want to start there, 
+   ; uncommment this (remove the semicolon) and replace
+   ; "screen_name_here" with the name of your screen.
+   ; (start_screen screen_name_here)
+
+   ; when set to true, enables editing & troubleshooting features 
+   (do_loc_file_update FALSE)
+
+	; when set to true, enables base UI class override when 
+	; special constructors can not be found
+	(use_default_ui FALSE)
+)
+
+(locale
+   ; Typical app example:
+   (english ui/english_screens.dta ui/english_messages.dta)
+)
+
+(mc
+   #mc.dta
+)
+
+(os
+   (date_format usa)
+)

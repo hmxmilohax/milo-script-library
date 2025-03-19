@@ -1,0 +1,186 @@
+; controls cameras in venue
+
+#prepare_camera.dta
+
+(init
+   ; Init variables
+   {set $camera.l_char_shots {new_array 0}}
+   {set $camera.r_char_shots {new_array 0}}
+   {set $camera.stage_shots {new_array 0}}
+   {set $camera.l_corner_shots {new_array 0}}
+   {set $camera.r_corner_shots {new_array 0}}
+
+   {insert_elems $camera.l_char_shots 0 L_CHAR_SHOTS}
+   {insert_elems $camera.r_char_shots 0 R_CHAR_SHOTS}
+   {insert_elems $camera.stage_shots 0 STAGE_SHOTS}
+   {insert_elems $camera.l_corner_shots 0 L_CORNER_SHOTS}
+   {insert_elems $camera.r_corner_shots 0 R_CORNER_SHOTS}
+
+   ; Define functions
+   {defun elems_ratio (args $one $two) (locals $temp)
+      {/ {num_elems $one} {+ {num_elems $one} {num_elems $two}}}
+   }
+
+   {defun pick_shot 
+      ; Pick shots based on current and last shots
+      {switch $camera.current_shots
+         ($camera.stage_shots
+            {if {== $camera.last_shots $camera.l_char_shots}
+               {set $shots $camera.r_char_shots}
+               {set $shots $camera.l_char_shots}
+            }
+         )
+         ($camera.r_char_shots
+            {if {< {random_float} 0.8}
+               {set $shots $camera.stage_shots}
+               {set $shots $camera.l_char_shots}
+            }
+         )
+         ($camera.l_char_shots
+            {if {< {random_float} 0.8}
+               {set $shots $camera.stage_shots}
+               {set $shots $camera.r_char_shots}
+            }
+         )
+      }
+
+      ; Record them
+      {set $camera.last_shots $camera.current_shots}
+      {set $camera.current_shots $shots}
+
+      ; Possibly use corner shots
+      {when 
+         {&&
+            {== $shots $camera.l_char_shots}
+            {!= {stage_chars get_singer_spot} 2} ; not on right
+            {< 
+               {random_float} 
+               {elems_ratio $camera.l_corner_shots $camera.l_char_shots}
+            }
+         }
+         {set $shots $camera.l_corner_shots}
+      }
+      {when 
+         {&&
+            {== $shots $camera.r_char_shots}
+            {!= {stage_chars get_singer_spot} 0} ; not on left
+            {< 
+               {random_float} 
+               {elems_ratio $camera.r_corner_shots $camera.r_char_shots}
+            }
+         }
+         {set $shots $camera.r_corner_shots}
+      }
+
+      {set $camera.next_tick {+ $db.music_tick 1920}}
+
+      ; Pick a shot from shots and execute it
+      {set $shot {random_elem $shots}}
+      {exec $shot}
+
+      ; Remove shot from shots
+      {remove_elem $shots $shot}
+
+      ; Refill shots when empty
+      {when {! {num_elems $shots}}
+         {switch $shots
+            ($camera.r_char_shots 
+               {insert_elems $camera.r_char_shots 0 R_CHAR_SHOTS}
+            )
+            ($camera.l_char_shots 
+               {insert_elems $camera.l_char_shots 0 L_CHAR_SHOTS}
+            )
+            ($camera.stage_shots 
+               {insert_elems $camera.stage_shots 0 STAGE_SHOTS}
+            )
+            ($camera.r_corner_shots 
+               {insert_elems $camera.r_corner_shots 0 R_CORNER_SHOTS}
+            )
+            ($camera.r_corner_shots 
+               {insert_elems $camera.r_corner_shots 0 R_CORNER_SHOTS}
+            )
+         }
+
+         ; Avoid this one next time
+         {remove_elem $shots $shot}
+      }
+   }
+
+   {set $camera.fade 240}
+
+   ; Start camera
+   CAM_BEGIN
+   {set $camera.last_shots $camera.l_char_shots}
+   {set $camera.current_shots $camera.stage_shots}
+   {set $camera.probability 1.0}
+   {set $camera.next_tick {+ $db.music_tick 5760}}
+   {set $camera.gtr_solo {has_guitarist}} ; 0 avoid, 1 waiting, 2 do
+   {set $camera.fade 0}
+)
+
+(downbeat
+   ; Increment probability
+   {set $camera.probability 
+      {+ $camera.probability 0.125}
+   }
+
+   ; Postpone downbeat event if close to phrase end
+   {if
+      {&&
+         {> $db.music_tick {- $game.phrase_end_tick 480}}
+         {! $arena.is_intro}
+      }
+      {delay_task 480 {fire check_shot}}
+      {fire check_shot}
+   }
+)
+
+(check_shot
+   {when 
+      {&&
+         {>= $db.music_tick $camera.next_tick}
+         {! $arena.game_over}
+         {< {random_float} $camera.probability}
+      }
+
+      {if {== $camera.gtr_solo 2}
+         {exec
+            CAM_GUITAR
+            {set $camera.gtr_solo 0}
+            {set $camera.current_shots $camera.stage_shots}
+            {set $camera.next_tick {+ $db.music_tick 7680}}
+            {delay_task {bar 4:0:0} {fire gtr_solo_off}}
+         }
+         {pick_shot}
+      }
+
+      {set $camera.probability 0.0}
+   }
+)
+
+(game_over
+   {set $camera.fade 240}
+   {if $arena.game_won
+      CAM_WIN
+      CAM_LOSE
+   }
+)
+
+(gtr_solo_1
+   {when $camera.gtr_solo
+      {set $camera.gtr_solo 2}
+      {set $camera.probability 1.0}
+      {fire check_shot}
+   }   
+)
+
+(gtr_solo_2
+   {fire gtr_solo_1}
+)
+
+(gtr_solo_off
+   {when {== {venue cam_msg} "Guitar"}
+      {set $camera.probability 1.0}
+      {fire check_shot}
+   }
+)
