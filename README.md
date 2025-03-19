@@ -40,8 +40,8 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Dance Central 2** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band Blitz** | PS3<br>Xbox 360 | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark: |
 | **Dance Central 3** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
-| **Fantasia: Music Evolved** | PS4<br>Xbox One/Series | Unknown | :white_check_mark: |
-| **Dance Central: Spotlight** | PS4<br>Xbox One/Series | Unknown | :white_check_mark: |
+| **Fantasia: Music Evolved** | Xbox 360<br>Xbox One | Unknown | :white_check_mark:<br>:x:|
+| **Dance Central: Spotlight** | Xbox One | Unknown | :white_check_mark: |
 | **Rock Band 4** | PS4<br>Xbox One | Known (v3 DTA_DTA) | :white_check_mark:<br>:x:[^1][^2] |
 | **Rock Band VR** | PC | Known (v3 DTA_DTA) | :white_check_mark:[^2][^3] |
 | **Amplitude 2016** | PS3<br>PS4 | Known (v3 DTA_DTA) | :white_check_mark:[^2] |
