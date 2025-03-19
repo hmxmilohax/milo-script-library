@@ -30,7 +30,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band Track Pack Volume 2** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
 | **Rock Band Track Pack: Classic Rock** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
 | **Rock Band Country Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
-| **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:x: |
+| **The Beatles: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
 | **Rock Band Metal Track Pack** | PS2<br>PS3<br>Xbox 360<br>Wii | Known (PS2 uses old-<br>style DTB, all others<br>use new-style DTB) | :white_check_mark:<br>:x:<br>:x:<br>:white_check_mark: |
 | **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:x:<br>:x: |
 | **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:x: |
@@ -42,7 +42,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Dance Central 3** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Fantasia: Music Evolved** | PS4<br>Xbox One/Series | Unknown | :white_check_mark: |
 | **Dance Central: Spotlight** | PS4<br>Xbox One/Series | Unknown | :white_check_mark: |
-| **Rock Band 4** | PS4/5<br>Xbox One/Series | Known (v3 DTA_DTA) | :white_check_mark:[^1][^2] |
+| **Rock Band 4** | PS4<br>Xbox One | Known (v3 DTA_DTA) | :white_check_mark:<br>:x:[^1][^2] |
 | **Rock Band VR** | PC | Known (v3 DTA_DTA) | :white_check_mark:[^2][^3] |
 | **Amplitude 2016** | PS3<br>PS4 | Known (v3 DTA_DTA) | :white_check_mark:[^2] |
 | **Super Beat Sports** | Switch | Known (v3 DTA_DTA) | :white_check_mark:[^2] |
