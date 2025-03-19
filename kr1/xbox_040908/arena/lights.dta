@@ -1,0 +1,96 @@
+; Controls lights in venue         
+
+#prepare_lights.dta
+
+; Switch anim every bar after excitement change, or probability based on
+; excitement 
+; boot: 0%/bar
+; bad: additional 6%/bar
+; okay: additional 12%/bar
+; great/peak: additional 50%/bar
+[LIGHT_PROBABILITY (0 .0625 .125 .5 .5)]
+
+
+(init
+   ; Functions
+   {defun pick_light (locals $blend)
+
+      {if $light.force_choice
+         {set $blend 480}
+         {set $blend 960}
+      }
+
+      {switch $arena.excitement
+         (kExcitementBoot
+            {{random_elem LOUSY_MOTION_ANIMS} $blend}
+            {{random_elem LOUSY_COLOR_ANIMS} $blend}
+         )
+         (kExcitementBad
+            {{random_elem BAD_MOTION_ANIMS} $blend}
+            {{random_elem BAD_COLOR_ANIMS} $blend}
+         )
+         (kExcitementOkay
+            {{random_elem OK_MOTION_ANIMS} $blend}
+            {{random_elem OK_COLOR_ANIMS} $blend}
+         )
+         (kExcitementGreat
+            {{random_elem GREAT_MOTION_ANIMS} $blend}
+            {{random_elem GREAT_COLOR_ANIMS} $blend}
+         )
+         (kExcitementPeak
+            {{random_elem GREAT_MOTION_ANIMS} $blend}
+            {{random_elem GREAT_COLOR_ANIMS} $blend}
+         )
+      }
+   }
+
+   ; Start the fun
+   {set $light.force_choice FALSE}
+   {set $light.probability 1.0}
+   {do_lousy01 0}
+   {color_intro 0}
+   {set $light.skip_bars 2}
+)
+
+(downbeat
+   {if {! $light.skip_bars}
+      {when {! $arena.game_over}
+         {fire check_light}
+      }
+      {set $light.skip_bars {- $light.skip_bars 1}}
+   }
+)
+
+(check_light
+   ; Increment probability
+   {set $light.probability 
+      {+ $light.probability 
+         {elem LIGHT_PROBABILITY $arena.excitement}
+      } 
+   }
+
+   ; Choose on excitement change or probability
+   {when {|| $light.force_choice {< {random_float} $light.probability}}
+      {if {&& $arena.game_over {! $arena.game_won}}
+         {exec {do_lousy01 0} {color_off 0}}
+         {pick_light}
+      }
+      {set $light.probability 0.0}
+      {set $light.force_choice FALSE}
+   }
+)
+
+(excitement
+   {when {! $light.skip_bars}
+      {set $light.force_choice TRUE}
+      {fire check_light}
+   }
+)
+
+(game_over
+   {set $light.force_choice TRUE}
+   {fire check_light}
+)
+(power_off
+          CHAR_OFF
+)

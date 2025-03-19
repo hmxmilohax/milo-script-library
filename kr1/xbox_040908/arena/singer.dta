@@ -1,0 +1,349 @@
+;
+; Main non-venue, non-song-specific event handlers
+;
+
+(init
+   {defun singer_play_anim (locals $a)
+      {set $arena.singer_last_anim_switch $db.music_tick}
+      {set $arena.singer_anims_done {+ $arena.singer_anims_done 1}}
+      {if {!= $arena.singer_special_anim kSpecialNone}
+         {exec
+            {singer_play_special_anim $arena.singer_special_anim kAnimBuffer}
+            {set $arena.singer_special_anim kSpecialNone}
+         }
+         {exec
+            ; normal - no special
+            {set $a {stage_chars find_singer_anim kWalkNone}}
+            {if {!= "" $a}
+               {exec
+                  {arena.singer play_anim $a kAnimBuffer}
+                  {stage_chars set_eyes {stage_chars anim_eye_mode $a}}
+               }
+               {print
+                  "WARNING: singer.dta could not find singer anim. Looping.\n"
+               }
+            }
+         }
+      }
+   }
+
+   {defun singer_play_special_anim (args $special $anim_mode) (locals $a)
+      {set $a {stage_chars find_singer_anim kWalkNone $special}}
+      {if {!= "" $a}
+         {exec
+            {arena.singer play_anim $a $anim_mode}
+            {stage_chars set_eyes {stage_chars anim_eye_mode $a}}
+         }
+         {print
+            "WARNING: singer.dta could not find singer anim, s = "
+            $special ". Looping.\n"
+         }
+      }
+   }
+
+   ;----------------------------------------------------------------------
+
+   ; Categorize walks to and from each of the 4 spots (in stage direction)
+   ; These are bitfields -- sometimes two are acceptable.
+   ;        3
+   ;  0     1     2
+   {set $walk_dirs
+      (
+         (kWalkNone    kWalkLeft     kWalkLeft     kWalkForward)  ; from 0
+         (kWalkRight   kWalkNone     kWalkLeft     kWalkBack)     ; from 1
+         (kWalkRight   kWalkRight    kWalkNone     kWalkForward)  ; from 2
+         (kWalkForward kWalkForward  kWalkForward  kWalkNone)     ; from 3
+      )
+   }
+
+   {defun get_walk_dir (args $s $d) (locals $w)
+      {set $w {elem {elem $walk_dirs $s} $d}}
+      
+      ; maybe walk forward in left/right cases.
+      {when
+         {&&
+            {|| {== $w kWalkLeft} {== $w kWalkRight}}
+            {< {random_float} 0.25}
+         }
+         {set $w kWalkForward}
+      }
+      {return $w}
+   }
+
+   {defun singer_walk (locals $s $d $w $a)
+      {set $s {stage_chars get_singer_spot}}
+      {set $d {stage_chars find_walk_spot 0 1 2}}
+      {set $w {get_walk_dir $s $d}}
+      {set $a {stage_chars find_singer_anim $w}}
+      {when {== $a ""}
+         ; no matching anims -- just use forward.
+         {set $a {stage_chars find_singer_anim kWalkForward}}
+      }
+
+      {when {!= $a ""} {stage_chars singer_walk_to $d $a}}
+   }
+
+   {defun singer_walk_to (args $dest) (locals $s $a $w)
+      {set $s {stage_chars get_singer_spot}}
+      {when {!= $s $dest}
+         {set $w {get_walk_dir $s $dest}}
+         {set $a {stage_chars find_singer_anim $w}}
+         {when {== $a ""}
+            ; no matching anims -- just use forward.
+           {set $a {stage_chars find_singer_anim kWalkForward}}
+         }
+         {if {!= $a ""}
+            {stage_chars singer_walk_to $dest $a}
+            {print
+               "WARNING: singer.dta can't walk to " $dest
+               " because no anim matched.\n"
+            }
+         }
+      }
+   }
+
+   ;----------------------------------------------------------------------
+
+   {defun maybe_walk_finale
+      ; walk to middle, but only if we didn't just finish walking
+      {when {! $arena.game_over}
+         {if {>= {arena.singer ticks_since_walking} 2880.0}
+            {singer_walk_to 3}
+            {delay_task 480.0 {maybe_walk_finale}}
+         }
+      }
+   }
+
+   ;----------------------------------------------------------------------
+   ; fire mic_up as early as possible before intro_end
+   {when {!= $arena.intro_end_tick -1.0}
+      {set $t {the_arena find_nearest_anim_tick $arena.intro_end_tick}}
+      {when {<= {- $arena.intro_end_tick $t} 20.0}
+         ; close to bar boundary, so we should round to previous bar
+         {set $t {- $t 1920.0}}
+      }
+      {when {< $t 1.0}
+         {set $t 1.0}
+      }
+      {delay_task $t {fire singer_mic_up_intro}}
+   }
+      
+      
+
+   ;----------------------------------------------------------------------
+
+   {set $arena.singer_anims_done 0}
+   {set $arena.singer_last_anim_switch 0.0}
+   {set $arena.singer_final_pos FALSE}
+   {set $arena.is_intro TRUE}
+   {set $arena.singer_changes_okay FALSE}
+   {set $arena.singer_special_anim kSpecialNone}
+   {set $arena.got_verse_chorus FALSE}
+   {singer_play_special_anim kSpecialIntro kAnimBuffer}
+)
+
+
+;----------------------------------------------------------------------
+; fires before intro is over (and when midi is done with mic down)
+
+(singer_mic_up
+   {when {&& {! $arena.is_intro} {! $arena.game_over}}
+      {set $arena.singer_changes_okay TRUE}
+      {singer_play_special_anim kSpecialIntroMicUp kAnimBuffer}
+   }
+)
+
+(singer_mic_up_intro
+   {singer_play_special_anim kSpecialIntroMicUp kAnimBuffer}
+)
+
+;----------------------------------------------------------------------
+
+(singer_mic_down
+   {when {! $arena.game_over}
+      {singer_play_special_anim kSpecialIntro kAnimBuffer}
+      {set $arena.singer_changes_okay FALSE}
+   }
+)
+
+;----------------------------------------------------------------------
+
+(singer_no_changes
+   {set $arena.singer_changes_okay FALSE}
+)
+
+(long_on
+   {fire singer_no_changes}
+)
+
+;----------------------------------------------------------------------
+
+(singer_changes_okay
+   {set $arena.singer_changes_okay TRUE}
+)
+
+(long_off
+   {fire singer_changes_okay}
+)
+
+;----------------------------------------------------------------------
+
+(intro_end
+   {set $arena.is_intro FALSE}
+   {set $arena.singer_changes_okay TRUE}
+   {singer_play_anim}
+)
+
+;----------------------------------------------------------------------
+
+(singer_final_pos
+   {set $arena.singer_final_pos TRUE}
+   {maybe_walk_finale}
+)
+
+;----------------------------------------------------------------------
+
+(game_over
+   {when {! $db.practice_mode}
+      {if $arena.game_won
+         {singer_play_special_anim kSpecialEnd kAnimBuffer}
+         {singer_play_special_anim kSpecialLose kAnimInterrupt}
+      }
+   }
+)
+
+;----------------------------------------------------------------------
+
+(chorus
+   {if $arena.got_verse_chorus
+      {when
+         {&&
+            {! $arena.game_over}
+            $arena.singer_changes_okay
+            {stage_chars singer_anim_interruptible}
+         }
+         {singer_play_anim}
+      }
+      {set $arena.got_verse_chorus TRUE}
+   }
+)
+
+(verse
+   {if $arena.got_verse_chorus
+      {when
+         {&&
+            {! $arena.game_over}
+            $arena.singer_changes_okay
+            {stage_chars singer_anim_interruptible}
+         }
+         {singer_play_anim}
+      }
+      {set $arena.got_verse_chorus TRUE}
+   }
+)
+
+;----------------------------------------------------------------------
+
+(singer_anim_change
+   {if $arena.game_over
+      {exec
+         {when {! $db.practice_mode}
+            {singer_play_special_anim
+               {if $arena.game_won
+                  {return kSpecialWin}
+                  {return kSpecialLoseLoop}
+               }
+               kAnimBuffer
+            }
+         }
+         ; otherwise, just let the endgame animation loop.
+      }
+      
+      ; else, not game over
+
+      {when $arena.singer_changes_okay
+         ; determine walk probability
+         {set $p
+            {if
+               {||
+                  $arena.singer_final_pos
+                  {<= $arena.singer_anims_done 1}
+                  {!= $arena.singer_special_anim kSpecialNone}
+               }
+               {return 0.0}
+               {if {== $arena.singer_anims_done 2}
+                  {return 0.3}
+                  {if {== $arena.singer_anims_done 3}
+                     {return 0.65}
+                     {return 1.0}
+                  }
+               }
+            }
+         }
+
+         ; If we don't walk, then we decide whether or not to pick a new
+         ; animation.
+
+         ; We want to repeat shorter animations longer.  So, for now, we
+         ; will base our decision on picking a new animation on the
+         ; number of beats elapsed since we changed anims (which we'll
+         ; store in $arena.singer_last_anim_switch).
+
+         {if {< {random_float} $p}
+            {exec
+               {singer_walk}
+               {set $arena.singer_anims_done 0}
+            }
+            {exec
+               ; figure out ticks elapsed since last switch
+               {set $e {- $db.music_tick $arena.singer_last_anim_switch}}
+
+               ; assign probability -
+               ; less than 5760: 0%
+               ; less than 7680: 33%
+               ; less than 9600: 70%
+               ; otherwise 100%
+               {set $p
+                  {if
+                     {||
+                        {>=
+                           {arena.singer anim_loops}
+                           {stage_chars singer_anim_max_loops}
+                        }
+                        {!= $arena.singer_special_anim kSpecialNone}
+                     }
+                     {return 1.0}  ; have to change!
+                     {if {< $e 5600.0} {return 0.0}
+                        {if {< $e 7500.0} {return 0.33}
+                           {if {< $e 9500.0} {return 0.70} {return 1.0}}
+                        }
+                     }
+                  }
+               }
+
+               {when {< {random_float} $p}
+                  {singer_play_anim}
+                  ; Otherwise, let it ride for another loop.
+               }
+            }
+         }
+      }
+   }
+)
+
+;----------------------------------------------------------------------
+
+(excitement
+   {when
+      {&&
+         {== $arena.excitement kExcitementPeak}
+         {stage_chars singer_anim_interruptible}
+         {! $arena.game_over}
+      }
+
+      {set $arena.singer_special_anim kSpecialGreat}
+      {singer_play_anim}
+   }
+)
+
+;----------------------------------------------------------------------
