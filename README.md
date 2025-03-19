@@ -35,6 +35,7 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Lego Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:x:<br>:x: |
 | **Green Day: Rock Band** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:x: |
 | **Rock Band 3** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :white_check_mark:<br>:white_check_mark:<br>:white_check_mark: |
+| **Rock Band Music Store** | PS3<br>Xbox 360 | Known (new-style DTB) | :x:<br>:white_check_mark: |
 | **Rock Band Country Track Pack 2** | PS3<br>Xbox 360<br>Wii | Known (new-style DTB) | :x:<br>:x:<br>:white_check_mark: |
 | **Dance Central** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 2** | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
@@ -92,7 +93,6 @@ Here are some tables for games that fit within our scope and where they're at as
 | **Rock Band 3** | 100829 (Bank 2) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 100901 (Bank 8) | Wii | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band 3** | 101019 (Bank 1) | Wii | Known (new-style DTB) | :white_check_mark: |
-| **Rock Band Music Store** | 110120 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 2** | 110725 (Takehome) | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Rock Band Blitz** | 120605 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
 | **Dance Central 3** | 120829 | Xbox 360 | Known (new-style DTB) | :white_check_mark: |
