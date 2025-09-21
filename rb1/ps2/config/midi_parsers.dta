@@ -1,51 +1,35 @@
+
 ; useful functions for midi parsers
-#define MIDIPARSER_CONVERTFUNCTIONS (
+#define MIDIPARSER_CONVERTFUNCTIONS
+(
    ; function to return delta time between this start and the next in real time seconds
    (rt_delta
-      {-
-         {$this beat_to_sec {$this get_start {+ [index] 1}}}
-         {$this beat_to_sec $mp.start}
-      }
+      {- {$this beat_to_sec {$this get_start {+ [index] 1}}} {$this beat_to_sec $mp.start}}
    )
    ; function to return delta time between this start and the next in beat time
-   (delta {- {$this get_start {+ [index] 1}} $mp.start})
+   (delta
+      {- {$this get_start {+ [index] 1}} $mp.start}
+   )
    ; function to determine if we have space before and after the current note
-   (has_space
-      ($before $after)
-      {if_else
+   (has_space ($before $after)
+      {if_else {&& {> $mp.prev_start $before} {> {- {$this get_start {+ [index] 1}} $mp.start} $after}}
+         TRUE
+         FALSE
+      }
+   )
+   
+   
+   (rt_has_space ($before $after)
+      {if_else 
          {&&
-            {> $mp.prev_start $before}
-            {> {- {$this get_start {+ [index] 1}} $mp.start} $after}
+            {> {- {$this beat_to_sec $mp.start} {$this beat_to_sec {- $mp.start $mp.prev_start}}} $before}
+            {> {- {$this beat_to_sec {$this get_start {+ [index] 1}}} {$this beat_to_sec $mp.start}} $after}
          }
          TRUE
          FALSE
       }
    )
-
-   (rt_has_space
-      ($before $after)
-      {if_else
-         {&&
-            {>
-               {-
-                  {$this beat_to_sec $mp.start}
-                  {$this beat_to_sec {- $mp.start $mp.prev_start}}
-               }
-               $before
-            }
-            {>
-               {-
-                  {$this beat_to_sec {$this get_start {+ [index] 1}}}
-                  {$this beat_to_sec $mp.start}
-               }
-               $after
-            }
-         }
-         TRUE
-         FALSE
-      }
-   )
-
+   
    ; returns val of next note
    (next_val
       {set $curidx [index]}
@@ -71,19 +55,21 @@
 
 ; Global events parser, needs to be there
 ; and have the name events_parser.
-{new MidiParser
-   events_parser
+{new MidiParser events_parser
    (track_name 'EVENTS')
-   (text {$this add_message $mp.data})
+   (text
+      {$this add_message $mp.data}
+   )
 }
 
 ;;;; Game mechanic stuff
 
 ;; Tambourine graphical events
-{new MidiParser
-   tambourine
+{new MidiParser tambourine
    (track_name 'PART VOCALS')
-   (init {set [message_type] midi_parser})
+   (init 
+      {set [message_type] midi_parser}   
+   )
    (allowed_notes 96 97)
    (midi
       {$this add_message
@@ -97,24 +83,25 @@
 }
 
 ;; Tambourine sound effect
-{new MidiParser
-   play_tambourine
+{new MidiParser play_tambourine
    (track_name 'PART VOCALS')
-   (init {set [message_type] play_tambourine})
+   (init 
+      {set [message_type] play_tambourine}   
+   )
    (allowed_notes 96 97)
    (midi
       ; Move backwards in time by the song_to_taskmgr compensation.
       {unless $edit_mode
          {set $mp.start
-            {$this sec_to_beat
-               {+
+            {$this sec_to_beat 
+               {+ 
                   {$this beat_to_sec $mp.start}
                   {* {profile_mgr get_song_to_taskmgr_ms} .001}
-                  -.02 ; seconds TODO each platform will have its own offset.
+                  -.02  ; seconds TODO each platform will have its own offset.
                }
             }
          }
-
+   
          {$this add_message
             {switch $mp.val
                (96 tambourine_gem)
@@ -126,10 +113,10 @@
    )
 }
 
+
 ; DMS - Removing parsers we don't need
 #ifdef HX_XBOX
-{new MidiParser
-   bass_strum
+{new MidiParser bass_strum
    (inverted TRUE)
    (track_name 'PART BASS')
    (init
@@ -138,15 +125,15 @@
       {set [idle_start_gap] .4}
       {set [idle_end_gap] .4}
       {set [zero_length] TRUE} ; use the start beat for the end beat.
-      {set [max_gap] .24}
+      {set [max_gap] .24}  
       {set [message_type] strum}
       {set [append_length] TRUE}
       {set $mp.mapping ''}
    )
    (mp.up FALSE)
    MIDIPARSER_CONVERTFUNCTIONS
-
-   (text
+   
+   (text 
       {if {&& {== $mp.val map} {has_substr {elem $mp.data 1} "StrumMap"}}
          {set $mp.mapping {elem $mp.data 1}}
       }
@@ -156,19 +143,10 @@
          (StrumMap_SlapBass
             {set [idle_message] bass_slap_open}
             {if_else {> $mp.prev_start 1}
-               {do
-                  {set [mp.up] FALSE}
-                  {$this add_message bass_slap_thumb}
-               }
-               {if_else [mp.up]
-                  {do
-                     {set [mp.up] FALSE}
-                     {$this add_message bass_slap_thumb}
-                  }
-                  {do
-                     {set [mp.up] TRUE}
-                     {$this add_message bass_slap_index}
-                  }
+               {do {set [mp.up] FALSE} {$this add_message bass_slap_thumb}}
+               {if_else [mp.up] 
+                  {do {set [mp.up] FALSE} {$this add_message bass_slap_thumb}}
+                  {do {set [mp.up] TRUE} {$this add_message bass_slap_index}}
                }
             }
          )
@@ -201,7 +179,7 @@
                }
                {do
                   {set [mp.up] FALSE}
-                  {$this add_message
+                  {$this add_message 
                      {if_else {$this rt_has_space 0.25 1}
                         chord_slow
                         {if_else {$this has_space 0 0.25}
@@ -213,63 +191,46 @@
                }
             }
          )
-         {do ; default, fingerstyle
+         {do      ; default, fingerstyle
             {set [idle_message] bass_finger_open}
             {$this add_message
                {if_else {|| {== $mp.val kMPGem4} {== $mp.val kMPGem5}}
                   {if_else {> $mp.prev_start 1}
-                     {do
-                        {set [mp.up] FALSE}
-                        bass_finger_middle_hi
-                     }
+                     {do {set [mp.up] FALSE} bass_finger_middle_hi}
                      {if_else [mp.up]
-                        {do
-                           {set [mp.up] FALSE}
-                           bass_finger_middle_hi
-                        }
-                        {do
-                           {set [mp.up] TRUE}
-                           bass_finger_index_hi
-                        }
+                        {do {set [mp.up] FALSE} bass_finger_middle_hi}
+                        {do {set [mp.up] TRUE} bass_finger_index_hi}
                      }
                   }
                   {if_else {> $mp.prev_start 1}
-                     {do
-                        {set [mp.up] FALSE}
-                        bass_finger_middle
-                     }
+                     {do {set [mp.up] FALSE} bass_finger_middle}
                      {if_else [mp.up]
-                        {do
-                           {set [mp.up] FALSE}
-                           bass_finger_middle
-                        }
-                        {do
-                           {set [mp.up] TRUE}
-                           bass_finger_index
-                        }
+                        {do {set [mp.up] FALSE} bass_finger_middle}
+                        {do {set [mp.up] TRUE} bass_finger_index}
                      }
                   }
                }
             }
          }
       }
-   )
+   )      
 }
 
+
+
 ; bass fret.
-{new MidiParser
-   bass_fret
+{new MidiParser bass_fret
    (inverted TRUE)
    (track_name 'PART BASS')
    (init
       {set [idle_message] open}
       {set [idle_length] .52}
       {set [idle_start_gap] .24}
-      {set [idle_end_gap] .24}
+      {set [idle_end_gap].24}
       {set [min_gap] .12}
       {set [max_gap] .24}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}      
    )
    (streak_count 0)
    (streak_note 0)
@@ -279,26 +240,26 @@
 
    (gem
       {if_else {== [streak_count] 0}
-         {do
-            {set [streak_count] 1} ; streak started
+         {do 
+            {set [streak_count] 1}                             ; streak started
             {set [streak_start] $mp.start}
             {set [streak_note] $mp.val}
             {set [note_length] $mp.length}
          }
          {if_else {== $mp.val [streak_note]}
-            {if_else {< $mp.prev_start 1.1} ; time to break the streak?
+            {if_else {< $mp.prev_start 1.1}                       ; time to break the streak?
                {do
-                  {++ [streak_count]} ; not yet, increment the counter
+                  {++ [streak_count]}          ; not yet, increment the counter
                   {set [note_length] {- $mp.end [streak_start]}}
                }
-               {do ; streak broken
+               {do                                                ; streak broken
                   {set $mp.start [streak_start]}
                   {set $mp.length [note_length]}
                   {$this pick_note}
                   {set [streak_count] 0}
                }
             }
-            {do ; streak broken
+            {do                                                ; streak broken
                {set $mp.start [streak_start]}
                {set $mp.length [note_length]}
                {$this pick_note}
@@ -309,12 +270,12 @@
    )
 
    (pick_note
-      {$this add_message
+      {$this add_message          
          {if_else $mp.single_bit
             {switch $mp.val
                (kMPGem1 index)
                (kMPGem2 ring)
-               (kMPGem3 pinky)
+               (kMPGem3 pinky)        
                (kMPGem4 middle_hi)
                ring_hi
             }
@@ -327,17 +288,17 @@
    )
 }
 
+
 ; Parser for strumming!
-{new MidiParser
-   guitar_strum
+{new MidiParser guitar_strum
    (inverted TRUE)
    (up FALSE)
    (track_name 'PART GUITAR')
-   (init
+   (init 
       {set [idle_message] strum_open}
       {set [idle_length] 1.0}
       {set [idle_start_gap] .5}
-      {set [idle_end_gap] .5}
+      {set [idle_end_gap].5}
       {set [max_gap] 0.5}
       {set [message_type] strum}
       {set [append_length] TRUE}
@@ -372,7 +333,7 @@
          }
          {do
             {set [mp.up] FALSE}
-            {$this add_message
+            {$this add_message 
                {if_else {$this rt_has_space 0.25 1}
                   chord_slow
                   {if_else {$this has_space 0 0.25}
@@ -387,8 +348,7 @@
 }
 
 ; Parser for guitar open string strums
-{new MidiParser
-   guitar_string_open
+{new MidiParser guitar_string_open
    (inverted TRUE)
    (track_name 'PART GUITAR')
    (init
@@ -397,7 +357,7 @@
       {set $mp.mapping ''}
    )
 
-   (text
+   (text 
       {if {&& {== $mp.val map} {has_substr {elem $mp.data 1} "HandMap"}}
          {set $mp.mapping {elem $mp.data 1}}
       }
@@ -408,16 +368,16 @@
          (HandMap_DropD
             {$this add_message
                {if_else {&& $mp.single_bit {== $mp.val kMPGem1}}
-                  (open)
-                  (closed)
+                   (open)
+                   (closed)
                }
             }
          )
          (HandMap_DropD2 ; DropD with single notes
             {$this add_message
                {if_else {&& $mp.single_bit {== $mp.val kMPGem1}}
-                  (open)
-                  (closed)
+                   (open)
+                   (closed)
                }
             }
          )
@@ -425,12 +385,12 @@
    )
 }
 
+
 ; Parser for string vibrations
-{new MidiParser
-   guitar_string_hi
+{new MidiParser guitar_string_hi
    (inverted TRUE)
    (track_name 'PART GUITAR')
-   (init
+   (init 
       {set [max_gap] 0.5}
       {set [message_type] strum}
       {set [append_length] TRUE}
@@ -446,11 +406,10 @@
 }
 
 ; Parser for string vibrations
-{new MidiParser
-   guitar_string_low
+{new MidiParser guitar_string_low
    (inverted TRUE)
    (track_name 'PART GUITAR')
-   (init
+   (init 
       {set [max_gap] 0.5}
       {set [message_type] strum}
       {set [append_length] TRUE}
@@ -465,11 +424,10 @@
    )
 }
 
-{new MidiParser
-   bass_string_hi
+{new MidiParser bass_string_hi
    (inverted TRUE)
    (track_name 'PART BASS')
-   (init
+   (init 
       {set [max_gap] 0.5}
       {set [message_type] strum}
       {set [append_length] TRUE}
@@ -485,11 +443,10 @@
 }
 
 ; Parser for string vibrations
-{new MidiParser
-   bass_string_low
+{new MidiParser bass_string_low
    (inverted TRUE)
    (track_name 'PART BASS')
-   (init
+   (init 
       {set [max_gap] 0.5}
       {set [message_type] strum}
       {set [append_length] TRUE}
@@ -503,8 +460,9 @@
       }
    )
 }
-
-#define GUITARFRETMAPPINGS (
+ 
+#define GUITARFRETMAPPINGS
+(  
    (init
       {set [idle_message] open}
       {set [idle_length] .52}
@@ -513,15 +471,15 @@
       {set [min_gap] .24}
       {set [max_gap] .5}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}      
       {set $mp.mapping ''}
    )
-   (text
+   (text 
       {if {&& {== $mp.val map} {has_substr {elem $mp.data 1} "HandMap"}}
          {set $mp.mapping {elem $mp.data 1}}
       }
    )
-
+   
    (gem
       {$this add_message
          {switch $mp.mapping
@@ -530,32 +488,12 @@
                ; on single bit, and a switch in one and a cond in another.
                {if_else $mp.single_bit
                   {switch $mp.val
-                     (kMPGem1
-                        {if_else {> $mp.length .3}
-                           index_vibrato
-                           index
-                        }
-                     )
-                     (kMPGem2
-                        {if_else {> $mp.length .3}
-                           middle_vibrato
-                           middle
-                        }
-                     )
-                     (kMPGem3
-                        {if_else {> $mp.length .3}
-                           ring_hi_vibrato
-                           ring_hi
-                        }
-                     )
-                     (kMPGem4
-                        {if_else {> $mp.length .3}
-                           pinky_hi_vibrato
-                           pinky_hi
-                        }
-                     )
-                     (kMPGem5
-                        {if_else {> $mp.length .3}
+                     (kMPGem1 {if_else {> $mp.length .3} index_vibrato index})
+                     (kMPGem2 {if_else {> $mp.length .3} middle_vibrato middle})
+                     (kMPGem3 {if_else {> $mp.length .3} ring_hi_vibrato ring_hi})
+                     (kMPGem4 {if_else {> $mp.length .3} pinky_hi_vibrato pinky_hi})
+                     (kMPGem5 
+                        {if_else {> $mp.length .3} 
                            {random_elem (index_hi_vibrato ring_hi_vibrato)}
                            {random_elem (index_hi middle_hi ring_hi)}
                         }
@@ -576,7 +514,7 @@
             (HandMap_Chord_C chord_c)
             (HandMap_Chord_D chord_d)
             (HandMap_Chord_A chord_aminor)
-
+            
             (HandMap_AllChords
                ; Note that this isn't a perfect mapping.  The single
                ; bit matched track three to lo, but hi for the chord.
@@ -588,11 +526,11 @@
             (HandMap_DropD
                {if_else $mp.single_bit
                   {switch $mp.val
-                     (kMPGem1 open)
-                     ((kMPGem2 kMPGem3) chord_power_lo)
+                     (kMPGem1 open)   
+                     ((kMPGem2 kMPGem3) chord_power_lo)  
                      chord_power_hi
                   }
-                  {if_else {< $mp.lowest_bit kMPGem3}
+                  {if_else {< $mp.lowest_bit kMPGem3} 
                      chord_power_lo
                      chord_power_hi
                   }
@@ -602,66 +540,26 @@
                {if_else $mp.single_bit
                   {switch $mp.val
                      (kMPGem1 open)
-                     (kMPGem2
-                        {if_else {> $mp.length .3}
-                           index_vibrato
-                           index
-                        }
-                     )
-                     (kMPGem3
-                        {if_else {> $mp.length .3}
-                           middle_vibrato
-                           middle
-                        }
-                     )
-                     (kMPGem4
-                        {if_else {> $mp.length .3}
-                           ring_hi_vibrato
-                           ring_hi
-                        }
-                     )
-                     (kMPGem5
-                        {if_else {> $mp.length .3}
-                           pinky_hi_vibrato
-                           pinky_hi
-                        }
-                     )
+                     (kMPGem2 {if_else {> $mp.length .3} index_vibrato index})
+                     (kMPGem3 {if_else {> $mp.length .3} middle_vibrato middle})
+                     (kMPGem4 {if_else {> $mp.length .3} ring_hi_vibrato ring_hi})
+                     (kMPGem5 {if_else {> $mp.length .3} pinky_hi_vibrato pinky_hi})
                   }
                   {if_else {< $mp.lowest_bit kMPGem3}
                      chord_power_lo
                      chord_power_hi
                   }
                }
-            )
+            ) 
             (HandMap_Solo ;Dmaj for all chords, vibrato for all chord sustains
                {if_else $mp.single_bit
                   {switch $mp.val
-                     (kMPGem1
-                        {if_else {> $mp.length .3}
-                           index_vibrato
-                           index
-                        }
-                     )
-                     (kMPGem2
-                        {if_else {> $mp.length .3}
-                           middle_vibrato
-                           pinky
-                        }
-                     )
-                     (kMPGem3
-                        {if_else {> $mp.length .3}
-                           ring_vibrato
-                           index_hi
-                        }
-                     )
-                     (kMPGem4
-                        {if_else {> $mp.length .3}
-                           pinky_vibrato
-                           ring_hi
-                        }
-                     )
-                     (kMPGem5
-                        {if_else {> $mp.length .3}
+                     (kMPGem1 {if_else {> $mp.length .3} index_vibrato index})
+                     (kMPGem2 {if_else {> $mp.length .3} middle_vibrato pinky})
+                     (kMPGem3 {if_else {> $mp.length .3} ring_vibrato index_hi})
+                     (kMPGem4 {if_else {> $mp.length .3} pinky_vibrato ring_hi})
+                     (kMPGem5 
+                        {if_else {> $mp.length .3} 
                            {random_elem (index_vibrato ring_vibrato)}
                            middle_hi
                         }
@@ -670,104 +568,39 @@
                   {switch $mp.lowest_bit
                      ; note that it wasn't clear why 5 wasn't there, so I just made the last be default.
                      (kMPGem1
-                        {cond
-                           ({& kMPGem2 $mp.val}
-                              {if_else {> $mp.length .3}
-                                 index_vibrato
-                                 chord_d
-                              }
-                           )
-                           ({& kMPGem3 $mp.val}
-                              {if_else {> $mp.length .3}
-                                 middle_vibrato
-                                 chord_d
-                              }
-                           )
-                           ({& kMPGem4 $mp.val}
-                              {if_else {> $mp.length .3}
-                                 ring_vibrato
-                                 chord_d
-                              }
-                           )
-                           {if_else {> $mp.length .3}
-                              ring_vibrato
-                              chord_d
-                           }
+                        {cond 
+                           ({& kMPGem2 $mp.val} {if_else {> $mp.length .3} index_vibrato chord_d})
+                           ({& kMPGem3 $mp.val} {if_else {> $mp.length .3} middle_vibrato chord_d})
+                           ({& kMPGem4 $mp.val} {if_else {> $mp.length .3} ring_vibrato chord_d})
+                           {if_else {> $mp.length .3} ring_vibrato chord_d}
                         }
                      )
                      (kMPGem2
-                        {cond
-                           ({& kMPGem3 $mp.val}
-                              {if_else {> $mp.length .3}
-                                 pinky_vibrato
-                                 chord_d
-                              }
-                           )
-                           ({& kMPGem4 $mp.val}
-                              {if_else {> $mp.length .3}
-                                 index_hi_vibrato
-                                 chord_d
-                              }
-                           )
-                           {if_else {> $mp.length .3}
-                              middle_hi_vibrato
-                              chord_d
-                           }
+                        {cond 
+                           ({& kMPGem3 $mp.val} {if_else {> $mp.length .3} pinky_vibrato chord_d})
+                           ({& kMPGem4 $mp.val} {if_else {> $mp.length .3} index_hi_vibrato chord_d})
+                           {if_else {> $mp.length .3} middle_hi_vibrato chord_d}
                         }
                      )
                      (kMPGem3
-                        {cond
-                           ({& kMPGem4 $mp.val}
-                              {if_else {> $mp.length .3}
-                                 ring_hi_vibrato
-                                 chord_d
-                              }
-                           )
-                           {if_else {> $mp.length .3}
-                              index_hi_vibrato
-                              chord_d
-                           }
+                        {cond 
+                           ({& kMPGem4 $mp.val} {if_else {> $mp.length .3} ring_hi_vibrato chord_d})
+                           {if_else {> $mp.length .3} index_hi_vibrato chord_d}
                         }
                      )
                      ; default for everything else.
-                     {if_else {> $mp.length .3}
-                        ring_hi_vibrato
-                        chord_d
-                     }
+                     {if_else {> $mp.length .3} ring_hi_vibrato chord_d}
                   }
                }
-            )
-            ; default.
+            )               
+             ; default.
             {if_else $mp.single_bit
                {switch $mp.val
-                  (kMPGem1
-                     {if_else {> $mp.length .3}
-                        index_vibrato
-                        index
-                     }
-                  )
-                  (kMPGem2
-                     {if_else {> $mp.length .3}
-                        ring_vibrato
-                        pinky
-                     }
-                  )
-                  (kMPGem3
-                     {if_else {> $mp.length .3}
-                        index_hi_vibrato
-                        index_hi
-                     }
-                  )
-                  (kMPGem4
-                     {if_else {> $mp.length .3}
-                        ring_hi_vibrato
-                        ring_hi
-                     }
-                  )
-                  {if_else {> $mp.length .3}
-                     middle_hi_vibrato
-                     middle_hi
-                  }
+                  (kMPGem1 {if_else {> $mp.length .3} index_vibrato index})
+                  (kMPGem2 {if_else {> $mp.length .3} ring_vibrato pinky})
+                  (kMPGem3 {if_else {> $mp.length .3} index_hi_vibrato index_hi})        
+                  (kMPGem4 {if_else {> $mp.length .3} ring_hi_vibrato ring_hi})
+                  {if_else {> $mp.length .3} middle_hi_vibrato middle_hi}
                }
                {if_else {< $mp.lowest_bit kMPGem3}
                   chord_power_lo
@@ -777,10 +610,10 @@
          }
       }
    )
-)
+)   
 
-{new MidiParser
-   guitar_streak_parser
+
+{new MidiParser guitar_streak_parser
    (track_name 'PART GUITAR')
    (streak_count 0)
    (streak_start 0)
@@ -790,17 +623,17 @@
    (gem
       {if_else $mp.single_bit
          {if_else {== [streak_count] 0}
-            {do
-               {set [streak_count] 1} ; streak started
+            {do 
+               {set [streak_count] 1}                             ; streak started
                {set [streak_start] $mp.start}
             }
-            {if_else {< $mp.prev_start 0.75} ; time to break the streak?
+            {if_else {< $mp.prev_start 0.75}                       ; time to break the streak?
                {do
-                  {++ [streak_count]} ; not yet, increment the counter
+                  {++ [streak_count]}          ; not yet, increment the counter
                   {set [last_start] $mp.start}
                }
-               {do ; streak broken
-                  {if {> [streak_count] 3} ; is the streak count large enough?
+               {do                                                ; streak broken
+                  {if {> [streak_count] 3}                        ; is the streak count large enough?
                      {set $orig_start $mp.start}
                      {set $mp.start [streak_start]}
                      {set $mp.end [streak_start]}
@@ -813,35 +646,35 @@
                }
             }
          }
-         {do
+         {do 
             {set [streak_count] 0}
          }
       }
    )
 }
 
-{new MidiParser
-   bass_face_accent
+{new MidiParser bass_face_accent
    (inverted TRUE)
    (track_name 'PART BASS')
    (init
       {set [min_gap] .15}
       {set [max_gap] .25}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}      
    )
-   (gem)
+   (gem
+   )
 }
 
-{new MidiParser
-   guitar_face_accent
+
+{new MidiParser guitar_face_accent
    (inverted TRUE)
    (track_name 'PART GUITAR')
    (init
       {set [min_gap] .15}
       {set [max_gap] .25}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}      
    )
    (gem
       {if $mp.single_bit
@@ -852,22 +685,22 @@
    )
 }
 
+
 ; guitarist fret.
-{new MidiParser
-   guitar_fret
+{new MidiParser guitar_fret
    (inverted TRUE)
    (track_name 'PART GUITAR')
-   GUITARFRETMAPPINGS
+   GUITARFRETMAPPINGS  
 }
+ 
 
-{new MidiParser
-   bass_fret_pos
+{new MidiParser bass_fret_pos
    (inverted TRUE)
    (track_name 'PART BASS')
-   (init
+   (init 
       {set [min_gap] .25}
-      {set [message_type] new_spot}
-      {set [append_length] TRUE}
+      {set [message_type] new_spot }
+      {set [append_length] TRUE}      
    )
    (allowed_notes 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59)
    (midi
@@ -897,17 +730,17 @@
          }
       }
    )
-}
+}   
 
+ 
 ;; For the fret ik.
-{new MidiParser
-   guitar_fret_pos
+{new MidiParser guitar_fret_pos
    (inverted TRUE)
    (track_name 'PART GUITAR')
-   (init
+   (init 
       {set [min_gap] .25}
-      {set [message_type] new_spot}
-      {set [append_length] TRUE}
+      {set [message_type] new_spot }
+      {set [append_length] TRUE}      
    )
    (allowed_notes 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59)
    (midi
@@ -937,41 +770,61 @@
          }
       }
    )
-}
+}   
 
 ; Musician full body parsers, just echo things along
 
-{new MidiParser
-   guitarist_parser
-   (track_name 'PART GUITAR')
-   (init {set [start_offset] -1})
-   (text {$this add_message $mp.data})
+{new MidiParser guitarist_parser
+   (track_name 
+      'PART GUITAR'
+   )
+   (init
+      {set [start_offset] -1}
+   )
+   (text
+      {$this add_message $mp.data}
+   )
 }
 
-{new MidiParser
-   bassist_parser
-   (track_name 'PART BASS')
-   (init {set [start_offset] -1})
-   (text {$this add_message $mp.data})
+{new MidiParser bassist_parser
+   (track_name 
+      'PART BASS'
+   )
+   (init 
+      {set [start_offset] -1}
+   )
+   (text
+      {$this add_message $mp.data}
+   )
 }
 
-{new MidiParser
-   drummer_parser
-   (track_name 'PART DRUMS')
-   (init {set [start_offset] -1})
-   (text {$this add_message $mp.data})
+{new MidiParser drummer_parser
+   (track_name 
+      'PART DRUMS'
+   )
+   (init 
+      {set [start_offset] -1}
+   )
+   (text
+      {$this add_message $mp.data}
+   )   
 }
 
-{new MidiParser
-   vocal_parser
-   (track_name 'PART VOCALS')
-   (init {set [start_offset] -1})
-   (text {$this add_message $mp.data})
+{new MidiParser vocal_parser
+   (track_name 
+      'PART VOCALS'
+   )
+   (init 
+      {set [start_offset] -1}
+   )
+   (text
+      {$this add_message $mp.data}
+   )   
 }
+
 
 ;; Drumming
-{new MidiParser
-   drums_left_hand
+{new MidiParser drums_left_hand
    (inverted TRUE)
    (track_name 'PART DRUMS')
    (init
@@ -980,24 +833,14 @@
       {set [append_length] TRUE}
       {set [max_gap] 2}
    )
-   (allowed_notes 26 30 34 35 40 41 46 48 50)
+   (allowed_notes 26 30 34 35 40 41 46 48 50)     
    (midi
       {$this add_message
          {switch $mp.val
-            (26
-               {if_else {$this rt_has_space 0.25 0.25}
-                  snare
-                  snare_fast
-               }
-            )
-            (30
-               {if_else {$this rt_has_space 0.25 0.25}
-                  hihat
-                  hihat_fast
-               }
-            )
-            (34
-               {if_else {$this rt_has_space 0.6 0.4}
+            (26 {if_else {$this rt_has_space 0.25 0.25} snare snare_fast})
+            (30 {if_else {$this rt_has_space 0.25 0.25} hihat hihat_fast})
+            (34 
+               {if_else {$this rt_has_space 0.6 0.4} 
                   cymbal_l_crash_big
                   {if_else {$this rt_has_space 0.25 0.25}
                      cymbal_l_crash_fast
@@ -1005,39 +848,25 @@
                   }
                }
             )
-            (35
-               {if_else {$this rt_has_space 0.25 0.25}
-                  cymbal_l
-                  cymbal_l_fast
-               }
-            )
+            (35 {if_else {$this rt_has_space 0.25 0.25} cymbal_l cymbal_l_fast})
             (40 cymbal_r_grab)
             (41 cymbal_l_grab)
-            (46
-               {if_else {$this rt_has_space 0.6 0.15}
+            (46 
+               {if_else {$this rt_has_space 0.6 0.15} 
                   tom_l_big
-                  {if_else {$this rt_has_space 0.25 0.25}
-                     tom_l
-                     tom_l_fast
-                  }
+                  {if_else {$this rt_has_space 0.25 0.25} tom_l tom_l_fast}
                }
             )
-            (48
-               {if_else {$this rt_has_space 0.6 0.15}
+            (48 
+               {if_else {$this rt_has_space 0.6 0.15} 
                   tom_r_big
-                  {if_else {$this rt_has_space 0.25 0.25}
-                     tom_r
-                     tom_r_fast
-                  }
+                  {if_else {$this rt_has_space 0.25 0.25} tom_r tom_r_fast}
                }
             )
-            (50
-               {if_else {$this rt_has_space 0.6 0.15}
+            (50 
+               {if_else {$this rt_has_space 0.6 0.15} 
                   floortom_big
-                  {if_else {$this rt_has_space 0.25 0.25}
-                     floortom
-                     floortom_fast
-                  }
+                  {if_else {$this rt_has_space 0.25 0.25} floortom floortom_fast}
                }
             )
             kDataUnhandled
@@ -1045,10 +874,10 @@
       }
    )
    MIDIPARSER_CONVERTFUNCTIONS
+
 }
 
-{new MidiParser
-   drums_right_hand
+{new MidiParser drums_right_hand
    (inverted TRUE)
    (track_name 'PART DRUMS')
    (ride_dir FALSE)
@@ -1059,96 +888,57 @@
       {set [max_gap] 2}
       {set $mp.ride_side TRUE}
    )
-   (text
+   (text 
       {if {has_substr $mp.val "ride_side"}
          {set $mp.ride_side {has_substr $mp.val "true"}}
       }
    )
-
-   (allowed_notes 27 31 36 37 38 39 40 41 42 47 49 51)
+   
+   (allowed_notes 27 31 36 37 38 39 40 41 42 47 49 51)     
    (midi
       {$this add_message
          {switch $mp.val
-            (27
-               {if_else {$this rt_has_space 0.25 0.25}
-                  snare
-                  snare_fast
-               }
-            )
-            (31
-               {if_else {$this rt_has_space 0.25 0.25}
-                  hihat
-                  hihat_fast
-               }
-            )
-            (36
+            (27 {if_else {$this rt_has_space 0.25 0.25} snare snare_fast})
+            (31 {if_else {$this rt_has_space 0.25 0.25} hihat hihat_fast})
+            (36 
                {if_else {== {$this prev_val} 38}
                   {if_else {<= {$this delta} 1}
-                     {if_else {$this rt_has_space 0.25 0.25}
-                        cymbal_l_side
-                        cymbal_l_side_fast
-                     }
+                     {if_else {$this rt_has_space 0.25 0.25} cymbal_l_side cymbal_l_side_fast}
                      {if_else {$this rt_has_space 0.6 0.4}
                         cymbal_l_crash_big
-                        {if_else {$this rt_has_space 0.25 0.25}
-                           cymbal_l_crash
-                           cymbal_l_crash_fast
-                        }
+                        {if_else {$this rt_has_space 0.25 0.25} cymbal_l_crash cymbal_l_crash_fast}
                      }
                   }
                   {if_else {$this rt_has_space 0.6 0.4}
                      cymbal_l_crash_big
-                     {if_else {$this rt_has_space 0.25 0.25}
-                        cymbal_l_crash
-                        cymbal_l_crash_fast
-                     }
+                     {if_else {$this rt_has_space 0.25 0.25} cymbal_l_crash cymbal_l_crash_fast}
                   }
                }
             )
-            (37
-               {if_else {$this rt_has_space 0.25 0.25}
-                  cymbal_l
-                  cymbal_l_fast
-               }
-            )
-            (38
+            (37 {if_else {$this rt_has_space 0.25 0.25} cymbal_l cymbal_l_fast})
+            (38 
                {if_else {== {$this prev_val} 36}
                   {if_else {<= {$this delta} 1}
-                     {if_else {$this rt_has_space 0.25 0.25}
-                        cymbal_r_side
-                        cymbal_r_side_fast
-                     }
+                     {if_else {$this rt_has_space 0.25 0.25} cymbal_r_side cymbal_r_side_fast}
                      {if_else {$this rt_has_space 0.6 0.4}
                         cymbal_r_crash_big
-                        {if_else {$this rt_has_space 0.25 0.25}
-                           cymbal_r_crash
-                           cymbal_r_crash_fast
-                        }
+                        {if_else {$this rt_has_space 0.25 0.25} cymbal_r_crash cymbal_r_crash_fast}
                      }
                   }
                   {if_else {$this rt_has_space 0.6 0.4}
                      cymbal_r_crash_big
-                     {if_else {$this rt_has_space 0.25 0.25}
-                        cymbal_r_crash
-                        cymbal_r_crash_fast
-                     }
+                     {if_else {$this rt_has_space 0.25 0.25} cymbal_r_crash cymbal_r_crash_fast}
                   }
                }
             )
-            (39
-               {if_else {$this rt_has_space 0.25 0.25}
-                  cymbal_r
-                  cymbal_r_fast
-               }
-            )
+            (39 {if_else {$this rt_has_space 0.25 0.25} cymbal_r cymbal_r_fast})
             (40 cymbal_r_grab)
             (41 cymbal_l_grab)
             (42
-               {if_else
-                  {&&
-                     $mp.ride_side
-                     {||
-                        {&& {== {$this prev_val} 42} {< $mp.prev_start 2}}
+               {if_else 
+                  {&& $mp.ride_side 
+                     {|| 
+                        {&& {== {$this prev_val} 42} {< $mp.prev_start 2}} 
                         {&& {== {$this next_val} 42} {< {$this delta} 2}}
                      }
                   }
@@ -1163,43 +953,28 @@
                            ride_side_l
                         }
                      }
-                     {do
-                        {set [ride_dir] FALSE}
-                        ride_fast
-                     }
+                     {do {set [ride_dir] FALSE} ride_fast}
                   }
-                  {do
-                     {set [ride_dir] FALSE}
-                     ride_fast
-                  }
+                  {do {set [ride_dir] FALSE} ride_fast}
                }
             )
-
-            (47
-               {if_else {$this rt_has_space 0.6 0.15}
+            
+            (47 
+               {if_else {$this rt_has_space 0.6 0.15} 
                   tom_l_big
-                  {if_else {$this rt_has_space 0.25 0.25}
-                     tom_l
-                     tom_l_fast
-                  }
+                  {if_else {$this rt_has_space 0.25 0.25} tom_l tom_l_fast}
                }
             )
-            (49
-               {if_else {$this rt_has_space 0.6 0.15}
+            (49 
+               {if_else {$this rt_has_space 0.6 0.15} 
                   tom_r_big
-                  {if_else {$this rt_has_space 0.25 0.25}
-                     tom_r
-                     tom_r_fast
-                  }
+                  {if_else {$this rt_has_space 0.25 0.25} tom_r tom_r_fast}
                }
             )
-            (51
+            (51 
                {if_else {$this rt_has_space 0.6 0.15}
-                  floortom_big
-                  {if_else {$this rt_has_space 0.25 0.25}
-                     floortom
-                     floortom_fast
-                  }
+                  floortom_big 
+                  {if_else {$this rt_has_space 0.25 0.25} floortom floortom_fast}
                }
             )
             kDataUnhandled
@@ -1207,148 +982,133 @@
       }
    )
    MIDIPARSER_CONVERTFUNCTIONS
+
 }
 
-{new MidiParser
-   drums_left_foot
+{new MidiParser drums_left_foot
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [idle_message] hihat_down}
       {set [idle_length] 0.0}
       {set [idle_start_gap] 0.25}
       {set [idle_end_gap] 0.25}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
-      {set [max_gap] 1}
+      {set [append_length] TRUE}    
+      {set [max_gap] 1}    
    )
    (allowed_notes 25)
-   (midi {$this add_message hihat_open})
+   (midi
+      {$this add_message hihat_open}
+   )
 }
 
-{new MidiParser
-   drums_right_foot
+{new MidiParser drums_right_foot
    (inverted TRUE)
    (track_name 'PART DRUMS')
    (init
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
-      {set [max_gap] 1}
+      {set [append_length] TRUE}  
+      {set [max_gap] 1}      
    )
    (allowed_notes 24)
-   (midi {$this add_message kick_01})
+   (midi
+      {$this add_message kick_01}
+   )
 }
 
-{new MidiParser
-   drums_snare
+{new MidiParser drums_snare
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
       {set [append_length] TRUE}
-      {set [max_gap] 0}
+      {set [max_gap] 0}        
    )
    (allowed_notes 26 27)
    (midi
-      {$this add_message
-         {if_else {$this has_space 0.5 0.5}
-            hit_norm_01
-            hit_tap_01
-         }
-      }
+      {$this add_message {if_else {$this has_space 0.5 0.5} hit_norm_01 hit_tap_01}}
    )
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_left_tom
+{new MidiParser drums_left_tom
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}     
    )
    (allowed_notes 46 47)
    (midi
       {$this add_message
-         {if_else {$this has_space 1.2 0.2}
+         {if_else {$this has_space 1.2 0.2} 
             hit_big_01
-            {if_else {$this has_space 0.5 0.5}
-               hit_norm_01
-               hit_tap_01
-            }
+            {if_else {$this has_space 0.5 0.5} hit_norm_01 hit_tap_01}
          }
       }
    )
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_right_tom
+{new MidiParser drums_right_tom
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}     
    )
    (allowed_notes 48 49)
    (midi
       {$this add_message
-         {if_else {$this has_space 1.2 0.2}
+         {if_else {$this has_space 1.2 0.2} 
             hit_big_01
-            {if_else {$this has_space 0.5 0.5}
-               hit_norm_01
-               hit_tap_01
-            }
+            {if_else {$this has_space 0.5 0.5} hit_norm_01 hit_tap_01}
          }
       }
    )
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_floortom
+
+{new MidiParser drums_floortom
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}   
    )
    (allowed_notes 50 51)
    (midi
       {$this add_message
          {if_else {$this has_space 1.2 0.2}
             hit_big_01
-            {if_else {$this has_space 0.5 0.5}
-               hit_norm_01
-               hit_tap_01
-            }
+            {if_else {$this has_space 0.5 0.5} hit_norm_01 hit_tap_01}
          }
       }
    )
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_left_crash
+{new MidiParser drums_left_crash
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [zero_length] TRUE}
       {set [message_type] strum}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}   
    )
    (allowed_notes 34 35 36 37 38 41)
    (midi
       {$this add_message
          {switch $mp.val
-            (34
-               {if_else {$this has_space 1.25 0.8}
+            (34 
+               {if_else {$this has_space 1.25 0.8} 
                   hit_big
                   {if_else {$this has_space 0.5 0.5}
                      hit_tap
@@ -1356,30 +1116,14 @@
                   }
                }
             )
-            (35
-               {if_else {$this has_space 0.5 0.5}
-                  hit_norm
-                  hit_tap
-               }
-            )
-            (36
+            (35 {if_else {$this has_space 0.5 0.5} hit_norm hit_tap})   
+            (36 
                {if_else {&& {== {$this prev_val} 38} {<= {$this delta} 1}}
-                  {if_else {$this has_space 0.5 0.5}
-                     hit_side
-                     hit_side_fast
-                  }
-                  {if_else {$this has_space 0.5 0.5}
-                     hit_norm
-                     hit_tap
-                  }
+                  {if_else {$this has_space 0.5 0.5} hit_side hit_side_fast}
+                  {if_else {$this has_space 0.5 0.5} hit_norm hit_tap}
                }
             )
-            (37
-               {if_else {$this has_space 0.5 0.5}
-                  hit_norm
-                  hit_tap
-               }
-            )
+            (37 {if_else {$this has_space 0.5 0.5} hit_norm hit_tap})   
             (41 hit_grab)
             kDataUnhandled
          }
@@ -1388,8 +1132,8 @@
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_right_crash
+
+{new MidiParser drums_right_crash
    (inverted TRUE)
    (track_name 'PART DRUMS')
    (init
@@ -1401,24 +1145,13 @@
    (midi
       {$this add_message
          {switch $mp.val
-            (38
+            (38    
                {if_else {&& {== {$this prev_val} 36} {<= {$this delta} 1}}
-                  {if_else {$this has_space 0.5 0.5}
-                     hit_side
-                     hit_side_fast
-                  }
-                  {if_else {$this has_space 0.5 0.5}
-                     hit_norm
-                     hit_tap
-                  }
-               }
+                  {if_else {$this has_space 0.5 0.5} hit_side hit_side_fast}
+                  {if_else {$this has_space 0.5 0.5} hit_norm hit_tap}
+               }             
             )
-            (39
-               {if_else {$this has_space 0.5 0.5}
-                  hit_norm
-                  hit_tap
-               }
-            )
+            (39 {if_else {$this has_space 0.5 0.5} hit_norm hit_tap}) 
             (40 hit_grab)
             kDataUnhandled
          }
@@ -1427,24 +1160,23 @@
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_ride
+{new MidiParser drums_ride
    (inverted TRUE)
    (track_name 'PART DRUMS')
-   (init
+   (init 
       {set [zero_length] TRUE}
       {set [message_type] strum}
       {set [append_length] TRUE}
    )
    (ride_dir FALSE)
-   (allowed_notes 27 31 36 37 38 39 40 41 42 47 49 51) ; we need all the notes for the right hand
+   (allowed_notes 27 31 36 37 38 39 40 41 42 47 49 51)    ; we need all the notes for the right hand
    (midi
       {switch $mp.val
          (42
             {$this add_message
-               {if_else
-                  {||
-                     {&& {== {$this prev_val} 42} {< $mp.prev_start 2}}
+               {if_else 
+                  {|| 
+                     {&& {== {$this prev_val} 42} {< $mp.prev_start 2}} 
                      {&& {== {$this next_val} 42} {< {$this delta} 2}}
                   }
                   {if_else {$this has_space 0.5 0.5}
@@ -1458,15 +1190,9 @@
                            hit_side_l
                         }
                      }
-                     {do
-                        {set [ride_dir] FALSE}
-                        hit_tap
-                     }
+                     {do {set [ride_dir] FALSE} hit_tap}
                   }
-                  {do
-                     {set [ride_dir] FALSE}
-                     hit_tap
-                  }
+                  {do {set [ride_dir] FALSE} hit_tap}
                }
             }
          )
@@ -1475,37 +1201,35 @@
    MIDIPARSER_CONVERTFUNCTIONS
 }
 
-{new MidiParser
-   drums_kick
+{new MidiParser drums_kick
    (inverted TRUE)
    (track_name 'PART DRUMS')
    (init
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}      
    )
    (allowed_notes 24)
    (midi
       {$this add_message
          {switch $mp.val
-            (24 kick)
+            (24 kick)      
             kDataUnhandled
          }
       }
    )
 }
 
-{new MidiParser
-   drums_hihat
+{new MidiParser drums_hihat
    (inverted TRUE)
    (track_name 'PART DRUMS')
    (init
       {set [zero_length] TRUE}
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE} 
    )
    (hihat_open TRUE)
-   (hihat_cache -999)
+   (hihat_cache -999) 
    (allowed_notes 25 30 31)
    (midi
       {$this add_message
@@ -1515,8 +1239,7 @@
                {set [hihat_cache] $mp.end}
                kDataUnhandled
             )
-            (
-               (30 31)
+            ((30 31) 
                {if_else {>= $mp.start [hihat_cache]}
                   {do
                      {set [hihat_open] FALSE}
@@ -1531,19 +1254,24 @@
    )
 }
 
+
+
+
+
 ; WORLD PARSERS, the world add sinks to these guys.
 ; Give them all the first name of world
 
-{new MidiParser
-   world_postproc_parser
+{new MidiParser world_postproc_parser
    (track_name 'VENUE')
-   (init {set [append_length] TRUE})
+   (init 
+      {set [append_length] TRUE} 
+   )
    (allowed_notes 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110)
    (midi
       {if {== $game.play_mode coop} ;; only used in coop mode, as we're out of notes in h2h mode
          {do
-            {set $mp.start {- $mp.start 0.15}} ; move back before camera cut
-            {if_else {< $mp.length 0.5} ; filter out quick marks
+            {set $mp.start {- $mp.start 0.15}}  ; move back before camera cut
+            {if_else {< $mp.length 0.5}              ; filter out quick marks
                {do
                   {set $mp.end $mp.start}
                   {set $mp.length 0}
@@ -1552,78 +1280,93 @@
             }
             {$this add_script
                {switch $mp.val
-                  (96
-                     ({set $camera.postproc_override ProFilm_a.pp}
+                  (96 
+                     (
+                        {set $camera.postproc_override ProFilm_a.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (97
-                     ({set $camera.postproc_override contrast_a.pp}
+                  (97 
+                     (
+                        {set $camera.postproc_override contrast_a.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (98
-                     ({set $camera.postproc_override film_16mm.pp}
+                  (98 
+                     (
+                        {set $camera.postproc_override film_16mm.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (99
-                     ({set $camera.postproc_override film_sepia_ink.pp}
+                  (99 
+                     (
+                        {set $camera.postproc_override film_sepia_ink.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (100
-                     ({set $camera.postproc_override film_silvertone.pp}
+                  (100 
+                     (
+                        {set $camera.postproc_override film_silvertone.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (101
-                     ({set $camera.postproc_override photo_negative.pp}
+                  (101 
+                     (
+                        {set $camera.postproc_override photo_negative.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (102
-                     ({set $camera.postproc_override photocopy.pp}
+                  (102 
+                     (
+                        {set $camera.postproc_override photocopy.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (103
-                     ({set $camera.postproc_override ProFilm_a.pp}
+                  (103 
+                     (
+                        {set $camera.postproc_override ProFilm_a.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (104
-                     ({set $camera.postproc_override ProFilm_b.pp}
+                  (104 
+                     (
+                        {set $camera.postproc_override ProFilm_b.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (105
-                     ({set $camera.postproc_override ProFilm_mirror_a.pp}
+                  (105 
+                     (
+                        {set $camera.postproc_override ProFilm_mirror_a.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (106
-                     ({set $camera.postproc_override film_blue_filter.pp}
+                  (106 
+                     (
+                        {set $camera.postproc_override film_blue_filter.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (107
-                     ({set $camera.postproc_override video_a.pp}
+                  (107 
+                     (
+                        {set $camera.postproc_override video_a.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (108
-                     ({set $camera.postproc_override video_bw.pp}
+                  (108 
+                     (
+                        {set $camera.postproc_override video_bw.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (109
-                     ({set $camera.postproc_override video_security.pp}
+                  (109 
+                     (
+                        {set $camera.postproc_override video_security.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
-                  (110
-                     ({set $camera.postproc_override video_trails.pp}
+                  (110 
+                     (
+                        {set $camera.postproc_override video_trails.pp}
                         {set $camera.postproc_blendtime $mp.length}
                      )
                   )
@@ -1633,29 +1376,26 @@
          }
       }
    )
-}
+}   
 
-{new MidiParser
-   world_drum_triggers
+
+{new MidiParser world_drum_triggers
    (track_name 'PART DRUMS')
    (allowed_notes 96 97 100)
    (midi
-      {$this add_message
-         ({switch $mp.val
+      {$this add_message (
+         {switch $mp.val
             (96 kick_drum)
             (97 snare_drum)
             (100 crash_hit)
             kDataUnhandled
-         }
-
-         )
+         })
       }
    )
-}
+}   
 
 ;lighting events
-{new MidiParser
-   world_lighting_parser
+{new MidiParser world_lighting_parser
    (track_name 'VENUE')
    (init
       {set [start_offset] -4}
@@ -1663,24 +1403,21 @@
    )
    (allowed_notes 48 49 50)
    (midi
-      {$this add_message
-         ({switch $mp.val
+      {$this add_message (
+         {switch $mp.val
             (48 lighting_next_keyframe)
             (49 lighting_prev_keyframe)
             (50 lighting_first_keyframe)
             kDataUnhandled
-         }
-
-         )
+         })         
       }
    )
-}
+}  
 
-{new MidiParser
-   world_event_parser
+{new MidiParser world_event_parser
    (track_name 'VENUE')
    (text
-      {$this add_message
+      {$this add_message 
          {switch $mp.val
             (bonusfx (bonusfx))
             (bonusfx_optional (bonusfx_optional))
@@ -1692,32 +1429,25 @@
    )
 }
 
-{new MidiParser
-   world_lighting_one_bar_to
+{new MidiParser world_lighting_one_bar_to
    (track_name 'VENUE')
    (init
       {set [start_offset] -4}
       {set [zero_length] TRUE}
    )
    (text
-      {$this add_message
+      {$this add_message 
          {switch $mp.val
             (chorus (one_bar_to chorus))
             (verse (one_bar_to verse))
-            (lighting
-               (set_lighting
-                  ()
-                  {elem $mp.data 1}
-               )
-            )
+            (lighting (set_lighting () {elem $mp.data 1}))
             kDataUnhandled
-         }
+         }   
       }
    )
 }
 
-{new MidiParser
-   world_focus_parser
+{new MidiParser world_focus_parser
    (track_name 'VENUE')
    (init
       {set [append_length] TRUE}
@@ -1732,36 +1462,23 @@
       {set [start_offset] -0.125}
    )
    (allowed_notes 61 62 63 64 70 71 72 73)
-
+   
    ; function to filter shots based on genre and gender
    (get_shot
       {set $filter {array 0}}
-      {do
+      {do 
          ($name {elem $mp.data 1})
-         ($player
-            {find_obj
-               $world
-               {cond
-                  ({has_substr $name "bass"} player_bass0)
-                  ({has_substr $name "drum"} player_drum0)
-                  ({has_substr $name "guitar"} player_guitar0)
-                  ({has_substr $name "vocal"} player_vocals0)
-                  ""
-               }
-            }
+         ($player {find_obj $world 
+            {cond 
+               ({has_substr $name "bass"} player_bass0)
+               ({has_substr $name "drum"} player_drum0)
+               ({has_substr $name "guitar"} player_guitar0)
+               ({has_substr $name "vocal"} player_vocals0)
+               ""
+            }}
          )
-         {set $genre
-            {if_else $player
-               {$player get attitude}
-               0
-            }
-         }
-         {set $gender
-            {if_else $player
-               {$player get gender}
-               0
-            }
-         }
+         {set $genre {if_else $player {$player get attitude} 0}}
+         {set $gender {if_else $player {$player get gender} 0}}
       }
       {switch $gender
          (male {push_back $filter (valid_male 1)})
@@ -1775,8 +1492,9 @@
       }
       ; return shot
       {$world find_shot {elem $mp.data 1} $filter}
-   )
 
+   )
+   
    (midi
       {$this add_script
          {switch $mp.val
@@ -1810,13 +1528,12 @@
    )
    (text
       {if {&& $world {== $mp.val do_directed_cut}}
-         {do
+         {do 
             {set $shot {$this get_shot}}
             {+= $mp.start 0.125}
             {+= $mp.end 0.125}
             {if $shot
-               {do
-                  ($zt {$shot get zero_time})
+               {do ($zt {$shot get zero_time})
                   {set $mp.start
                      {if_else {$shot convert_frames $zt}
                         {$this sec_to_beat {- {$this beat_to_sec $mp.start} $zt}}
@@ -1829,13 +1546,12 @@
          }
       }
       {if {&& $world {== $mp.val do_optional_cut}}
-         {do
+         {do 
             {set $shot {$this get_shot}}
             {+= $mp.start 0.125}
             {+= $mp.end 0.125}
             {if $shot
-               {do
-                  ($zt {$shot get zero_time})
+               {do ($zt {$shot get zero_time})
                   {set $mp.start
                      {if_else {$shot convert_frames $zt}
                         {$this sec_to_beat {- {$this beat_to_sec $mp.start} $zt}}
@@ -1850,7 +1566,8 @@
    )
 }
 
-#define H2H_TRACK (
+#define H2H_TRACK
+(
    {switch $game.play_mode
       (h2h_drum 'PART DRUMS')
       (h2h_guitar 'PART GUITAR')
@@ -1860,15 +1577,14 @@
    }
 )
 
+
 {if {&& $game.play_mode {!= $game.play_mode coop}}
-   {new MidiParser
-      world_focus_parser_h2h
+   {new MidiParser world_focus_parser_h2h
       (track_name H2H_TRACK)
-      (init
-         ()
+      (init()
          {set [start_offset] -0.125}
          {set [append_length] TRUE}
-         {set $mp.endcache 0}
+         {set $mp.endcache 0}    
       )
 
       (allowed_notes 105 106)
@@ -1878,49 +1594,49 @@
          ; current note add the script for the previous notes end event. It can then check this
          ; cached time vs. the current time to filter out small gaps. If that time is negative, 
          ; then we know there is note overlap, and we also need to call for a camera cut.
-
-         ;
-         ; PGM FIXME -- this is a little hacky, we should clean this up properly
-         ;                
-         ;         {if {|| {<= {- $mp.start $mp.endcache} 0} {> {- $mp.start $mp.endcache} 1}}
-         ;            {$this add_script ({$world pick_new_shot})}
-         ;         }
-
+ 
+;
+; PGM FIXME -- this is a little hacky, we should clean this up properly
+;                
+;         {if {|| {<= {- $mp.start $mp.endcache} 0} {> {- $mp.start $mp.endcache} 1}}
+;            {$this add_script ({$world pick_new_shot})}
+;         }
+         
          ; set focus notes and pick new shots on note starts
-         ;         {$this add_script
-         ;            {switch $mp.val
-         ;               (105 ({set $camera.h2h_p1_focus TRUE} {$world pick_new_shot}))
-         ;               (106 ({set $camera.h2h_p2_focus TRUE} {$world pick_new_shot}))
-         ;               kDataUnhandled
-         ;            }
-         ;         }
-         ;         {set $mp.start $mp.end}
-         ;         {$this add_script
-         ;            {switch $mp.val
-         ;               (105 ({set $camera.h2h_p1_focus FALSE}))
-         ;               (106 ({set $camera.h2h_p2_focus FALSE}))
-         ;               kDataUnhandled
-         ;            }
-         ;         }
-         ;         {set $mp.endcache $mp.end} ; cache note end time
+;         {$this add_script
+;            {switch $mp.val
+;               (105 ({set $camera.h2h_p1_focus TRUE} {$world pick_new_shot}))
+;               (106 ({set $camera.h2h_p2_focus TRUE} {$world pick_new_shot}))
+;               kDataUnhandled
+;            }
+;         }
+;         {set $mp.start $mp.end}
+;         {$this add_script
+;            {switch $mp.val
+;               (105 ({set $camera.h2h_p1_focus FALSE}))
+;               (106 ({set $camera.h2h_p2_focus FALSE}))
+;               kDataUnhandled
+;            }
+;         }
+;         {set $mp.endcache $mp.end} ; cache note end time
       )
    }
 }
 
 ; Tell the slot0 (leftmost) player when to play and when not to play.
 {if {&& $game.play_mode {!= $game.play_mode coop}}
-   {new MidiParser
-      slot0_enable
+
+   {new MidiParser slot0_enable
       (track_name H2H_TRACK)
       (init
          {set [start_offset] -1}
          {set [next_disable] -1}
       )
-      (term
+      (term 
          {set $mp.start [next_disable]}
-         {set $mp.end $mp.start}
+         {set $mp.end $mp.start}         
          {$this add_message disable_player}
-      )
+      )      
       (allowed_notes 105)
       (midi
          {if {== $mp.val 105}
@@ -1934,15 +1650,14 @@
          }
       )
    }
-
-   {new MidiParser
-      slot1_enable
+   
+   {new MidiParser slot1_enable
       (track_name H2H_TRACK)
       (init
          {set [start_offset] -1}
          {set [next_disable] -1}
       )
-      (term
+      (term 
          {set $mp.start [next_disable]}
          {set $mp.end $mp.start}
          {$this add_message disable_player}
@@ -1961,9 +1676,10 @@
    }
 }
 
+
+
 {if $game.play_mode
-   {new MidiParser
-      world_spotlight_focus
+   {new MidiParser world_spotlight_focus
       (track_name
          {switch $game.play_mode
             (coop 'VENUE')
@@ -1976,7 +1692,7 @@
       )
       (init
          {set [start_offset] 0.25}
-         {set [append_length] TRUE}
+         {set [append_length] TRUE}      
       )
 
       (allowed_notes 37 38 39 40 105 106)
@@ -2002,8 +1718,8 @@
                      kDataUnhandled
                   }
                }
-            )
-            ; head 2 head modes
+             )
+             ; head 2 head modes
             {$this add_message
                {switch $mp.val
                   (105 (spotlight_h2h_p1_on))
@@ -2025,12 +1741,11 @@
 }
 
 {if {&& $game.play_mode {!= $game.play_mode coop}}
-   {new MidiParser
-      world_focus_parser_h2h_override
+   {new MidiParser world_focus_parser_h2h_override
       (track_name H2H_TRACK)
       (init
          {set [start_offset] -0.125}
-         {set [append_length] TRUE}
+         {set [append_length] TRUE}      
       )
 
       (allowed_notes 13 14 15)
@@ -2056,11 +1771,11 @@
    }
 }
 
+
 ; camera event parser, preproccessor
 ;
 ;  triggers the actual shots
-{new MidiParser
-   world_camera_parser
+{new MidiParser world_camera_parser
    (track_name
       {if_else $game.play_mode
          {switch $game.play_mode
@@ -2073,11 +1788,11 @@
          'VENUE'
       }
    )
-   (init
+   (init 
       {set [start_offset] -0.125}
       {set [append_length] TRUE}
    )
-
+   
    (allowed_notes 12 60)
    (midi
       {if_else {== $game.play_mode coop}
@@ -2093,8 +1808,7 @@
 
 ; stage kit
 
-{new MidiParser
-   stagekit_fogstrobe_parser
+{new MidiParser stagekit_fogstrobe_parser
    (track_name 'VENUE')
    (text
       {if {has_substr $mp.val "FogOn"}
@@ -2104,10 +1818,10 @@
          {$this add_script ({set_stagekit_fog FALSE})}
       }
    )
+   
 }
 
-{new MidiParser
-   stagekit_bass_parser
+{new MidiParser stagekit_bass_parser
    (track_name 'PART BASS')
    (inverted TRUE)
    (init
@@ -2116,30 +1830,29 @@
       {set [min_gap] 0.2}
    )
    (gem
-      {$this add_script
-         ({foreach_int $i 0 3
+      {$this add_script 
+         (
+            {foreach_int $i 0 3
                {if {== {stagekit_get_bank_mode $i} kStageBass}
                   {stagekit_set_bank_state $i TRUE}
                }
             }
-
          )
       }
       {set $mp.start $mp.end}
-      {$this add_script
-         ({foreach_int $i 0 3
+      {$this add_script 
+         (
+            {foreach_int $i 0 3
                {if {== {stagekit_get_bank_mode $i} kStageBass}
                   {stagekit_set_bank_state $i FALSE}
                }
             }
-
          )
       }
    )
 }
 
-{new MidiParser
-   stagekit_guitar_parser
+{new MidiParser stagekit_guitar_parser
    (track_name 'PART GUITAR')
    (inverted TRUE)
    (init
@@ -2148,99 +1861,98 @@
       {set [min_gap] 0.2}
    )
    (gem
-      {$this add_script
-         ({foreach_int $i 0 3
+      {$this add_script 
+         (
+            {foreach_int $i 0 3
                {if {== {stagekit_get_bank_mode $i} kStageGuitar}
                   {stagekit_set_bank_state $i TRUE}
                }
             }
-
          )
       }
       {set $mp.start $mp.end}
-      {$this add_script
-         ({foreach_int $i 0 3
+      {$this add_script 
+         (
+            {foreach_int $i 0 3
                {if {== {stagekit_get_bank_mode $i} kStageGuitar}
                   {stagekit_set_bank_state $i FALSE}
                }
             }
-
          )
       }
    )
 }
 
-{new MidiParser
-   stagekit_drum_parser
+{new MidiParser stagekit_drum_parser
    (track_name 'PART DRUMS')
    (inverted TRUE)
    (init
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}   
       {set [max_gap] .24}
-      {set [min_gap] 0.2}
+      {set [min_gap] 0.2} 
    )
    (gem
       {switch $mp.val
          (kMPGem1
-            {$this add_script
-               ({foreach_int $i 0 3
+            {$this add_script 
+               (
+                  {foreach_int $i 0 3
                      {if {== {stagekit_get_bank_mode $i} kStageDrumKick}
                         {stagekit_set_bank_state $i TRUE}
                      }
                   }
-
                )
             }
             {set $mp.start $mp.end}
-            {$this add_script
-               ({foreach_int $i 0 3
+            {$this add_script 
+               (
+                  {foreach_int $i 0 3
                      {if {== {stagekit_get_bank_mode $i} kStageDrumKick}
                         {stagekit_set_bank_state $i FALSE}
                      }
                   }
-
                )
             }
          )
          (kMPGem2
-            {$this add_script
-               ({foreach_int $i 0 3
+            {$this add_script 
+               (
+                  {foreach_int $i 0 3
                      {if {== {stagekit_get_bank_mode $i} kStageDrumSnare}
                         {stagekit_set_bank_state $i TRUE}
                      }
                   }
-
                )
             }
             {set $mp.start $mp.end}
-            {$this add_script
-               ({foreach_int $i 0 3
+            {$this add_script 
+               (
+                  {foreach_int $i 0 3
                      {if {== {stagekit_get_bank_mode $i} kStageDrumSnare}
                         {stagekit_set_bank_state $i FALSE}
                      }
                   }
-
                )
             }
          )
          {do
-            {$this add_script
-               ({foreach_int $i 0 3
+            {$this add_script 
+               (
+                  {foreach_int $i 0 3
                      {if {== {stagekit_get_bank_mode $i} kStageDrumCrash}
                         {stagekit_set_bank_state $i TRUE}
                      }
                   }
-
                )
             }
             {set $mp.start $mp.end}
-            {$this add_script
-               ({foreach_int $i 0 3
+            {$this add_script 
+               (
+                  {foreach_int $i 0 3
                      {if {== {stagekit_get_bank_mode $i} kStageDrumCrash}
                         {stagekit_set_bank_state $i FALSE}
                      }
                   }
-
                )
             }
          }
@@ -2248,33 +1960,32 @@
    )
 }
 
-{new MidiParser
-   stagekit_vocal_parser
+{new MidiParser stagekit_vocal_parser
    (track_name 'PART VOCALS')
    (inverted TRUE)
    (init
       {set [append_length] TRUE}
       {set [max_gap] .24}
-      {set [min_gap] 0.2}
+      {set [min_gap] 0.2} 
    )
    (midi
-      {$this add_script
-         ({foreach_int $i 0 3
+      {$this add_script 
+         (
+            {foreach_int $i 0 3
                {if {== {stagekit_get_bank_mode $i} kStageVocal}
                   {stagekit_set_bank_state $i TRUE}
                }
             }
-
          )
       }
       {set $mp.start $mp.end}
-      {$this add_script
-         ({foreach_int $i 0 3
+      {$this add_script 
+         (
+            {foreach_int $i 0 3
                {if {== {stagekit_get_bank_mode $i} kStageVocal}
                   {stagekit_set_bank_state $i FALSE}
                }
             }
-
          )
       }
    )
@@ -2282,8 +1993,7 @@
 
 ; EQ
 
-{new MidiParser
-   eq_bass_parser
+{new MidiParser eq_bass_parser
    (track_name 'PART BASS')
    (inverted TRUE)
    (init
@@ -2296,11 +2006,12 @@
       {set [max_gap] .24}
       {set [min_gap] 0.2}
    )
-   (gem {$this add_message bass})
+   (gem
+      {$this add_message bass}
+   )
 }
 
-{new MidiParser
-   eq_guitar_parser
+{new MidiParser eq_guitar_parser
    (track_name 'PART GUITAR')
    (inverted TRUE)
    (init
@@ -2313,22 +2024,23 @@
       {set [max_gap] .24}
       {set [min_gap] 0.2}
    )
-   (gem {$this add_message guitar})
+   (gem
+      {$this add_message guitar}
+   )
 }
 
-{new MidiParser
-   eq_kick_parser
+{new MidiParser eq_kick_parser
    (track_name 'PART DRUMS')
    (inverted TRUE)
    (init
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE}   
       {set [idle_message] still}
       {set [idle_length] 0.1}
       {set [idle_start_gap] .1}
       {set [idle_end_gap] 0.1}
       {set [max_gap] .24}
-      {set [min_gap] 0.2}
+      {set [min_gap] 0.2} 
    )
    (gem
       {switch $mp.val
@@ -2337,19 +2049,18 @@
    )
 }
 
-{new MidiParser
-   eq_snare_parser
+{new MidiParser eq_snare_parser
    (track_name 'PART DRUMS')
    (inverted TRUE)
    (init
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE} 
       {set [idle_message] still}
       {set [idle_length] 0.1}
       {set [idle_start_gap] .1}
       {set [idle_end_gap] 0.1}
       {set [max_gap] .24}
-      {set [min_gap] 0.2}
+      {set [min_gap] 0.2}    
    )
    (gem
       {switch $mp.val
@@ -2358,19 +2069,18 @@
    )
 }
 
-{new MidiParser
-   eq_cymbal_parser
+{new MidiParser eq_cymbal_parser
    (track_name 'PART DRUMS')
    (inverted TRUE)
    (init
       {set [message_type] midi_parser}
-      {set [append_length] TRUE}
+      {set [append_length] TRUE} 
       {set [idle_message] still}
       {set [idle_length] 0.075}
       {set [idle_start_gap] .075}
       {set [idle_end_gap] 0.075}
       {set [max_gap] .15}
-      {set [min_gap] 0.125}
+      {set [min_gap] 0.125}    
    )
    (gem
       {switch $mp.val
@@ -2381,8 +2091,7 @@
    )
 }
 
-{new MidiParser
-   eq_vocal_parser
+{new MidiParser eq_vocal_parser
    (track_name 'PART VOCALS')
    (inverted TRUE)
    (init
@@ -2393,14 +2102,15 @@
       {set [idle_start_gap] .3}
       {set [idle_end_gap] 0.2}
       {set [max_gap] .24}
-      {set [min_gap] 0.2}
+      {set [min_gap] 0.2} 
    )
-   (midi {$this add_message vocal})
+   (midi
+      {$this add_message vocal}
+   )
 }
 
 ; singalong parsers
-{new MidiParser
-   bass_singalong_parser
+{new MidiParser bass_singalong_parser
    (track_name 'VENUE')
    (init)
    (allowed_notes 85)
@@ -2411,8 +2121,7 @@
    )
 }
 
-{new MidiParser
-   drum_singalong_parser
+{new MidiParser drum_singalong_parser
    (track_name 'VENUE')
    (init)
    (allowed_notes 86)
@@ -2423,8 +2132,7 @@
    )
 }
 
-{new MidiParser
-   guitar_singalong_parser
+{new MidiParser guitar_singalong_parser
    (track_name 'VENUE')
    (init)
    (allowed_notes 87)
@@ -2435,8 +2143,8 @@
    )
 }
 
-{new MidiParser
-   guitar_singalong_streak_parser
+
+{new MidiParser guitar_singalong_streak_parser
    (track_name 'VENUE')
    (init)
    (allowed_notes 87)

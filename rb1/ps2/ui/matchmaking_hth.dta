@@ -1,13 +1,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Head to Head Matchmaking Screen
 
-{new UIPanel
-   matchmaking_hth_panel
-   (file matchmaking_hth_og.milo)
-
-   (show_waiting {waiting.grp set_showing TRUE})
-   (hide_waiting {waiting.grp set_showing FALSE})
-
+{new UIPanel matchmaking_hth_panel
+	(file matchmaking_hth_og.milo)
+     
+   (show_waiting
+      {waiting.grp set_showing TRUE}
+   )
+   (hide_waiting
+      {waiting.grp set_showing FALSE}
+   )
+   
    (unload
       ; unhook the callback here after we've exited
       ; {practice_space_panel set_showing_callback ''} - REA
@@ -16,31 +19,33 @@
    )
 }
 
-{new MultiFocusScreen
-   matchmaking_hth_screen
+{new MultiFocusScreen matchmaking_hth_screen
    (panels
       meta
       ;practice_space_panel
-      movie_panel
+		movie_panel
       matchmaking_hth_panel
       helpbar
    )
    (back {gamemode get main_mode_screen})
-
+   
    (helpbar ()) ;helpbar will be set dynamically in (update)
 
    (player_panels
       (panel matchmaking_hth_panel)
       (slots none none)
       (type ; type of PanelDirs, serves as a common handler for all options
-         (player_num {gamecfg get_player_num_from_slot_num [slot_num]}) ; required
-         (slot_num 0) ; required
-         (slot none) ; required
-         (option '') ; required
+         (player_num {gamecfg get_player_num_from_slot_num [slot_num]})  ; required
+         (slot_num 0)    ; required
+         (slot none)     ; required
+         (option '')     ; required
          (current_option ; required
             {cond
-               ({session is_busy} waiting)
-               ({&&
+               ({session is_busy}
+                  waiting
+               )
+               (
+                  {&&
                      {! {$this is_participating}}
                      {&&
                         {!= [slot] none}
@@ -50,15 +55,18 @@
                   }
                   no_instrument
                )
-               ({! {$this is_participating}} join)
-               ({&&
+               ({! {$this is_participating}}
+                  join
+               )
+               ( 
+                  {&&
                      {gamemode get ranked}
                      {==
                         {{game get_player_config [player_num]} get_track_type}
                         kTrackNone
                      }
                   }
-                  ;   choose_part
+               ;   choose_part
                )
                ({! {{game get_player_config [player_num]} has_char}}
                   {if_else [choose_gender]
@@ -68,8 +76,7 @@
                )
 
                ; Default
-               {do
-                  ($leader_num {gamecfg get leader_num})
+               {do ($leader_num {gamecfg get leader_num})
                   {if_else {== $leader_num -1}
                      ready_no_leader
                      ; else
@@ -86,15 +93,16 @@
          (enter
             ;; restore slot symbols if there's an existing session...
             {if {$this is_participating}
-               {$this set
-                  slot
-                  {{gamecfg get_player_config [player_num]} get_controller_sym}
+               {$this set slot
+                  {{gamecfg get_player_config [player_num]}
+                     get_controller_sym
+                  }
                }
             }
 
             {$this update_char_provider}
             {set [choose_gender] FALSE}
-            {$this update_char_provider}
+			{$this update_char_provider}
          )
 
          MATCHMAKING_LOAD_CHAR_METHODS ; from matchmaking.dta 
@@ -112,7 +120,9 @@
                {do
                   ($pcfg {game get_player_config [player_num]})
                   ($old_instrument {$pcfg get_controller_type})
-                  ($new_instrument {game get_controller_type_from_controller [player_num]})
+                  ($new_instrument
+                     {game get_controller_type_from_controller [player_num]}
+                  )
 
                   {if {!= $old_instrument $new_instrument}
                      ; remove player from session
@@ -124,26 +134,35 @@
 
          (update ; required
             {do
-               ($participating {$this is_participating})
-               ($leader {&& $participating {$this is_leader}})
-               ($remote {&& $participating {! {gamecfg is_player_local [player_num]}}})
+               ($participating   {$this is_participating})
+               ($leader          {&& $participating {$this is_leader}})
+               ($remote
+                  {&&
+                     $participating
+                     {! {gamecfg is_player_local [player_num]}}
+                  }
+               )
                ($has_char
-                  {&& $participating {{gamecfg get_player_config [player_num]} has_char}}
+                  {&&
+                     $participating
+                     {{gamecfg get_player_config [player_num]} has_char}
+                  }
                )
                ($has_online
                   {&&
                      $participating
                      {||
                         $remote
-                        {platform_mgr has_online_privilege
+                        {platform_mgr
+                           has_online_privilege
                            {joypad_get_players_padnum [player_num]}
                         }
                      }
                   }
                )
-               ($session_busy {session is_busy})
+               ($session_busy    {session is_busy})
 
-               ($part_sel FALSE)
+			   ($part_sel FALSE)
 
                ;;;;;;;;;;
                ;; RE-SYNC STATE TO EXISTING PLAYER CONFIG
@@ -159,8 +178,7 @@
                {{game get_player_config [player_num]} has_char}
             }
          )
-         (allow_button_msg
-            ($player_num) ; required
+         (allow_button_msg ($player_num) ; required
             ;; HACK! - try to put lower player num in lower slot...
             {if_else
                {&&
@@ -169,9 +187,10 @@
                   {== [slot] none}
                   {== [player_num] -1}
                   {==
-                     {
-                        ; check that the other slot is unassigned...
-                        {{ui current_screen} get_panel_from_slot_num kGameHthSlot1}
+                     { ; check that the other slot is unassigned...
+                        {{ui current_screen} get_panel_from_slot_num
+                           kGameHthSlot1
+                        }
                         player_num
                      }
                      -1
@@ -201,7 +220,10 @@
                   {foreach $slot_num (0 1) ;kHTHSlot REA
                      {do
                         ($panel
-                           {{gamemode get matchmaking_screen} get_panel_from_slot_num $slot_num}
+                           {{gamemode get matchmaking_screen}
+                              get_panel_from_slot_num
+                              $slot_num
+                           }
                         )
 
                         {$panel set slot none}
@@ -210,11 +232,11 @@
                }
 
                {gamecfg set_player_slot_num $player_num -1}
-
-               ; REA - Clear leader num if this player was the leader
-               {if {== {gamecfg get leader_num} $player_num}
-                  {game set leader_num -1}
-               }
+					
+					; REA - Clear leader num if this player was the leader
+				   {if {== {gamecfg get leader_num} $player_num}
+					   {game set leader_num -1} 
+				   }
             }
 
             {{gamemode get matchmaking_screen} export_all update}
@@ -227,19 +249,23 @@
                {band_ui_sink send_net_focus [player_num] $new_focus name}
             }
          )
-         (net_focus
-            ($player_num $new_focus_name)
+         (net_focus ($player_num $new_focus_name)
             {set [send_focus_msg] FALSE}
             {$this set_focus {$this find $new_focus_name}}
             {set [send_focus_msg] TRUE}
          )
 
-         (get_char {{game get_player_config [player_num]} get_char})
+         (get_char
+            {{game get_player_config [player_num]} get_char}
+         )
          (is_participating
             {&& {!= [player_num] -1} {game is_player_participating [player_num]}}
          )
          (is_leader
-            {&& {$this is_participating} {== {gamecfg get leader_num} [player_num]}}
+            {&&
+               {$this is_participating}
+               {== {gamecfg get leader_num} [player_num]}
+            }
          )
          (update_char_provider
             {if {!= [player_num] -1}
@@ -252,7 +278,12 @@
                   {game get_instrument_from_controller [player_num]}
                }
 
-               {if {&& {$this is_participating} {gamecfg is_player_local [player_num]}}
+               {if
+                  {&&
+                     {$this is_participating}
+                     {gamecfg is_player_local [player_num]}
+                  }
+
                   ;; update list
                   {char.lst set_provider [char_provider]}
 
@@ -262,8 +293,7 @@
             }
          )
 
-         (new_local_player
-            ($player_num)
+         (new_local_player ($player_num)
             {gamecfg set_player_slot_num $player_num [slot_num]}
 
             {if {== $player_num [player_num]}
@@ -272,11 +302,10 @@
                {$this update_char_provider}
 
                ;; Skip char select if we are in auto-choose mode
-               {do
-                  ($char {available_prefab $player_num})
-                  {{game get_player_config $player_num} set_char $char}
-                  {$this load_char $char}
-               }
+                  {do ($char {available_prefab $player_num})
+                     {{game get_player_config $player_num} set_char $char}
+                     {$this load_char $char}
+                  }
                {{gamemode get matchmaking_screen} export_all update}
             }
          )
@@ -288,74 +317,100 @@
             ; eat any button messages...
             (BUTTON_DOWN_MSG
                {switch $button
-                  (
-                     (kPad_Tri kPad_X)
+                  ((kPad_Tri kPad_X)
                      {synth play button_error}
                   )
                }
                TRUE
             )
          )
-         (no_instrument (BUTTON_DOWN_MSG TRUE))
+         (no_instrument
+            (BUTTON_DOWN_MSG
+               TRUE
+            )
+         )
          (join
             (BUTTON_DOWN_MSG
-               {switch $button
-                  (kPad_Tri
-                     ;; Go Back...
-                     ;; TODO: destroy session and stuff?
-                     {band_ui_sink set invite_accepted FALSE}
-                     {synth play button_back}
-                     {ui goto_screen main_multimode_screen} ; REA - Skip multiplayer type screen
-                  )
-                  (kPad_X
-                     {cond
-                        ({gamecfg is_missing_mic
+                  {switch $button
+                     (kPad_Tri
+                        ;; Go Back...
+                        ;; TODO: destroy session and stuff?
+                        {band_ui_sink set invite_accepted FALSE}
+                        {synth play button_back}
+								{ui goto_screen main_multimode_screen} ; REA - Skip multiplayer type screen
+                     )
+                     (kPad_X
+                        {cond
+                           (
+                              {gamecfg is_missing_mic
                                  $player_num
                                  {== {gamemode get max_local_players} 2}
                               }
-                           ; then
-                           {vocalist_must_have_mic_screen set message hth_vocalist_needs_mic}
-                           {ui push_screen vocalist_must_have_mic_screen}
-                        )
-                        ({game can_local_player_join $player_num}
-                           {synth play button_select}
-                           ;; make sure all slots are set appropriately                                 
-                           {foreach $slot_num (kGameHthSlot0 kGameHthSlot1)
-                              {do
-                                 ($panel
-                                    {{gamemode get matchmaking_screen} get_panel_from_slot_num $slot_num}
-                                 )
-
-                                 {$panel set slot {gamecfg get_instrument_from_controller $player_num}}
+                              ; then
+                              {vocalist_must_have_mic_screen set message
+                                 hth_vocalist_needs_mic
                               }
-                           }
+                              {ui push_screen vocalist_must_have_mic_screen}
+                           )
+                           ({game can_local_player_join $player_num}
+                              {synth play button_select}
+                              ;; make sure all slots are set appropriately                                 
+                              {foreach $slot_num (kGameHthSlot0 kGameHthSlot1)
+                                 {do
+                                    ($panel
+                                       {{gamemode get matchmaking_screen}
+                                          get_panel_from_slot_num
+                                          $slot_num
+                                       }
+                                    )
 
-                           ; REA - Set leader to first player to click in
-                           {if {== {gamecfg get leader_num} -1}
-                              {game set leader_num $player_num}
-                           }
-
-                           ;; add_local_player will fire off a msg when ready
-                           {session_mgr add_sink $this new_local_player}
-                           {session_mgr add_local_player
-                              $player_num
-                              {gamecfg get_controller_type_from_controller $player_num}
-                           }
-
-                           {{gamemode get matchmaking_screen} export_all update}
-                        )
-                        (
-                           ;; If they can't join, try to help them out...
-                           {&&
-                              {||
-                                 {== [slot] none}
-                                 {== [slot] {gamecfg get_instrument_from_controller $player_num}}
+                                    {$panel set slot
+                                       {gamecfg
+                                          get_instrument_from_controller
+                                          $player_num
+                                       }
+                                    }
+                                 }								  
                               }
-                              {< {session num_players} {gamemode get max_local_players}}
-                           }
-                           ; then
-                           {cond
-                              ({&&
+
+										; REA - Set leader to first player to click in
+										{if {== {gamecfg get leader_num} -1}
+											{game set leader_num $player_num} 
+										}
+										
+                              ;; add_local_player will fire off a msg when ready
+                              {session_mgr add_sink $this new_local_player}
+                              {session_mgr add_local_player
+                                 $player_num
+                                 {gamecfg
+                                    get_controller_type_from_controller
+                                    $player_num
+                                 }
+                              }
+
+                              {{gamemode get matchmaking_screen} export_all update}
+                           )
+                           (;; If they can't join, try to help them out...
+                              {&&
+                                 {||
+                                    {== [slot] none}
+                                    {==
+                                       [slot]
+                                       {gamecfg
+                                          get_instrument_from_controller
+                                          $player_num
+                                       }
+                                    }
+                                 }
+                                 {<
+                                    {session num_players}
+                                    {gamemode get max_local_players}
+                                 }
+                              }
+                              ; then
+                              {cond
+                                 (
+                                    {&&
                                        {gamemode get online_play_required}
                                        {platform_mgr is_player_signed_in
                                           $player_num
@@ -367,11 +422,14 @@
                                           }
                                        }
                                     }
-                                 ; then
-                                 {mm_signin_net_screen set player_num $player_num}
-                                 {ui push_screen mm_signin_net_screen}
-                              )
-                              ({&&
+                                    ; then
+                                    {mm_signin_net_screen set player_num
+                                       $player_num
+                                    }
+                                    {ui push_screen mm_signin_net_screen}
+                                 )
+                                 (
+                                    {&&
                                        {gamemode get online_play_required}
                                        {platform_mgr is_player_signed_in
                                           $player_num
@@ -380,11 +438,18 @@
                                           $player_num
                                        }
                                     }
-                                 ; then
-                                 {mm_signin_net_guest_hth_screen set player_num $player_num}
-                                 {ui push_screen mm_signin_net_guest_hth_screen}
-                              )
-                              ({&&
+                                    ; then
+                                    {mm_signin_net_guest_hth_screen
+                                       set
+                                       player_num
+                                       $player_num
+                                    }
+                                    {ui push_screen
+                                       mm_signin_net_guest_hth_screen
+                                    }
+                                 )
+                                 (
+                                    {&&
                                        {! {gamemode get online_play_required}}
                                        {platform_mgr is_player_signed_in
                                           $player_num
@@ -393,36 +458,50 @@
                                           $player_num
                                        }
                                     }
-                                 ; then
-                                 {mm_signin_guest_hth_screen set player_num $player_num}
-                                 {ui push_screen mm_signin_guest_hth_screen}
-                              )
-                              ({! {platform_mgr is_signed_in $player_num}}
-                                 ; then
-                                 {if_else {gamemode get online_play_required}
-                                    {platform_mgr signin 4 1}
-                                    ; else
-                                    {platform_mgr signin 4 0}
-                                 }
-                              )
-                              ; default
-                              (TRUE {synth play button_error})
-                           }
-                        )
-                        ; default
-                        (TRUE {synth play button_error})
-                     }
-                  )
-               }
+                                    ; then
+                                    {mm_signin_guest_hth_screen set player_num
+                                       $player_num
+                                    }
+                                    {ui push_screen mm_signin_guest_hth_screen}
+                                 )
+                                 (
+                                    {! {platform_mgr is_signed_in $player_num}}
+                                    ; then
+                                    {if_else {gamemode get online_play_required}
+                                       {platform_mgr signin 4 1}
+                                       ; else
+                                       {platform_mgr signin 4 0}
+                                    }
+                                 )
+                                 ; default
+                                 (TRUE
+                                    {synth play button_error}
+                                 )
+                              }
+                           )
+                           ; default
+                           (TRUE
+                              {synth play button_error}
+                           )
+                        }
+                     )
+                  }
             )
          )
          (choose_part
-            (init {$this set_focus part_guitar.btn})
+            (init
+               {$this set_focus part_guitar.btn}
+            )
             (SELECT_START_MSG
-               {{gamecfg get_player_config [player_num]} set_track_type
+               {{gamecfg get_player_config [player_num]}
+                  set_track_type
                   {switch $component
-                     (part_guitar.btn kTrackGuitar)
-                     (part_bass.btn kTrackBass)
+                     (part_guitar.btn
+                        kTrackGuitar
+                     )
+                     (part_bass.btn
+                        kTrackBass
+                     )
                   }
                }
 
@@ -440,26 +519,32 @@
                }
             )
          )
-         (choose_character)
+         (choose_character
+         )
          MATCHMAKING_CHOOSE_GENDER ; from matchmaking.dta
          (ready_no_leader
-            (init {$this set_focus continue_no_leader.btn})
+            (init
+               {$this set_focus continue_no_leader.btn}
+            )
             (SELECT_START_MSG
                {switch $component
                   (continue_no_leader.btn
                      {if {{gamemode get matchmaking_screen} all_ready}
+
                         ; sync_screen will bring down "show details" screen on other machines
                         {band_ui_sink sync_screen
                            {gamemode get post_matchmaking_screen}
                            0 ; we don't want any pushed screens on the post_matchmaking_screen
                         }
-
+                        
                         ; this will get everyone to fill in NPCs with valid chars
                         {session_mgr send_to_all (game load_all_chars) TRUE}
                         {game load_all_chars}
                      }
                   )
-                  (choose_char_non_leader.btn {$this release_char})
+                  (choose_char_non_leader.btn
+                     {$this release_char}
+                  )
                }
                kDataUnhandled
             )
@@ -475,7 +560,9 @@
             )
          )
          (ready_leader
-            (init MM_READY_LEADER_BUTTON_FOCUS)
+            (init
+               MM_READY_LEADER_BUTTON_FOCUS
+            )
 
             (BUTTON_DOWN_MSG
                {switch $button
@@ -500,12 +587,13 @@
                         ; else
                         {do
                            {if {{gamemode get matchmaking_screen} all_ready}
+   
                               ; sync_screen will bring down "show details" screen on other machines
                               {band_ui_sink sync_screen
                                  {gamemode get post_matchmaking_screen}
                                  0 ; we don't want any pushed screens on the post_matchmaking_screen
                               }
-
+   
                               ; this will get everyone to fill in NPCs with valid chars
                               {session_mgr send_to_all (game load_all_chars) TRUE}
                               {game load_all_chars}
@@ -514,24 +602,27 @@
                         }
                      }
                   )
-                  (
-                     (search.btn search_continue.btn)
-                     #ifndef _SHIP
-                     {if {!= {search.btn get text_token} {search_continue.btn get text_token}}
+                  ((search.btn search_continue.btn)
+#ifndef _SHIP
+                     {if
+                        {!=
+                           {search.btn get text_token}
+                           {search_continue.btn get text_token}
+                        }
                         ; then
                         {fail "search.btn and search_continue.btn out of sync\n"}
                      }
-                     #endif
+#endif
                      {switch {search.btn get text_token}
-                        (
-                           (matchmaker_search_hth matchmaker_search_band)
+                        ((matchmaker_search_hth matchmaker_search_band)
                            ; start search on the default channel
                            {gamecfg set channel 0}
                            {session_mgr find_players}
                         )
-                        (matchmaker_search_cancel {session_mgr cancel_find})
-                        (
-                           (matchmaker_invite_join_band matchmaker_invite_join_game)
+                        (matchmaker_search_cancel
+                           {session_mgr cancel_find}
+                        )
+                        ((matchmaker_invite_join_band matchmaker_invite_join_game)
                            {session_mgr join_invite}
                         )
                      }
@@ -547,17 +638,23 @@
                      {ui push_screen kick_player_screen}
                      kDataUnhandled
                   )
-                  (choose_char.btn {$this release_char} kDataUnhandled)
+                  (choose_char.btn
+                     {$this release_char}
+                     kDataUnhandled
+                  )
                   ; default
                   kDataUnhandled
                }
             )
          )
          (ready_not_leader
-            (init)
+            (init
+            )
             (SELECT_START_MSG
                {switch $component
-                  (choose_char_non_leader.btn {$this release_char})
+                  (choose_char_non_leader.btn
+                     {$this release_char}
+                  )
                }
                kDataUnhandled
             )
@@ -586,8 +683,7 @@
 
    (BUTTON_DOWN_MSG
       {switch $button
-         (
-            (kPad_X kPad_Tri)
+         ((kPad_X kPad_Tri)
             {synth play button_error}
          )
          ; default
@@ -604,7 +700,11 @@
    )
 
    (accepted_join_request_msg
-      {if {&& {gamemode get ranked} {is_leader_local}}
+      {if
+         {&&
+            {gamemode get ranked}
+            {is_leader_local}
+         }
          ; then we hang out on the fake screen for a few seconds
          {ui goto_screen fake_matchmaking_hth_screen}
       }
@@ -612,7 +712,10 @@
 
    (REMOTE_PLAYER_LEFT_MSG
       ; If the leader's gone, kill the session (unless it's because we cleared the session)
-      {if {&& {== $player_num {gamecfg get leader_num}} {! {session disabled}}}
+      {if {&&
+            {== $player_num {gamecfg get leader_num}}
+            {! {session disabled}}   
+          }
          {tour clear_performer}
          {session clear}
          {session set_public FALSE}
@@ -620,7 +723,9 @@
       }
    )
 
-   (change_game_msg {$this export_all update})
+   (change_game_msg
+      {$this export_all update}
+   )
 
    ;; Set when a signin change happens under a pushed screen...
    (signin_change_waiting FALSE)
@@ -639,8 +744,7 @@
       {unless {band_ui_sink is_forced_transition_active}
          ;; if a slot owns a player whose signin has changed, remove that player
          {foreach_int $slot_num 0 4
-            {do
-               ($player_num {$this get_player_num_from_slot_num $slot_num})
+            {do ($player_num {$this get_player_num_from_slot_num $slot_num})
                {if
                   {&&
                      {!= $player_num -1}
@@ -668,8 +772,7 @@
       }
    )
 
-   (profile_activated_msg
-      ($pad_num)
+   (profile_activated_msg ($pad_num)
       ;; just treat this like a signin change (without the signin change...)
       {unless {band_ui_sink is_forced_transition_active}
          {if_else {== {ui current_screen} $this}
@@ -689,7 +792,11 @@
    )
 
    (JOYPAD_CONNECT_MSG
-      {if {&& {! {ui in_transition}} {== {ui current_screen} $this}}
+      {if
+         {&&
+            {! {ui in_transition}}
+            {== {ui current_screen} $this}
+         }
          ; then
          {$this export_all verify_controller_types}
          {$this export_all update}
@@ -697,29 +804,29 @@
    )
 
    (enter
-      {synth release_mics} ; REA - clear all assigned mics when we enter
+	   {synth release_mics} ; REA - clear all assigned mics when we enter
       {session_mgr add_sink $this}
       {memcardmgr add_sink $this save_load_all_complete_msg}
       {profile_mgr add_sink $this profile_activated_msg}
 
       {game set joining_allowed TRUE}
-
+      
       ;; async stuff warning...
       {matchmaking_hth_panel hide_waiting}
-
+      
       ; the CharSelectPanel wants to know when to show/hide chars
       ; {practice_space_panel set_showing_callback $this} REA - not used anymore
-
+      
       ; select the hth matchmaking cam shot
-      ; throws error, FIXME REA
-
+	  ; throws error, FIXME REA
+      
       ; we should all be playing follow the leader now
       {band_ui_sink set_net_sync TRUE}
-
+      
       ; tell the band_ui_sink not to worry about controller disconnects
       {band_ui_sink set post_matchmaking FALSE}
    )
-
+   
    (TRANSITION_COMPLETE_MSG
       ; do this here, in case the session was busy when the
       ; joypad connect change message happened.
@@ -748,10 +855,11 @@
       {memcardmgr remove_sink $this save_load_all_complete_msg}
       {profile_mgr remove_sink $this profile_activated_msg}
 
+    
       {game set joining_allowed FALSE}
 
       {synth reset_mics_changed}
-
+      
       ; tell the band_ui_sink to worry about controller disconnects
       ; we're relying on an PRE matchmaking screens to reset the session
       {band_ui_sink set post_matchmaking TRUE}
@@ -759,18 +867,13 @@
       ; the session getting cleared/another error coming along, while showing
       ; the disconnected controller dialog
    )
+   
 
    ;; MultiFocusPanel checks this before each ButtonDown msg is passed along
    (allow_input {! {session is_busy}})
 
-   (session_busy_msg
-      ($is_busy)
-      {matchmaking_hth_panel
-         {if_else $is_busy
-            show_waiting
-            hide_waiting
-         }
-      }
+   (session_busy_msg ($is_busy)
+      {matchmaking_hth_panel {if_else $is_busy show_waiting hide_waiting}}
 
       {if {! $is_busy}
          {$this export_all verify_controller_types}
@@ -778,7 +881,9 @@
       }
    )
 
-   (wait_for_session {$this export_all update})
+   (wait_for_session
+      {$this export_all update}
+   )
 
    (session_ready_complete_msg
       ;; make sure any controller action that happened while
@@ -787,42 +892,42 @@
       {$this export_all update}
    )
 
-   (session_disabled {$this export_all update})
+   (session_disabled
+      {$this export_all update}
+   )
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; fake ranked matchmaking screen to delay moving to loading screen for a few seconds
-{new MultiFocusScreen
-   fake_matchmaking_hth_screen
+{new MultiFocusScreen fake_matchmaking_hth_screen
    (panels
       meta
       ;practice_space_panel
-      movie_panel
+		movie_panel
       matchmaking_hth_panel
       helpbar
    )
-
+   
    (player_panels
       (panel matchmaking_hth_panel)
       (slots none none)
       (type ; type of PanelDirs, serves as a common handler for all options
-         (player_num {gamecfg get_player_num_from_slot_num [slot_num]}) ; required
-         (slot_num 0) ; required
-         (slot none) ; required
-         (option '') ; required
-         (current_option waiting) ; required
-         (update TRUE) ; required
-         (is_ready TRUE) ; required
-         (allow_button_msg ($player_num) FALSE) ; required
+         (player_num {gamecfg get_player_num_from_slot_num [slot_num]})  ; required
+         (slot_num 0)    ; required
+         (slot none)     ; required
+         (option '')     ; required
+         (current_option waiting); required
+         (update TRUE); required
+         (is_ready TRUE); required
+         (allow_button_msg ($player_num) FALSE); required
       )
-
+      
       (options
          (waiting
             ; eat any button messages...
             (BUTTON_DOWN_MSG
                {switch $button
-                  (
-                     (kPad_Tri kPad_X)
+                  ((kPad_Tri kPad_X)
                      {synth play button_error}
                   )
                }
@@ -831,38 +936,35 @@
          )
       )
    )
-
+   
    (is_ready TRUE) ; required
-
+      
    ; TODO this screen should handle REMOTE_PLAYER_LEFT_MSG?
-
+   
    (TRANSITION_COMPLETE_MSG
-      {script_task kTaskUISeconds
-         (delay 1.5)
+      {script_task kTaskUISeconds (delay 1.5)
          (script
-            {if
-               {&&
-                  {== {ui current_screen} fake_matchmaking_hth_screen}
-                  {! {ui in_transition}}
-               }
+            {if {&& {== {ui current_screen} fake_matchmaking_hth_screen}
+                    {! {ui in_transition}}
+                }
                {ui goto_screen {gamemode get post_matchmaking_screen}}
             }
          )
       }
    )
 }
+      
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; out of character confirmation screen
-{new UIScreen
-   mm_hth_char_no_room_screen
+{new UIScreen mm_hth_char_no_room_screen
    (panels dialog_panel)
    (focus dialog_panel)
 
    (enter
       {dialog_panel set_ok
-         {sprintf
-            {localize_token charcreator_no_more_chars_fmt}
+         {sprintf {localize_token charcreator_no_more_chars_fmt}
             {profile_mgr get_max_chars_per_inst}
          }
       }
@@ -870,17 +972,23 @@
       {platform_mgr add_sink $this signin_changed}
    )
 
-   (exit {platform_mgr remove_sink $this signin_changed})
+   (exit
+      {platform_mgr remove_sink $this signin_changed}
+   )
 
-   (SELECT_MSG {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 
-   (signin_changed {ui pop_screen})
+   (signin_changed
+      {ui pop_screen}
+   )
 }
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Guest where Net is needed screen
-{new UIScreen
-   mm_signin_net_guest_hth_screen
+{new UIScreen mm_signin_net_guest_hth_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
@@ -893,22 +1001,25 @@
          {localize mm_need_a_profile_cancel}
          opt1.btn
       }
-
+      
       MATCHMAKING_POPUP_ENTER
    )
 
    (SELECT_MSG
       {switch $component
-         (opt1.btn {platform_mgr signin 4 1})
-         (opt2.btn {ui pop_screen})
+         (opt1.btn
+            {platform_mgr signin 4 1}
+         )
+         (opt2.btn
+            {ui pop_screen}
+         )
       }
    )
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Need Net Guest's Owner screen
-{new UIScreen
-   mm_signin_guest_hth_screen
+{new UIScreen mm_signin_guest_hth_screen
    (panels dialog_panel)
    (focus dialog_panel)
    (player_num -1)
@@ -921,14 +1032,18 @@
          {localize mm_need_a_profile_cancel}
          opt1.btn
       }
-
+      
       MATCHMAKING_POPUP_ENTER
    )
 
    (SELECT_MSG
       {switch $component
-         (opt1.btn {platform_mgr signin 4 1})
-         (opt2.btn {ui pop_screen})
+         (opt1.btn
+            {platform_mgr signin 4 1}
+         )
+         (opt2.btn
+            {ui pop_screen}
+         )
       }
    )
 }

@@ -1,3 +1,4 @@
+
 #include track_handlers.dta
 
 (TrackDir
@@ -6,21 +7,19 @@
       (gem_track
          (editor
             (reset script (script {$this reset}))
+            
+            (surface_mesh symbol
+               (list {$this object_type_list Mesh})
+            )
 
-            (surface_mesh symbol (list {$this object_type_list Mesh}))
-
-            (surface_texture
-               symbol
-               (list {$this object_type_list Tex})
+            (surface_texture symbol 
+               (list {$this object_type_list Tex})   
                (post_sync {$this update_surface_texture})
             )
 
             ; objects to be fitted to surface
-            (fit_meshes
-               (array symbol (list {$this object_type_list Mesh}))
-               (help
-                  "Meshes which need to be fit to the cross section of the track surface."
-               )
+            (fit_meshes (array symbol (list {$this object_type_list Mesh})) 
+               (help "Meshes which need to be fit to the cross section of the track surface.")
             )
 
             (deploy script (script {$this deploy}))
@@ -34,10 +33,10 @@
 
             (practice_reset script (script {$this practice_reset}))
 
-            COMMON_TRACK_EDITOR ; include all common track stuff   
+            COMMON_TRACK_EDITOR     ; include all common track stuff   
          )
-
-         ; track surface texture
+         
+          ; track surface texture
          (surface_texture none proxy_save)
 
          ; surface mesh
@@ -51,7 +50,7 @@
          (num_tracks 1)
 
          (multiplier 1)
-
+         
          ; number of consecutive kick gem passes
          (kick_pass_counter 0)
 
@@ -59,12 +58,12 @@
          (fit_meshes ())
 
          ; list of objects in the file so we can select them in the editor
-         (object_type_list
-            ($obj_type)
-            {do
-               ($array {array 0})
+         (object_type_list ($obj_type)
+            {do ($array {array 0})
                {push_back $array none}
-               {$this iterate $obj_type $obj {push_back $array {symbol {$obj name}}}}
+               {$this iterate $obj_type $obj
+                  {push_back $array {symbol {$obj name}}}
+               }
                ; alphabetize the array
                {sort $array}
                $array
@@ -72,72 +71,55 @@
          )
 
          ; set the pitch of the camera for the track
-         (set_pitch
-            ($pitch)
-            {do
-               ($x)
-               ($y)
-               ($z)
+         (set_pitch ($pitch)
+            {do ($x) ($y) ($z)
                {rotater.grp get_local_rot $x $y $z}
                {rotater.grp set_local_rot $pitch $y $z}
             }
          )
 
          ; set the start/end of the fade
-         (set_fade
-            ($start $length)
+         (set_fade ($start $length)
             {track.env set fade_start $start}
             {track.env set fade_end {+ $start $length}}
             {{$this get cam} set far_plane {+ {+ $start $length} 20}}
          )
-
+         
          ; set the frustum of the camera
-         (set_fov
-            ($in_val)
+         (set_fov ($in_val)
             {{$this get cam} set y_fov $in_val}
          )
 
-         (set_cam_pos
-            ($x $y $z)
+         (set_cam_pos ($x $y $z)
             {{$this get cam} set_local_pos $x $y $z}
          )
 
          ; x offset of the screen rect (if we DO have our own perspective)
-         (set_screen_rect_x
-            ($in_val)
-            {game.cam set
-               (screen_rect x)
+         (set_screen_rect_x ($in_val)
+            {game.cam set (screen_rect x)
                {* $in_val {- [gem_track_index] {/ {- [num_tracks] 1} 2}}}
             }
          )
 
          ; set the distance between the tracks (if we don't have our own perspective)
-         (set_track_offset
-            ($in_val)
-            {do
-               ($x)
-               ($y)
-               ($z)
+         (set_track_offset ($in_val)
+            {do ($x) ($y) ($z)
                {rotater.grp get_local_pos $x $y $z}
-               {rotater.grp set_local_pos
-                  {* {* $in_val {- [gem_track_index] {/ {- [num_tracks] 1} 2}}} -1}
-                  $y
+               {rotater.grp set_local_pos 
+                  {* {* $in_val {- [gem_track_index] {/ {- [num_tracks] 1} 2}}} -1} 
+                  $y 
                   $z
                }
-            }
+            } 
          )
 
          ; side angle of the track (if we don't have our own perspective)
-         (set_side_angle
-            ($in_val)
-            {do
-               ($x)
-               ($y)
-               ($z)
+         (set_side_angle ($in_val)
+            {do ($x) ($y) ($z)
                {rotater.grp get_local_rot $x $y $z}
-               {rotater.grp set_local_rot
+               {rotater.grp set_local_rot 
                   $x
-                  $y
+                  $y 
                   {* $in_val {- [gem_track_index] {/ {- [num_tracks] 1} 2}}}
                }
             }
@@ -150,43 +132,39 @@
             }
          )
 
-         (on_update_fx
-            ($ixEffect)
+         (on_update_fx ($ixEffect)
             ;delete any existing hider thread
-            {if {exists fx_hider}
-               {delete fx_hider}
+            {if {exists fx_hider} 
+               {delete  fx_hider}
             }
 
             {if [effect_selector]
                {if {|| {== [instrument] guitar} {== [instrument] bass}}
                   {[effect_selector] set_showing TRUE}
                   {foreach_int $i 0 5
-                     {{[effect_selector] find {sprintf "guitar_fx_%d.lbl" $i}} set_state
-                        kNormal
-                     }
+                     {{[effect_selector] find {sprintf "guitar_fx_%d.lbl" $i}}
+                        set_state kNormal}
                   }
-                  {{[effect_selector] find {sprintf "guitar_fx_%d.lbl" $ixEffect}} set_state
-                     kFocused
-                  }
+                  {{[effect_selector] find {sprintf "guitar_fx_%d.lbl" $ixEffect}}
+                     set_state kFocused}
 
-                  {thread_task kTaskSeconds
-                     (delay 1)
-                     (name fx_hider)
-                     (script {[effect_selector] set_showing FALSE})
+                  {thread_task kTaskSeconds (delay 1) (name fx_hider)
+                     (script 
+                        {[effect_selector] set_showing FALSE}
+                     )
                   }
                }
             }
          )
 
          ; returns the object from a symbol or 0
-         (get_obj
-            ($obj_name)
+         (get_obj ($obj_name)
             {if_else {$this exists $obj_name}
                {$this find $obj_name}
                0
             }
          )
-
+         
          (play_intro
             {if {exists game}
                {$this set_track_fade FALSE}
@@ -202,7 +180,9 @@
                   ; play the animation then hide the player_intro
                   {do
                      {[player_intro] intro}
-                     {script_task kTaskSeconds (delay 2) (script {[player_intro] hide})}
+                     {script_task kTaskSeconds (delay 2)
+                        (script {[player_intro] hide})
+                     }
                   }
                }
             }
@@ -213,29 +193,29 @@
 
             ; maybe if the .milo files are ddiferent you can just set
             ; gem_track_index the same or something -jwf
-            {script_task kTaskBeats
-               (delay
-                  {if_else {== $game.play_mode coop}
+            {script_task kTaskBeats 
+               (delay 
+                  {if_else {== $game.play_mode coop} 
                      {+ {* .6 [gem_track_index]} 0.001}
                      0.001
                   }
                )
-               (script
+               (script 
                   {do
                      {intro.trig trigger}
                      {if {exists game}
-                        {script_task kTaskSeconds
-                           (delay 0.35)
+                        {script_task kTaskSeconds (delay 0.35)
                            (script {$this set_track_fade TRUE})
                         }
                      }
                   }
-               )
+                )
             }
          )
 
          ;override to the track handlers reset function
          (track_reset
+         
             ; sets the surface texture 
             {$this update_surface_texture}
 
@@ -247,7 +227,7 @@
             }
 
             ; Instrument type specific
-            {if {== drum [instrument]}
+            {if {== drum [instrument]} 
                {instrument_setup.anim set_frame 1}
             }
             {if {== bass [instrument]}
@@ -256,24 +236,19 @@
             {if {== guitar [instrument]}
                {instrument_setup.anim set_frame 2}
             }
-
+            
             ; Put the effect_selector object at the same position as the player_feedback
             {if {&& {!= [player_feedback] ""} {!= [effect_selector] ""}}
                {[effect_selector] set_trans_parent [player_feedback]}
                {[effect_selector] set_showing FALSE}
             }
-
-            {do
-               ($smasher_plate
-                  {if_else {== [instrument] drum}
-                     {object smasher_plate_drum}
-                     {object smasher_plate_guitar}
-                  }
-               )
-
+            
+            {do ($smasher_plate {if_else {== [instrument] drum} 
+                                 {object smasher_plate_drum} {object smasher_plate_guitar}})
+                 
                ; Do the striping for the smasher plates
                {$smasher_plate reset}
-
+               
                ; HACK if I am a proxy then collect the effects from the smasher plate.
                ; This should not happen if I am the top level Dir in milo because this action will
                ; invalidate the save.
@@ -282,65 +257,56 @@
                   {{$smasher_plate find after_hide.grp} set_showing FALSE}
                }
             }
-
+            
             ; If I am a proxy get rid of the widgets that I don't use so there's no overhead
             {if {$this is_proxy}
-               {do
-                  ($remove_group
-                     {if_else {== [instrument] drum}
-                        {object guitar_gems.grp}
-                        {object drum_gems.grp}
-                     }
-                  )
-                  ($objects {$remove_group get_array objects})
-                  {foreach $elem $objects
+               {do ($remove_group {if_else {== [instrument] drum} {object guitar_gems.grp} {object drum_gems.grp}})
+                   ($objects {$remove_group get_array objects})
+                   {foreach $elem $objects
                      {if {== {$elem class_name} TrackWidget}
                         {delete $elem}
                      }
-                  }
+                   }
                }
-            }
-
+           }
+            
             ; temporarily disable widget lod
             {$this setup_widget_lod}
-
+            
             {$this enable_player}
-
+            
             ; reset the kick pass counter
             {set [kick_pass_counter] 0}
          )
-
+         
          (practice_reset
-            {if {&& [parent] {{[parent] panel} exists reset_all.trig}}
+         
+         {if {&& [parent] {{[parent] panel} exists reset_all.trig}}
                {{{[parent] panel} find ending_bonus.tnm} set_frame 0}
                {{{[parent] panel} find ending_bonus} reset}
-            }
-
+         }
+         
             {$this reset}
-
+            
             {if {exists game}
                {$this set_track_fade [track_fading]}
             }
-
+            
             {if {exists intro_anim.grp}
-               {intro_anim.grp animate
-                  (range
-                     {intro_anim.grp end_frame}
-                     {intro_anim.grp end_frame}
-                  )
-               }
+               {intro_anim.grp animate (range {intro_anim.grp end_frame} {intro_anim.grp end_frame})}
             }
          )
 
-         (practice_track_in {intro.trig trigger})
-
+         (practice_track_in
+            {intro.trig trigger}
+         )
+         
          (practice_track_out
             {$this set_track_fade FALSE}
             {retract.trig trigger}
          )
-
-         (set_multiplier
-            ($val)
+         
+         (set_multiplier ($val)
             {set [multiplier] $val}
          )
 
@@ -351,15 +317,13 @@
             ;{unison_mask.mesh set_showing FALSE}  ;HWR _ doesn't exist anymore
             {guitar_solo_mask.mesh set_showing FALSE}
          )
-
+         
          ; GEM PASS
-         (gem_pass
-            ($gem_id $lanes)
+         (gem_pass ($gem_id $lanes)
             {if {&& {& $lanes 1} {== [instrument] drum}}
-               {++ [kick_pass_counter]}
+               {++ [kick_pass_counter]}               
                {if {>= [kick_pass_counter] 8}
-                  {do
-                     ($next_kick_ms {[parent] next_kick_ms})
+                  {do ($next_kick_ms {[parent] next_kick_ms})
                      {if_else {== [kick_pass_counter] 8}
                         {do
                            ; If this is the 8th passed kick gem
@@ -386,6 +350,7 @@
             ; If I'm the drummer trigger a hard kick
             {kick_drummer.trig trigger}
          )
+         
 
          ; see a kick gem (we don't know if it's hit or not)
          (see_kick
@@ -394,7 +359,7 @@
                {[popup_object] kick_note}
             }
          )
-
+         
          (kick_swing
             {$this popup_help kick FALSE}
             {set [kick_pass_counter] 0}
@@ -408,21 +373,18 @@
          )
 
          ; handler for a solo note hit 
-         (solo_note
-            ($in_slot)
+         (solo_note ($in_slot)
             ; find the gem smasher for this slot and tell it to hit_fill
             {if [parent]
                {{[parent] get_smasher $in_slot} hit_fill}
-            }
+            }      
             {solo_hit.trig trigger}
          )
 
          ; handler for a mash hit
-         (mash
-            ($in_slot)
+         (mash ($in_slot)
             {if {|| {!= [instrument] drum} {!= $in_slot 0}} ; exclude the kick drum
-               {do
-                  ($anim)
+               {do ($anim)
                   {if_else {== [instrument] drum}
                      {do
                         ; HACK to flip for lefty
@@ -431,7 +393,7 @@
                         }
                         {set $anim {object {sprintf "drum_mash%d.anim" $in_slot}}}
                      }
-
+                     
                      {set $anim {object {sprintf "gem_mash%d.anim" $in_slot}}}
                   }
                   {$anim animate}
@@ -439,11 +401,9 @@
             }
          )
 
-         (fill_hit
-            ($num_notes)
+         (fill_hit ($num_notes)
             ; hits toward crash gem
-            {do
-               ($trig_name {sprint "fill_hit_" $num_notes ".trig"})
+            {do ($trig_name {sprint "fill_hit_" $num_notes ".trig"})
                {if {exists $trig_name}
                   {{object $trig_name} trigger}
                }
@@ -453,22 +413,15 @@
          ; called right before a drum fill comes on screen
          (reset_drum_fill
             {drum_fill_reset.trig trigger}
-
-            {do
-               ($time_til_next
-                  {-
-                     {taskmgr time_til_next 1 .001}
-                     .2
-                  }
-               )
+            
+            {do ($time_til_next {- {taskmgr time_til_next 1 .001} .2})
                {if {exists drum_mash_2nd_pass_activate.anim}
                   {if {< $time_til_next 0}
                      {set $time_til_next {+ $time_til_next 1}}
                   }
-                  {script_task kTaskBeats
-                     (delay $time_til_next)
+                  {script_task kTaskBeats (delay $time_til_next)
                      (script {drum_mash_2nd_pass_activate.anim animate (loop 0 1)})
-                  }
+                  }                  
                }
             }
          )
@@ -478,65 +431,49 @@
             {drum_mash_hit_anim.grp set_frame {drum_mash_hit_anim.grp end_frame}}
             {fill_colors.grp set_frame {fill_colors.grp end_frame}}
          )
-
+         
          (crash_fill
-            {do
-               ($smasher {[parent] get_smasher 4})
+            {do ($smasher {[parent] get_smasher 4})
                {$smasher drum_fill_complete}
             }
          )
-
+         
          ; Set up the widget lod
          (setup_widget_lod
             ; make sure this never saves.
             {if {|| {! $edit_mode} {$this is_proxy}}
-               {do
-                  ($glow_visible
-                     {if_else {>= $track_LOD 1}
-                        FALSE
-                        TRUE
-                     }
-                  )
+               {do ($glow_visible {if_else {>= $track_LOD 1} FALSE TRUE})
                   {$this set_widget_glow drum_blue.wid $glow_visible}
-                  {$this set_widget_glow drum_green.wid $glow_visible}
-                  {$this set_widget_glow drum_red.wid $glow_visible}
-                  {$this set_widget_glow drum_yellow.wid $glow_visible}
-                  {$this set_widget_glow drum_star.wid $glow_visible}
-                  {$this set_widget_glow gem_blue.wid $glow_visible}
-                  {$this set_widget_glow gem_blue_hopo.wid $glow_visible}
-                  {$this set_widget_glow gem_green.wid $glow_visible}
-                  {$this set_widget_glow gem_green_hopo.wid $glow_visible}
-                  {$this set_widget_glow gem_orange.wid $glow_visible}
-                  {$this set_widget_glow gem_orange_hopo.wid $glow_visible}
-                  {$this set_widget_glow gem_red.wid $glow_visible}
-                  {$this set_widget_glow gem_red_hopo.wid $glow_visible}
-                  {$this set_widget_glow gem_yellow.wid $glow_visible}
-                  {$this set_widget_glow gem_yellow_hopo.wid $glow_visible}
-                  {$this set_widget_glow star_gem.wid $glow_visible}
-                  {$this set_widget_glow star_hopo.wid $glow_visible}
+                  {$this set_widget_glow drum_green.wid $glow_visible} 
+                  {$this set_widget_glow drum_red.wid $glow_visible} 
+                  {$this set_widget_glow drum_yellow.wid $glow_visible} 
+                  {$this set_widget_glow drum_star.wid $glow_visible} 
+                  {$this set_widget_glow gem_blue.wid $glow_visible} 
+                  {$this set_widget_glow gem_blue_hopo.wid $glow_visible} 
+                  {$this set_widget_glow gem_green.wid $glow_visible} 
+                  {$this set_widget_glow gem_green_hopo.wid $glow_visible} 
+                  {$this set_widget_glow gem_orange.wid $glow_visible} 
+                  {$this set_widget_glow gem_orange_hopo.wid $glow_visible} 
+                  {$this set_widget_glow gem_red.wid $glow_visible} 
+                  {$this set_widget_glow gem_red_hopo.wid $glow_visible} 
+                  {$this set_widget_glow gem_yellow.wid $glow_visible} 
+                  {$this set_widget_glow gem_yellow_hopo.wid $glow_visible} 
+                  {$this set_widget_glow star_gem.wid $glow_visible} 
+                  {$this set_widget_glow star_hopo.wid $glow_visible} 
                }
             }
          )
-
+         
          ; turn on or off the widget glow
-         (set_widget_glow
-            ($obj_name $val)
+         (set_widget_glow ($obj_name $val)
             {if {exists $obj_name}
-               {do
-                  ($object {object $obj_name})
-                  {$object set
-                     max_meshes
-                     {if_else $val
-                        2
-                        1
-                     }
-                  }
+               {do ($object {object $obj_name})
+                  {$object set max_meshes {if_else $val 2 1}}
                }
             }
          )
 
-         (super_streak
-            ($val)
+         (super_streak ($val)
             {if {== [instrument] bass}
                {if_else $val
                   {do
@@ -561,18 +498,17 @@
             {star_deploy.trig trigger}
             {if {&& [parent] {{[parent] panel} exists crowd_meter}}
                {{{[parent] panel} find crowd_meter} deploy [instrument]}
-            }
+         }
             {if {!= [streak_meter] ""}
                {if [player]
                   {[streak_meter] set_band_multiplier {{[player] band} multiplier}}
                }
                {[streak_meter] star_deploy}
             }
-
+            
             ; update the gems in case a fill has stomped on them
             {if {&& {== [instrument] drum} {!= [parent] ""}}
-               {script_task kTaskSeconds
-                  (delay 0)
+               {script_task kTaskSeconds (delay 0)
                   ; this is on a delay because if I call this right now then 
                   ; we'll still think we havn't deployed yet.
                   (script {[parent] update_gems})
@@ -592,50 +528,25 @@
                {[streak_meter] star_deploy_stop}
             }
          )
-
+         
          ; spew a constant stream of random gems
          (spew_gems
             {if {! {exists spew_gems_test}}
                {$this toggle_running}
-               {thread_task kTaskBeats
-                  (name spew_gems_test)
+               {thread_task kTaskBeats (name spew_gems_test) 
                   (script
                      ; dummy command for thread_task bug
                      {set $lane 0}
                      ; display measure lines
                      {switch $beat
-                        (0
-                           {$this add_test_widget "bar_measure.wid" 2}
-                           {set $beat 1}
-                        )
-                        (1
-                           {$this add_test_widget "bar_half_beat.wid" 2}
-                           {set $beat 2}
-                        )
-                        (2
-                           {$this add_test_widget "bar_beat.wid" 2}
-                           {set $beat 3}
-                        )
-                        (3
-                           {$this add_test_widget "bar_half_beat.wid" 2}
-                           {set $beat 4}
-                        )
-                        (4
-                           {$this add_test_widget "bar_beat.wid" 2}
-                           {set $beat 5}
-                        )
-                        (5
-                           {$this add_test_widget "bar_half_beat.wid" 2}
-                           {set $beat 6}
-                        )
-                        (6
-                           {$this add_test_widget "bar_beat.wid" 2}
-                           {set $beat 7}
-                        )
-                        (7
-                           {$this add_test_widget "bar_half_beat.wid" 2}
-                           {set $beat 0}
-                        )
+                        (0 {$this add_test_widget "bar_measure.wid" 2} {set $beat 1})
+                        (1 {$this add_test_widget "bar_half_beat.wid" 2} {set $beat 2})
+                        (2 {$this add_test_widget "bar_beat.wid" 2} {set $beat 3})
+                        (3 {$this add_test_widget "bar_half_beat.wid" 2} {set $beat 4})
+                        (4 {$this add_test_widget "bar_beat.wid" 2} {set $beat 5})
+                        (5 {$this add_test_widget "bar_half_beat.wid" 2} {set $beat 6})
+                        (6 {$this add_test_widget "bar_beat.wid" 2} {set $beat 7})
+                        (7 {$this add_test_widget "bar_half_beat.wid" 2} {set $beat 0})
                      }
                      ; generate a random number of gems to display on each line 0-3
                      {set $num_gems {random_int 3 4}}
@@ -646,7 +557,7 @@
                      {foreach_int $gem 0 $num_gems
                         ; pick a random lane and draw a gem in it
                         {set $lane {random_int 0 5}}
-
+                        
                         {if_else {== [instrument] drum}
                            {switch $lane
                               (0 {$this add_test_widget "drum_red.wid" $lane})
@@ -654,40 +565,38 @@
                               (2 {$this add_test_widget "gem_kick.wid" $lane})
                               (3 {$this add_test_widget "drum_blue.wid" $lane})
                               (4 {$this add_test_widget "drum_green.wid" $lane})
-                           }
+                           }                           
                            {switch $lane
-                              (0
-                                 {if_else $hopo
+                              (0 {if_else $hopo
                                     {$this add_test_widget "gem_green_hopo.wid" $lane}
                                     {$this add_test_widget "gem_green.wid" $lane}
                                  }
                               )
-                              (1
-                                 {if_else $hopo
+                              (1 {if_else $hopo
                                     {$this add_test_widget "gem_red_hopo.wid" $lane}
                                     {$this add_test_widget "gem_red.wid" $lane}
                                  }
                               )
-                              (2
-                                 {if_else $hopo
+                              (2 {if_else $hopo
                                     {$this add_test_widget "gem_yellow_hopo.wid" $lane}
                                     {$this add_test_widget "gem_yellow.wid" $lane}
                                  }
                               )
-                              (3
-                                 {if_else $hopo
+                              (3 {if_else $hopo
                                     {$this add_test_widget "gem_blue_hopo.wid" $lane}
                                     {$this add_test_widget "gem_blue.wid" $lane}
                                  }
                               )
-                              (4
-                                 {if_else $hopo
+                              (4 {if_else $hopo
                                     {$this add_test_widget "gem_orange_hopo.wid" $lane}
                                     {$this add_test_widget "gem_orange.wid" $lane}
                                  }
                               )
-                           }
+                           }                        
+
                         }
+                        
+
                      }
                      {$task sleep 1}
                      {$task loop}
@@ -695,7 +604,7 @@
                }
             }
          )
-
+         
          ; clear all gems from the track
          (clear_gems
             {if {exists spew_gems_test}
@@ -703,8 +612,8 @@
                {$this toggle_running}
             }
          )
-
-         COMMON_TRACK_HANDLERS ; include all common track stuff
+         
+         COMMON_TRACK_HANDLERS      ; include all common track stuff
       )
       ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    )

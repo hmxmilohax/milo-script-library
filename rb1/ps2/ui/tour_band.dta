@@ -1,27 +1,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gig guide lower 3rd
-{new UIPanel
-   tour_gigguide_lower3rd_panel
+{new UIPanel tour_gigguide_lower3rd_panel
    (file "tour_gigguide_lower3rd.milo")
-
+   
    (refresh
       ; set town fame
-      {do
-         ($show_venue
-            {|| {tour_band_event_panel is_up} {tour_eventdetails_panel is_up}}
-         )
-         ($show_town {tour_band_venue_panel is_up})
-         ($perf {tour performer})
+      {do ($show_venue {|| {tour_band_event_panel is_up}
+                           {tour_eventdetails_panel is_up}})
+          ($show_town  {tour_band_venue_panel is_up})
+          ($perf       {tour performer})
 
          {bandname.lbl set_localized {{tour performer} band_name}}
-
+         
          ; hide the town name if we're on the top level world screen
          {townname.lbl set_showing {|| $show_venue $show_town}}
-         {cond
+         {cond 
             ($show_venue {townname.lbl set text_token {tour venue_token}})
-            ($show_town {townname.lbl set text_token {tour town}})
+            ($show_town  {townname.lbl set text_token {tour town}})
          }
-
+                  
          ;; hide stats at zero fame
          {if_else {== {$perf world_fame} 0}
             {stats.grp set_showing FALSE}
@@ -32,41 +29,52 @@
             {aspect_ratio.tnm set_frame 0}
          }
 
-         {fame.lbl set_localized {fmt_score {$perf world_fame}}}
+         {fame.lbl set_localized 
+            {fmt_score {$perf world_fame}}
+         }
          {buzz.lbl set_localized {fmt_score {$perf fans}}}
       }
    )
-
-   (enter {$this refresh})
+   
+   (enter
+      {$this refresh}
+   )
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BWT hub lower3rd
-{new UIPanel tour_band_lower3rd_panel (file "tour_band_lower3rd.milo")}
+{new UIPanel tour_band_lower3rd_panel
+   (file "tour_band_lower3rd.milo")
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tour band creation/resolution screens
 
-{new UIScreen
-   tour_band_name_error_screen
+{new UIScreen tour_band_name_error_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_LEADER_SESSION
-   (enter {dialog_panel set_ok {localize_token shell_no_band_name_error}})
-   (SELECT_MSG {ui pop_screen})
+   (enter
+      {dialog_panel set_ok {localize_token shell_no_band_name_error}}
+   )
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
-{new UIScreen
-   tour_band_create_name_not_unique_screen
+{new UIScreen tour_band_create_name_not_unique_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_LEADER_SESSION
-   (enter {dialog_panel set_ok {localize_token tour_band_name_not_unique}})
-   (SELECT_MSG {ui pop_screen})
+   (enter
+      {dialog_panel set_ok {localize_token tour_band_name_not_unique}}
+   )
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
-{new BandCreatePanel
-   tour_band_create_panel
+{new BandCreatePanel tour_band_create_panel
    (file tour_name_band.milo)
    (focus name.btn)
    (reset_focus TRUE)
@@ -77,19 +85,21 @@
       {hometown.lst set_provider {tour hometown_provider}}
       {$this update_band}
    )
-
+   
    ; sent from the session
-   (update_band
+   (update_band 
       {if_else {== {{tour performer} band_name} ''}
          {name.lbl set text_token shell_enter_name}
          {name.lbl set_localized {{tour performer} band_name}}
       }
-      {hometown.lst set_selected {{tour performer} hometown}}
+      {hometown.lst set_selected {{tour performer} hometown}}         
    )
 
    (SCROLL_MSG
       {switch $component
-         (hometown.lst {{tour performer} set_hometown {hometown.lst selected_sym}})
+         (hometown.lst
+            {{tour performer} set_hometown {hometown.lst selected_sym}}
+         )
       }
    )
 
@@ -114,14 +124,15 @@
          )
          (hometown.lst
             {hometown.lst confirm}
-            {$this set_focus hometown.btn}
+            {$this set_focus hometown.btn}  
          )
          (accept.btn
             {cond
                ({== {{tour performer} band_name} ""}
                   {ui push_screen tour_band_name_error_screen}
                )
-               ({!
+               (
+                  {!
                      {profile_mgr is_band_name_unique
                         {gamecfg get leader_num}
                         {{tour performer} band_name}
@@ -136,7 +147,10 @@
 
                   ; pass ownership of the band object to the profile
                   {tour give_new_band_to_profile
-                     {profile_mgr get_mapped_profile_from_player {gamecfg get leader_num}}
+                     {profile_mgr
+                        get_mapped_profile_from_player
+                        {gamecfg get leader_num}
+                     }
                   }
 
                   ;; update band data!
@@ -145,12 +159,20 @@
                )
             }
          )
-         (cancel.btn {ui goto_screen {gamemode get matchmaking_screen}})
+         (cancel.btn
+            {ui goto_screen {gamemode get matchmaking_screen}}
+         )
       }
    )
 
    (VIRTUAL_KEYBOARD_RESULT_MSG
-      {if {&& $ok $this {ui focus_panel} {== {ui focus_panel} $this}}
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {== {ui focus_panel} $this}
+         }
          ; then
          {{tour performer} set_band_name $text}
          {$this update_band}
@@ -164,8 +186,12 @@
          (RB_RETCODE_BAND_NAME_PROFANE
             {ui push_screen tour_band_name_profane_screen}
          )
-         (RB_RETCODE_BAND_NAME_DUP {ui push_screen tour_band_name_dup_screen})
-         (RB_RETCODE_BAND_NAME_IP {ui push_screen tour_band_name_ip_screen})
+         (RB_RETCODE_BAND_NAME_DUP
+            {ui push_screen tour_band_name_dup_screen}
+         )
+         (RB_RETCODE_BAND_NAME_IP
+            {ui push_screen tour_band_name_ip_screen}
+         )
          ; else (SUCCESS or SERVER_DOWN)
 
          {if {{tour performer} is_local}
@@ -177,36 +203,35 @@
    )
 
    (BUTTON_DOWN_MSG
-      {cond
+      {cond 
          ({band_ui_sink is_network_busy} TRUE)
          ({== $button kPad_Tri}
             {switch {$this focus_name}
-               (hometown.lst
+               (hometown.lst 
                   {hometown.lst undo $player_num}
                   {$this set_focus hometown.btn}
                )
                kDataUnhandled
             }
-         )
+         )  
          (TRUE kDataUnhandled)
       }
    )
 }
 
-{new UIScreen
-   tour_band_create_screen
+{new UIScreen tour_band_create_screen
    (panels meta practice_space_panel tour_band_create_panel helpbar)
    (back {gamemode get matchmaking_screen})
    (focus tour_band_create_panel)
 
-   (helpbar
-      {if_else {is_leader_local}
+   (helpbar 
+      {if_else {is_leader_local} 
          (helpbar_back helpbar_select)
          (helpbar_back '')
       }
    )
    HELPBAR_WAITING_FOR_LEADER
-
+   
    (enter
       ; select the creator shot
       {practice_space_panel select_cam "createband"}
@@ -214,16 +239,13 @@
 }
 
 ; Deal with bad name and/or motto
-{new UIScreen
-   tour_band_name_profane_screen
+{new UIScreen tour_band_name_profane_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_LEADER_SESSION
 
    (enter
-      {dialog_panel set_ok
-         {localize_token tour_profile_create_band_name_profane}
-      }
+      {dialog_panel set_ok {localize_token tour_profile_create_band_name_profane}}
    )
 
    (SELECT_MSG
@@ -235,8 +257,7 @@
    )
 }
 
-{new UIScreen
-   tour_band_name_dup_screen
+{new UIScreen tour_band_name_dup_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_LEADER_SESSION
@@ -254,8 +275,7 @@
    )
 }
 
-{new UIScreen
-   tour_band_name_ip_screen
+{new UIScreen tour_band_name_ip_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_LEADER_SESSION
@@ -274,54 +294,55 @@
 }
 
 ; BWT Minimum Participants Blort Dialog
-{new UIScreen
-   tour_band_min_participants_screen
+{new UIScreen tour_band_min_participants_screen
    (panels dialog_panel)
-
+   
    (enter
       {dialog_panel set_ok
-         {sprintf
-            {localize tour_band_min_participants}
+         {sprintf {localize tour_band_min_participants}
             {gamemode get min_num_participants}
          }
-      }
+      }   
       {dialog_panel set limit leader_session}
    )
-
-   (SELECT_MSG {ui pop_screen})
-}
-
-; Welcome to the hub screen
-{new UIScreen
-   hub_welcome_screen
-   (panels dialog_panel)
-   (focus dialog_panel)
-   LIMIT_TO_LEADER_SESSION
-
-   (enter {dialog_panel set_ok {localize_token tour_hub_welcome_message}})
-
+   
    (SELECT_MSG
-      {{profile_mgr get_mapped_profile_from_player {gamecfg get leader_num}} set_first_hub_visit_done
-
-      }
       {ui pop_screen}
    )
 }
 
-; BWT Hub
-{new UIPanel
-   tour_band_hub_panel
-   (file tour_band_hub.milo)
-   (reset TRUE)
-   LIMIT_TO_SESSION
+; Welcome to the hub screen
+{new UIScreen hub_welcome_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   LIMIT_TO_LEADER_SESSION
 
+   (enter
+      {dialog_panel set_ok {localize_token tour_hub_welcome_message}}
+   )
+
+   (SELECT_MSG
+      {{profile_mgr get_mapped_profile_from_player {gamecfg get leader_num}} 
+            set_first_hub_visit_done}
+      {ui pop_screen}
+   )
+}
+
+
+
+; BWT Hub
+{new UIPanel tour_band_hub_panel
+   (file tour_band_hub.milo)
+   (reset TRUE) 
+   LIMIT_TO_SESSION
+   
    (enter
       ; first, reset focus if necessary
       {if [reset]
          {$this set_focus gigguide.btn}
       }
       {set [reset] FALSE}
-
+   
       ;; hide band-state stuff when no leader
       {if {== {gamecfg get leader_num} -1}
          {$this disable gigguide.btn}
@@ -329,41 +350,42 @@
          {$this disable bandlineup.btn}
          {$this set_focus rokkshoppe.btn}
       }
-
+      
       {$this refresh}
-
+      
       {unless {== {session mode} kNetLocal}
          {game foreach_local_player_config $pcfg
             ; in net games, put everyone into the "waiting" state
-            {$pcfg set_ui_waiting TRUE}
+            {$pcfg set_ui_waiting TRUE}         
          }
       }
    )
-
+      
    (TRANSITION_COMPLETE_MSG
       ; look for unsaved data, and if some is found, then save
       {autosave}
 
       ; disable net sync here, so we can freely navigate
       {band_ui_sink set_net_sync FALSE}
-
+      
       ; but allow net error message to interrupt, since we have just saved now
       {band_ui_sink set block_mode kBlockNone}
-
+      
       ; HACK don't push this first-timer screen if we've just started autosave
       {unless {== {ui current_screen} ''}
          ; check if we need to bring up the first-timer panel
-         {do
-            ($p_profile
-               {profile_mgr get_mapped_profile_from_player {gamecfg get leader_num}}
-            )
-            {if {&& $p_profile {$p_profile is_first_hub_visit}}
+         {do ($p_profile {profile_mgr
+                           get_mapped_profile_from_player
+                           {gamecfg get leader_num}
+                         })
+            {if {&& $p_profile
+                 {$p_profile is_first_hub_visit}}
                {ui push_screen hub_welcome_screen}
             }
          }
       }
    )
-
+   
    (refresh
       {if_else {== {{tour performer} world_fame} 0}
          {gigguide.btn set text_token tour_gigguide_start}
@@ -373,42 +395,37 @@
       {bandname.lbl set_localized {{tour performer} band_name}}
 
       ; hide stats at zero fame
-      {do
-         ($perf {tour performer})
+      {do ($perf {tour performer})
          {stats.grp set_showing {!= {$perf world_fame} 0}}
          {fame.lbl set_localized {fmt_score {$perf world_fame}}}
          {buzz.lbl set_localized {fmt_score {$perf fans}}}
       }
 
       #ifdef TOUR_LOGGING
-      {$log_tour print "MONEYBAL | "}
-      #endif
+         {$log_tour print "MONEYBAL | "}
+      #endif 
       {foreach_int $slot 0 {player_names.set size (objects)}
-         {do
-            ($name {player_names.set get (objects $slot)})
-            ($part {player_parts.set get (objects $slot)})
-            ($money {player_money.set get (objects $slot)})
-            ($leader {player_leaders.set get (objects $slot)})
-            ($no_instrument {player_no_instruments.set get (objects $slot)})
-            ($player_num {game get_player_num_from_slot_num $slot})
-            ($active {!= $player_num -1})
-
+         {do ($name {player_names.set get (objects $slot)})
+             ($part {player_parts.set get (objects $slot)})
+             ($money {player_money.set get (objects $slot)})
+             ($leader {player_leaders.set get (objects $slot)})
+             ($no_instrument {player_no_instruments.set get (objects $slot)})
+             ($player_num {game get_player_num_from_slot_num $slot})
+             ($active {!= $player_num -1})
+                         
             {$name set_showing $active}
-            {$money set_showing FALSE} ;; hide money for now
+            {$money set_showing FALSE}  ;; hide money for now
             {$part set_showing $active}
             {$leader set_showing {&& $active {== $player_num {game get leader_num}}}}
             {$no_instrument set_showing {! $active}}
-
+                        
             {if_else $active
-               {do
-                  ($char {{game get_player_config $player_num} get_char})
+               {do ($char {{game get_player_config $player_num} get_char})
                   {$name set_localized {$char get_char_name}}
                   {$part set_localized {$char instrument_icon}}
                   {$money set_localized {fmt_money {$char money}}}
                   #ifdef TOUR_LOGGING
-                  {$log_tour print
-                     {sprintf "%s:%d," {$char get_instrument} {$char money}}
-                  }
+                     {$log_tour print {sprintf "%s:%d," {$char get_instrument} {$char money}}}
                   #endif
                }
                {$no_instrument set_localized
@@ -418,14 +435,15 @@
          }
       }
       #ifdef TOUR_LOGGING
-      {$log_tour print "\n"}
+         {$log_tour print "\n"}
       #endif
    )
 
    (SELECT_START_MSG
       {switch $component
          (gigguide.btn
-            {if {>= {game get_num_participants} {gamemode get min_num_participants}}
+            {if {>= {game get_num_participants} 
+                    {gamemode get min_num_participants}}
                ; if a net game, go to the waiting screen
                {if_else {== {session mode} kNetLocal}
                   {tour_band_waiting_panel advance}
@@ -461,11 +479,12 @@
       }
       kDataUnhandled
    )
-
+   
    (SELECT_MSG
       {switch $component
          (gigguide.btn
-            {if {< {game get_num_participants} {gamemode get min_num_participants}}
+            {if {< {game get_num_participants} 
+                   {gamemode get min_num_participants}}
                ; not enough people in the band to play a gig
                {ui push_screen tour_band_min_participants_screen}
             }
@@ -474,11 +493,10 @@
    )
 }
 
-{new UIScreen
-   tour_band_hub_screen
-   (panels
-      meta
-      practice_space_panel
+{new UIScreen tour_band_hub_screen
+   (panels 
+      meta 
+      practice_space_panel 
       tour_band_hub_panel
       tour_band_lower3rd_panel
       helpbar
@@ -487,7 +505,7 @@
    (focus tour_band_hub_panel)
    (back {gamemode get matchmaking_screen})
    LIMIT_TO_SESSION
-
+   
    (enter
       ;; set this here because it's a central point, and it's the return
       ;;   path from the rock shop
@@ -495,53 +513,62 @@
 
       ;; make sure to update the mode accordingly
       {switch {tour bwtmode}
-         (kMetaTour_StartNew {tour set_bwtmode kMetaTour_KnownLocal})
-         (kMetaTour_UnknownRemote {tour set_bwtmode kMetaTour_KnownRemote})
+         (kMetaTour_StartNew
+            {tour set_bwtmode kMetaTour_KnownLocal}
+         )
+         (kMetaTour_UnknownRemote
+            {tour set_bwtmode kMetaTour_KnownRemote}
+         )
       }
-
+      
       ; select the hub shot
       {practice_space_panel select_cam "coop_hub"}
    )
+   
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; BWT hub -> gigguide waiting screen
-{new UIPanel
-   tour_band_waiting_panel
+{new UIPanel tour_band_waiting_panel
    (file "tour_band_waiting.milo")
    LIMIT_TO_SESSION
-
-   (enter
+   
+   (enter     
       {game foreach_local_player_config $pcfg
          {$pcfg set_ui_waiting FALSE}
       }
-
+      
       {if {is_leader_local}
          {session add_sink $this}
          {$this check_advance}
       }
    )
-
+   
    (exit
       {if {is_leader_local}
          {session remove_sink $this}
       }
    )
-
+   
    (BUTTON_DOWN_MSG
       ; if we back out, put all players back into the "waiting state"
-      {if {&& {! {$this all_ready}} {== $button kPad_Tri}}
+      {if {&& {! {$this all_ready}}
+              {== $button kPad_Tri}}
          {game foreach_local_player_config $pcfg
-            {$pcfg set_ui_waiting TRUE}
+            {$pcfg set_ui_waiting TRUE}   
          }
          {ui goto_screen tour_band_hub_screen FALSE TRUE}
-      }
-      kDataUnhandlded
+      }  
+      kDataUnhandlded 
+   )
+      
+   (REMOTE_PLAYER_CHANGED_MSG
+      {$this check_advance}   
    )
 
-   (REMOTE_PLAYER_CHANGED_MSG {$this check_advance})
-
-   (REMOTE_PLAYER_LEFT_MSG {$this check_advance})
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this check_advance}   
+   )
 
    (check_advance
       {if {$this all_ready}
@@ -552,9 +579,7 @@
    (advance
       {band_ui_sink sync_screen ; resets net_sync
          {cond
-            ({tour hint}
-               {{tour hint} get screen}
-            )
+            ({tour hint} {{tour hint} get screen})
             ({{tour performer} can_leave_hometown} tour_band_town_screen)
             ({{tour performer} can_leave_home_venue} tour_band_venue_screen)
             (TRUE tour_band_event_screen)
@@ -562,13 +587,12 @@
          0
       }
    )
-
+   
    (all_ready
-      {do
-         ($ready TRUE)
+      {do ($ready TRUE)
          {game foreach_player_config $pcfg
             {if {$pcfg ui_waiting}
-               {set $ready FALSE}
+               {set $ready FALSE}   
             }
          }
          $ready
@@ -576,9 +600,12 @@
    )
 }
 
-{new UIScreen
-   tour_band_waiting_screen
-   (panels meta practice_space_panel tour_band_waiting_panel helpbar)
+{new UIScreen tour_band_waiting_screen
+   (panels meta 
+      practice_space_panel 
+      tour_band_waiting_panel
+      helpbar
+   )
    (focus tour_band_waiting_panel)
    (helpbar (helpbar_back))
 }
@@ -586,7 +613,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; tour band profile
 
-#define SET_BAND_PROFILE_DATA (
+#define SET_BAND_PROFILE_DATA
+(
    {editname.btn set_localized {$this get_band_name}}
    {creation_date.lbl set_localized {$this get_create_date_string}}
    {hometown.lbl set_localized {$this get_hometown_string}}
@@ -597,11 +625,10 @@
    {logo.rndtex set proxy {$this get_logo_patch}}
 )
 
-#define kKeyboardModeName (0)
+#define kKeyboardModeName  (0)
 #define kKeyboardModeMotto (1)
 
-{new UIPanel
-   tour_band_profile_panel
+{new UIPanel tour_band_profile_panel
    (file tour_band_profile.milo)
    (focus logo.btn)
    (player_num -1)
@@ -618,10 +645,10 @@
       {practice_space_panel select_cam "coop_enter"}
 
       SET_BAND_PROFILE_DATA
-
+      
       {$this disable members.btn}
       {$this disable topsongs.btn}
-
+      
       {$this enable editname.btn}
       {$this enable logo.btn}
       {$this enable motto.btn}
@@ -644,18 +671,14 @@
             {patch_panel set patch_player_num $player_num}
             {patch_panel set patch {{tour performer} edit_logo_patch}}
             {patch_panel set exit_screen tour_band_profile_screen}
-            {patch_panel set
-               bg_color
-               {pack_color 1 1 1}
-            }
+            {patch_panel set bg_color {pack_color 1 1 1}}
             {patch_panel set set general}
             ; select the logo shot
             {practice_space_panel select_cam "logo"}
             ; hook it up
-            {{practice_space_panel find logo.rndtex} set
-               proxy
+            {{practice_space_panel find logo.rndtex} set proxy
                {{tour performer} edit_logo_patch}
-            }
+            }            
             ; start forcing the patch dir to render every frame
             {{practice_space_panel find logo.rndtex} set force TRUE}
             {if_else {patch_panel get help_shown}
@@ -674,22 +697,36 @@
                $this
             }
          )
-         (members.btn kDataUnhandled)
-         (topsongs.btn kDataUnhandled)
+         (members.btn
+            kDataUnhandled
+         )
+         (topsongs.btn
+            kDataUnhandled
+         )
          ; default
          kDataUnhandled
       }
    )
 
    (VIRTUAL_KEYBOARD_RESULT_MSG
-      {if {&& $ok $this {ui focus_panel} {== {ui focus_panel} $this}}
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {== {ui focus_panel} $this}
+         }
+
          ; then
          {switch {$this get keyboard_mode}
             (kKeyboardModeName
                {if {!= $text ""}
                   {if_else
                      {!
-                        {profile_mgr is_band_name_unique {gamecfg get leader_num} $text}
+                        {profile_mgr is_band_name_unique
+                           {gamecfg get leader_num}
+                           $text
+                        }
                      }
                      ; then
                      {ui push_screen tour_band_create_name_not_unique_screen}
@@ -697,9 +734,12 @@
                      {do
                         {$this set_band_name $text}
                         {editname.btn set_localized $text}
-
+   
                         {band_ui_sink show_network_busy_icon}
-                        {entity_uploader verify_band_name {{tour performer} band_name} $this}
+                        {entity_uploader verify_band_name
+                           {{tour performer} band_name}
+                           $this
+                        }
                      }
                   }
                }
@@ -721,10 +761,11 @@
          ; else
          {do
             ; send an update here, so session gets any logo changes
-            {if {&& {== $button kPad_Tri} {{tour performer} is_local}}
+            {if {&& {== $button kPad_Tri}
+                    {{tour performer} is_local}}
                {{tour performer} update_data}
             }
-            kDataUnhandled
+            kDataUnhandled         
          }
       }
    )
@@ -738,8 +779,12 @@
                (RB_RETCODE_BAND_NAME_PROFANE
                   {ui push_screen tour_band_rename_profane_screen}
                )
-               (RB_RETCODE_BAND_NAME_DUP {ui push_screen tour_band_rename_dup_screen})
-               (RB_RETCODE_BAND_NAME_IP {ui push_screen tour_band_rename_ip_screen})
+               (RB_RETCODE_BAND_NAME_DUP
+                  {ui push_screen tour_band_rename_dup_screen}
+               )
+               (RB_RETCODE_BAND_NAME_IP
+                  {ui push_screen tour_band_rename_ip_screen}
+               )
                ; else (SUCCESS or SERVER_DOWN)
             }
          )
@@ -749,7 +794,9 @@
                (RB_RETCODE_BAND_MOTTO_PROFANE
                   {ui push_screen tour_band_motto_profane_screen}
                )
-               (RB_RETCODE_BAND_MOTTO_IP {ui push_screen tour_band_motto_ip_screen})
+               (RB_RETCODE_BAND_MOTTO_IP
+                  {ui push_screen tour_band_motto_ip_screen}
+               )
                ; else (SUCCESS or SERVER_DOWN)
             }
          )
@@ -757,50 +804,44 @@
    )
 }
 
-{new UIScreen
-   tour_band_profile_screen
-   (panels
-      meta
-      practice_space_panel
-      tour_band_profile_panel
-      tour_band_lower3rd_panel
-      helpbar
+{new UIScreen tour_band_profile_screen
+   (panels meta practice_space_panel tour_band_profile_panel 
+      tour_band_lower3rd_panel helpbar
    )
    (focus tour_band_profile_panel)
    (back tour_band_hub_screen)
    (helpbar (helpbar_back helpbar_select))
-
+   
    ; called from patch_panel
    (confirm
       ; update the cached patch, since we revert by default
       {patch_panel cache_patch}
       ; mark ourself as dirty, so we autosave/upload
-      {{tour performer} set_dirty
-         TRUE
+      {{tour performer} set_dirty TRUE 
          {| kTourPerfDirtySave kTourPerfDirtyUpload}
       }
-      {tour_band_profile_panel set player_num {patch_panel get patch_player_num}}
+      {tour_band_profile_panel set player_num
+         {patch_panel get patch_player_num}
+      }
       {ui goto_screen tour_band_profile_screen}
    )
 }
 
 ; bad band name screens
-{new UIScreen
-   tour_band_rename_profane_screen
+{new UIScreen tour_band_rename_profane_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_SESSION
    (enter
-      {dialog_panel set_ok
-         {localize_token tour_profile_rename_band_name_profane}
-      }
+      {dialog_panel set_ok {localize_token tour_profile_rename_band_name_profane}}
    )
 
-   (SELECT_MSG {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
-{new UIScreen
-   tour_band_rename_dup_screen
+{new UIScreen tour_band_rename_dup_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_SESSION
@@ -808,11 +849,12 @@
       {dialog_panel set_ok {localize_token tour_profile_rename_band_name_dup}}
    )
 
-   (SELECT_MSG {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
-{new UIScreen
-   tour_band_rename_ip_screen
+{new UIScreen tour_band_rename_ip_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_SESSION
@@ -820,44 +862,51 @@
       {dialog_panel set_ok {localize_token tour_profile_rename_band_name_ip}}
    )
 
-   (SELECT_MSG {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
 ; bad band motto errors
-{new UIScreen
-   tour_band_motto_profane_screen
+{new UIScreen tour_band_motto_profane_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_SESSION
-   (enter {dialog_panel set_ok {localize_token tour_profile_motto_profane}})
+   (enter
+      {dialog_panel set_ok {localize_token tour_profile_motto_profane}}
+   )
 
-   (SELECT_MSG {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
-{new UIScreen
-   tour_band_motto_ip_screen
+{new UIScreen tour_band_motto_ip_screen
    (panels dialog_panel)
    (focus dialog_panel)
    LIMIT_TO_SESSION
-   (enter {dialog_panel set_ok {localize_token tour_profile_motto_ip}})
+   (enter
+      {dialog_panel set_ok {localize_token tour_profile_motto_ip}}
+   )
 
-   (SELECT_MSG {ui pop_screen})
+   (SELECT_MSG
+      {ui pop_screen}
+   )
 }
 
-{new UIPanel
-   remote_band_profile_panel
+{new UIPanel remote_band_profile_panel
    (file tour_band_profile.milo)
    (focus logo.btn)
    (player_num -1)
    LIMIT_TO_SESSION
-
+   
    (enter
       {data.grp set_showing FALSE}
       {top5.grp set_showing FALSE}
       {band_ui_sink show_network_busy_icon}
       {$this request_band_profile}
    )
-
+   
    (exit
       {data.grp set_showing TRUE}
       {band_ui_sink hide_network_busy_icon}
@@ -875,8 +924,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; tour active rock moment
-{new UIPanel
-   tour_active_moment_panel
+{new UIPanel tour_active_moment_panel
    (file "tour_active_moment.milo")
    (focus yes.btn)
    (reset_focus TRUE)
@@ -885,12 +933,10 @@
    (enter
       {song.lbl set_localized {tour event_display_name}}
       {by_line.lbl set_localized {tour event_description}}
-
-      {do
-         ($moment {{tour performer} next_moment})
+      
+      {do ($moment {{tour performer} next_moment})
          {if_else {{tour performer} has_next_moment}
-            {do
-               ($moment_token {elem $moment 0})
+            {do ($moment_token {elem $moment 0})
                ; initialize text using moment
                {title.lbl set text_token $moment_token}
                {desc.lbl set text_token {sprint $moment_token "_desc"}}
@@ -899,12 +945,14 @@
          }
       }
    )
-
+   
    (SELECT_MSG
       ; accept/decline active moment
       ; don't use [] syntax since arg is evaluated outside of gDataThis
-      {{tour performer} set_active_moment
-         {if_else {&& {{tour performer} has_next_moment} {== $component yes.btn}}
+      {{tour performer} set_active_moment 
+         {if_else {&& {{tour performer} has_next_moment}
+                      {== $component yes.btn}
+                  } 
             {{tour performer} next_moment}
             0
          }
@@ -913,12 +961,11 @@
    )
 }
 
-{new UIScreen
-   tour_active_moment_screen
+{new UIScreen tour_active_moment_screen
    (panels meta tour_world_bg_panel tour_active_moment_panel helpbar)
    (focus tour_active_moment_panel)
-   (helpbar
-      {if_else {is_leader_local}
+   (helpbar 
+      {if_else {is_leader_local} 
          ('' helpbar_select)
          (helpbar_back) ; for exiting the session
       }
@@ -928,15 +975,15 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; BWT Gig Guide
-#define TOUR_BAND_GIGGUIDE_HANDLERS (
+#define TOUR_BAND_GIGGUIDE_HANDLERS
+(
    LIMIT_TO_LEADER_SESSION
 
-   (set_num_new
-      ($num $label)
+   (set_num_new ($num $label)
       {$label set_showing $num}
       {$label set_localized
          {sprintf
-            {localize
+            {localize 
                {if_else {== $num 1}
                   tour_gigguide_new_event
                   tour_gigguide_new_events
@@ -945,57 +992,51 @@
             $num
          }
       }
-   )
+   )   
 )
 
 ;;;;;;;;;;;;;;;;;;;;
 ; tour world map/town select
-{new UIPanel
-   tour_band_town_panel
+{new UIPanel tour_band_town_panel
    TOUR_BAND_GIGGUIDE_HANDLERS
    (file "tour_band_town.milo")
    (focus towns.lst)
-
+   
    (enter
       {$this refresh}
       {tour_world_bg_panel zoom_out}
    )
-
+   
    (refresh
       {towns.lst set_provider {tour town_provider}}
       ; set display num of list, should always be odd
-      {do
-         ($num_towns {min {towns.lst num_display} {{tour town_provider} num_towns}})
-         {towns.lst set_num_display
-            {-
-               $num_towns
-               {if_else {mod $num_towns 2}
-                  0
-                  1
-               }
+      {do ($num_towns 
+            {min
+               {towns.lst num_display}
+               {{tour town_provider} num_towns}
             }
+          )   
+         {towns.lst set_num_display 
+            {- $num_towns {if_else {mod $num_towns 2} 0 1}}
          }
       }
       {towns.lst set_selected {{tour performer} town}}
       {$this update_tooltip}
    )
-
+   
    (update_tooltip
       {tour_gigguide_lower3rd_panel refresh}
-      {do
-         ($perf {tour performer})
-         ($town {$perf town})
+      {do ($perf {tour performer})
+          ($town {$perf town})
          {fans_count.lbl set_localized {fmt_score {$perf town_fame $town}}}
-         {fans_total.lbl set_localized
-            {sprintf "/%s" {fmt_score {$perf total_town_fame $town}}}
-         }
+         {fans_total.lbl set_localized {sprintf "/%s" {fmt_score {$perf total_town_fame $town}}}}
          {tour_world_bg_panel set town $town}
          {tour_world_bg_panel update}
-
+         
          {$this set_num_new {$perf num_new_town_events} town_new_events.lbl}
       }
    )
-
+   
    (BUTTON_DOWN_MSG
       {switch $button
          (kPad_R1
@@ -1007,27 +1048,24 @@
          kDataUnhandled
       }
    )
-
+   
    (SCROLL_MSG
       {synth play bwt_swish.cue}
       {{tour performer} set_town {towns.lst selected_sym}}
       {$this update_tooltip}
    )
-
-   (SELECT_START_MSG {ui goto_screen tour_band_venue_screen} kDataUnhandled)
+   
+   (SELECT_START_MSG
+      {ui goto_screen tour_band_venue_screen}
+      kDataUnhandled
+   )
 }
 
-{new UIScreen
-   tour_band_town_screen
-   (panels
-      meta
-      tour_world_bg_panel
-      tour_band_town_panel
-      tour_gigguide_lower3rd_panel
-      helpbar
-   )
-   (helpbar
-      {if_else {is_leader_local}
+{new UIScreen tour_band_town_screen
+   (panels meta tour_world_bg_panel
+      tour_band_town_panel tour_gigguide_lower3rd_panel helpbar)
+   (helpbar 
+      {if_else {is_leader_local} 
          (helpbar_returntohub helpbar_choose_city helpbar_callmanager)
          (helpbar_back '')
       }
@@ -1035,19 +1073,22 @@
    HELPBAR_WAITING_FOR_LEADER
    (focus tour_band_town_panel)
    (back tour_band_hub_screen)
-   (enter {tour_world_bg_panel play_town_loop FALSE})
+   (enter
+      {tour_world_bg_panel play_town_loop FALSE}
+   )
 }
 
 ;;;;;;;;;;;;;;;;;;
 ; town venue select panel/screen
-{new UIPanel
-   tour_band_venue_panel
+{new UIPanel tour_band_venue_panel
    TOUR_BAND_GIGGUIDE_HANDLERS
    (file "tour_band_venue.milo")
    (focus venue.lst)
 
-   (SCROLL_MSG {$this set_venue {venue.lst selected_sym}})
-
+   (SCROLL_MSG
+      {$this set_venue {venue.lst selected_sym}}
+   )
+   
    (enter
       {tour_gigguide_lower3rd_panel refresh}
       {tour_world_bg_panel zoom_in}
@@ -1055,11 +1096,12 @@
       {$this refresh}
       {venue.lst set_selected {{tour performer} venue}}
    )
-
-   (refresh {$this set_venue {{tour performer} venue}})
-
-   (set_venue
-      ($venue)
+      
+   (refresh
+      {$this set_venue {{tour performer} venue}}
+   )
+      
+   (set_venue ($venue)
       {if {{tour performer} is_local}
          {{tour performer} set_venue {symbol $venue}}
       }
@@ -1068,19 +1110,23 @@
 
       {cond
          ({!= kTourLocked {{tour performer} venue_status {tour venue}}}
-            ; unlocked venue
+             ; unlocked venue
             {summary_unlocked.grp set_showing TRUE}
             {summary_require.grp set_showing FALSE}
-
+                        
             ;; new gigs available in this venue
-            {$this set_num_new
+            {$this set_num_new 
                {{tour performer} num_new_venue_events}
                venue_new_events.lbl
             }
-
-            {fans_count.lbl set_localized {sprintf "%i" {{tour performer} venue_fame}}}
-            {fans_total.lbl set_localized
-               {sprintf "/%i " {{tour performer} total_venue_fame}}
+            
+            {fans_count.lbl set_localized 
+               {sprintf "%i" {{tour performer} venue_fame}}
+            }
+            {fans_total.lbl set_localized 
+               {sprintf "/%i " 
+                  {{tour performer} total_venue_fame}
+               }
             }
          )
          (TRUE ; venue is locked
@@ -1088,8 +1134,7 @@
             {summary_require.grp set_showing TRUE}
 
             ; venue reqs based on first event
-            {do
-               ($p {tour requirement_provider})
+            {do ($p {tour requirement_provider})
                {$p set_by_venue {tour performer}}
                {requirements.lst set_provider $p}
             }
@@ -1098,12 +1143,14 @@
 
       {tour_gigguide_lower3rd_panel refresh}
    )
-
+      
    (BUTTON_DOWN_MSG
       {switch $button
          (kPad_X
             ; can't select locked venues
-            {if_else {== kTourLocked {{tour performer} venue_status {tour venue}}}
+            {if_else {== kTourLocked 
+                        {{tour performer} venue_status {tour venue}}
+                     }
                TRUE
                kDataUnhandled
             }
@@ -1116,25 +1163,25 @@
                }
             }
          )
-         (kPad_Tri {tour_world_bg_panel zoom_out} kDataUnhandled)
+         (kPad_Tri
+            {tour_world_bg_panel zoom_out}
+            kDataUnhandled
+         )
          kDataUnhandled
       }
    )
-
-   (SELECT_START_MSG {ui goto_screen tour_band_event_screen} kDataUnhandled)
+      
+   (SELECT_START_MSG
+      {ui goto_screen tour_band_event_screen}
+      kDataUnhandled
+   )
 }
 
-{new UIScreen
-   tour_band_venue_screen
-   (panels
-      meta
-      tour_world_bg_panel
-      tour_band_venue_panel
-      tour_gigguide_lower3rd_panel
-      helpbar
-   )
-   (helpbar
-      {if_else {is_leader_local}
+{new UIScreen tour_band_venue_screen
+   (panels meta tour_world_bg_panel
+      tour_band_venue_panel tour_gigguide_lower3rd_panel helpbar)
+   (helpbar 
+      {if_else {is_leader_local} 
          {if_else {{tour performer} can_leave_hometown}
             (helpbar_leavetown helpbar_choose_city helpbar_callmanager)
             (helpbar_returntohub helpbar_choose_city)
@@ -1145,26 +1192,27 @@
    HELPBAR_WAITING_FOR_LEADER
 
    (focus tour_band_venue_panel)
-   (back
+   (back 
       {if_else {{tour performer} can_leave_hometown}
          tour_band_town_screen
          tour_band_hub_screen
       }
+   ) 
+   
+   (enter
+      {tour_world_bg_panel play_town_loop TRUE}   
    )
-
-   (enter {tour_world_bg_panel play_town_loop TRUE})
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; choose event screen
-{new UIPanel
-   tour_band_event_panel
+{new UIPanel tour_band_event_panel
    TOUR_EVENT_PANEL_HANDLERS
    COMMON_SONG_PREVIEW
    (file "tour_band_event.milo")
    (focus event.lst)
    (player_num {local_to_leader_player_num})
-
+   
    (refresh
       {event.lst set_provider {tour event_provider}} ; refresh
       {if {tour event}
@@ -1172,16 +1220,16 @@
       }
       ; always set event, to clear state
       {$this update_selection}
-
+      
       ; trigger any new hints (really just for cheats)
       {if {tour hint}
          {ui goto_screen {{tour hint} get screen}}
       }
    )
-
+   
    (enter
       {venue_name.lbl set text_token {tour venue_token}}
-      {venue_desc.lbl set text_token {tour venue_desc_token}}
+      {venue_desc.lbl set text_token {tour venue_desc_token}}    
       ; see if we have any new hints for this town
       {tour_gigguide_lower3rd_panel refresh}
       {tour_world_bg_panel zoom_in}
@@ -1189,25 +1237,22 @@
       ; the event should be set, so update the preview
       {$this update_preview TRUE}
    )
-
-   (exit {song_preview ''})
-
-   (play_preview
-      ($on)
-      {if_else ($on)
-         {do
-            ($event {tour event})
-            #ifndef _SHIP
+   
+   (exit
+      {song_preview ''}
+   )
+   
+   (play_preview ($on)
+      {if_else ($on)         
+         {do ($event {tour event})
+#ifndef _SHIP
             {unless $event
                {fail "Tried to play preview, but no event!"}
             }
-            #endif
-            {if_else
-               {&&
-                  {$this is_event_playable}
-                  {== {$event num_songs} 1}
-                  {!= {tour event_concrete_song} ''}
-               }
+#endif
+            {if_else {&& {$this is_event_playable}
+                         {== {$event num_songs} 1}
+                         {!= {tour event_concrete_song} ''}}
                {song_preview {tour event_concrete_song}}
                {song_preview ''} ; turn off song preview
             }
@@ -1215,33 +1260,41 @@
          {song_preview ''}
       }
    )
-
-   (update_preview
-      ($on)
+   
+   (update_preview ($on)
       {if {is_leader_local}
          {$this play_preview $on}
-         {session send_to_all (tour_band_event_panel play_preview $on) kNetReliable}
+         {session send_to_all (tour_band_event_panel play_preview $on) 
+            kNetReliable
+         }
       }
    )
-
+   
    (update_selection
-      {{tour performer} set_event {event.lst selected_sym} {game get leader_num}}
+      {{tour performer} set_event 
+         {event.lst selected_sym} 
+         {game get leader_num}
+      }
    )
-
-   (is_event_playable {!= kTourLocked {{tour performer} event_status}})
-
-   (SCROLL_MSG {$this update_selection})
-
+   
+   (is_event_playable
+      {!= kTourLocked {{tour performer} event_status}}
+   )
+   
+   (SCROLL_MSG
+      {$this update_selection}
+   )
+   
    (start_event_select
       {if_else {== {{tour performer} next_any_index} -1}
          {do
             {$this confirm_event} ; start the event
             {ui goto_screen {gamemode get ready_screen}}
          }
-         {ui goto_screen tour_selsong_screen} ; select first song
+         {ui goto_screen tour_selsong_screen}  ; select first song
       }
    )
-
+   
    (SELECT_START_MSG
       {if_else {$this is_event_playable}
          {$this start_event_select}
@@ -1249,7 +1302,7 @@
       }
       kDataUnhandled
    )
-
+   
    (BUTTON_DOWN_MSG
       {cond
          ({== $button kPad_R1}
@@ -1262,62 +1315,54 @@
       }
       kDataUnhandled
    )
-
+   
    (BUTTON_UP_MSG
-      {if {&& {! {ui in_transition}} {$this is_updown $button}}
+      {if {&& {! {ui in_transition}}
+              {$this is_updown $button}}
          {$this update_preview TRUE}
       }
-      kDataUnhandled
+      kDataUnhandled   
    )
 }
 
-{new UIScreen
-   tour_band_event_screen
-   (panels
-      meta
-      tour_world_bg_panel
-      tour_band_event_panel
-      tour_gigguide_lower3rd_panel
-      helpbar
-   )
-   (helpbar
-      {if_else {is_leader_local}
+{new UIScreen tour_band_event_screen
+   (panels meta tour_world_bg_panel 
+      tour_band_event_panel tour_gigguide_lower3rd_panel helpbar)
+   (helpbar 
+      {if_else {is_leader_local} 
          (helpbar_leavevenue helpbar_chooseset helpbar_eventdetails)
          (helpbar_back '')
       }
    )
    HELPBAR_WAITING_FOR_LEADER
    (focus tour_band_event_panel)
-   (back
+   (back 
       {if_else {{tour performer} can_leave_home_venue}
          tour_band_venue_screen
          tour_band_hub_screen
       }
-   )
-
+   ) 
+   
    (enter
-      {helpbar set_limit_to_player_num {game get leader_num}}
-      {tour_world_bg_panel play_town_loop TRUE}
+		{helpbar set_limit_to_player_num {game get leader_num}}
+		{tour_world_bg_panel play_town_loop TRUE}   
    )
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; event details
-{new UIPanel
-   tour_eventdetails_panel
+{new UIPanel tour_eventdetails_panel
    (file "tour_eventdetails.milo")
    LIMIT_TO_LEADER_SESSION
 
    (enter
-      {do
-         ($event {tour event})
+      {do ($event {tour event})
          ; always show the event name
          {event_name.lbl set_localized {tour event_display_name}}
-
+         
          ; always show the reward, if there is one and we haven't won it yet         
-         {do
-            ($award {$event get award_item})
-            ($show_award {&& {!= $award ''} {! {{tour performer} has_item $award}}})
+         {do ($award {$event get award_item})
+             ($show_award {&& {!= $award ''} {! {{tour performer} has_item $award}}})
             {award.grp set_showing $show_award}
             {if $show_award
                {icon.lbl set_localized {{tour performer} item_to_str $award}}
@@ -1326,8 +1371,7 @@
          }
 
          ; show set list if playable, requirements if locked         
-         {do
-            ($can_play {!= kTourLocked {{tour performer} event_status}})
+         {do ($can_play {!= kTourLocked {{tour performer} event_status}})
             {event_playable.grp set_showing $can_play}
             {event_locked.grp set_showing {! $can_play}}
             {if_else $can_play
@@ -1335,8 +1379,7 @@
                   {song.lst set_provider {tour event_song_provider}}
                   {$this set_focus song.lst}
                }
-               {do
-                  ($p {tour requirement_provider})
+               {do ($p {tour requirement_provider})
                   {$p set_by_event {tour performer} $event}
                   {requirements.lst set_provider $p}
                   {$this set_focus ''} ; nuthin'
@@ -1345,9 +1388,11 @@
          }
       }
    )
-
+   
    (BUTTON_DOWN_MSG
-      {if {&& {== $button kPad_X} {!= kTourLocked {{tour performer} event_status}}}
+      {if {&& {== $button kPad_X} 
+              {!= kTourLocked {{tour performer} event_status}}
+          }
          {synth play button_select}
          {tour_band_event_panel start_event_select} ; start the event
       }
@@ -1355,17 +1400,13 @@
    )
 }
 
-{new UIScreen
-   tour_eventdetails_screen
-   (panels
-      meta
-      tour_world_bg_panel
-      tour_eventdetails_panel
-      tour_gigguide_lower3rd_panel
-      helpbar
-   )
-   (helpbar
-      {if_else {&& {is_leader_local} {!= kTourLocked {{tour performer} event_status}}}
+{new UIScreen tour_eventdetails_screen
+   (panels meta tour_world_bg_panel 
+      tour_eventdetails_panel tour_gigguide_lower3rd_panel helpbar)
+   (helpbar 
+      {if_else {&& {is_leader_local} 
+                   {!= kTourLocked {{tour performer} event_status}}
+               }
          (helpbar_back helpbar_chooseset)
          (helpbar_back)
       }
@@ -1373,44 +1414,47 @@
    HELPBAR_WAITING_FOR_LEADER
    LIMIT_TO_LEADER_SESSION
    (focus tour_eventdetails_panel)
-   (back tour_band_event_screen)
+   (back tour_band_event_screen) 
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Marathon "encore" warning screen
-{new UIScreen
-   tour_band_marathon_screen
+{new UIScreen tour_band_marathon_screen
    (panels meta tour_world_bg_panel dialog_panel helpbar)
    (focus dialog_panel)
-   (helpbar
-      {if_else {is_leader_local}
+   (helpbar 
+      {if_else {is_leader_local} 
          ('' helpbar_continue)
          (helpbar_back)
       }
    )
    HELPBAR_WAITING_FOR_LEADER
    LIMIT_TO_LEADER_SESSION
-
+   
    (enter
-      {dialog_panel set_yesno {localize_token tour_band_marathon_warning} no.btn}
-      {dialog_panel set_title {localize_token are_you_sure}}
+      {dialog_panel set_yesno 
+         {localize_token tour_band_marathon_warning} 
+         no.btn
+      }
+      {dialog_panel set_title {localize_token are_you_sure}}   
    )
-
+   
    (SELECT_START_MSG
       {ui goto_screen
          {switch $component
             (yes.btn tour_band_seldiff_screen)
-            (no.btn tour_band_event_screen)
+            (no.btn  tour_band_event_screen)
          }
       }
-      kDataUnhandled
+      kDataUnhandled   
    )
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; BWT endgame screens
-#define TOUR_ENDGAME_HANDLERS (
-   ENDGAME_PANEL_HANDLERS
+#define TOUR_ENDGAME_HANDLERS
+(
+   ENDGAME_PANEL_HANDLERS   
    (complete_song
       {$this set_results}
       {$this submit_achievements}
@@ -1420,82 +1464,72 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Tour Next Song Results Screen
 ; this is pushed when we win the song, just needs to pop back to stats screen
-{new UIScreen
-   tour_nextsong_screen
-   (enter {ui pop_screen tour_nextstats_screen})
+{new UIScreen tour_nextsong_screen
+   (enter
+      {ui pop_screen tour_nextstats_screen}
+   )
 }
 
 ; special panel that stays up for a minimum time before allowing transition
-{new NextSongPanel
-   tour_nextsong_panel
+{new NextSongPanel tour_nextsong_panel
    TOUR_ENDGAME_HANDLERS
    (file "tour_nextsong.milo")
    (min_time 5.0) ; minimum time this will be up, in seconds
-
+   
    (enter
       ; no need to autosave here, not done with song yet
       {$this complete_song}
-
+      
       ; set progress
       {songs.lbl set_localized
-         {sprintf
-            {localize tour_event_songs}
+         {sprintf {localize tour_event_songs}
             {{tour performer} num_completed}
             {{tour event} num_songs}
          }
       }
-
+      
       ; unload the game now that we've set our stats
       {ui goto_screen tour_preload_song_screen}
    )
 }
 
 ; keeps game up, so we can setup our stats before unloading it
-{new UIScreen
-   tour_nextstats_screen
+{new UIScreen tour_nextstats_screen
    (panels game world_panel mtv_overlay coop_track_panel tour_nextsong_panel)
 }
 
 ; starts pre-loading next song from memory card
-{new PreloadPanel
-   tour_preload_song_panel
+{new PreloadPanel tour_preload_song_panel
    (load
       ; set our next song here
-      {game set_song {{tour performer} next_song}}
+      {game set_song {{tour performer} next_song}}  
    )
 
    (enter
       {if_else [preload_ok]
          ; looks like we've successfully pre-loaded our song
-         {ui goto_screen tour_load_song_screen}
+         {ui goto_screen tour_load_song_screen}   
          ; we had an error during load, this will boot us to band select
          {band_ui_sink content_file_read_failed}
       }
    )
 }
 
-{new UIScreen
-   tour_preload_song_screen
+{new UIScreen tour_preload_song_screen
    ; keep the game panel up, so we can cleanly bail out if necessary
-   (panels
-      game
-      world_panel
-      mtv_overlay
-      coop_track_panel
-      tour_nextsong_panel
+   (panels game world_panel mtv_overlay coop_track_panel tour_nextsong_panel
       tour_preload_song_panel
    )
 }
 
 ; unloads current song, cues up next song in event to load and play
-{new UIScreen
-   tour_load_song_screen
+{new UIScreen tour_load_song_screen
    (panels world_panel mtv_overlay coop_track_panel tour_nextsong_panel)
-
+   
    (TRANSITION_COMPLETE_MSG
       ; we're about to play a song, add it to recently played list
       {song_provider add_recent_song {gamecfg get_song}}
-
+      
       ; HACK this is to force $world to enter 
       ; when the screen is entered so that 
       ; parsers are re-hooked up.
@@ -1508,15 +1542,14 @@
 }
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Tour Endgame Screen
-{new UIPanel
-   tour_band_endgame_panel
+{new UIPanel tour_band_endgame_panel
    (file "tour_endgame.milo")
    (focus continue.btn)
    TOUR_ENDGAME_HANDLERS
-
+   
    (enter
       {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
-
+      
       {$this complete_song}
 
       ; before we complete the event, we need the gigcomplete panel to
@@ -1526,9 +1559,9 @@
 
       ; complete now, so that the next screen is all set in a net game
       {{tour performer} complete_event}
-
+      
       ; only leader can continue to gig complete screen
-      {if_else {{tour performer} is_local}
+      {if_else {{tour performer} is_local} 
          {do
             {continue.btn set text_token tour_finish_gig}
             {$this enable continue.btn}
@@ -1540,27 +1573,32 @@
       }
    )
 
-   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
-
-   (SELECT_MSG {ui goto_screen tour_band_gigcomplete_screen})
+   (exit
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+   )
+   
+   (SELECT_MSG
+      {ui goto_screen tour_band_gigcomplete_screen}
+   )
 }
 
-{new UIScreen
-   tour_band_endgame_screen
+{new UIScreen tour_band_endgame_screen
    (panels tour_band_endgame_panel helpbar)
    (focus tour_band_endgame_panel)
-   (helpbar
-      {if_else {is_leader_local}
-         #ifdef HX_XBOX
-         {if_else {&& {gamemode get online_play_required} {> {session num_players} 0}}
+   (helpbar 
+      {if_else {is_leader_local} 
+      #ifdef HX_XBOX
+         {if_else {&&   {gamemode get online_play_required}
+                        {> {session num_players} 0}
+                  }
             ;show the details icon
             ('' helpbar_finishgig helpbar_details)
             ;else don't show the details icon
             ('' helpbar_finishgig)
          }
-         #else
+      #else
          ('' helpbar_finishgig)
-         #endif
+      #endif
          ;else
          (helpbar_back)
       }
@@ -1570,29 +1608,24 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; gig complete
-{new UIPanel
-   tour_band_gigcomplete_panel
+{new UIPanel tour_band_gigcomplete_panel
    (file "tour_band_gigcomplete.milo")
    (focus continue.btn)
    LIMIT_TO_LEADER_SESSION
 
    ; needed to track "Big in ____" achievements
    (was_town_complete FALSE)
-   (init_was_town_complete
-      ($tp)
+   (init_was_town_complete ($tp)
       {set [was_town_complete] {$tp is_town_complete}}
    )
 
    ; needed to track vehicle achievements
-   (did_have_vehicles
-      (
-         (tour_vehicle_van FALSE)
-         (tour_vehicle_bus FALSE)
-         (tour_vehicle_jet FALSE)
-      )
-   )
-   (init_did_have_vehicles
-      ($tp)
+   (did_have_vehicles (
+      (tour_vehicle_van FALSE)
+      (tour_vehicle_bus FALSE)
+      (tour_vehicle_jet FALSE)
+   ))
+   (init_did_have_vehicles ($tp)
       {foreach $vehicle (tour_vehicle_van tour_vehicle_bus tour_vehicle_jet)
          {do
             ($thearray {find [did_have_vehicles] $vehicle})
@@ -1600,47 +1633,51 @@
          }
       }
    )
-
+   
    (enter
       {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
-      {do
-         ($tp {tour performer})
-         ($carrot_event {$tp next_item_event})
-         ($num_unlocked_events {{tour performer} num_unlocked_events})
-         ($num_unlocked_venues {$tp num_unlocked_venues})
-         ($num_unlocked_towns {$tp num_unlocked_towns})
-         ($unlocked_item {$tp unlocked_item})
+      {do ($tp {tour performer})
+          ($carrot_event {$tp next_item_event})
+          ($num_unlocked_events {{tour performer} num_unlocked_events})
+          ($num_unlocked_venues {$tp num_unlocked_venues})
+          ($num_unlocked_towns {$tp num_unlocked_towns})
+          ($unlocked_item {$tp unlocked_item})
 
          ; carrot (requirements for next item in progression)
          ; don't show it if we've just unlocked an item
          {if_else {&& $carrot_event {== $unlocked_item ''}}
-            {do
-               ($item {$carrot_event get award_item})
+            {do ($item {$carrot_event get award_item})
                {carrot.grp set_showing TRUE}
                {if_else {== kTourNew {$tp event_status $carrot_event}}
                   {do ; we can play the event
-                     {carrot_item.lbl set text_token {sprintf "%s_carrot_canwin" $item}}
+                     {carrot_item.lbl set text_token
+                        {sprintf "%s_carrot_canwin" $item}
+                     }
                      {carrot_desc.lbl set_showing FALSE}
                   }
                   {do ; can't play it yet, show the requirements
-                     ($world_fame {$tp world_fame})
-                     ($required_world_fame {$carrot_event get world_fame_required})
-                     ($town {$tp find_event_town $carrot_event})
-                     ($town_fame {$tp town_fame $town})
-                     ($required_town_fame {$carrot_event get town_fame_required})
-                     ($fans {$tp fans})
-                     ($required_fans {$tp buzz_to_fans {$carrot_event get buzz_required}})
+                      ($world_fame {$tp world_fame})
+                      ($required_world_fame {$carrot_event get world_fame_required})
+                      ($town {$tp find_event_town $carrot_event})
+                      ($town_fame {$tp town_fame $town})
+                      ($required_town_fame {$carrot_event get town_fame_required})
+                      ($fans {$tp fans})
+                      ($required_fans {$tp buzz_to_fans {$carrot_event get buzz_required}})
 
                      ; set the text based on the next item
-                     {carrot_item.lbl set text_token {sprintf "%s_carrot_needmore" $item}}
-
+                     {carrot_item.lbl set text_token 
+                        {sprintf "%s_carrot_needmore" $item}
+                     }
+                     
                      ; show what is most needed to advance
                      {carrot_desc.lbl set_showing TRUE}
                      {cond
                         ; town fame requirement
                         ({> $required_town_fame $town_fame}
                            {carrot_desc.lbl set_localized
-                              {sprintf {localize tour_band_need_townfame} {localize_token $town}}
+                              {sprintf {localize tour_band_need_townfame}
+                                 {localize_token $town}
+                              }
                            }
                         )
                         ; world fame requirement
@@ -1649,51 +1686,59 @@
                         )
                         ; buzz/fans requirements
                         ({> $required_fans $fans}
-                           {carrot_desc.lbl set text_token tour_band_need_fans}
+                           {carrot_desc.lbl set text_token tour_band_need_fans}                           
                         )
-                        (TRUE {fail "unknown event requirement!"})
+                        (TRUE
+                           {fail "unknown event requirement!"}   
+                        )
                      }
                   }
                }
             }
             {carrot.grp set_showing FALSE}
          }
-
+         
          ; new item
          {if_else {!= $unlocked_item ''}
             {do
-               {newitem.lbl set_localized
-                  {sprintf {localize tour_endgame_newitem} {localize_token $unlocked_item}}
+               {newitem.lbl set_localized 
+                  {sprintf {localize tour_endgame_newitem} 
+                     {localize_token $unlocked_item}
+                  }
                }
                {newitem.lbl set_showing TRUE}
             }
             {newitem.lbl set_showing FALSE}
          }
-
+         
          ; new towns
          {if_else $num_unlocked_towns
             {do
-               {newtowns.lbl set_localized
-                  {sprintf {localize tour_band_new_towns} $num_unlocked_towns}
+               {newtowns.lbl set_localized 
+                  {sprintf 
+                     {localize tour_band_new_towns}
+                     $num_unlocked_towns
+                  }
                }
                {newtowns.lbl set_showing TRUE}
             }
             {newtowns.lbl set_showing FALSE}
          }
-
+         
          ;; new venues
          {if_else $num_unlocked_venues
             {do
                {newvenues.lbl set_localized
                   {if_else {== $num_unlocked_venues 1}
-                     {sprintf
-                        {localize tour_band_new_venue}
+                     {sprintf {localize tour_band_new_venue} 
                         {localize_token {$tp unlocked_venue_token}}
                         {localize_token {$tp unlocked_venue_town}}
                      }
-                     {sprintf {localize tour_band_new_venues} $num_unlocked_venues}
+                     {sprintf {localize tour_band_new_venues}
+                        $num_unlocked_venues
+                     }
                   }
-               }
+               }               
                {newvenues.lbl set_showing TRUE}
             }
             {do
@@ -1701,13 +1746,13 @@
                {icon_newvenue.mesh set_showing FALSE}
             }
          }
-
+         
          ; new gigs/songs
          {if_else $num_unlocked_events
             {do
-               {newgigs.lbl set_localized
-                  {sprintf
-                     {localize
+               {newgigs.lbl set_localized 
+                  {sprintf 
+                     {localize 
                         {if_else {== $num_unlocked_events 1}
                            tour_band_new_event
                            tour_band_new_events
@@ -1722,9 +1767,9 @@
                {icon_newgig.mesh set_showing FALSE}
             }
          }
-
+            
          ;; number of stars
-         {if_else {== 5 {{tour event} total_fame}}
+         {if_else {== 5 {{tour event} total_fame} }
             {do
                {stars.lbl set_localized {{beatmatch main_performer} star_rating}}
                {starcount.lbl set_showing FALSE}
@@ -1732,27 +1777,27 @@
             {do
                {stars.lbl set_localized "*"}
                {starcount.lbl set_showing TRUE}
-               {starcount.lbl set_localized
-                  {sprintf
-                     "%d/%d"
-                     {{tour performer} total_fame_stars} ; caps 5/song
-                     {{tour event} total_fame}
-                  }
+               {starcount.lbl set_localized {sprintf "%d/%d" 
+                  {{tour performer} total_fame_stars} ; caps 5/song
+                  {{tour event} total_fame}}
                }
             }
          }
-
+            
          ;; fans, and change of fans
-         {buzz.lbl set_showing
+         {buzz.lbl set_showing 
             {|| {$tp fans_change} {== {$tp buzz_state} kTourBuzzCap}}
          }
          {buzz.lbl set_localized {$tp fans_update_str}}
-
+      
          ; $ reward
-         {money.lbl set_localized
-            {sprintf {localize tour_band_reward} {fmt_money {$tp reward}}}
+         {money.lbl set_localized 
+            {sprintf
+               {localize tour_band_reward}
+               {fmt_money {$tp reward}}
+            }
          }
-
+         
          ; t-shirt unlocks
          {if_else {== {{tour performer} town_torso_unlock} ''}
             {do
@@ -1766,37 +1811,40 @@
                {newoutfit.lbl set text_token tour_band_outfit}
             }
          }
-
+   
          ; score
          {score.lbl set_localized {fmt_score {{beatmatch main_performer} score}}}
-
+         
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
          ; Band World Tour Achievements
-
+         
          ; vehicle unlocks
          {foreach $vehicle (tour_vehicle_van tour_vehicle_bus tour_vehicle_jet)
             ; achievement awarded iff vehicle awarded (and event not just replayed)
             ; that is... we didn't have the vehicle before, but now we do
-            {if
-               {&&
+            {if {&&
                   {! {elem {find [did_have_vehicles] $vehicle} 1}}
                   {$tp has_item $vehicle}
+                }
+               {$this submit_band_achievement 
+                  {symbol {sprintf "ach_band_%s" $vehicle}}
                }
-               {$this submit_band_achievement {symbol {sprintf "ach_band_%s" $vehicle}}}
             }
          }
-
+         
          ; fans unlock (expressed in buzz)
          {if {>= {$tp buzz} {$tp buzz_achievement}}
             {$this submit_band_achievement ach_band_of_the_moment}
          }
-
+         
          ; BWT "complete" achievement, earned for completing marathon event
          ; uses minimum difficulty in active band line-up
          {unless {== {$tp min_difficulty_sym} easy}
-            {if {== {{tour event} get award_item} tour_bwt_complete}
-               {$this submit_band_achievement
-                  {symbol {sprintf "ach_band_complete_%s" {$tp min_difficulty_sym}}}
+               {if {== {{tour event} get award_item} tour_bwt_complete}
+                  {$this submit_band_achievement
+                  {symbol {sprintf "ach_band_complete_%s"
+                     {$tp min_difficulty_sym}
+                  }}
                }
             }
          }
@@ -1805,7 +1853,7 @@
          {if {== {{tour event} get award_item} tour_halloffame_complete}
             {$this submit_band_achievement ach_hall_of_fame}
          }
-
+         
          ; city complete achievements; only if this was the last remaining gig
          {if {&& {$tp is_town_complete} {! [was_town_complete]}}
             {$this submit_band_achievement
@@ -1814,11 +1862,12 @@
          }
       }
    )
+   
+   (exit
+      {platform_mgr set_notify_ui_location kOSNotifyTopRight}
+   )
 
-   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
-
-   (submit_band_achievement
-      ($ach)
+   (submit_band_achievement ($ach)
       ;; TODO Is this sufficient? Must be:
       ;; - a local player
       ;; - someone actually playing (is that local? active?)
@@ -1830,19 +1879,20 @@
       {game foreach_local_player $p
          ; Achievements only for profiles with their own save data.
          {unless {profile_mgr has_profile_map {$p player_num}}
+
             {achievements submit {$p player_num} $ach}
 
             ; If we award a player the Platinum Artist achievement,
             ; set that flag in the profile.
             {if {== $ach ach_band_complete_expert}
-               {{profile_mgr get_save_data_from_player {$p player_num}} set_platinum_artist
-
+               {{profile_mgr get_save_data_from_player {$p player_num}}
+                  set_platinum_artist
                }
             }
          }
       }
    )
-
+ 
    (SELECT_START_MSG
       {ui goto_screen
          {if_else {{tour performer} is_winning}
@@ -1854,12 +1904,12 @@
    )
 }
 
-{new UIScreen
-   tour_band_gigcomplete_screen
+
+{new UIScreen tour_band_gigcomplete_screen
    (panels tour_band_gigcomplete_panel helpbar)
    (focus tour_band_gigcomplete_panel)
-   (helpbar
-      {if_else {is_leader_local}
+   (helpbar 
+      {if_else {is_leader_local} 
          ('' helpbar_returntomap)
          (helpbar_back)
       }
@@ -1869,8 +1919,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; retry flow (comes from the game screen)
-{new UIScreen
-   tour_band_lose_screen
+{new UIScreen tour_band_lose_screen
    (enter
       ; lose the song here, so we're set to display fan stats on the retry screen
       {if {{tour performer} is_local}
@@ -1880,18 +1929,17 @@
    )
 }
 
-{new UIPanel
-   tour_band_retry_panel
+{new UIPanel tour_band_retry_panel
    (file "tour_band_retry.milo")
    (focus retry.btn)
    (reset_focus TRUE)
    LIMIT_TO_LEADER_SESSION
-
+   
    (enter
       {song.lbl set_localized {song_mgr song_name {game get_song}}}
-      {song_progress.lbl set_localized
+      {song_progress.lbl set_localized         
          {sprintf
-            {localize percent_complete_format}
+            {localize percent_complete_format} 
             {{beatmatch main_performer} percent_complete}
          }
       }
@@ -1899,7 +1947,7 @@
       {buzz.lbl set_showing {{tour performer} fans_change}}
       {buzz.lbl set_localized {{tour performer} fans_update_str}}
    )
-
+   
    (SELECT_MSG
       {switch $component
          (retry.btn
@@ -1915,12 +1963,11 @@
    )
 }
 
-{new UIScreen
-   tour_band_retry_screen
+{new UIScreen tour_band_retry_screen
    (panels tour_band_retry_panel helpbar)
    (focus tour_band_retry_panel)
-   (helpbar
-      {if_else {is_leader_local}
+   (helpbar 
+      {if_else {is_leader_local} 
          ('' helpbar_select)
          (helpbar_back)
       }
@@ -1930,9 +1977,14 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; BWT hints...
-#define BAND_HINT_PANEL_HANDLERS (TOUR_HINT_PANEL_HANDLERS (player_num {local_to_leader_player_num}))
+#define BAND_HINT_PANEL_HANDLERS
+(
+   TOUR_HINT_PANEL_HANDLERS
+   (player_num {local_to_leader_player_num})
+)
 
-#define BAND_HINT_SCREEN_HANDLERS (
+#define BAND_HINT_SCREEN_HANDLERS
+(
    ;(helpbar ('' 
    ;   {if_else {session is_local_player {game get leader_num}}
    ;      helpbar_continue
@@ -1942,241 +1994,212 @@
    HELPBAR_WAITING_FOR_LEADER
 
    (enter
-      {tour_world_bg_panel
+      {tour_world_bg_panel 
          {if_else {{tour performer} can_leave_hometown}
             zoom_out
             zoom_in
          }
       }
       {tour_world_bg_panel update}
-   )
+   )   
 )
 
+
+
 ; welcome hint
-{new UIPanel
-   tour_band_welcome_panel
+{new UIPanel tour_band_welcome_panel
    (file "tour_band_welcome.milo")
    BAND_HINT_PANEL_HANDLERS
    (enter
       {welcome.lbl set_localized
-         {sprintf {localize tour_band_welcome} {localize_token {tour venue_token}}}
-      }
+         {sprintf {localize tour_band_welcome}
+            {localize_token {tour venue_token}}
+         }
+      }   
    )
 }
 
-{new UIScreen
-   tour_band_welcome_screen
+{new UIScreen tour_band_welcome_screen
    (panels meta tour_world_bg_panel tour_band_welcome_panel helpbar)
    (focus tour_band_welcome_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; first gig hint
-{new UIPanel
-   tour_band_firstgig_panel
+{new UIPanel tour_band_firstgig_panel
    (file "tour_band_firstgig.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_firstgig_screen
+{new UIScreen tour_band_firstgig_screen
    (panels meta tour_world_bg_panel tour_band_firstgig_panel helpbar)
    (focus tour_band_firstgig_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; manager
-{new UIPanel
-   tour_band_firstmanager_panel
+{new UIPanel tour_band_firstmanager_panel
    (file "tour_band_firstmanager.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_firstmanager_screen
+{new UIScreen tour_band_firstmanager_screen
    (panels meta tour_world_bg_panel tour_band_firstmanager_panel helpbar)
    (focus tour_band_firstmanager_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; first venue hint
-{new UIPanel
-   tour_band_firstvenue_panel
+{new UIPanel tour_band_firstvenue_panel
    (file "tour_band_firstvenue.milo")
    BAND_HINT_PANEL_HANDLERS
    (enter
       {venue.lbl set_localized
-         {sprintf
+         {sprintf 
             {localize tour_band_firstvenue}
             {localize_token {{tour performer} unlocked_venue_token}}
          }
-      }
+      }   
    )
 }
 
-{new UIScreen
-   tour_band_firstvenue_screen
+{new UIScreen tour_band_firstvenue_screen
    (panels meta tour_world_bg_panel tour_band_firstvenue_panel helpbar)
    (focus tour_band_firstvenue_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; items available hints
-{new UIPanel
-   tour_band_canwinitem_panel
+{new UIPanel tour_band_canwinitem_panel
    (file "tour_band_canwinitem.milo")
    BAND_HINT_PANEL_HANDLERS
    (enter
-      {do
-         ($event {{tour performer} next_item_event})
-         ($item {$event get award_item})
-         ($venue {$event get venue})
-         ($town {{tour performer} find_event_town $event})
-
+      {do ($event {{tour performer} next_item_event})
+          ($item {$event get award_item})
+          ($venue {$event get venue})
+          ($town {{tour performer} find_event_town $event})
+         
          {event.lbl set_localized
             {sprintf
                {localize tour_band_canwin_event}
                {tour event_display_name $event}
-               {localize_token
-                  {tour venue_token $town $venue}
-               }
+               {localize_token {tour venue_token $town $venue}}
                {localize_token $town}
             }
          }
-
-         {desc.lbl set text_token {sprint "tour_band_canwin_" $item}}
+         
+         {desc.lbl set text_token
+            {sprint "tour_band_canwin_" $item}
+         }
          {item.lbl set text_token $item}
          {icon.lbl set_localized {{tour performer} item_to_str $item}}
-
+         
          ; select town/venue containing the event?
-      }
+      }   
    )
 }
 
-{new UIScreen
-   tour_band_canwinitem_screen
+{new UIScreen tour_band_canwinitem_screen
    (panels meta tour_world_bg_panel tour_band_canwinitem_panel helpbar)
    (focus tour_band_canwinitem_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; new item hints
-{new UIPanel
-   tour_band_newitem_panel
+{new UIPanel tour_band_newitem_panel
    (file "tour_band_newitem.milo")
    BAND_HINT_PANEL_HANDLERS
    (enter
-      {do
-         ($item {{tour performer} unlocked_item})
+      {do ($item {{tour performer} unlocked_item})
          {item.lbl set text_token $item}
          {item_desc.lbl set text_token {sprint "tour_hint_new_" $item}}
       }
    )
 }
 
-{new UIScreen
-   tour_band_newitem_screen
+{new UIScreen tour_band_newitem_screen 
    (panels meta tour_world_bg_panel tour_band_newitem_panel helpbar)
    (focus tour_band_newitem_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; new van
-{new UIPanel
-   tour_band_newvan_panel
+{new UIPanel tour_band_newvan_panel
    (file "tour_band_newvan.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_newvan_screen
+{new UIScreen tour_band_newvan_screen
    (panels meta tour_world_bg_panel tour_band_newvan_panel helpbar)
    (focus tour_band_newvan_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; new bus
-{new UIPanel
-   tour_band_newbus_panel
+{new UIPanel tour_band_newbus_panel
    (file "tour_band_newbus.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_newbus_screen
+{new UIScreen tour_band_newbus_screen
    (panels meta tour_world_bg_panel tour_band_newbus_panel helpbar)
    (focus tour_band_newbus_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; new van
-{new UIPanel
-   tour_band_newjet_panel
+{new UIPanel tour_band_newjet_panel
    (file "tour_band_newjet.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_newjet_screen
+{new UIScreen tour_band_newjet_screen
    (panels meta tour_world_bg_panel tour_band_newjet_panel helpbar)
    (focus tour_band_newjet_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; checkmark hints
-{new UIPanel
-   tour_band_firstgig_checkmarks_panel
+{new UIPanel tour_band_firstgig_checkmarks_panel
    (file "tour_band_firstgig_checkmarks.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_firstgig_checkmarks_screen
-   (panels
-      meta
-      tour_world_bg_panel
-      tour_band_firstgig_checkmarks_panel
-      helpbar
-   )
+{new UIScreen tour_band_firstgig_checkmarks_screen 
+   (panels meta tour_world_bg_panel tour_band_firstgig_checkmarks_panel helpbar)
    (focus tour_band_firstgig_checkmarks_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
 ; buzz/fans hints
-{new UIPanel
-   tour_band_buzzcap_panel
+{new UIPanel tour_band_buzzcap_panel
    (file "tour_band_buzzcap.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_buzzcap_screen
+{new UIScreen tour_band_buzzcap_screen
    (panels meta tour_world_bg_panel tour_band_buzzcap_panel helpbar)
    (focus tour_band_buzzcap_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
-{new UIPanel
-   tour_band_buzzmaxcap_panel
+{new UIPanel tour_band_buzzmaxcap_panel
    (file "tour_band_buzzmaxcap.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_buzzmaxcap_screen
+{new UIScreen tour_band_buzzmaxcap_screen
    (panels meta tour_world_bg_panel tour_band_buzzmaxcap_panel helpbar)
    (focus tour_band_buzzmaxcap_panel)
    BAND_HINT_SCREEN_HANDLERS
 }
 
-{new UIPanel
-   tour_band_fanslost_panel
+{new UIPanel tour_band_fanslost_panel
    (file "tour_band_fanslost.milo")
    BAND_HINT_PANEL_HANDLERS
 }
 
-{new UIScreen
-   tour_band_fanslost_screen
+{new UIScreen tour_band_fanslost_screen 
    (panels meta tour_world_bg_panel tour_band_fanslost_panel helpbar)
    (focus tour_band_fanslost_panel)
    BAND_HINT_SCREEN_HANDLERS
@@ -2184,9 +2207,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ; win sequence
-#define BAND_WIN_SCREEN_HANDLERS (
-   (helpbar
-      {if_else {is_leader_local}
+#define BAND_WIN_SCREEN_HANDLERS
+(
+   (helpbar 
+      {if_else {is_leader_local} 
          ('' helpbar_continue)
          (helpbar_back)
       }
@@ -2194,27 +2218,27 @@
    HELPBAR_WAITING_FOR_LEADER
 )
 
-{new UIPanel
-   tour_band_congrats_panel
+{new UIPanel tour_band_congrats_panel
    (file "tour_band_congrats.milo")
    (focus continue.btn)
-
+   
    (BUTTON_DOWN_MSG
       {if {== $button kPad_X}
          {ui goto_screen tour_band_video_credits_screen}
-      }
+      }   
    )
 }
-{new UIScreen
-   tour_band_win_screen
+{new UIScreen tour_band_win_screen
    (panels tour_band_congrats_panel)
    (focus tour_band_congrats_panel)
-
-   (TRANSITION_COMPLETE_MSG {ui goto_screen tour_band_win_movie_screen})
+   
+   (TRANSITION_COMPLETE_MSG
+		{ui goto_screen tour_band_win_movie_screen}
+  )
 }
 
-{new MoviePanel
-   tour_band_video_credits_panel
+
+{new MoviePanel tour_band_video_credits_panel
    (preload FALSE) ; stream it
    (audio TRUE)
    (loop FALSE)
@@ -2222,141 +2246,151 @@
    (videos win_credits)
 
    ; callback when movie finishes      
-   (movie_done {ui goto_screen tour_band_text_credits_screen})
-
+   (movie_done
+      {ui goto_screen tour_band_text_credits_screen}  
+   )
+   
    (BUTTON_DOWN_MSG
-      {if {|| {== $button kPad_Start} {== $button kPad_X}}
+      {if {|| {== $button kPad_Start}
+              {== $button kPad_X}}
          {ui goto_screen tour_band_text_credits_screen}
       }
    )
 }
-{new UIScreen
-   tour_band_video_credits_screen
+{new UIScreen tour_band_video_credits_screen
    BAND_WIN_SCREEN_HANDLERS
    (panels tour_band_video_credits_panel)
 }
 
-{new UIScreen
-   tour_band_text_credits_screen
+{new UIScreen tour_band_text_credits_screen
    BAND_WIN_SCREEN_HANDLERS
    (panels credits_panel)
    (scroll_sfx FALSE) ; don't play scroll sfx in this screen
-
+   
    (BUTTON_DOWN_MSG
-      {if {|| {== $button kPad_Start} {== $button kPad_X}}
+      {if {|| {== $button kPad_Start}
+              {== $button kPad_X}}
          ; skip the status upgrade screen if someone is playing easy
-         {ui goto_screen
+         {ui goto_screen 
             {if_else {== {{tour performer} min_difficulty} kDifficultyEasy}
                {gamemode get continue_screen}
                tour_band_item_reward_screen
             }
-         }
-      }
+         }         
+      }   
    )
 }
 
-{new UIPanel
-   tour_band_item_reward_panel
+{new UIPanel tour_band_item_reward_panel
    (file "tour_band_item_rewards.milo")
-
+   
    (enter
       {foreach_int $slot 0 4
-         {do
-            ($player_num {game get_player_num_from_slot_num $slot})
-            ($active_label {sprintf "instrument%i.lbl" $slot})
-            ($inactive_label {sprintf "inactive%i.lbl" $slot})
-            ($char_label {sprintf "char%i.lbl" $slot})
+         {do ($player_num {game get_player_num_from_slot_num $slot})
+             ($active_label   {sprintf "instrument%i.lbl" $slot})
+             ($inactive_label {sprintf "inactive%i.lbl" $slot})
+             ($char_label     {sprintf "char%i.lbl" $slot})
             {$active_label set_showing {!= $player_num -1}}
             {$char_label set_showing {!= $player_num -1}}
             {$inactive_label set_showing {== $player_num -1}}
             {if_else {== $player_num -1}
                ; set inactive label
-               {$inactive_label set_localized {missing_slot_to_track_icon $slot}}
-               {do
-                  ($pcfg {game get_player_config $player_num})
-                  ($char {$pcfg get_char})
-                  {$char_label set_localized {$char get_char_name}}
-                  {$active_label set_localized {$char track_icon {$pcfg get_track_sym}}}
+               {$inactive_label set_localized
+                  {missing_slot_to_track_icon $slot}
+               }
+               {do ($pcfg {game get_player_config $player_num})
+                   ($char {$pcfg get_char})
+                  {$char_label set_localized {$char get_char_name}}   
+                  {$active_label set_localized 
+                     {$char track_icon {$pcfg get_track_sym}}
+                  }
                }
             }
-         }
-      }
+         }   
+      } 
    )
    (BUTTON_DOWN_MSG
-      {if {|| {== $button kPad_Start} {== $button kPad_X}}
+      {if {|| {== $button kPad_Start}
+              {== $button kPad_X}}
          {ui goto_screen {gamemode get continue_screen}}
-      }
+      }   
    )
 }
-{new UIScreen
-   tour_band_item_reward_screen
+{new UIScreen tour_band_item_reward_screen
    BAND_WIN_SCREEN_HANDLERS
    (panels tour_band_item_reward_panel)
    (focus tour_band_item_reward_panel)
 }
 
 ;;; call manager screen
-{new UIPanel
-   tour_band_carrot_panel
+{new UIPanel tour_band_carrot_panel
    (file "tour_band_carrot.milo")
    (enter
-      {do
-         ($tp {tour performer})
-         ($carrot_event {$tp next_item_event})
-         ($unlocked_item {$tp unlocked_item})
-         ($item {$carrot_event get award_item})
-         {if_else {== kTourNew {$tp event_status $carrot_event}}
-            {do ; we can play the event
-               {carrot_item.lbl set text_token {sprintf "manager%s_carrot_canwin" $item}}
-               {carrot_desc.lbl set_showing FALSE}
-            }
-            {do ; can't play it yet, show the requirements
-               ($world_fame {$tp world_fame})
-               ($required_world_fame {$carrot_event get world_fame_required})
-               ($town {$tp find_event_town $carrot_event})
-               ($town_fame {$tp town_fame $town})
-               ($required_town_fame {$carrot_event get town_fame_required})
-               ($fans {$tp fans})
-               ($required_fans {$tp buzz_to_fans {$carrot_event get buzz_required}})
-
-               ; set the text based on the next item
-               {carrot_item.lbl set
-                  text_token
-                  {sprintf "manager%s_carrot_needmore" $item}
-               }
-
-               ; show what is most needed to advance
-               {carrot_desc.lbl set_showing TRUE}
-               {cond
-                  ; town fame requirement
-                  ({> $required_town_fame $town_fame}
-                     {carrot_desc.lbl set_localized
-                        {sprintf {localize managertour_band_need_townfame} {localize_token $town}}
+      {do 
+          ($tp {tour performer})
+          ($carrot_event {$tp next_item_event})
+          ($unlocked_item {$tp unlocked_item})
+          ($item {$carrot_event get award_item})
+               {if_else {== kTourNew {$tp event_status $carrot_event}}
+                  {do ; we can play the event
+                     {carrot_item.lbl set text_token
+                        {sprintf "manager%s_carrot_canwin" $item}
                      }
-                  )
-                  ; world fame requirement
-                  ({> $required_world_fame $world_fame}
-                     {carrot_desc.lbl set text_token managertour_band_need_worldfame}
-                  )
-                  ; buzz/fans requirements
-                  ({> $required_fans $fans}
-                     {carrot_desc.lbl set text_token managertour_band_need_fans}
-                  )
-                  (TRUE {fail "Your manager is stumped!"})
+                     {carrot_desc.lbl set_showing FALSE}
+                  }
+                  {do ; can't play it yet, show the requirements
+                      ($world_fame {$tp world_fame})
+                      ($required_world_fame {$carrot_event get world_fame_required})
+                      ($town {$tp find_event_town $carrot_event})
+                      ($town_fame {$tp town_fame $town})
+                      ($required_town_fame {$carrot_event get town_fame_required})
+                      ($fans {$tp fans})
+                      ($required_fans {$tp buzz_to_fans {$carrot_event get buzz_required}})
+
+                     ; set the text based on the next item
+                     {carrot_item.lbl set text_token 
+                        {sprintf "manager%s_carrot_needmore" $item}
+                     }
+                     
+                     ; show what is most needed to advance
+                     {carrot_desc.lbl set_showing TRUE}
+                     {cond
+                        ; town fame requirement
+                        ({> $required_town_fame $town_fame}
+                           {carrot_desc.lbl set_localized
+                              {sprintf {localize managertour_band_need_townfame}
+                                 {localize_token $town}
+                              }
+                           }
+                        )
+                        ; world fame requirement
+                        ({> $required_world_fame $world_fame}
+                           {carrot_desc.lbl set text_token managertour_band_need_worldfame}
+                        )
+                        ; buzz/fans requirements
+                        ({> $required_fans $fans}
+                           {carrot_desc.lbl set text_token managertour_band_need_fans}                           
+                        )
+                        (TRUE
+                           {fail "Your manager is stumped!"}   
+                        )
+                     }
+                  }
                }
             }
-         }
-      }
    )
-
+   
    (BUTTON_DOWN_MSG
-      {if {|| {== $button kPad_Start} {== $button kPad_X}}
+      {if {|| {== $button kPad_Start}
+              {== $button kPad_X}}
          {ui pop_screen}
-      }
+      }   
    )
 }
-{new UIScreen
-   tour_band_carrot_screen
+{new UIScreen tour_band_carrot_screen
    (panels tour_band_carrot_panel)
    (focus tour_band_carrot_panel)
 }
+
+
+

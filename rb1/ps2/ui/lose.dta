@@ -1,37 +1,38 @@
 #ifdef HX_XBOX
-#define LOSE_PANEL_HANDLERS (
+#define LOSE_PANEL_HANDLERS
+(
    LIMIT_TO_LEADER_SESSION
-
+  
    (quit_button '')
-
+   
    (enter
       {$this set_focus lose_restart.btn}
       {lose_song_data.lbl set_localized {song_mgr song_name {game get_song}}}
-      {lose_progress_data.lbl set_localized
+      {lose_progress_data.lbl set_localized         
          {sprintf
-            {localize percent_complete_format}
+            {localize percent_complete_format} 
             {{beatmatch active_player 0} percent_complete}
          }
       }
-
+      
       ; for multiplayer games, shuffle buttons so we don't show "practice"
       ;{if_else {! {gamemode get is_solo}}
-      ;{do
-      ; {lose_quit.btn set_showing FALSE} ; hide the bottom button
-      ; {$this disable lose_quit.btn}
-      ; {set [quit_button] lose_practice.btn}
-      ; {[quit_button] set text_token QUIT}
-      ;}
-      ;else
-      {do ;set the buttons back to how they are in the Milo file
-         {set [quit_button] lose_quit.btn}
-         {[quit_button] set_showing TRUE}
-         {[quit_button] set text_token QUIT}
+         ;{do
+           ; {lose_quit.btn set_showing FALSE} ; hide the bottom button
+           ; {$this disable lose_quit.btn}
+           ; {set [quit_button] lose_practice.btn}
+           ; {[quit_button] set text_token QUIT}
+         ;}
+         ;else
+         {do ;set the buttons back to how they are in the Milo file
+            {set [quit_button] lose_quit.btn}
+            {[quit_button] set_showing TRUE}
+            {[quit_button] set text_token QUIT}
 
-         {if {exists lose_practice.btn} ;doesn't exist in tour_solo, so check
-            {lose_practice.btn set text_token practice}
+            {if {exists lose_practice.btn} ;doesn't exist in tour_solo, so check
+               {lose_practice.btn set text_token practice}
+            }
          }
-      }
       ;}
    )
 
@@ -41,8 +42,12 @@
             {session send_to_all (game_restart) kNetReliable}
             {game_restart}
          )
-         (lose_diff.btn {ui goto_screen meta_loading_ready_screen})
-         (lose_selsong.btn {ui goto_screen meta_loading_continue_screen})
+         (lose_diff.btn
+            {ui goto_screen meta_loading_ready_screen}
+         )
+         (lose_selsong.btn
+            {ui goto_screen meta_loading_continue_screen}
+         )
          ; default
          ; [quit_button] might be lose_practice.btn, so check it first
          {if_else {== $component [quit_button]}
@@ -52,7 +57,10 @@
                {ui goto_screen meta_loading_main_screen}
             }
             ;else
-            {if {&& {exists lose_practice.btn} {== $component lose_practice.btn}}
+            {if   {&&   
+                     {exists lose_practice.btn} 
+                     {== $component lose_practice.btn}
+                  }
                {gamemode set_mode practice}
                {ui pop_screen practice_sel_section_screen}
             }
@@ -61,69 +69,71 @@
    )
 )
 
-{new UIPanel
-   lose
+{new UIPanel lose
+	#ifdef HX_XBOX
+	   (file lose.milo)
+	#else
+		#ifdef HX_WII
+			(file lose_og_wii.milo)
+		#else	
+			(file lose_og.milo)
+		#endif
+	#endif
+   LOSE_PANEL_HANDLERS
+  
+}
+
+{new UIPanel tour_solo_lose_panel
    #ifdef HX_XBOX
-   (file lose.milo)
-   #else
-      #ifdef HX_WII
-      (file lose_og_wii.milo)
-      #else
-      (file lose_og.milo)
-      #endif
-   #endif
+	   (file tour_solo_lose.milo)
+	#else
+		(file tour_solo_lose_og.milo)
+	#endif
+   
    LOSE_PANEL_HANDLERS
 }
 
-{new UIPanel
-   tour_solo_lose_panel
-   #ifdef HX_XBOX
-   (file tour_solo_lose.milo)
-   #else
-   (file tour_solo_lose_og.milo)
-   #endif
-
-   LOSE_PANEL_HANDLERS
+{new UIScreen lose_screen
+   (panels lose)
+   (focus lose)
 }
 
-{new UIScreen lose_screen (panels lose) (focus lose)}
-
-{new UIScreen
-   tour_solo_lose_screen
+{new UIScreen tour_solo_lose_screen
    (panels tour_solo_lose_panel)
    (focus tour_solo_lose_panel)
 }
 #else ; REA - Lose screen system has been rewritten to support Harmonix spec, includes confirmation screens and correct options
-#define LOSE_PANEL_HANDLERS (
-   LIMIT_TO_SESSION
+#define LOSE_PANEL_HANDLERS
+(
+	LIMIT_TO_SESSION
    (player_num {local_to_leader_player_num})
    (quit_button '')
-
+   
    (enter
       {crowd_audio turn_off}
       {$this set_focus lose_restart.btn}
       {lose_song_data.lbl set_localized {song_mgr song_name {game get_song}}}
-      {lose_progress_data.lbl set_localized
+      {lose_progress_data.lbl set_localized         
          {sprintf
-            {localize percent_complete_format}
+            {localize percent_complete_format} 
             {{beatmatch active_player 0} percent_complete}
          }
       }
-
+      
       ; We force the user to quit if there aren't enough players for this mode
-      {if {< {gamecfg get_num_participants} {gamemode get min_players}}
+      {if 
+         {< {gamecfg get_num_participants} {gamemode get min_players}}
          ;then
          {$this disable lose_restart.btn}
          {$this disable lose_diff.btn}
          {$this disable lose_selsong.btn}
       }
-
+	
       ; for multiplayer games, shuffle buttons so we don't show "practice"
-      {if_else
-         {&&
-            {! {gamemode get is_solo}}
-            {exists lose_practice.btn} ; REA - MP tour uses solo tour lose screen so need some additional checking
-         }
+      {if_else  {&& 
+			       {! {gamemode get is_solo}}
+				   {exists lose_practice.btn} ; REA - MP tour uses solo tour lose screen so need some additional checking
+		        }
          {do
             {lose_quit.btn set_showing FALSE} ; hide the bottom button
             {$this disable lose_quit.btn}
@@ -147,7 +157,9 @@
       {$this set_up_buttons}
    )
 
-   (exit {session remove_sink $this remote_player_left_msg})
+   (exit
+      {session remove_sink $this remote_player_left_msg}
+   )
 
    (set_up_buttons
       ; We force the user to quit if there aren't enough players for this mode
@@ -159,72 +171,73 @@
       }
    )
 
-   (REMOTE_PLAYER_LEFT_MSG {$this set_up_buttons})
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
 
    (SELECT_MSG
-      {if {game is_player_participating $player_num}
-         {switch $component
-            (lose_restart.btn
-               {session send_to_all (game_restart) kNetReliable}
-               {game_restart}
-            )
-            (lose_diff.btn
-               {[quit_confirm_screen] set quitting FALSE}
-               {$this confirm_goto meta_loading_ready_screen}
-            )
-            (lose_selsong.btn
-               #ifndef HX_XBOX ;HWR - Conditional compile for HOJ's lose screen code
-               {set [exit_destination] exit_new_song}
-               {if_else {== $this lose} ;  Go to the right lose confirm screen for our current screen
-                  {ui goto_screen lose_confirm_screen}
-                  ; else
-                  {ui goto_screen lose_tour_confirm_screen}
-               }
-               #else
-               {[quit_confirm_screen] set quitting FALSE}
-               {$this confirm_goto meta_loading_continue_screen}
-               #endif
-            )
-            ; default
-            ; [quit_button] might be menu_item_3.btn, so check it first
-            {if_else {== $component [quit_button]}
-               {do
-                  #ifndef HX_XBOX ;HWR - Conditional compile for HOJ's lose screen code
-                  {set [exit_destination] exit_quit}
-                  {if_else {== $this lose} ;  Go to the right lose confirm screen for our current screen
-                     {ui goto_screen lose_confirm_screen}
-                     ; else
-                     {ui goto_screen lose_tour_confirm_screen}
-                  }
-                  #else
-                  {[quit_confirm_screen] set quitting TRUE}
-                  {$this confirm_goto meta_loading_main_screen}
-                  #endif
-               }
-               ;else "Practice"
-               {if ;;{&&   
-                  {exists lose_practice.btn}
-                  ;;  {== $component lose_practice.btn}
+    {if {game is_player_participating $player_num}
+      {switch $component
+         (lose_restart.btn
+            {session send_to_all (game_restart) kNetReliable}
+            {game_restart}
+         )
+         (lose_diff.btn
+            {[quit_confirm_screen] set quitting FALSE}
+            {$this confirm_goto meta_loading_ready_screen}
+         )
+         (lose_selsong.btn
+#ifndef HX_XBOX	;HWR - Conditional compile for HOJ's lose screen code
+			{set [exit_destination] exit_new_song}
+			{if_else {== $this lose} ;  Go to the right lose confirm screen for our current screen
+				{ui goto_screen lose_confirm_screen}
+				; else
+				{ui goto_screen lose_tour_confirm_screen}
+			}
+#else
+            {[quit_confirm_screen] set quitting FALSE}
+            {$this confirm_goto meta_loading_continue_screen}
+#endif
+         )
+         ; default
+         ; [quit_button] might be menu_item_3.btn, so check it first
+         {if_else {== $component [quit_button]}
+            {do
+#ifndef HX_XBOX	;HWR - Conditional compile for HOJ's lose screen code
+			   {set [exit_destination] exit_quit}
+			   {if_else {== $this lose} ;  Go to the right lose confirm screen for our current screen
+				  {ui goto_screen lose_confirm_screen}
+				  ; else
+				  {ui goto_screen lose_tour_confirm_screen}
+			   }
+#else
+               {[quit_confirm_screen] set quitting TRUE}
+               {$this confirm_goto meta_loading_main_screen}
+#endif
+            }
+            ;else "Practice"
+            {if   ;;{&&   
+                     {exists lose_practice.btn} 
+                   ;;  {== $component lose_practice.btn}
                   ;;}
-                  #ifndef HX_XBOX ;HWR - Conditional compile for HOJ's lose screen code
-                  {set [exit_destination] exit_practice}
-                  {if_else {== $this lose} ;  Go to the right lose confirm screen for our current screen
-                     {ui goto_screen lose_confirm_screen}
-                     ; else
-                     {ui goto_screen lose_tour_confirm_screen}
-                  }
-                  #else
-                  {[quit_confirm_screen] set quitting TRUE}
-                  {$this confirm_goto goto_practice_screen}
-                  #endif
-               }
+#ifndef HX_XBOX	;HWR - Conditional compile for HOJ's lose screen code
+			   {set [exit_destination] exit_practice}
+			   {if_else {== $this lose} ;  Go to the right lose confirm screen for our current screen
+				  {ui goto_screen lose_confirm_screen}
+				  ; else
+				  {ui goto_screen lose_tour_confirm_screen}
+			   }
+#else
+               {[quit_confirm_screen] set quitting TRUE}
+               {$this confirm_goto goto_practice_screen}
+#endif
             }
          }
       }
+	}
    )
 
-   (confirm_goto
-      ($destination)
+   (confirm_goto ($destination)
       {band_ui_sink set_net_sync FALSE}
       {set $lose_confirm_screen_return_to {{ui current_screen} name}}
       {[quit_confirm_screen] set confirm_screen $destination}
@@ -237,80 +250,79 @@
             {session clear}
             {ui goto_screen meta_loading_main_screen}
          )
-         (exit_new_song {ui goto_screen meta_loading_continue_screen})
+         (exit_new_song
+            {ui goto_screen meta_loading_continue_screen} 
+         )
          (exit_practice
             {gamemode set_mode practice}
-            {if_else
-               {==
-                  {{game get_player_config {gamecfg get leader_num}} get_track_sym}
-                  vocals
-               }
-               {ui goto_screen meta_loading_practice_vocals_screen}
-               ;else
-               {ui goto_screen meta_loading_practice_screen}
-            }
+			   {if_else {== {{game get_player_config {gamecfg get leader_num}} get_track_sym} vocals}
+				   {ui goto_screen meta_loading_practice_vocals_screen}
+					;else
+				   {ui goto_screen meta_loading_practice_screen}
+			   }
          )
       }
    )
 )
 
-{new UIPanel
-   lose
-   #ifdef HX_XBOX
-   (file lose.milo)
-   #else
-      #ifdef HX_WII
-      (file lose_og_wii.milo)
-      #else
-      (file lose_og.milo)
-      #endif
-   #endif
+{new UIPanel lose
+	#ifdef HX_XBOX
+	   (file lose.milo)
+	#else
+		#ifdef HX_WII
+			(file lose_og_wii.milo)
+		#else	
+			(file lose_og.milo)
+		#endif
+	#endif
    (quit_confirm_screen lose_confirm_quit_screen)
    LOSE_PANEL_HANDLERS
 }
 
-{new UIPanel
-   tour_solo_lose_panel
+{new UIPanel tour_solo_lose_panel
    #ifdef HX_XBOX
-   (file tour_solo_lose.milo)
-   #else
-   (file tour_solo_lose_og.milo)
-   #endif
+	   (file tour_solo_lose.milo)
+	#else
+		(file tour_solo_lose_og.milo)
+	#endif
    (quit_confirm_screen lose_tour_solo_confirm_quit_screen)
    LOSE_PANEL_HANDLERS
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-#define LOSE_SCREEN_HANDLERS (
+#define LOSE_SCREEN_HANDLERS
+(
    LIMIT_TO_SESSION
-   (helpbar
-      {if_else {is_leader_local}
+   (helpbar 
+      {if_else {is_leader_local} 
          ('' helpbar_select)
          (helpbar_back '')
-      }
+	  }
    )
    HELPBAR_WAITING_FOR_LEADER
-   (enter {helpbar set_limit_to_player_num -1})
+   (enter 
+		{helpbar set_limit_to_player_num -1}
+   )
 )
 
-{new UIScreen
-   lose_screen
+{new UIScreen lose_screen
    (panels lose helpbar)
    (focus lose)
    LOSE_SCREEN_HANDLERS
+  
 }
 
-{new UIScreen
-   tour_solo_lose_screen
+{new UIScreen tour_solo_lose_screen
    (panels tour_solo_lose_panel helpbar)
    (focus tour_solo_lose_panel)
    LOSE_SCREEN_HANDLERS
+   
 }
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-{new UIScreen
-   goto_practice_screen
+{new UIScreen goto_practice_screen
    (panels)
    (TRANSITION_COMPLETE_MSG
       {gamemode set_mode practice}
@@ -318,10 +330,12 @@
    )
 }
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-#define COMMON_LOSE_QUIT_CONFIRM (
+#define COMMON_LOSE_QUIT_CONFIRM
+(
    (focus dialog_panel)
    (confirm_screen '') ;where to go if confirmed
    (quitting FALSE)
@@ -329,7 +343,7 @@
    (back $lose_confirm_screen_return_to)
 
    (enter
-      {dialog_panel set_yesno
+      {dialog_panel set_yesno 
          {localize confirm_quit} ;TODO get string from mode
          no.btn
       }
@@ -344,74 +358,89 @@
          {band_ui_sink set_net_sync TRUE}
       }
    )
-
-   (REMOTE_PLAYER_LEFT_MSG {$this set_up_buttons})
+   
+   (REMOTE_PLAYER_LEFT_MSG
+      {$this set_up_buttons}
+   )
 
    QUIT_DIALOG_SET_UP_BUTTONS ;defined in pause.dta
 
    (SELECT_MSG
-      {if_else
-         {||
-            {&& {is_leader_local} {game is_player_participating $player_num}}
-            {gamemode get always_allow_player}
-         }
+      {if_else   {|| 
+              {&& {is_leader_local}
+                 {game is_player_participating $player_num}}
+              {gamemode get always_allow_player}
+            }  
          {switch $component
-            (yes.btn {band_ui_sink sync_screen [confirm_screen] 1})
-            (no.btn {ui goto_screen $lose_confirm_screen_return_to})
+            (yes.btn
+               {band_ui_sink sync_screen [confirm_screen] 1}
+            )
+            (no.btn
+               {ui goto_screen $lose_confirm_screen_return_to}
+            )
          }
          kDataUnhandled
       }
    )
 )
 
-{new UIScreen
-   lose_confirm_quit_screen
+{new UIScreen lose_confirm_quit_screen
    (panels lose dialog_panel)
    COMMON_LOSE_QUIT_CONFIRM
 }
 
-{new UIScreen
-   lose_tour_solo_confirm_quit_screen
+{new UIScreen lose_tour_solo_confirm_quit_screen
    (panels tour_solo_lose_panel dialog_panel)
    COMMON_LOSE_QUIT_CONFIRM
 }
-#define LOSE_CONFIRM_HANDLERS (
+#define LOSE_CONFIRM_HANDLERS
+(
    (enter
-      {dialog_panel set_yesno {localize confirm_quit} no.btn}
-
-      {if {helpbar_dialog is_up}
-         {helpbar_dialog set_config ('' helpbar_select)}
-         {helpbar_dialog set_limit_to_player_num -1}
+      {dialog_panel set_yesno 
+         {localize confirm_quit}
+         no.btn
       }
+	  
+	  {if {helpbar_dialog is_up}
+		{helpbar_dialog set_config ('' helpbar_select)}
+		{helpbar_dialog set_limit_to_player_num -1}
+	}
    )
 )
 
-{new UIScreen
-   lose_confirm_screen
+{new UIScreen lose_confirm_screen
    (panels lose dialog_panel helpbar helpbar_dialog)
    (focus dialog_panel)
-
+   
+      
    LOSE_CONFIRM_HANDLERS
    (SELECT_MSG
       {switch $component
-         (yes.btn {lose on_quit})
-         (no.btn {ui goto_screen lose_screen})
+         (yes.btn
+            {lose on_quit}
+         )
+         (no.btn
+            {ui goto_screen lose_screen}
+         )
       }
    )
 }
 
-{new UIScreen
-   lose_tour_confirm_screen
+{new UIScreen lose_tour_confirm_screen
    (panels tour_solo_lose_panel dialog_panel helpbar_dialog)
    (helpbar ('' helpbar_select))
    (focus dialog_panel)
-
+      
    LOSE_CONFIRM_HANDLERS
-
+   
    (SELECT_MSG
       {switch $component
-         (yes.btn {tour_solo_lose_panel on_quit})
-         (no.btn {ui goto_screen tour_solo_lose_screen})
+         (yes.btn
+            {tour_solo_lose_panel on_quit}
+         )
+         (no.btn
+            {ui goto_screen tour_solo_lose_screen}
+         )
       }
    )
 }

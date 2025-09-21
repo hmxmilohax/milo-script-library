@@ -1,6 +1,8 @@
+
+
 ; Some fake levels to simplify life.
 ; we make these all negative, so we can always just take the min of authored and game.
-#define kExcitementIdle (-1)
+#define kExcitementIdle (-1) 
 #define kExcitementWon (-2)
 #define kExcitementLost (-3)
 #define kExcitementInvalid (-4)
@@ -13,10 +15,10 @@
 (override_group '')
 
 (enter
-   {{$this dir} add_sinks
-      $this
-      intro_start
-      excitement
+   
+   {{$this dir} add_sinks $this
+      intro_start 
+      excitement 
       game_over
       game_lost
       game_won
@@ -29,40 +31,38 @@
       crowd_normal
       crowd_intense
    }
-
+   
    {set [game_excitement] kExcitementOkay}
    {set [authored_excitement] kExcitementIdle}
    {set [old_excitement] -kExcitementInvalid}
    {set [override_group] ''}
-   {$this set_fullness 1 1}
+   {$this set_fullness 1 1} 
 
    ; Animations in idle should always be played realtime.  
-   {set $crowd.idle_flags
-      {| kPlayNoBlend kPlayGraphLoop kPlayRealTime}
-   }
+   {set $crowd.idle_flags {| kPlayNoBlend kPlayGraphLoop kPlayRealTime}}
    {set $crowd.play_flags {| kPlayNoBlend kPlayGraphLoop}}
 )
 
 ; The intro sequence has started.
 (intro_start
-   {set $crowd.tempo
+
+   {set $crowd.tempo 
       {if_else {exists game}
          {song_mgr anim_tempo {game get_song}}
          0
       }
    }
-
+   
    ; Start them off with no blend and real time, even for encore.
    {$this iterate_frac
-      (1 {main.drv play_group_flags realtime_idle 0 $crowd.idle_flags})
+      (1 { main.drv play_group_flags realtime_idle 0 $crowd.idle_flags })
    }
 )
 
 (game_over
    ; don't listen to any more excitement changes.
    ; or authored crowd state changes
-   {{$this dir} remove_sink
-      $this
+   {{$this dir} remove_sink $this 
       excitement
       crowd_realtime
       crowd_mellow
@@ -71,84 +71,90 @@
    }
 )
 
-(game_outro {{$this dir} remove_sink $this})
+(game_outro
+   {{$this dir} remove_sink $this}
+)
 
-(game_lost {set [game_excitement] kExcitementLost})
+(game_lost
+   {set [game_excitement] kExcitementLost}
+)
 
-(game_won {set [game_excitement] kExcitementWon})
+(game_won
+   {set [game_excitement] kExcitementWon}
+)
 
-(game_won_band0 {set [game_excitement] kExcitementWon})
+(game_won_band0
+   {set [game_excitement] kExcitementWon}
+)
 
-(game_won_band1 {set [game_excitement] kExcitementWon})
+(game_won_band1
+   {set [game_excitement] kExcitementWon}
+)
 
-(game_won_tie {set [game_excitement] kExcitementWon})
+(game_won_tie
+   {set [game_excitement] kExcitementWon}
+)
 
 (playing_final_cam
-   {set $crowd.play_flags
-      {| kPlayNoBlend kPlayGraphLoop kPlayRealTime}
-   }
+   {set $crowd.play_flags {| kPlayNoBlend kPlayGraphLoop kPlayRealTime}}  
 )
 
-(animate
-   ($bad $ok $great)
+
+(animate ($bad $ok $great)
    {$this iterate_frac
-      ($bad {main.drv play_group_flags bad $crowd.tempo $crowd.play_flags})
-      ($ok {main.drv play_group_flags ok $crowd.tempo $crowd.play_flags})
-      ($great {main.drv play_group_flags great $crowd.tempo $crowd.play_flags})
+      ($bad { main.drv play_group_flags bad $crowd.tempo $crowd.play_flags })
+      ($ok { main.drv play_group_flags ok $crowd.tempo $crowd.play_flags })
+      ($great { main.drv play_group_flags great $crowd.tempo $crowd.play_flags })
    }
-)
+)    
 
 ; When crowd_update is called, use this instead 
 ; of excitement level
-(override_anim
-   ($group_name)
-   {set [override_group] $group_name}
+(override_anim ($group_name)
+   {set [override_group] $group_name}         
 )
 
 ; Cameras call this every switch.
-(crowd_update
+(crowd_update      
+
    {if_else [override_group]
-      {do
-         ($over [override_group])
+      {do ($over [override_group])
          {$this iterate_frac
-            (1 {main.drv play_group_flags $over $crowd.tempo $crowd.play_flags})
-         }
+            (1 { main.drv play_group_flags $over $crowd.tempo $crowd.play_flags })
+         }      
          ; make sure we clear old_excitement so we set it going back.
          {set [old_excitement] kExcitementInvalid}
       }
-
+      
       ; Use the min of authored and game, idle trumps normal levels, win/lose trump all.
-      {do
-         ($level {min [authored_excitement] [game_excitement]})
-
+      {do ($level {min [authored_excitement] [game_excitement]})
+        
          ;{print "exc is " [game_excitement] " auth is " [authored_excitement] " level is " $level "\n"}
-
+         
          ; if excitement has not changed, don't do anything.
          ; Sometimes you can see two shots with the same crowd member
          ; and they seem to teleport their arms puzzingly.
          {if {!= $level [old_excitement]}
             {set [old_excitement] $level}
             {$this set show_3d_only FALSE}
-            {switch $level ;     bad ok  grt idle 
+            {switch $level                ;     bad ok  grt idle 
                (kExcitementIdle
                   {$this iterate_frac
-                     (1
-                        {main.drv play_group_flags realtime_idle $crowd.tempo $crowd.idle_flags}
-                     )
+                     (1 { main.drv play_group_flags realtime_idle $crowd.tempo $crowd.idle_flags })
                   }
                )
-               (kExcitementLost
+               (kExcitementLost     
                   {$this iterate_frac
-                     (1 {main.drv play_group_flags lose $crowd.tempo $crowd.idle_flags})
+                     (1 { main.drv play_group_flags lose $crowd.tempo $crowd.idle_flags })
                   }
                )
-               (kExcitementBoot {$this animate 1.0 0.0 0.0})
-               (kExcitementBad {$this animate 0.8 0.2 0.0})
-               (kExcitementOkay {$this animate 0.0 0.8 0.2})
-               (kExcitementGreat {$this animate 0.0 0.0 1.0})
+               (kExcitementBoot  {$this animate 1.0 0.0 0.0 })
+               (kExcitementBad   {$this animate 0.8 0.2 0.0 })
+               (kExcitementOkay  {$this animate 0.0 0.8 0.2 })
+               (kExcitementGreat {$this animate 0.0 0.0 1.0 })
                (kExcitementWon
                   {$this iterate_frac
-                     (1 {main.drv play_group_flags win $crowd.tempo $crowd.idle_flags})
+                     (1 { main.drv play_group_flags win $crowd.tempo $crowd.idle_flags })
                   }
                )
                ; hmmm.
@@ -159,8 +165,7 @@
    }
 )
 
-(excitement
-   ($level)
+(excitement ($level)
    ;{print "excitement set to " $level "\n"}
    {set [game_excitement] $level}
 )

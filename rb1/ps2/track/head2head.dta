@@ -3,64 +3,51 @@
       (head2head
          (editor
             (reset script (script {$this reset}))
-            (max_diff
-               int
-               (post_sync {$this set_score_diff [test_score_diff]})
-               (help "Maximum score difference that is displayed")
+            (max_diff int (post_sync {$this set_score_diff [test_score_diff]})
+             (help "Maximum score difference that is displayed")
             )
             (test_score_diff int (post_sync {$this set_score_diff [test_score_diff]}))
          )
-
+         
          (test_score_diff 0)
          (max_diff 10000)
-
+         
          ; the last know delta of scores
          (diff 0)
-
+         
          ; who's winning?
          (winner 0)
          (tie_window 100)
-
+         
          ; remember what the last arrow direction was
          (arrow_direction none)
-
+         
          (reset
             {set [diff] 0}
             {set [winner] 0}
             {h2h_meter_bar.tnm set_frame {/ {h2h_meter_bar.tnm end_frame} 2}}
          )
-
-         (set_score_diff
-            ($diff)
+         
+         (set_score_diff ($diff)
             {if_else {&& {<= $diff [tie_window]} {>= $diff {- [tie_window]}}}
                {set [winner] 0}
                {if_else {> $diff [tie_window]}
-                  {set [winner] 1}
-                  {set [winner] -1}
+                   {set [winner] 1}
+                   {set [winner] -1}
                }
             }
-
+            
             ; if the difference has changed
             {if {!= $diff [diff]}
                ; figure out which direction we're going (the difference between the difference)
-               {do
-                  ($diff_diff {- $diff [diff]})
-                  ($direction
-                     {if_else {> $diff_diff 0}
-                        'right'
-                        'left'
-                     }
-                  )
-
+               {do ($diff_diff {- $diff [diff]})
+                   ($direction {if_else {> $diff_diff 0} 'right' 'left'})
+                  
                   {if {!= $direction [arrow_direction]}
                      {set [arrow_direction] $direction}
-                     {if {exists flipper}
-                        {delete flipper}
-                     }
+                     {if {exists flipper} {delete flipper}}
                      ; add a delay to prevent arrow flip-flop
-                     {script_task kTaskSeconds
-                        (delay .1)
-                        (name flipper)
+                     {script_task kTaskSeconds (delay .1) (name flipper)
                         (script
                            {if_else {== [arrow_direction] 'right'}
                               {arrow_flip_RT.trig trigger}
@@ -80,12 +67,17 @@
                         }
                      }
 
-                     {do
-                        ($range {max -1 {min 1 {/ $diff [max_diff]}}})
+                     {do ($range {max -1 {min 1 {/ $diff [max_diff]}}})
                         ($center_frame {/ {h2h_meter_bar.tnm end_frame} 2.0})
-                        {h2h_meter_bar.tnm set_frame
-                           {+ $center_frame {* .5 {* $range {h2h_meter_bar.tnm end_frame}}}}
-                        }
+                           {h2h_meter_bar.tnm set_frame 
+                              {+ $center_frame 
+                                 {* .5 
+                                    {* $range 
+                                       {h2h_meter_bar.tnm end_frame}
+                                    }
+                                 }
+                              }
+                           }
                      }
                   }
                }
