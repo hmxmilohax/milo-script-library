@@ -1,0 +1,243 @@
+#define CLOTHING_BUTTONS ((2tops.btn 3legs.btn))
+#define CLOTHING_LISTS ((torso.lst legs.lst))
+#define CLOTHING_HANDLERS (
+   (file "shop_clothing.milo")
+   (outfit_char shop_char_panel)
+   (outfit_money shop_money_panel)
+   (show_outfit_text TRUE)
+   (reset TRUE)
+   (focus 2tops.btn)
+   (current_genre_btn none)
+   OUTFIT_DEFAULTS
+   (enter
+      {$this set button_list CLOTHING_BUTTONS}
+      {torso.grp set_showing FALSE}
+      {legs.grp set_showing FALSE}
+      {toggle_buttons OUTFIT_GENRES_BUTTONS TRUE}
+      {Categories.grp set_showing FALSE}
+      {if {== $this shop_tops_panel}
+         {$this show_me_bodies}
+      }
+      {if {== $this shop_legs_panel}
+         {$this show_me_legs}
+      }
+      OUTFIT_DEFAULT_ENTER
+   )
+   (show_genre
+      ($genre)
+      {do
+         {[current_grp] set_showing TRUE}
+         {$this set genre $genre}
+         {$this set_focus [current_list]}
+         {$this refresh_lists}
+         {$this store_outfit}
+      }
+   )
+   (show_me_legs
+      {do
+         {$this set current_grp legs.grp}
+         {$this set current_list legs.lst}
+         {$this set current_btn 3legs.btn}
+         {toggle_buttons CLOTHING_BUTTONS FALSE}
+         {if_else {== [closet] TRUE}
+            {do
+               {Categories.grp set_showing TRUE}
+               {$this set_focus 02city.btn}
+               {hide_invalid_genres $this legs [closet] FALSE}
+            }
+            {do
+               {$this show_genre none}
+            }
+         }
+      }
+   )
+   (show_me_bodies
+      {do
+         {$this set current_grp torso.grp}
+         {$this set current_list torso.lst}
+         {$this set current_btn 2tops.btn}
+         {toggle_buttons CLOTHING_BUTTONS FALSE}
+         {if_else {== [closet] TRUE}
+            {do
+               {Categories.grp set_showing TRUE}
+               {$this set_focus 02city.btn}
+               {hide_invalid_genres $this torso [closet] FALSE}
+            }
+            {do
+               {$this show_genre none}
+            }
+         }
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {switch {$this focus_name}
+               (2tops.btn {$this show_me_bodies})
+               (3legs.btn {$this show_me_legs})
+               (OUTFIT_GENRES_BUTTONS
+                  {foreach_int $index 0 {size OUTFIT_GENRES_BUTTONS}
+                     {do
+                        ($button {elem OUTFIT_GENRES_BUTTONS $index})
+                        {if {== {$this focus_name} $button}
+                           {Categories.grp set_showing FALSE}
+                           {$this set current_genre_btn $button}
+                           {$this show_genre {elem OUTFIT_GENRES $index}}
+                        }
+                     }
+                  }
+                  {synth play button_select}
+               )
+               (CLOTHING_LISTS {$this select_item})
+            }
+            kDataUnhandled
+         )
+         (kAction_Cancel
+            {if_else {'||' {== $this shop_tops_panel} {== $this shop_legs_panel}}
+               {do
+                  {$this undo_outfit}
+                  {new.grp set_showing FALSE}
+                  {ui goto_screen shop_screen}
+               }
+               {do
+                  {switch {$this focus_name}
+                     (CLOTHING_BUTTONS
+                        {if_else {== [closet] TRUE}
+                           {ui goto_screen shop_mycloset}
+                           {ui goto_screen shop_screen}
+                        }
+                     )
+                     (CLOTHING_LISTS
+                        {if {!= {$this selected_outfit} ''}
+                           {$this undo_outfit}
+                        }
+                        {if_else [closet]
+                           {do
+                              {$this set_focus [current_genre_btn]}
+                              {[current_grp] set_showing FALSE}
+                              {Categories.grp set_showing TRUE}
+                              {toggle_buttons OUTFIT_GENRES_BUTTONS TRUE}
+                           }
+                           {do
+                              {toggle_buttons CLOTHING_BUTTONS TRUE}
+                              {[current_grp] set_showing FALSE}
+                              {$this set_focus [current_btn]}
+                           }
+                        }
+                        {$this update}
+                     )
+                     {do
+                        {Categories.grp set_showing FALSE}
+                        {toggle_buttons CLOTHING_BUTTONS TRUE}
+                        {$this set_focus [current_btn]}
+                     }
+                  }
+               }
+            }
+            {[outfit_char] select_cam "idle"}
+            {synth play button_back}
+            kDataUnhandled
+         )
+         (kAction_ViewModify
+            {switch {$this focus_name}
+               (CLOTHING_LISTS
+                  {synth play button_toggle}
+                  {[outfit_char] select_next_cam}
+                  kDataUnhandled
+               )
+            }
+         )
+         (kAction_Start
+            {switch {$this focus_name}
+               (CLOTHING_LISTS
+                  {if [can_change_member]
+                     {$this set apply_to_all TRUE}
+                     {$this set current_list {$this focus_name}}
+                     {$this select_item}
+                  }
+               )
+            }
+         )
+         CHANGE_MEMBER_ACTION
+      }
+   )
+   (setup {$this store_outfit})
+)
+{new OutfitPanel
+   shop_clothing_panel
+   (closet FALSE)
+   (single_screen FALSE)
+   CLOTHING_HANDLERS
+}
+{new OutfitPanel
+   mycloset_clothing_panel
+   (closet TRUE)
+   (single_screen FALSE)
+   CLOTHING_HANDLERS
+}
+{new OutfitPanel
+   shop_tops_panel
+   (closet FALSE)
+   (single_screen TRUE)
+   CLOTHING_HANDLERS
+}
+{new OutfitPanel
+   shop_legs_panel
+   (closet FALSE)
+   (single_screen TRUE)
+   CLOTHING_HANDLERS
+}
+{new MainScreen
+   shop_clothing
+   (panels
+      meta
+      shop_char_panel
+      shop_money_panel
+      shop_clothing_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus shop_clothing_panel)
+}
+{new MainScreen
+   mycloset_clothing
+   (panels
+      meta
+      shop_char_panel
+      shop_money_panel
+      mycloset_clothing_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus mycloset_clothing_panel)
+}
+{new MainScreen
+   shop_tops
+   (panels
+      meta
+      hubentourage_panel
+      shop_char_panel
+      shop_money_panel
+      shop_tops_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus shop_tops_panel)
+}
+{new MainScreen
+   shop_legs
+   (panels
+      meta
+      hubentourage_panel
+      shop_char_panel
+      shop_money_panel
+      shop_legs_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus shop_legs_panel)
+}

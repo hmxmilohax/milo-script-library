@@ -1,0 +1,220 @@
+{new UIPanel
+   mycloset_menu
+   (outfit_char shop_char_panel)
+   (outfit_money shop_money_panel)
+   (file "shop_mycloset.milo")
+   (focus 2clothing.btn)
+   (can_change_member FALSE)
+   (enter
+      {do
+         ($costumes
+            {{[outfit_char] get tour_char} get_my_outfits {symbol "costumes"}}
+         )
+         {[outfit_char] select_cam "idle"}
+         {[outfit_char] hide_instruments}
+         {if {== {size $costumes} 0}
+            {$this disable 1costumes.btn}
+         }
+         {if {!= {[outfit_char] get_edit_group} kEditBand}
+            {$this disable 5instruments.btn}
+            {$this disable 7name.btn}
+         }
+         {$this set can_change_member {[outfit_char] can_change_member}}
+      }
+   )
+   (SELECT_MSG
+      {synth play button_select}
+      {switch $component
+         (1costumes.btn {ui goto_screen mycloset_costumes})
+         (2clothing.btn {ui goto_screen mycloset_clothing})
+         (3heads.btn {ui goto_screen mycloset_heads})
+         (4hairhats.btn {ui goto_screen mycloset_hair})
+         (5instruments.btn {ui goto_screen mycloset_instruments})
+         (6randomise.btn
+            {do
+               ($char {[outfit_char] get char})
+               ($tour_char {[outfit_char] get tour_char})
+               {$tour_char randomize_outfit $char}
+            }
+         )
+         (7name.btn
+            #ifndef HX_OG
+            {virtual_keyboard show_keyboard
+               $player_num
+               {get_char_name_length}
+               {localize create_char_vk_title}
+               {localize create_char_vk_desc}
+               {{[outfit_char] get tour_char} get_char_name}
+               $this
+            }
+            #else
+            {ui push_screen char_shop_renaming_screen}
+            #endif
+            {synth play button_select}
+         )
+      }
+   )
+   (change_band_member
+      {[outfit_char] next_band_member}
+      {[outfit_money] refresh}
+   )
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Cancel
+            {do
+               {synth play button_back}
+               {synth stop shop_amb.cue}
+               {taskmgr clear_tasks}
+            }
+         )
+         CHANGE_MEMBER_ACTION
+      }
+      kDataUnhandled
+   )
+   #ifndef HX_OG
+   (VIRTUAL_KEYBOARD_RESULT_MSG
+      {if
+         {&&
+            $ok
+            $this
+            {ui focus_panel}
+            {== {ui focus_panel} $this}
+            {! {== $text ""}}
+            {! {== $text {{[outfit_char] get tour_char} get_char_name}}}
+         }
+         {cond
+            ({!
+                  {[outfit_char]
+                     is_char_name_unique
+                     $text}}
+               {ui push_screen char_shop_rename_not_unique_screen}
+            )
+            ({!
+                  {ui is_valid_name $text}}
+               {ui push_screen char_shop_rename_illegal_name_screen}
+            )
+            (TRUE
+               {do
+                  {{[outfit_char] get tour_char} set_char_name $text}
+                  {[outfit_money] refresh}
+               }
+            )
+         }
+      }
+   )
+   #endif
+}
+{new MainScreen
+   shop_mycloset
+   (panels
+      meta
+      shop_char_panel
+      shop_money_panel
+      mycloset_menu
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus mycloset_menu)
+   (helpbar
+      {if_else {shop_char_panel can_change_member}
+         (
+            (cancel helpbar_back)
+            (option shop_hb_change_member)
+            (confirm helpbar_confirm)
+         )
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {if {== $action kAction_Cancel}
+         {ui goto_screen shop_screen}
+      }
+      kDataUnhandled
+   )
+}
+#ifdef HX_OG
+{new BandCreatePanel
+   char_shop_renaming_panel
+   (file "../../../ui/naming_dialog_char.milo")
+   (focus name.lbl)
+   (name_label name.lbl)
+   (name_active TRUE)
+   (back_button_exits TRUE)
+   (outfit_char shop_char_panel)
+   (outfit_money shop_money_panel)
+   NAMING_PANEL_HANDLERS
+   (enter
+      {shit2.tnm set_frame 0}
+      {set [for_char] TRUE}
+      {$this init_name}
+   )
+   (accept_name
+      {$this stop_naming}
+      {cond
+         ({==
+               {$this get_name}
+               {{[outfit_char]
+                     get
+                     tour_char}
+                  get_char_name}}
+            {ui pop_screen}
+         )
+         ({==
+               {$this get_name}
+               ""}
+            {ui goto_screen char_shop_rename_error_screen}
+         )
+         ({!
+               {ui
+                  is_valid_name
+                  {$this get_name}}}
+            {ui goto_screen char_shop_rename_illegal_name_screen}
+         )
+         ({!
+               {[outfit_char]
+                  is_char_name_unique
+                  {$this get_name}}}
+            {ui goto_screen char_shop_rename_not_unique_screen}
+         )
+         (TRUE
+            {{[outfit_char] get tour_char} set_char_name {$this get_name}}
+            {[outfit_money] refresh}
+            {ui pop_screen}
+         )
+      }
+   )
+   (cancel_name {ui pop_screen})
+   (on_exit)
+}
+{new BandScreen
+   char_shop_renaming_screen
+   (panels char_shop_renaming_panel)
+   (focus char_shop_renaming_panel)
+}
+{new BandScreen
+   char_shop_rename_error_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter {dialog_panel set_ok {localize shell_no_char_name_error}})
+   (SELECT_MSG {ui pop_screen})
+}
+#endif
+{new BandScreen
+   char_shop_rename_not_unique_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter {dialog_panel set_ok {localize char_name_not_unique}})
+   (SELECT_MSG {ui pop_screen})
+}
+{new BandScreen
+   char_shop_rename_illegal_name_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter {dialog_panel set_ok {localize illegal_name}})
+   (SELECT_MSG {ui pop_screen})
+}

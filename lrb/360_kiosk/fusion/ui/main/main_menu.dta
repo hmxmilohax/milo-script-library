@@ -1,0 +1,274 @@
+{new UIPanel
+   main_menu
+   (file "main_menu.milo")
+   (SELECT_MSG
+      {switch $component
+         {synth play button_select}
+         (BandButton_02StoryMode.btn {ui goto_screen hub_screen})
+      }
+   )
+}
+{func show_calibration
+   {ui goto_screen cal_welcome_screen}
+   {fx fade_out}
+   {do
+      ($user {user_mgr get_band_user $player_num})
+      {$user set_controller_type {$user connected_controller_type}}
+      {input_mgr set_user $user}
+   }
+}
+{new SigninScreen
+   tour_band_signin_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (must_not_be_a_guest FALSE)
+   (must_be_online FALSE)
+   (must_be_multiplayer_capable FALSE)
+   (handle_sign_outs FALSE)
+   (limit_user_signin FALSE)
+   (enter
+      {dialog_panel set_custom
+         {localize main_local_tour_need_to_signin}
+         {localize main_local_tour_signin_button}
+         {localize main_local_tour_cancel_button}
+         opt1.btn
+      }
+   )
+   (exit)
+   (SELECT_MSG
+      {switch $component
+         (opt1.btn {platform_mgr signin 1})
+         (opt2.btn {ui pop_screen})
+      }
+   )
+   (on_signed_in
+      {do
+         {gamemode set_mode tour_local $player_num}
+         {ui reset_screen tour_band_sel_screen}
+         {fx fade_out}
+      }
+   )
+}
+{new UIPanel
+   main_menu_artwork
+   #ifdef KIOSK_DEMO
+   (file "main_menu_artwork_demo.milo")
+   #else
+   (file "main_menu_artwork.milo")
+   #endif
+   (focus_btn quickplay.btn)
+   (load)
+   (enter
+      {gamemode set_practice 0}
+      {gamemode set_mode init}
+      {user_mgr clear_users}
+      {gamecfg reset_config}
+      {tour clear_band}
+      {$this set_focus [focus_btn]}
+      {meta music_load_and_start}
+      {meta fade_meta_music 0}
+      #ifdef HX_WII
+      {$this disable store.btn}
+      {store.btn set_showing FALSE}
+      #endif
+      {input_mgr clear_ui_leader}
+      #ifdef KIOSK_DEMO
+      {if {exists tutorial.btn}
+         {$this disable tutorial.btn}
+      }
+      {if {exists tour.btn}
+         {$this disable tour.btn}
+      }
+      {if {exists store.btn}
+         {$this disable store.btn}
+      }
+      {if {exists options.btn}
+         {$this disable options.btn}
+      }
+      {if {exists community.btn}
+         {$this disable community.btn}
+      }
+      {foreach_int $i 0 {user_mgr get_max_users}
+         {do
+            ($user {user_mgr get_user_from_pad_num $i})
+            {if $user
+               {if
+                  {'||'
+                     {== {$user connected_controller_type} kControllerDrum}
+                     {== {$user connected_controller_type} kControllerGuitar}
+                  }
+                  {do
+                     {{$user get_gameplay_options} set_lefty FALSE}
+                  }
+               }
+            }
+         }
+      }
+      #endif
+   )
+   (exit)
+   (poll {meta music_ensure_playing})
+   (SELECT_MSG
+      {synth play button_select}
+      {switch $component
+         #ifdef KIOSK_DEMO
+         (challenge.btn
+            {do
+               {set [focus_btn] challenge.btn}
+               {if_else {gamecfg is_missing_mic $player_num FALSE}
+                  {do
+                     #ifdef KIOSK_DEMO
+                     {vocalist_must_have_mic_screen set message demo_solo_vocalist_needs_mic}
+                     #else
+                     {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+                     #endif
+                     {ui push_screen vocalist_must_have_mic_screen}
+                  }
+                  {do
+                     {gamemode set_mode qp_coop_local $player_num}
+                     {content_mgr start_refresh}
+                     {challenge_mgr set_current_challenge challenge_rocktopus}
+                     {ui goto_screen {gamemode get matchmaking_screen}}
+                  }
+               }
+            }
+         )
+         (exitdemo.btn
+            {sell_panel set should_quit TRUE}
+            {ui goto_screen sell_screen}
+         )
+         #endif
+         (quickplay.btn
+            {do
+               {set [focus_btn] quickplay.btn}
+               {if_else {gamecfg is_missing_mic $player_num FALSE}
+                  {do
+                     #ifdef KIOSK_DEMO
+                     {vocalist_must_have_mic_screen set message demo_solo_vocalist_needs_mic}
+                     #else
+                     {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+                     #endif
+                     {ui push_screen vocalist_must_have_mic_screen}
+                  }
+                  {do
+                     {gamemode set_mode qp_coop_local $player_num}
+                     {content_mgr start_refresh}
+                     #ifdef KIOSK_DEMO
+                     {challenge_mgr clear_current_challenge}
+                     #endif
+                     {ui goto_screen {gamemode get matchmaking_screen}}
+                  }
+               }
+            }
+         )
+         (tutorial.btn
+            {set [focus_btn] tutorial.btn}
+            {set [num_users] 0}
+            {foreach_int $i 0 {user_mgr get_max_users}
+               {do
+                  ($user {user_mgr get_user_from_pad_num $i})
+                  {if {&& $user {!= {$user connected_controller_type} kControllerNone}}
+                     {do
+                        {'++' [num_users]}
+                        {$user set_controller_type {$user connected_controller_type}}
+                     }
+                  }
+               }
+            }
+            {training_menu_debug_panel set
+               training_user
+               {user_mgr get_band_user $player_num}
+            }
+            {ui goto_screen training_menu_screen}
+            {fx fade_out}
+         )
+         (tour.btn
+            {set [focus_btn] tour.btn}
+            {if_else {user_mgr is_any_user_signed_in}
+               {do
+                  {gamemode set_mode tour_local $player_num}
+                  {ui goto_screen tour_band_sel_screen}
+                  {fx fade_out}
+               }
+               {do
+                  {ui push_screen tour_band_signin_screen}
+               }
+            }
+         )
+         (store.btn
+            {do
+               {set [focus_btn] store.btn}
+               #ifdef HX_XBOX
+               {input_mgr set_user {user_mgr get_band_user $player_num}}
+               {gamemode set_mode store}
+               {if_else
+                  {'||'
+                     {! {platform_mgr is_player_signed_into_live $player_num}}
+                     {platform_mgr is_player_a_guest $player_num}
+                  }
+                  {ui push_screen main_store_signin_screen}
+                  {ui push_screen main_store_find_cache_screen}
+               }
+               #endif
+               #ifdef HX_PS3
+               {gamemode set_mode store}
+               {ui goto_screen store_enter_network_screen}
+               #endif
+               #ifdef HX_WII
+               {ui goto_screen store_loading_screen}
+               {force_goto_else_after_network_connect store_wii_enter_screen
+                  main_screen
+                  TRUE
+               }
+               #endif
+               #ifdef HX_PC
+               {ui goto_screen store_loading_screen}
+               #endif
+               {fx fade_out}
+               {input_mgr set_user {user_mgr get_band_user $player_num}}
+            }
+         )
+         (options.btn
+            {set [focus_btn] options.btn}
+            {ui goto_screen options_screen}
+            {cal_welcome_screen set cancel_screen options_screen}
+            {cal_welcome_screen set back options_screen}
+            {cal_complete_screen set confirm_screen options_screen}
+            {cal_hw_complete_screen set confirm_screen options_screen}
+         )
+         (community.btn
+            {set [focus_btn] community.btn}
+            {ui goto_screen extras_screen}
+         )
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {if {== $action kAction_Cancel}
+         {ui goto_screen main_startscreen}
+      }
+      kDataUnhandled
+   )
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (TRANSITION_COMPLETE_MSG {autosave} kDataUnhandled)
+   (num_users 0)
+   (setup_users
+      {set [num_users] 0}
+      {reset_random_selection}
+      {foreach_int $i 0 {user_mgr get_max_users}
+         {do
+            ($user {user_mgr get_user_from_pad_num $i})
+            {if {&& $user {!= {$user connected_controller_type} kControllerNone}}
+               {do
+                  {'++' [num_users]}
+                  {$user set_controller_type {$user connected_controller_type}}
+                  {set $player_num {$user get_user_num}}
+                  {set $pcfg {game get_player_config $player_num}}
+                  {$pcfg set_char {get_random_quickplay_prefab}}
+               }
+            }
+         }
+      }
+      {gamecfg auto_assign_missing_slots}
+      {user_mgr save_slots}
+   )
+}

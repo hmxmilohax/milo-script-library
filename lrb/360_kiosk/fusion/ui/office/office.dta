@@ -1,0 +1,116 @@
+{new UIPanel
+   office_panel
+   (file "office.milo")
+   (focus MyCareer.btn)
+   (enter
+      {$this office_focus {$this focus_name} FALSE}
+      #ifndef DAN_FAST
+      {if_else {{tour band} is_manager_hired}
+         {do
+            {{mixeroffice_panel find manager} set_showing TRUE}
+         }
+         {do
+            {{mixeroffice_panel find manager} set_showing FALSE}
+         }
+      }
+      {if {exists Manager}
+         {{mixeroffice_panel find Manager} set_showing FALSE}
+      }
+      {{jukebox_panel find jukebox.emit} set_occluded 1}
+      #endif
+   )
+   (FOCUS_MSG
+      {if {'||' {! {ui in_transition}} {== {ui transition_screen} office_screen}}
+         {$this office_focus $new_focus TRUE}
+         {synth play move_hub.cue}
+      }
+   )
+   (SELECT_MSG
+      {if_else {== {ui check_shot_ended} 1}
+         {do
+            {switch $component
+               (MyCareer.btn {ui goto_screen stats_list_screen})
+               (BandIdent.btn {ui goto_screen our_band_screen})
+               (Entourage.btn
+                  {if_else {== {{tour band} is_manager_hired} TRUE}
+                     {ui goto_screen buy_entourage_screen}
+                     {ui push_screen manager_needed_screen}
+                  }
+               )
+            }
+            {synth play button_select}
+            kDataUnhandled
+         }
+         FALSE
+      }
+   )
+   (office_focus
+      ($focus $transition_camera)
+      {do
+         {MyCareer.grp set_showing FALSE}
+         {BandIdentity.grp set_showing FALSE}
+         {Entourage.grp set_showing FALSE}
+         {switch $focus
+            (MyCareer.btn
+               {MyCareer.grp set_showing TRUE}
+               {if {== $transition_camera TRUE}
+                  {ui goto_camera "mycareer"}
+               }
+            )
+            (BandIdent.btn
+               {BandIdentity.grp set_showing TRUE}
+               {if {== $transition_camera TRUE}
+                  {ui goto_camera "band"}
+               }
+            )
+            (Entourage.btn
+               {Entourage.grp set_showing TRUE}
+               {if {== $transition_camera TRUE}
+                  {ui goto_camera "entourage"}
+               }
+            )
+         }
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Up
+            {if_else {== {ui check_shot_ended} 1}
+               kDataUnhandled
+               FALSE
+            }
+         )
+         (
+            (kAction_Up
+               kAction_Down
+               kAction_Left
+               kAction_Right
+               kAction_Confirm
+               kAction_Cancel
+            )
+            {if_else {== {ui check_shot_ended} 1}
+               kDataUnhandled
+               FALSE
+            }
+         )
+         kDataUnhandled
+      }
+   )
+   (TRANSITION_COMPLETE_MSG
+      {if {== $old_screen loading_office_screen}
+         {ui start_camera}
+         {ui goto_camera "mycareer"}
+         {$this set_focus MyCareer.btn}
+         {if {{tour band} is_manager_hired}
+            {show_hint hint_entourage ''}
+         }
+      }
+   )
+}
+{new BandScreen
+   manager_needed_screen
+   (panels dialog_panel)
+   (focus dialog_panel)
+   (enter {dialog_panel set_ok {localize manager_not_hired}})
+   (SELECT_MSG {ui pop_screen})
+}

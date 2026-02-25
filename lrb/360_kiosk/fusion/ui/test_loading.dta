@@ -1,0 +1,179 @@
+{helpbar load TRUE}
+{fx load TRUE}
+{event_dialog_panel load TRUE}
+#ifndef NOWIINETWORKING
+{content_loading_panel load TRUE}
+#endif
+{passive_messages_panel load TRUE}
+{new BandScreen
+   test_game_screen
+   (bad_data_reset FALSE)
+   (panels game world_panel coop_track_panel sync_audio_net_panel)
+   GAME_SCREEN_HANDLERS
+   #ifdef HX_XBOX
+   (my_enter
+      {if [bad_data_reset]
+         {do
+            {$this set bad_data_reset FALSE}
+            {ui reset_screen meta_loading_uisink_default_screen}
+         }
+      }
+   )
+   #endif
+}
+{new SessionPanel
+   loading_panel
+   (file "loading_screens/load_cont.milo")
+   (enter
+      {{$this find proxy} set_showing 1}
+      {proxy set_proxy_dir "fusion/ui/loading_screens/load_gen_02.milo" 0}
+   )
+   (is_loaded TRUE)
+}
+{new SessionPanel
+   test_loading_panel
+   (file "loading_screens/load_cont.milo")
+   (enter
+      {{$this find proxy} set_showing 1}
+      {proxy set_proxy_dir "fusion/ui/loading_screens/load_gen_02.milo" 0}
+      {if_else {== {cutscene get_current_cutscene} ''}
+         {ui goto_screen {gamemode get game_screen}}
+         {ui goto_screen cutscene_screen}
+      }
+   )
+   (is_loaded TRUE)
+}
+{new UIPanel
+   char_loading_panel
+   (chars_zeroed FALSE)
+   (clips_loaded TRUE)
+   (clips_need_loading FALSE)
+   (load
+      {set [chars_zeroed] FALSE}
+      {set [clips_loaded] TRUE}
+      {set [clips_need_loading] FALSE}
+      {if
+         {&&
+            {gamemode get is_tour}
+            {! {challenge_mgr has_challenge}}
+            {== {cutscene get_current_cutscene} ''}
+         }
+         {do
+            ($venue
+               {if_else {gamemode get is_tour_quickplay}
+                  {tour current_venue}
+                  {{tour band} venue}
+               }
+            )
+            {$venue load_entourage_chars}
+         }
+      }
+      {
+         #ifdef KIOSK_DEMO
+         if_else
+         TRUE
+         #else
+         if_else
+         {gamemode get is_tour}
+         #endif
+         {if_else {!= {cutscene get_current_cutscene} ''}
+            {do
+               {set [clips_need_loading] TRUE}
+               {set [clips_loaded] FALSE}
+               {cutscene load_entourage_chars}
+               {game load_all_chars (world TRUE) (venue_entourage FALSE)}
+            }
+            {if_else {challenge_mgr has_challenge}
+               {do
+                  {challenge_mgr load_entourage_chars}
+                  {game load_all_chars (world TRUE) (venue_entourage FALSE)}
+               }
+               {do
+                  {game load_all_chars (world TRUE) (venue_entourage TRUE)}
+               }
+            }
+         }
+         {game load_all_chars (world TRUE)}
+      }
+   )
+   (is_loaded
+      {if {char_cache loaded}
+         {if_else {! [clips_loaded]}
+            {if_else [clips_need_loading]
+               {do
+                  {set [clips_need_loading] FALSE}
+                  {if {!= {cutscene get_current_cutscene} ''}
+                     {char_cache load_all_clips kClipModeNone TRUE}
+                  }
+               }
+               {if {char_cache clips_loaded}
+                  {set [clips_loaded] TRUE}
+               }
+            }
+            {if {&& {! [chars_zeroed]}}
+               {if {&& {gamemode get is_tour} {challenge_mgr has_challenge}}
+                  {char_cache clear_all_entourage_instruments}
+               }
+               {char_cache zero_all_spheres}
+               {set [chars_zeroed] TRUE}
+            }
+         }
+      }
+      [chars_zeroed]
+   )
+}
+{new UIScreen
+   test_loading_screen
+   (panels char_loading_panel test_loading_panel)
+   (enter
+      {helpbar set_config ((min_height 0))}
+      {animatic_movie_panel unload}
+   )
+}
+{new UIScreen
+   loading_screen
+   (panels test_loading_panel)
+   (enter
+      {helpbar set_config ((min_height 0))}
+      {animatic_movie_panel unload}
+   )
+}
+{new SessionPanel
+   test_loading_panel_post_cutscene
+   (file "loading_screens/load_cont.milo")
+   (enter
+      {{$this find proxy} set_showing 1}
+      {proxy set_proxy_dir "fusion/ui/loading_screens/load_gen_02.milo" 0}
+      {ui goto_screen test_game_screen}
+   )
+}
+{new UIScreen
+   test_loading_screen_post_cutscene
+   (panels meta test_loading_panel_post_cutscene)
+   (enter {helpbar set_config ((min_height 0))})
+}
+{new SessionPanel
+   loading_panel_post_cutscene_replay
+   (file "loading_screens/load_cont.milo")
+   (enter
+      {{$this find proxy} set_showing 1}
+      {proxy set_proxy_dir "fusion/ui/loading_screens/load_gen_02.milo" 0}
+   )
+}
+{new UIScreen
+   loading_screen_post_cutscene_replay_1
+   (panels loading_panel_post_cutscene_replay)
+   (TRANSITION_COMPLETE_MSG
+      {ui goto_screen loading_screen_post_cutscene_replay_2}
+   )
+}
+{new UIScreen
+   loading_screen_post_cutscene_replay_2
+   (panels meta loading_panel_post_cutscene_replay)
+   (enter {helpbar set_config ((min_height 0))})
+   (TRANSITION_COMPLETE_MSG
+      {gamecfg reset_config}
+      {ui goto_screen tv_screen}
+   )
+}
+{test_loading_panel load TRUE}

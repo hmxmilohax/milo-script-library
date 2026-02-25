@@ -1,0 +1,105 @@
+{new UIPanel
+   watchtv_panel
+   (file "watchtv.milo")
+   (enter
+      {do
+         {cutscene.lst set_provider {tour cutscene_provider}}
+         {$this set_focus cutscene.lst}
+         {cutscene set replay 0}
+      }
+   )
+   (SCROLL_MSG CLICK_FOR_SCROLL_MSG kDataUnhandled)
+   (BUTTON_DOWN_MSG
+      {if {== $action kAction_Confirm}
+         {cutscene set_current_cutscene {cutscene.lst selected_sym}}
+         {cutscene set replay 1}
+         {$this setup_users}
+         {if {== {cutscene get_current_cutscene} auditions}
+            {cutscene set_required_driver
+               {switch {$player get_track_type}
+                  (kTrackGuitar guitar.cutdrv)
+                  (kTrackDrum drum.cutdrv)
+                  (kTrackVocals vocal.cutdrv)
+                  (kTrackBass bass.cutdrv)
+                  guitar.cutdrv
+               }
+               guitar.cutdrv
+            }
+         }
+         {synth play button_select}
+         {ui goto_screen cutscene_loading_screen_1}
+      }
+      {if {== $action kAction_Cancel}
+         {synth play button_back}
+         {if_else $hub_loaded
+            {ui goto_screen hub_screen}
+            {ui goto_screen loading_leaving_tv_screen}
+         }
+      }
+      kDataUnhandled
+   )
+   (setup_users
+      {set $guitar0 -1}
+      {set $guitar3 -1}
+      {foreach_int $i 0 {user_mgr get_max_users}
+         {do
+            ($user {user_mgr get_user_from_slot $i})
+            {if
+               {&&
+                  $user
+                  {!= {$user connected_controller_type} kControllerNone}
+                  {$user is_participating}
+               }
+               {do
+                  {switch {$user get_controller_type}
+                     (kControllerDrum
+                        {if {== {$user get_track_type} kTrackNone}
+                           {$user set_track_type kTrackDrum}
+                        }
+                     )
+                     (kControllerVocals
+                        {if {== {$user get_track_type} kTrackNone}
+                           {$user set_track_type kTrackVocals}
+                        }
+                     )
+                     (kControllerGuitar
+                        {if_else {< $i 3}
+                           {set $guitar0 {$user get_track_type}}
+                           {set $guitar3 {$user get_track_type}}
+                        }
+                     )
+                  }
+               }
+            }
+         }
+      }
+      {if {&& {== $guitar0 -1} {== $guitar3 kTrackNone}}
+         {{user_mgr get_user_from_slot 3} set_track_type kTrackBass}
+      }
+      {if {&& {== $guitar0 kTrackNone} {== $guitar3 -1}}
+         {{user_mgr get_user_from_slot 0} set_track_type kTrackGuitar}
+      }
+      {if {&& {== $guitar0 kTrackGuitar} {== $guitar3 kTrackNone}}
+         {{user_mgr get_user_from_slot 3} set_track_type kTrackBass}
+      }
+      {if {&& {== $guitar0 kTrackBass} {== $guitar3 kTrackNone}}
+         {{user_mgr get_user_from_slot 3} set_track_type kTrackGuitar}
+      }
+      {if {&& {== $guitar0 kTrackNone} {== $guitar3 kTrackGuitar}}
+         {{user_mgr get_user_from_slot 0} set_track_type kTrackBass}
+      }
+      {if {&& {== $guitar0 kTrackNone} {== $guitar3 kTrackBass}}
+         {{user_mgr get_user_from_slot 0} set_track_type kTrackGuitar}
+      }
+      {if {&& {== $guitar0 kTrackNone} {== $guitar3 kTrackNone}}
+         {{user_mgr get_user_from_slot 0} set_track_type kTrackGuitar}
+         {{user_mgr get_user_from_slot 3} set_track_type kTrackBass}
+      }
+      {if {&& {== $guitar0 kTrackGuitar} {== $guitar3 kTrackGuitar}}
+         {{user_mgr get_user_from_slot 3} set_track_type kTrackBass}
+      }
+      {if {&& {== $guitar0 kTrackBass} {== $guitar3 kTrackBass}}
+         {{user_mgr get_user_from_slot 0} set_track_type kTrackGuitar}
+      }
+   )
+}

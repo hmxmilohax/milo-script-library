@@ -1,0 +1,123 @@
+{new UIPanel
+   complete_panel
+   (file complete.milo)
+   (enter
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set_focus 0.btn}
+      {$this set_up_buttons}
+   )
+   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
+   (set_up_buttons
+      #ifdef KIOSK_DEMO
+      {$this disable 0.btn}
+      {$this disable 1.btn}
+      {2.btn set text_token comp_quit}
+      {$this set_focus 2.btn}
+      #else
+      {0.btn set text_token comp_selsong}
+      {if_else {> {meta_performer num_songs} 1}
+         {do
+            {1.btn set text_token comp_quit}
+            {$this disable 2.btn}
+            {2.btn set text_token ''}
+            {2.btn set_showing FALSE}
+         }
+         {do
+            {1.btn set text_token comp_restart}
+            {2.btn set text_token comp_quit}
+         }
+      }
+      #endif
+   )
+   (disable_by_token
+      ($token)
+      {$this iterate
+         BandButton
+         $b
+         {if {== {$b get text_token} $token}
+            {$this disable $b}
+         }
+      }
+   )
+   (set_focus_by_token
+      ($token)
+      {$this iterate
+         BandButton
+         $b
+         {if {== {$b get text_token} $token}
+            {$this set_focus $b}
+         }
+      }
+   )
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (SELECT_MSG
+      {if {!= {ui bottom_screen} {ui current_screen}}
+         {{ui bottom_screen} set_showing FALSE}
+      }
+      {switch {$component get text_token}
+         (comp_restart
+            {synth play button_select}
+            {meta_performer restart}
+            {game restart_at_end}
+         )
+         (comp_selsong
+            {synth play button_select}
+            {if_else {gamemode get is_tour_quickplay}
+               {coop_endgame_panel do_quickplay_exit song_select_screen}
+               {ui reset_screen meta_loading_continue_screen}
+            }
+         )
+         (comp_quit
+            {synth play button_select}
+            {if_else {gamemode get is_tour_quickplay}
+               {coop_endgame_panel do_quickplay_exit quickplay_venuescreen}
+               {ui reset_screen meta_loading_main_screen}
+            }
+         )
+      }
+   )
+}
+{new BandScreen
+   complete_screen
+   (panels complete_panel)
+   (focus complete_panel)
+   (helpbar
+      {if_else {is_leader_local}
+         ((confirm helpbar_select))
+         ()
+      }
+   )
+}
+{new UIPanel
+   complete_ranked_panel
+   (file complete_ranked.milo)
+   (block_event
+      ($event)
+      {== $event disband}
+   )
+   (enter
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set_focus comp_new_match.btn}
+   )
+   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (SELECT_MSG
+      {switch $component
+         (comp_new_match.btn
+            {synth play button_select}
+            {finding_screen set_joining_user $player}
+            {ui goto_screen meta_loading_new_match_screen}
+         )
+         (comp_quit.btn
+            {synth play button_select}
+            {ui goto_screen meta_loading_main_screen}
+         )
+      }
+   )
+}
+{new BandScreen
+   complete_ranked_screen
+   (panels complete_ranked_panel)
+   (focus complete_ranked_panel)
+   (helpbar ((confirm helpbar_select)))
+}

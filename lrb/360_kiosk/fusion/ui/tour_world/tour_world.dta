@@ -1,0 +1,720 @@
+#define kEntourageModFans (0)
+#define kEntourageModStuds (1)
+{new UIPanel
+   tour_only_world_complete_panel
+   (file "../tour_world/tour_world_complete.milo")
+   (focus "")
+   (compl_state 0)
+   (lbl_studs_value 0)
+   (lbl_fans_value 0)
+   (lbl_studs Score_01.lbl)
+   (lbl_fans Fans_01.lbl)
+   (is_entourage_showing FALSE)
+   (entourage_index 0)
+   (entourage_skipping FALSE)
+   (gig_studs 0)
+   (gig_fans 0)
+   (counter_studs 0)
+   (counter_fans 0)
+   (exit_immediate FALSE)
+   (enter
+      {$this set_showing TRUE}
+      {platform_mgr set_notify_ui_location kOSNotifyBottomCenter}
+      {$this set gig_studs {{tour band} get_song_studs}}
+      {$this set gig_fans {{tour band} get_song_fans}}
+      {$this set lbl_studs_value {{tour band} get_song_studs}}
+      {$this set lbl_fans_value {{tour band} get_song_fans}}
+      {$this set compl_state 4}
+      {scoretotal.lbl set_localized {fmt_score {{tour band} studs}}}
+      {fanstotal.lbl set_localized {fmt_score {{tour band} fans}}}
+      {starcount.lbl set_localized {fmt_score {{tour band} get_gig_stars}}}
+      {if_else {> {meta_performer num_songs} 1}
+         {do
+            {TopStars_01.grp set_showing FALSE}
+            {TopStars_02.grp set_showing TRUE}
+            {stars_02.lbl set text_token {{tour band} get_gig_starrating}}
+         }
+         {do
+            {TopStars_02.grp set_showing FALSE}
+            {TopStars_01.grp set_showing TRUE}
+            {stars.lbl set text_token {{tour band} get_gig_starrating}}
+         }
+      }
+      {startotal.lbl set_localized {fmt_score {{tour band} stars}}}
+      {if_else {{tour band} get_num_entourage_hired 3}
+         {do
+            {ScreenInfo_02.grp set_showing TRUE}
+            {ScreenInfo_01.grp set_showing FALSE}
+            {$this set lbl_studs Score_02.lbl}
+            {$this set lbl_fans Fans_02.lbl}
+            {$this set entourage_index 0}
+            {$this set is_entourage_showing FALSE}
+            {$this set entourage_skipping FALSE}
+         }
+         {do
+            {ScreenInfo_01.grp set_showing TRUE}
+            {ScreenInfo_02.grp set_showing FALSE}
+            {$this set lbl_studs Score_01.lbl}
+            {$this set lbl_fans Fans_01.lbl}
+         }
+      }
+      {$this update_labels}
+      {starcount.lbl set_showing 0}
+      {StarBG_03.mesh set_showing 0}
+      {StarIcon01.mesh set_showing 0}
+      {if
+         {&&
+            {{tour band} playing_special_gig}
+            {!= {{{tour band} special_gig} name} gig_lcc_special_a}
+         }
+         {do
+            ($gig {{tour band} special_gig})
+            {PopMess_Title.lbl set text_token {$gig display_name}}
+            {if_else {< {{tour band} get_gig_stars} {$gig get_star_requirement}}
+               {do
+                  {PopMess_Unlocked.lbl set
+                     text_token
+                     {{$gig get_intro_instruction} get_extra_b}
+                  }
+                  {synth play lose_studs.cue}
+               }
+               {do
+                  {PopMess_Unlocked.lbl set
+                     text_token
+                     {{$gig get_intro_instruction} get_extra_a}
+                  }
+                  {synth play slider_sfx.cue}
+               }
+            }
+            {PopMessAppear.trig trigger}
+            {script_task kTaskUISeconds
+               (script {$this close_special_pop})
+               (once TRUE)
+               (delay 10)
+            }
+            {synth play move_hub.cue}
+            {$this set compl_state 3}
+         }
+      }
+      {if {challenge_mgr has_challenge}
+         {PopMess_Title.lbl set text_token {challenge_mgr get_name}}
+         {PopMess_Unlocked.lbl set text_token {challenge_mgr get_score_bonus_text}}
+         {PopMessAppear.trig trigger}
+         {script_task kTaskUISeconds
+            (script {$this close_challenge_pop})
+            (once TRUE)
+            (delay 10)
+         }
+         {synth play move_hub.cue}
+         {$this set compl_state 6}
+      }
+   )
+   (exit {platform_mgr set_notify_ui_location kOSNotifyTopRight})
+   (update_labels
+      {[lbl_studs] set_localized {fmt_score {'*' [lbl_studs_value] 1.0}}}
+      {[lbl_fans] set_localized {fmt_score {'*' [lbl_fans_value] 1.0}}}
+   )
+   (poll)
+   (i_demand_a_recount
+      {do
+         ($studs {{tour band} get_song_studs})
+         ($fans {{tour band} get_song_fans})
+         {if {== {$this get compl_state} 0}
+            {$this count_up lbl_studs_value $studs [counter_studs]}
+            {$this count_up lbl_fans_value $fans [counter_fans]}
+            {'+=' [counter_studs] 37}
+            {'+=' [counter_fans] 3}
+            {if_else
+               {&&
+                  {! [is_entourage_showing]}
+                  {&& {== [lbl_studs_value] $studs} {== [lbl_fans_value] $fans}}
+               }
+               {do
+                  {$this set compl_state 1}
+                  {synth stop add_studs.cue}
+                  {synth play stud_total.cue}
+               }
+               {if_else {&& {== [lbl_studs_value] $studs} {== [lbl_fans_value] $fans}}
+                  {do
+                     {$this set compl_state 8}
+                     {synth stop add_studs.cue}
+                  }
+                  {script_task kTaskUISeconds
+                     (script {$this i_demand_a_recount})
+                     (once TRUE)
+                     (delay 0.1)
+                  }
+               }
+            }
+            {$this update_labels}
+         }
+         {if {== {$this get compl_state} 5}
+            {do
+               {$this count_down lbl_studs_value [counter_studs]}
+               {$this count_down lbl_fans_value [counter_fans]}
+               {'+=' [counter_studs] 77}
+               {'+=' [counter_fans] 9}
+               {$this update_labels}
+               {scoretotal.lbl set_localized
+                  {fmt_score
+                     {'*'
+                        {'+'
+                           {{tour band} studs}
+                           {- {{tour band} get_song_studs} [lbl_studs_value]}
+                        }
+                        1.0
+                     }
+                  }
+               }
+               {fanstotal.lbl set_localized
+                  {fmt_score
+                     {'*'
+                        {'+' {{tour band} fans} {- {{tour band} get_song_fans} [lbl_fans_value]}}
+                        1.0
+                     }
+                  }
+               }
+               {if_else {&& {== [lbl_studs_value] 0} {== [lbl_fans_value] 0}}
+                  {do
+                     {$this total_counted}
+                     {synth stop add_studs.cue}
+                     {synth play stud_total.cue}
+                  }
+                  {script_task kTaskUISeconds
+                     (script {$this i_demand_a_recount})
+                     (once TRUE)
+                     (delay 0.1)
+                  }
+               }
+            }
+         }
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {switch {$this get compl_state}
+               (
+                  (0 8)
+                  {if {{tour band} get_num_entourage_hired 3}
+                     {$this set entourage_skipping TRUE}
+                     {$this skip_current_entourage kEntourageModStuds}
+                     {$this skip_current_entourage kEntourageModFans}
+                     {while [is_entourage_showing]
+                        {$this update_entourage}
+                     }
+                  }
+                  {$this set lbl_studs_value {{tour band} get_song_studs}}
+                  {$this set lbl_fans_value {{tour band} get_song_fans}}
+                  {$this update_labels}
+                  {$this set compl_state 1}
+                  {synth stop add_studs.cue}
+                  {synth play button_select}
+                  {synth play stud_total.cue}
+               )
+               (1
+                  {$this add_total}
+                  {synth play button_select}
+               )
+               (2
+                  {$this leave}
+                  {synth play button_select}
+               )
+               (3 {$this close_special_pop})
+               (4
+                  {if_else
+                     {&&
+                        {== [lbl_studs] Score_02.lbl}
+                        {'||' {!= [lbl_studs_value] 0} {!= [lbl_fans_value] 0}}
+                     }
+                     {$this update_entourage}
+                     {$this add_total}
+                  }
+                  {synth play button_select}
+               )
+               (5
+                  {do
+                     {$this total_counted}
+                     {synth play button_select}
+                     {synth play stud_total.cue}
+                  }
+               )
+               (6 {$this close_challenge_pop})
+            }
+         )
+         kDataUnhandled
+      }
+   )
+   (add_total
+      {do
+         ($venue {{tour band} venue})
+         ($venue_name
+            {if_else $venue
+               {$venue get_name}
+               gNullStr
+            }
+         )
+         {startotal.lbl set_localized {fmt_score {{tour band} stars}}}
+         {$this set lbl_studs_value {{tour band} get_song_studs}}
+         {$this set lbl_fans_value {{tour band} get_song_fans}}
+         {if_else {&& {== [lbl_studs_value] 0} {== [lbl_fans_value] 0}}
+            {$this total_counted}
+            {do
+               {synth play add_studs.cue}
+               {$this set compl_state 5}
+               {$this set counter_studs 1}
+               {$this set counter_fans 1}
+               {$this i_demand_a_recount}
+            }
+         }
+      }
+   )
+   (total_counted
+      {do
+         ($venue {{tour band} venue})
+         ($venue_name
+            {if_else $venue
+               {$venue get_name}
+               gNullStr
+            }
+         )
+         {{tour band} add_fans {{tour band} get_song_fans} $venue_name}
+         {{tour band} add_studs {{tour band} get_song_studs}}
+         {scoretotal.lbl set_localized {fmt_score {'*' {{tour band} studs} 1.0}}}
+         {fanstotal.lbl set_localized {fmt_score {'*' {{tour band} fans} 1.0}}}
+         {[lbl_studs] set_localized {fmt_score 0}}
+         {[lbl_fans] set_localized {fmt_score 0}}
+         {synth stop add_studs.cue}
+         {synth play stud_total.cue}
+         {$this goto_leave_state}
+      }
+   )
+   (goto_leave_state
+      {tour check_unlock}
+      {if_else {tour has_unlocks_to_show}
+         {helpbar set_config ((confirm helpbar_continue))}
+         {helpbar set_config ((confirm tour_hb_returntomap))}
+      }
+      {$this set compl_state 2}
+   )
+   (leave
+      {do
+         ($band {tour band})
+         ($stars {{tour band} get_gig_stars})
+         {{tour band} clear_song_scores}
+         {do
+            {if_else {tour has_unlocks_to_show}
+               {ui goto_screen itemunlocked_screen}
+               {do
+                  ($venue {{$band venue} get_name})
+                  ($specials {special_event_panel init})
+                  ($gigcount {{tour band} total_gigs})
+                  ($hint
+                     {cond
+                        ({== $gigcount 1} hint_firstsong)
+                        ({== $gigcount 2} hint_secondsong)
+                        ({&&
+                              {gamemode get is_tour}
+                              {gamemode get is_challenge}
+                              {!
+                                 {challenge_mgr is_in_player}}
+                              {need_hint hint_arcade}}
+                           hint_arcade
+                        )
+                        ({need_hint hint_roadcrew_hired} hint_roadcrew_hired)
+                        ''
+                     }
+                  )
+                  {set $hadhint FALSE}
+                  {cond
+                     ({&&
+                           {challenge_mgr has_challenge}
+                           {==
+                              {challenge_mgr get_name}
+                              challenge_asteroid}}
+                        {special_event_panel set decline_exit_screen {$this garage_exit_screen}}
+                        {cutscene_branch_panel setup
+                           story_outro
+                           {do
+                              {post_game_loading_panel load TRUE}
+                              {post_game_loading_panel set next_screen {$this garage_exit_screen}}
+                              post_game_loading_screen
+                           }
+                           0
+                           FALSE
+                        }
+                        {if_else {!= $hint ''}
+                           {unless {show_hint $hint cutscene_branch_screen}
+                              {ui pop_screen cutscene_branch_screen}
+                           }
+                           {ui pop_screen cutscene_branch_screen}
+                        }
+                     )
+                     ({&&
+                           {{tour band}
+                              playing_special_gig}
+                           {==
+                              {{{tour band}
+                                    special_gig}
+                                 name}
+                              gig_ws_special_03}}
+                        {special_event_panel set decline_exit_screen {$this garage_exit_screen}}
+                        {cutscene_branch_panel setup
+                           alien_signing
+                           {do
+                              {post_game_loading_panel load TRUE}
+                              {post_game_loading_panel set next_screen {$this garage_exit_screen}}
+                              post_game_loading_screen
+                           }
+                           0
+                           FALSE
+                        }
+                        {if_else {!= $hint ''}
+                           {unless {show_hint $hint cutscene_branch_screen}
+                              {ui pop_screen cutscene_branch_screen}
+                           }
+                           {ui pop_screen cutscene_branch_screen}
+                        }
+                     )
+                     ({&&
+                           {== $venue ven_stud_farm}
+                           {>=
+                              {{tour band}
+                                 get_stars_at_venue
+                                 ven_stud_farm}
+                              3}}
+                        {special_event_panel set decline_exit_screen {$this garage_exit_screen}}
+                        {cutscene_branch_panel setup
+                           alien_abduction
+                           {if_else $specials
+                              special_event_screen
+                              {do
+                                 {post_game_loading_panel load TRUE}
+                                 {post_game_loading_panel set next_screen {$this garage_exit_screen}}
+                                 post_game_loading_screen
+                              }
+                           }
+                           0
+                           FALSE
+                        }
+                        {if_else {!= $hint ''}
+                           {unless {show_hint $hint cutscene_branch_screen}
+                              {ui pop_screen cutscene_branch_screen}
+                           }
+                           {ui pop_screen cutscene_branch_screen}
+                        }
+                     )
+                     ({&&
+                           {== $venue ven_volcanic_rock}
+                           {>=
+                              {{tour band}
+                                 get_stars_at_venue
+                                 ven_volcanic_rock}
+                              3}}
+                        {special_event_panel set decline_exit_screen {$this garage_exit_screen}}
+                        {cutscene_branch_panel setup
+                           dino_chase
+                           {if_else $specials
+                              special_event_screen
+                              {do
+                                 {post_game_loading_panel load TRUE}
+                                 {post_game_loading_panel set next_screen {$this garage_exit_screen}}
+                                 post_game_loading_screen
+                              }
+                           }
+                           0
+                           FALSE
+                        }
+                        {if_else {!= $hint ''}
+                           {unless {show_hint $hint cutscene_branch_screen}
+                              {ui pop_screen cutscene_branch_screen}
+                           }
+                           {ui pop_screen cutscene_branch_screen}
+                        }
+                     )
+                     (TRUE
+                        {if_else $specials
+                           {do
+                              {special_event_panel set decline_exit_screen {$this garage_exit_screen}}
+                              {if_else {!= $hint ''}
+                                 {show_hint $hint special_event_screen}
+                                 {ui pop_screen special_event_screen}
+                              }
+                           }
+                           {if_else {!= $hint ''}
+                              {do
+                                 {if_else {show_hint $hint ''}
+                                    {do
+                                       {$this set_showing FALSE}
+                                       {$this set exit_immediate TRUE}
+                                    }
+                                    {$this goto_garage}
+                                 }
+                              }
+                              {$this goto_garage}
+                           }
+                        }
+                     )
+                  }
+               }
+            }
+         }
+      }
+   )
+   (TRANSITION_COMPLETE_MSG
+      {if [exit_immediate]
+         {$this set exit_immediate FALSE}
+         {$this goto_garage}
+      }
+   )
+   (garage_exit_screen
+      {if_else {&& {gamemode get is_challenge} {challenge_mgr is_in_player}}
+         arcade_screen
+         {if_else {{tour band} vehicle}
+            garage_gigscreen
+            garage_vehiclescreen
+         }
+      }
+   )
+   (goto_garage
+      {post_game_loading_panel load TRUE}
+      {post_game_loading_panel set next_screen {$this garage_exit_screen}}
+      {ui pop_screen post_game_loading_screen}
+   )
+   (mod_count
+      ($value $max $slow)
+      {do
+         ($mod 10)
+         {if {< [$value] $max}
+            {while {!= {mod [$value] $mod} [$value]}
+               {'*=' $mod 10}
+            }
+            {/= $mod 10}
+            {if {&& $slow {> $mod 10}}
+               {/= $mod 10}
+            }
+            {'+=' [$value] $mod}
+            {if {> [$value] $max}
+               {$this set $value $max}
+            }
+         }
+      }
+   )
+   (mod_count_down
+      ($value $slow)
+      {do
+         ($mod 100000000)
+         {if {> [$value] 0}
+            {while {== {mod [$value] $mod} [$value]}
+               {/= $mod 10}
+            }
+            {if {&& $slow {> $mod 10}}
+               {/= $mod 10}
+            }
+            {-= [$value] $mod}
+            {if {< [$value] 0}
+               {$this set $value 0}
+            }
+         }
+      }
+   )
+   (count_up
+      ($value $max $step)
+      {do
+         {'+=' [$value] $step}
+         {if {> [$value] $max}
+            {$this set $value $max}
+         }
+      }
+   )
+   (count_down
+      ($value $step)
+      {do
+         {-= [$value] $step}
+         {if {< [$value] 0}
+            {$this set $value 0}
+         }
+      }
+   )
+   (update_entourage
+      {$this set is_entourage_showing FALSE}
+      {$this show_next_entourage kEntourageModStuds}
+      {$this show_next_entourage kEntourageModFans}
+      {if {&& [is_entourage_showing] {! [entourage_skipping]}}
+         {script_task kTaskUISeconds
+            (script {$this update_entourage})
+            (once TRUE)
+            (delay 1.5)
+         }
+         {synth play streak_success.cue}
+      }
+      {'+=' [entourage_index] 1}
+      {if {&& {! [entourage_skipping]} {!= [compl_state] 0}}
+         {synth play add_studs.cue}
+         {$this set compl_state 0}
+         {$this set counter_studs 1}
+         {$this set counter_fans 1}
+         {$this i_demand_a_recount}
+      }
+   )
+   (show_next_entourage
+      ($type)
+      {do
+         ($members {{tour band} get_num_entourage_hired $type})
+         ($trigger "")
+         {if {< [entourage_index] $members}
+            {do
+               ($member {{tour band} get_entourage_member [entourage_index] $type})
+               {if_else {== $type kEntourageModStuds}
+                  {$this add_studs {{tour get_entourage_member $member} get_studs_modifier}}
+                  {$this add_fans {{tour get_entourage_member $member} get_fans_modifier}}
+               }
+               {Ent_Score_Name.lbl set_localized $member}
+               {Ent_Score_Percent.lbl set_localized
+                  {sprintf
+                     {localize eg_percent_format}
+                     {int {'*' {{tour get_entourage_member $member} get_studs_modifier} 100.0}}
+                  }
+               }
+               {if_else {== [entourage_skipping] TRUE}
+                  {set $trigger {sprintf "Ent_Skip_Char_%s.trig" $member}}
+                  {set $trigger {sprintf "Ent_NewOpen_Char_%s.trig" $member}}
+               }
+               {if {{tour band} is_entourage_new $member}
+                  {{tour band} set_entourage_age $member FALSE}
+               }
+               {{$this find $trigger} trigger}
+               {$this set is_entourage_showing TRUE}
+            }
+         }
+      }
+   )
+   (skip_current_entourage
+      ($type)
+      {do
+         ($members {{tour band} get_num_entourage_hired $type})
+         ($trigger "")
+         ($index {- [entourage_index] 1})
+         {if {&& {>= $index 0} {< $index $members}}
+            {do
+               ($member {{tour band} get_entourage_member $index $type})
+               {set $trigger {sprintf "Ent_Skip_Char_%s.trig" $member}}
+               {{$this find $trigger} trigger}
+            }
+         }
+      }
+   )
+   (close_special_pop
+      {do
+         {if {== [compl_state] 3}
+            {do
+               ($gig {{tour band} special_gig})
+               {PopMessClose.trig trigger}
+               {if_else {< {{tour band} get_gig_stars} {$gig get_star_requirement}}
+                  {do
+                     {$this set gig_studs 0}
+                     {$this set gig_fans 0}
+                     {$this set lbl_studs_value 0}
+                     {$this set lbl_fans_value 0}
+                     {$this update_labels}
+                     {$this goto_leave_state}
+                     {synth play lose_studs.cue}
+                  }
+                  {do
+                     {$gig run_exit_script}
+                     {$this add_studs {$gig get_studs_modifier}}
+                     {$this add_fans {$gig get_fans_modifier}}
+                     {$this set lbl_studs_value {{tour band} get_song_studs}}
+                     {$this set lbl_fans_value {{tour band} get_song_fans}}
+                     {$this update_labels}
+                     {$this set compl_state 4}
+                     {synth play streak_success.cue}
+                  }
+               }
+            }
+         }
+      }
+   )
+   (close_challenge_pop
+      {do
+         {if {== [compl_state] 6}
+            {PopMessClose.trig trigger}
+            {$this add_studs {challenge_mgr get_studs_modifier}}
+            {$this add_fans {challenge_mgr get_fans_modifier}}
+            {$this set lbl_studs_value {{tour band} get_song_studs}}
+            {$this set lbl_fans_value {{tour band} get_song_fans}}
+            {$this update_labels}
+            {$this set compl_state 4}
+            {synth play streak_success.cue}
+         }
+      }
+   )
+   (add_studs
+      ($mod)
+      {do
+         ($bonus {'*' [gig_studs] $mod})
+         {if {== {'+' [gig_studs] $bonus} 0}
+            {$this set gig_studs 0}
+         }
+         {{tour band} add_song_studs {int $bonus}}
+      }
+   )
+   (add_fans
+      ($mod)
+      {do
+         ($bonus {'*' [gig_fans] $mod})
+         {if {== {'+' [gig_fans] $bonus} 0}
+            {$this set gig_fans 0}
+         }
+         {{tour band} add_song_fans {int $bonus}}
+      }
+   )
+}
+{new BandScreen
+   tour_world_complete_screen
+   #ifndef HX_OG
+   (panels endgame_background_animated_panel tour_only_world_complete_panel)
+   #else
+   (panels endgame_background_panel tour_only_world_complete_panel)
+   #endif
+   (focus tour_only_world_complete_panel)
+   (helpbar
+      {if_else {is_leader_local}
+         ((confirm helpbar_continue))
+         ()
+      }
+   )
+}
+{new BandScreen
+   tour_world_lose_screen
+   (enter
+      {if {{tour band} is_local}
+         {{tour band} lose_song}
+      }
+      {ui goto_screen tour_retry_screen}
+   )
+}
+{new UIPanel
+   tour_world_status_panel
+   (file "tour_world_status.milo")
+   (refresh
+      {do
+         ($show_venue
+            {'||' {tour_world_event_panel is_up} {tour_world_details_panel is_up}}
+         )
+         ($show_town {tour_world_venue_panel is_up})
+         ($perf {tour band})
+         ($world_fame {$perf world_fame})
+         {bandname.lbl set_localized {{tour band} band_name}}
+         {stats.grp set_showing $world_fame}
+         {if_else {== {rnd aspect} kWidescreenAspect}
+            {aspect_ratio.tnm set_frame 1}
+            {aspect_ratio.tnm set_frame 0}
+         }
+         {fame.lbl set_localized {fmt_score $world_fame}}
+         {buzz.lbl set_localized {fmt_score {$perf fans}}}
+      }
+   )
+   (enter {$this refresh})
+}
+{new UIPanel tour_world_lower3rd_panel (file "tour_lower3rd.milo")}

@@ -1,0 +1,715 @@
+#include ../../../../system/run/config/macros.dta
+(init
+   {set_key_cheats_enabled 1}
+   #include ../tour/tour_helpers.dta
+   #include meta.dta
+   #include meta_loading.dta
+   #include ../../ui/cheats_funcs.dta
+   #include ../../ui/global.dta
+   #include ../../ui/game.dta
+   #include ../../ui/fx_panel.dta
+   #include saveload.dta
+   #include ../../ui/splash/splash.dta
+   #include pause.dta
+   #include cutscene.dta
+   #include helpers.dta
+   #ifdef HX_WII
+   #include ../../ui/naming_screen.dta
+   #endif
+   #ifdef HX_XBOX
+   #include dlc_xbox.dta
+   #endif
+   #include test_loading.dta
+   #ifdef KIOSK_DEMO
+   #include loading_screens/sell_screen.dta
+   #endif
+   #include main/main.dta
+   #include main/main_menu.dta
+   #include main/main_menu_options.dta
+   #include main/main_menu_extras.dta
+   #include main/main_startmenu.dta
+   #ifndef HX_WII
+   #include ../../ui/store/store.dta
+   #endif
+   #include calibration/calibration.dta
+   #include practice/training.dta
+   #include mov/movie_screens.dta
+   #include song_select.dta
+   #include seldiff.dta
+   #include modifiers_screen.dta
+   #include endgame/endgame.dta
+   #include endgame/lose.dta
+   #include endgame/complete.dta
+   #include endgame/item_unlocked.dta
+   #include hub_world.dta
+   #include tour/special_events.dta
+   #include matchmaking/matchmaking.dta
+   #include tour/tour_band_sel.dta
+   #include tour/lego_tour.dta
+   #include tour_world/tour_world.dta
+   #include hub/arcade.dta
+   #include hub/lounge.dta
+   #include hub/stage.dta
+   #include hub/custom_den_colour.dta
+   #include hub/denzones.dta
+   #include hub/denslots.dta
+   #include hub/denitems.dta
+   #include hub/watchtv.dta
+   #include hub/hub_menu.dta
+   #include tour/challenge_screen.dta
+   #include garage/new_vehicle.dta
+   #include garage/new_venue.dta
+   #include garage/garage_vehiclepanel.dta
+   #include garage/garage_venuepanel.dta
+   #include garage/garage_gigmenu.dta
+   #include garage/garage_difficultymenu.dta
+   #include office/office.dta
+   #include office/entourage_buy_edit.dta
+   #include office/buy_entourage.dta
+   #include office/my_career.dta
+   #include office/career_stats.dta
+   #include office/stats_list.dta
+   #include office/our_band.dta
+   #include office/albums.dta
+   #include shop/shop.dta
+   #include shop/charcreator.dta
+   #include loading_screens/loading.dta
+   #include leaderboards/leaderboards.dta
+   #include options/options.dta
+   #include options/options_vocal.dta
+   #include options/options_audio.dta
+   #include options/options_console.dta
+   #include options/options_gameplay.dta
+   #include options/options_export.dta
+   #include options/options_language.dta
+   #include New_Vehicles/vehicle_purchased.dta
+   #include framerate/frame_rate.dta
+   #ifndef HX_OG
+   #include shop/patchcreator.dta
+   #endif
+   #ifndef HX_WII
+   #include ../../ui/network_connect.dta
+   #endif
+   #include ../../ui/main_dialogs.dta
+   #ifdef HX_WII
+   {overflow_dialog_panel load TRUE}
+   #endif
+   #ifndef HX_WII
+   {net_cache_mgr init
+      {find $syscfg store netcache_init}
+   }
+   #endif
+   {new MainScreen
+      main_screen
+      (panels meta movie_panel main_menu_artwork)
+      (focus main_menu_artwork)
+      (helpbar ((confirm helpbar_confirm)))
+      (enter
+         {$this set_focus_panel main_menu_artwork}
+         #ifdef HX_XBOX
+         {if {== {band_ui current_event} pad_lost}
+            {band_ui dismiss_event}
+         }
+         #endif
+         #ifdef HX_WII
+         {band_ui dismiss_event_no_pad_checks}
+         #endif
+         {autoload}
+      )
+      (BUTTON_DOWN_MSG
+         {if {== $action kAction_Cancel}
+            {ui goto_screen main_startscreen}
+         }
+         kDataUnhandled
+      )
+   }
+   {new MainScreen
+      options_screen
+      (panels meta movie_panel main_options_panel)
+      (focus main_options_panel)
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter {$this set_focus_panel main_options_panel})
+      (BUTTON_DOWN_MSG
+         {if {== $action kAction_Cancel}
+            {ui reset_screen main_screen}
+         }
+         kDataUnhandled
+      )
+   }
+   {new MainScreen
+      extras_screen
+      (panels meta movie_panel main_extras_panel)
+      (focus main_extras_panel)
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter {$this set_focus_panel main_extras_panel})
+      (BUTTON_DOWN_MSG
+         {if {== $action kAction_Cancel}
+            {ui goto_screen main_screen}
+         }
+         kDataUnhandled
+      )
+   }
+   {new UIScreen
+      main_screen_flush
+      (panels)
+      (enter
+         {ui goto_screen main_screen}
+         {fx fade_out}
+         {ui current_screen set_focus main_menu_artwork}
+      )
+   }
+   {new MainScreen
+      hub_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         jukebox_panel
+         #endif
+         hub_menu
+         tour_profile_panel
+      )
+      (load {hint_screen load TRUE})
+      (helpbar
+         {if_else {> {user_mgr get_num_participants} 1}
+            (
+               (cancel helpbar_back)
+               (confirm helpbar_confirm)
+               (view_modify helpbar_show_help)
+               (option helpbar_customize)
+               (state_confirm helpbar_take_control)
+            )
+            (
+               (cancel helpbar_back)
+               (confirm helpbar_confirm)
+               (view_modify helpbar_show_help)
+               (option helpbar_customize)
+            )
+         }
+      )
+      (focus hub_menu)
+      (enter
+         {do
+            {presence_mgr set_in_rock_den}
+            {$this set_focus_panel hub_menu}
+            {meta music_stop}
+            #ifdef HX_XBOX
+            {platform_mgr check_signin_state_msg}
+            #endif
+         }
+      )
+      (TRANSITION_COMPLETE_MSG
+         {if_else {show_hint hint_rockden ''}
+            {$this set_showing FALSE}
+            {if_else {== {user_mgr get_num_participants} 1}
+               {$this set_showing TRUE}
+               {if_else {show_hint hint_take_control ''}
+                  {$this set_showing FALSE}
+                  {$this set_showing TRUE}
+               }
+            }
+         }
+      )
+      (BUTTON_DOWN_MSG
+         {if {== $action kAction_Cancel}
+            {synth play button_back}
+            {band_ui trigger_event leave_rock_den_prompt}
+         }
+         kDataUnhandled
+      )
+   }
+   {new MainScreen
+      hub_reenter_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         jukebox_panel
+         #endif
+      )
+      (enter {ui goto_screen hub_screen})
+   }
+   {new MainScreen
+      lounge_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         #endif
+         lounge_panel
+         tour_profile_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel lounge_panel}
+         }
+      )
+   }
+   {new MainScreen
+      office_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixeroffice_panel
+         hubentourage_panel
+         jukebox_panel
+         #endif
+         office_panel
+         tour_profile_panel
+      )
+      (focus office_panel)
+      (reset_focus TRUE)
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         #ifdef HX_XBOX
+         {platform_mgr check_signin_state_msg}
+         #endif
+      )
+      (BUTTON_DOWN_MSG
+         {switch $action
+            (kAction_Cancel
+               {synth play button_back}
+               {office_panel set focus {office_panel find MyCareer.btn}}
+               {ui start_camera}
+               {fx fade_out}
+               {ui goto_screen autosave_loading_hub_screen}
+            )
+         }
+         kDataUnhandled
+      )
+   }
+   {new MainScreen
+      my_career_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixeroffice_panel
+         hubentourage_panel
+         #endif
+         my_career_panel
+         tour_profile_panel
+      )
+      (focus my_career_panel)
+      (back
+         {do
+            {synth play button_back}
+            office_screen
+         }
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+   }
+   {new MainScreen
+      career_stats_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixeroffice_panel
+         hubentourage_panel
+         #endif
+         career_stats_panel
+         tour_lower3rd_panel
+      )
+      (focus career_stats_panel)
+      (back
+         {do
+            {synth play button_back}
+            office_screen
+         }
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+   }
+   {new MainScreen
+      entourage_buy_edit_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixeroffice_panel
+         hubentourage_panel
+         #endif
+         entourage_buy_edit_panel
+         tour_profile_panel
+      )
+      (focus entourage_buy_edit_panel)
+      (back
+         {do
+            {synth play button_back}
+            office_screen
+         }
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+   }
+   {new MainScreen
+      jukebox_screen
+      (panels hubentourage_panel movie_panel meta)
+      (enter
+         {do
+            {{tour band} clear_vehicle}
+            {quickplay_venuepanel set quickplay_exit_screen loading_jukebox_screen}
+            {ui goto_screen quickplay_venuescreen}
+         }
+      )
+   }
+   {new MainScreen
+      stage_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         jukebox_panel
+         #endif
+         stage_panel
+         tour_lower3rd_panel
+         tour_profile_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel stage_panel}
+            {gamemode set_mode tour_local}
+            {stage_screen start_camera}
+            {stage_screen goto_camera "stage"}
+         }
+      )
+   }
+   {new MainScreen
+      denzones_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         #endif
+         hub_menu
+         denzones_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel denzones_panel}
+         }
+      )
+   }
+   {new MainScreen
+      denslots_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         jukebox_panel
+         #endif
+         hub_menu
+         denslots_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel denslots_panel}
+         }
+      )
+   }
+   {new MainScreen
+      denitems_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         jukebox_panel
+         #endif
+         hub_menu
+         denitems_panel
+         tour_profile_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel denitems_panel}
+         }
+      )
+   }
+   {new MainScreen
+      tv_screen_avec_hub
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixer_panel
+         hubentourage_panel
+         #endif
+         watchtv_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel watchtv_panel}
+         }
+      )
+   }
+   {new MainScreen
+      tv_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         hubentourage_panel
+         #endif
+         watchtv_panel
+      )
+      (helpbar
+         (
+            (cancel helpbar_back)
+            (confirm helpbar_confirm)
+         )
+      )
+      (enter
+         {do
+            {$this set_focus_panel watchtv_panel}
+         }
+      )
+   }
+   {new MainScreen
+      garage_vehiclescreen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixergarage_panel
+         hubentourage_panel
+         #endif
+         garage_vehiclepanel
+         tour_profile_panel
+      )
+      (helpbar
+         {if_else {> {user_mgr get_num_participants} 1}
+            (
+               (cancel helpbar_back)
+               (confirm helpbar_confirm)
+               (state_confirm helpbar_take_control)
+            )
+            (
+               (cancel helpbar_back)
+               (confirm helpbar_confirm)
+            )
+         }
+      )
+      (enter
+         {do
+            {$this set_focus_panel garage_vehiclepanel}
+         }
+      )
+      (poll
+         {if {== {ui current_screen} $this}
+            {show_hint hint_garage ''}
+            #ifdef HX_XBOX
+            {platform_mgr check_signin_state_msg}
+            #endif
+         }
+      )
+   }
+   {new MainScreen
+      garage_gigscreen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixergarage_panel
+         hubentourage_panel
+         #endif
+         garage_gigmenu
+         tour_lower3rd_panel
+         tour_profile_panel
+      )
+      (helpbar
+         {if_else {> {user_mgr get_num_participants} 1}
+            (
+               (cancel helpbar_back)
+               (confirm helpbar_confirm)
+               (option tour_hb_eventdetails)
+               (state_confirm helpbar_take_control)
+            )
+            (
+               (cancel helpbar_back)
+               (confirm helpbar_confirm)
+               (option tour_hb_eventdetails)
+            )
+         }
+      )
+      (enter
+         {do
+            {$this set_focus_panel garage_gigmenu}
+            {platform_mgr disable_xmp}
+            {input_mgr set_limit kLimitUILeader}
+         }
+      )
+      (exit
+         {platform_mgr enable_xmp}
+         {input_mgr set_limit kLimitUILeaderNoSwap}
+      )
+   }
+   {new MultiFocusScreen
+      difficulty_screen
+      (panels
+         meta
+         #ifndef DAN_FAST
+         mixergarage_panel
+         hubentourage_panel
+         #endif
+         seldiff_panel
+         seldiff_border_panel
+      )
+      SELDIFF_SCREEN_HANDLERS
+   }
+   {new MultiFocusScreen
+      qp_difficulty_screen
+      (panels meta movie_panel seldiff_panel seldiff_border_panel)
+      SELDIFF_SCREEN_HANDLERS
+   }
+   #ifdef HX_WII
+   {ui goto_screen splash_WBIE_screen}
+   #else
+   {ui goto_screen splash_mtv_screen}
+   #endif
+)
+(music_start)
+(color_presets
+   #include ../../ui/color_presets.dta
+)
+(band_ui
+   #include ../../ui/band_ui.dta
+)
+(overload_horizontal_nav TRUE)
+(BUTTON_DOWN_MSG
+   #ifdef KIOSK_DEMO
+   {platform_mgr user_input}
+   #endif
+   {handle_ret
+      (profile_mgr button_down $player_num $player $raw_button $action $pad_num)
+   }
+)
+(latin_to_ascii
+   (192 65)
+   (193 65)
+   (194 65)
+   (195 65)
+   (196 65)
+   (197 65)
+   (198 65)
+   (199 67)
+   (200 69)
+   (201 69)
+   (202 69)
+   (203 69)
+   (204 73)
+   (205 73)
+   (206 73)
+   (207 73)
+   (208 68)
+   (209 78)
+   (210 79)
+   (211 79)
+   (212 79)
+   (213 79)
+   (214 79)
+   (215 120)
+   (216 79)
+   (217 85)
+   (218 85)
+   (219 85)
+   (220 85)
+   (221 89)
+   (222 80)
+   (223 66)
+   (224 97)
+   (225 97)
+   (226 97)
+   (227 97)
+   (228 97)
+   (229 97)
+   (230 97)
+   (231 99)
+   (232 101)
+   (233 101)
+   (234 101)
+   (235 101)
+   (236 105)
+   (237 105)
+   (238 105)
+   (239 105)
+   (240 111)
+   (241 110)
+   (242 111)
+   (243 111)
+   (244 111)
+   (245 111)
+   (246 111)
+   (248 111)
+   (249 117)
+   (250 117)
+   (251 117)
+   (252 117)
+   (253 121)
+   (254 112)
+   (255 121)
+)

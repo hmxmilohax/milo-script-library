@@ -1,0 +1,432 @@
+{func goto_gig
+   ($event_symbol $is_challenge)
+   {do
+      {synth play button_select}
+      {meta_performer finalize_setlist}
+      {set $game.play_mode coop}
+      {if_else $is_challenge
+         {do
+            {challenge_mgr set_current_challenge $event_symbol}
+            {challenge_mgr set_in_player FALSE}
+            {challenge_panel set quick FALSE}
+            {difficulty_screen set cancel_screen garage_gigscreen}
+            {challenge_info_screen setup
+               garage_challenge_screen
+               garage_gigscreen
+               {tour get_challenge_gig $event_symbol}
+            }
+            {ui goto_screen challenge_info_screen}
+            {gamecfg set_globalshortsongmode FALSE}
+         }
+         {do
+            {gamemode set is_challenge FALSE}
+            {gamemode set lego_mode TRUE}
+            {gamemode set max_stars 5}
+            {gamemode set can_fail_individually TRUE}
+            {gamemode set allow_overdrive_phrases TRUE}
+            {cutscene clear_current_cutscene}
+            {tour set_gig $event_symbol}
+            {if_else {== {{tour band} next_any_index} -1}
+               {do
+                  {difficulty_screen set cancel_screen garage_gigscreen}
+                  {if_else {{tour band} playing_special_gig}
+                     {do
+                        {special_event_info_screen setup
+                           difficulty_screen
+                           garage_gigscreen
+                           {{tour band} special_gig}
+                        }
+                        {ui goto_screen special_event_info_screen}
+                     }
+                     {ui goto_screen difficulty_screen}
+                  }
+               }
+               {if_else {{tour band} playing_special_gig}
+                  {do
+                     {cond
+                        ({==
+                              {{{tour band}
+                                    venue}
+                                 get_album_gig}
+                              {{tour band}
+                                 special_gig}}
+                           {do
+                              ($album_gig {{{tour band} special_gig} name})
+                              {if_else {{tour band} is_album_finalised $album_gig}
+                                 {do
+                                    {difficulty_screen set cancel_screen garage_gigscreen}
+                                    {{tour band} set_album_setlist $album_gig}
+                                    {ui goto_screen difficulty_screen}
+                                 }
+                                 {do
+                                    {{tour band} reset_album_setlist $album_gig}
+                                    {album_edit_panel set
+                                       current_album
+                                       {{tour band} get_index_from_album $album_gig}
+                                    }
+                                    {album_edit_menu_panel set is_recordable FALSE}
+                                    {special_event_info_screen setup
+                                       garage_album_edit_screen
+                                       garage_gigscreen
+                                       {{tour band} special_gig}
+                                    }
+                                    {ui goto_screen special_event_info_screen}
+                                 }
+                              }
+                           }
+                        )
+                        ({==
+                              {{{tour band}
+                                    venue}
+                                 get_album_promo_gig}
+                              {{tour band}
+                                 special_gig}}
+                           {special_event_info_screen setup
+                              garage_album_select_screen
+                              garage_gigscreen
+                              {{tour band} special_gig}
+                           }
+                           {ui goto_screen special_event_info_screen}
+                        )
+                        (TRUE
+                           {do
+                              {special_event_info_screen setup
+                                 song_select_tour_screen
+                                 garage_gigscreen
+                                 {{tour band} special_gig}
+                              }
+                              {ui goto_screen special_event_info_screen}
+                           }
+                        )
+                     }
+                  }
+                  {ui goto_screen song_select_tour_screen}
+               }
+            }
+            {do
+               ($band {tour band})
+               ($venue_name {{$band venue} get_name})
+               {if {$band is_venue_new $venue_name}
+                  {$band set_venue_age $venue_name FALSE}
+               }
+            }
+         }
+      }
+   }
+}
+{new UIPanel
+   garage_gigmenu
+   (file "../tour_world/tour_world_event.milo")
+   (focus_on_enter "campervan")
+   (list_position 0)
+   (trigger_anims FALSE)
+   (exit {song_preview ''})
+   (last_selected '')
+   (mapping
+      (
+         (campervan veh_camper_van van_idle_loop.cue)
+         (minibus veh_minibus minibus_idle_loop.cue)
+         (boat veh_boat boat_idle_loop.cue)
+         (helicopter veh_helicopter heli_idle_loop.cue)
+         (tourbus veh_tourbus bus_idle_loop.cue)
+         (hovercraft veh_hovercraft hovercraft_idle_loop.cue)
+         (submarine veh_submarine boat_idle_loop.cue)
+         (jet veh_private_jet van_idle_loop.cue)
+         (teleporter veh_teleporter teleport_loop.cue)
+      )
+   )
+   (venues
+      (ven_crystal_mine
+         ven_bill_ditt_construction_co
+         ven_blockton_manor
+         ven_the_jolly_rocker
+         ven_the_parrot_n_pegleg
+         ven_lego_city_rooftop
+         ven_the_cavern
+         ven_stud_farm
+         ven_sub_zero_research_facility
+         ven_the_abyss
+         ven_blockingham_castle
+         ven_wembrick_stadium
+         ven_the_moon
+         ven_lego_city_zoo
+         ven_volcanic_rock
+         ven_wreck_n_roll_bowl
+         ven_space_rock_festival
+         ven_ufo
+      )
+   )
+   (update_preview_song
+      {song_preview ''}
+      {do
+         ($gig {tour get_gig {event.lst selected_sym}})
+         {if {&& $gig {> {$gig num_songs} 0}}
+            {song_preview {$gig get_song 0}}
+         }
+      }
+   )
+   (enter
+      {garage_vehiclepanel stop_veh_sound}
+      {challenge_mgr clear_current_challenge}
+      {event.lst set_provider {tour gig_provider}}
+      {$this set_focus event.lst}
+      {if {!= [last_selected] ''}
+         {event.lst set_selected [last_selected] FALSE}
+      }
+      {do
+         ($band {tour band})
+         ($venue {$band venue})
+         {venue_name.lbl set text_token {$venue get_display_name}}
+         {venue_desc.lbl set text_token {$venue get_description}}
+         {if {$band is_manager_hired}
+            {show_hint hint_manager_hired ''}
+         }
+      }
+      {{tour band} set_venue {{tour band} venue}}
+      {{tour band} clear_gig}
+      {garage_gigscreen start_camera}
+      {garage_gigscreen goto_camera [focus_on_enter]}
+      {garage_vehiclepanel set_vehicles_showing}
+      {$this update_preview_song}
+   )
+   (TRANSITION_COMPLETE_MSG
+      {cond
+         ({&&
+               {{tour band}
+                  is_new_vehicle_unlocked}
+               {== $new_screen garage_gigscreen}}
+            {new_vehicle_panel set vehicle {{tour band} get_new_unlocked_vehicle}}
+            {ui push_screen new_vehicle_screen}
+         )
+         ({&&
+               {== $old_screen new_vehicle_screen}
+               {==
+                  {new_vehicle_panel get vehicle}
+                  veh_helicopter}}
+            {show_hint hint_album ''}
+         )
+         ({== $new_screen garage_gigscreen}
+            {foreach_int $i 0 {size [venues]}
+               {do
+                  ($ven {elem [venues] $i})
+                  {if_else {== $ven ven_bill_ditt_construction_co}
+                     {if
+                        {&&
+                           {{tour band} is_venue_new $ven}
+                           {> {{tour band} get_stars_at_venue ven_lego_city_central} 5}
+                        }
+                        {set $hint {symbol {sprint "hint_" $ven}}}
+                        {unless {{tour band} have_seen_hint $hint}
+                           {new_venue_panel set venue $ven}
+                           {ui push_screen new_venue_screen}
+                           {set $i {size [venues]}}
+                        }
+                     }
+                     {if {{tour band} is_venue_new $ven}
+                        {set $hint {symbol {sprint "hint_" $ven}}}
+                        {unless {{tour band} have_seen_hint $hint}
+                           {new_venue_panel set venue $ven}
+                           {ui push_screen new_venue_screen}
+                           {set $i {size [venues]}}
+                        }
+                     }
+                  }
+               }
+            }
+         )
+      }
+      {if {== $old_screen setlist_preview_tour_screen}
+         {event.lst set_selected [list_position]}
+      }
+      {$this focus_vehicle [focus_on_enter]}
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {if {== {event.lst is_scrolling} FALSE}
+               {do
+                  ($normal_gig {tour get_gig {event.lst selected_sym}})
+                  ($special_gig {tour get_special_gig {event.lst selected_sym}})
+                  ($challenge_gig {tour get_challenge_gig {event.lst selected_sym}})
+                  ($gig
+                     {cond
+                        ($normal_gig $normal_gig)
+                        ($special_gig $special_gig)
+                        ($challenge_gig $challenge_gig)
+                     }
+                  )
+                  {if_else {$gig is_unlocked}
+                     {do
+                        {goto_gig {event.lst selected_sym} $challenge_gig}
+                        kDataUnhandled
+                     }
+                     TRUE
+                  }
+               }
+            }
+         )
+         (kAction_Cancel
+            {synth play button_back}
+            {{tour band} clear_gig}
+            {ui goto_screen garage_venuescreen}
+            {garage_vehiclepanel play_veh_sound}
+            kDataUnhandled
+         )
+         (
+            (kAction_Option
+               #ifdef HX_WII
+               kAction_Option1
+               #endif
+            )
+            {do
+               ($normal_gig {tour get_gig {event.lst selected_sym}})
+               ($special_gig {tour get_special_gig {event.lst selected_sym}})
+               ($challenge_gig {tour get_challenge_gig {event.lst selected_sym}})
+               ($gig
+                  {cond
+                     ($normal_gig $normal_gig)
+                     ($special_gig $special_gig)
+                     ($challenge_gig $challenge_gig)
+                  }
+               )
+               {cond
+                  ({== $gig $challenge_gig}
+                     {do
+                        {{tour setlist_provider} init_from_challenge $gig}
+                        {setlist_preview_tour_panel set event_name {localize {$gig get_name}}}
+                     }
+                  )
+                  ({==
+                        $gig
+                        {{{tour band}
+                              venue}
+                           get_album_gig}}
+                     {do
+                        {{tour setlist_provider} init_from_album $gig {tour band}}
+                        {setlist_preview_tour_panel set event_name {$gig display_name}}
+                     }
+                  )
+                  (TRUE
+                     {do
+                        {{tour setlist_provider} init_from_gig $gig}
+                        {setlist_preview_tour_panel set event_name {$gig display_name}}
+                     }
+                  )
+               }
+               {setlist_preview_tour_panel set event_symbol {event.lst selected_sym}}
+               {$this set list_position {event.lst selected_pos}}
+               {synth play button_toggle}
+               {ui goto_screen setlist_preview_tour_screen}
+            }
+         )
+         (TRUE kDataUnhandled)
+      }
+      kDataUnhandled
+   )
+   (SCROLL_MSG
+      {synth play button_focus}
+      {$this set last_selected {event.lst selected_sym}}
+      {$this update_preview_song}
+   )
+   (focus_vehicle
+      ($newfocus)
+      {do
+         ($button {find_exists [mapping] {symbol $newfocus}})
+         {if $button
+            {do
+               ($vehicle_name {elem $button 1})
+               {print ""}
+               #ifndef DAN_FAST
+               {if {== [trigger_anims] TRUE}
+                  {do
+                     ($stopall {{mixergarage_panel loaded_dir} find "Stop_All_Vehicles.trig"})
+                     ($trigger
+                        {{mixergarage_panel loaded_dir} find {sprint $vehicle_name ".trig"}}
+                     )
+                     {$stopall trigger}
+                     {$trigger trigger}
+                     {$this set trigger_anims FALSE}
+                  }
+               }
+               #endif
+            }
+         }
+      }
+   )
+}
+{new BandScreen
+   song_select_tour_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      song_select_details_panel
+      song_select_panel
+      tour_world_lower3rd_panel
+      song_sync_panel
+   )
+   COMMON_SONG_SELECT_SCREEN
+}
+{new UIPanel
+   setlist_preview_tour_panel
+   (file "../tour_world/tour_world_details.milo")
+   (focus song.lst)
+   (event_name none)
+   (event_symbol none)
+   (enter
+      {song.lst set_provider {tour setlist_provider}}
+      {event_name.lbl set_localized [event_name]}
+   )
+   (SCROLL_MSG {synth play button_focus})
+   (BUTTON_DOWN_MSG
+      {if_else {== $action kAction_Confirm}
+         {do
+            ($normal_gig {tour get_gig [event_symbol]})
+            ($special_gig {tour get_special_gig [event_symbol]})
+            ($challenge_gig {tour get_challenge_gig [event_symbol]})
+            ($gig
+               {cond
+                  ($normal_gig $normal_gig)
+                  ($special_gig $special_gig)
+                  ($challenge_gig $challenge_gig)
+               }
+            )
+            {if_else {$gig is_unlocked}
+               {do
+                  {goto_gig [event_symbol] $challenge_gig}
+                  kDataUnhandled
+               }
+               TRUE
+            }
+         }
+         kDataUnhandled
+      }
+   )
+}
+{new BandScreen
+   setlist_preview_tour_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      setlist_preview_tour_panel
+      tour_world_lower3rd_panel
+   )
+   (helpbar
+      (
+         (cancel helpbar_back)
+         (confirm helpbar_confirm)
+      )
+   )
+   (back
+      {do
+         {synth play button_back}
+         garage_gigscreen
+      }
+   )
+   (focus setlist_preview_tour_panel)
+}

@@ -1,0 +1,176 @@
+#define HAIR_BUTTONS ((1hair.btn 2hats.btn))
+#define HAIR_LISTS ((hats.lst hair.lst))
+#define HAIR_HANDLERS (
+   (file "shop_hair.milo")
+   (outfit_char shop_char_panel)
+   (outfit_money shop_money_panel)
+   (show_outfit_text TRUE)
+   (single_screen FALSE)
+   (focus 1hair.btn)
+   (current_genre_btn none)
+   OUTFIT_DEFAULTS
+   (enter
+      {$this set button_list HAIR_BUTTONS}
+      {hats.grp set_showing FALSE}
+      {hair.grp set_showing FALSE}
+      {toggle_buttons OUTFIT_GENRES_BUTTONS TRUE}
+      {Categories.grp set_showing FALSE}
+      OUTFIT_DEFAULT_ENTER
+   )
+   (show_genre
+      ($genre)
+      {do
+         {[current_grp] set_showing TRUE}
+         {$this set genre $genre}
+         {$this set_focus [current_list]}
+         {$this refresh_lists}
+         {$this store_outfit}
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {switch {$this focus_name}
+               (1hair.btn
+                  {$this set current_grp hair.grp}
+                  {$this set current_list hair.lst}
+                  {$this set current_btn 1hair.btn}
+                  {toggle_buttons HAIR_BUTTONS FALSE}
+                  {if_else {== [closet] TRUE}
+                     {do
+                        {Categories.grp set_showing TRUE}
+                        {$this set_focus 02city.btn}
+                        {hide_invalid_genres $this hair [closet] FALSE}
+                     }
+                     {do
+                        {$this show_genre none}
+                     }
+                  }
+               )
+               (2hats.btn
+                  {$this set current_grp hats.grp}
+                  {$this set current_list hats.lst}
+                  {$this set current_btn 2hats.btn}
+                  {toggle_buttons HAIR_BUTTONS FALSE}
+                  {if_else {== [closet] TRUE}
+                     {do
+                        {Categories.grp set_showing TRUE}
+                        {$this set_focus 02city.btn}
+                        {hide_invalid_genres $this hats [closet] FALSE}
+                     }
+                     {do
+                        {$this show_genre none}
+                     }
+                  }
+               )
+               (OUTFIT_GENRES_BUTTONS
+                  {foreach_int $index 0 {size OUTFIT_GENRES_BUTTONS}
+                     {do
+                        ($button {elem OUTFIT_GENRES_BUTTONS $index})
+                        {if {== {$this focus_name} $button}
+                           {Categories.grp set_showing FALSE}
+                           {$this set current_genre_btn $button}
+                           {$this show_genre {elem OUTFIT_GENRES $index}}
+                        }
+                     }
+                  }
+               )
+               (HAIR_LISTS
+                  {$this select_item}
+                  {synth play button_select}
+               )
+            }
+            kDataUnhandled
+         )
+         (kAction_Cancel
+            {switch {$this focus_name}
+               (HAIR_BUTTONS
+                  {if_else {== [closet] TRUE}
+                     {ui goto_screen shop_mycloset}
+                     {ui goto_screen shop_screen}
+                  }
+               )
+               (HAIR_LISTS
+                  {if {!= {$this selected_outfit} ''}
+                     {$this undo_outfit}
+                  }
+                  {if_else {== [closet] TRUE}
+                     {do
+                        {$this set_focus [current_genre_btn]}
+                        {[current_grp] set_showing FALSE}
+                        {Categories.grp set_showing TRUE}
+                        {toggle_buttons OUTFIT_GENRES_BUTTONS TRUE}
+                     }
+                     {do
+                        {toggle_buttons HAIR_BUTTONS TRUE}
+                        {[current_grp] set_showing FALSE}
+                        {$this set_focus [current_btn]}
+                     }
+                  }
+                  {new.grp set_showing FALSE}
+                  {$this update}
+               )
+               {do
+                  {Categories.grp set_showing FALSE}
+                  {toggle_buttons HAIR_BUTTONS TRUE}
+                  {$this set_focus [current_btn]}
+               }
+            }
+            {[outfit_char] select_cam "idle"}
+            {synth play button_back}
+            kDataUnhandled
+         )
+         (kAction_ViewModify
+            {switch {$this focus_name}
+               (HAIR_LISTS
+                  {synth play button_toggle}
+                  {[outfit_char] select_next_cam}
+                  kDataUnhandled
+               )
+            }
+         )
+         (kAction_Start
+            {switch {$this focus_name}
+               (HAIR_LISTS
+                  {if [can_change_member]
+                     {$this set apply_to_all TRUE}
+                     {$this set current_list {$this focus_name}}
+                     {$this select_item}
+                  }
+               )
+            }
+         )
+         CHANGE_MEMBER_ACTION
+      }
+   )
+   (setup {$this store_outfit})
+)
+{new OutfitPanel shop_hair_panel (closet FALSE) HAIR_HANDLERS}
+{new OutfitPanel mycloset_hair_panel (closet TRUE) HAIR_HANDLERS}
+{new MainScreen
+   shop_hair
+   (panels
+      meta
+      hubentourage_panel
+      shop_char_panel
+      shop_money_panel
+      shop_hair_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus shop_hair_panel)
+}
+{new MainScreen
+   mycloset_hair
+   (panels
+      meta
+      shop_char_panel
+      shop_money_panel
+      mycloset_hair_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus mycloset_hair_panel)
+}

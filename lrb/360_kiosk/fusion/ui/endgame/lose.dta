@@ -1,0 +1,142 @@
+#define LOSE_PANEL_HANDLERS (
+   (quit_button '')
+   (enter
+      {if {$this exists lose_restart.btn}
+         {$this set_focus lose_restart.btn}
+      }
+      {lose_song_data.lbl set_localized
+         {if_else {gamemode get is_challenge}
+            {localize {challenge_mgr get_name}}
+            {song_mgr song_name {meta_performer song}}
+         }
+      }
+      {do
+         ($mp {beatmatch main_performer})
+         {lose_progress_data.lbl set_localized
+            {sprintf {localize percent_complete_format} {$mp percent_complete}}
+         }
+      }
+   )
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (SELECT_MSG
+      {switch $component
+         (lose_restart.btn
+            {do
+               {synth play button_select}
+               {post_game_loading_panel load TRUE}
+               {post_game_loading_panel set
+                  next_screen
+                  challenge_pre_songs_loading_screen
+               }
+               {ui pop_screen post_game_loading_screen}
+            }
+         )
+         (lose_diff.btn
+            {do
+               {synth play button_select}
+               {qp_difficulty_screen set
+                  cancel_screen
+                  {if_else {challenge_mgr is_in_player}
+                     arcade_screen
+                     garage_gigscreen
+                  }
+               }
+               {$this confirm_goto qp_difficulty_screen}
+            }
+         )
+         (lose_quit.btn
+            {do
+               {synth play button_select}
+               {if_else {gamemode get is_tour}
+                  {if_else {challenge_mgr is_in_player}
+                     {$this confirm_goto arcade_screen}
+                     {$this confirm_goto
+                        {if_else {{tour band} vehicle}
+                           garage_gigscreen
+                           garage_vehiclescreen
+                        }
+                     }
+                  }
+                  {$this confirm_goto quickplay_venuescreen}
+               }
+            }
+         )
+      }
+   )
+   (confirm_goto
+      ($destination)
+      {[quit_confirm_screen] set return_screen {ui current_screen}}
+      {[quit_confirm_screen] set confirm_screen $destination}
+      {ui goto_screen [quit_confirm_screen]}
+   )
+)
+{new UIPanel
+   challenge_lose
+   (file challenge_lose.milo)
+   (quit_confirm_screen lose_confirm_quit_screen)
+   LOSE_PANEL_HANDLERS
+}
+{new UIPanel
+   lose
+   (file lose.milo)
+   (quit_confirm_screen lose_confirm_quit_screen)
+   LOSE_PANEL_HANDLERS
+}
+#define LOSE_SCREEN_HANDLERS (
+   (helpbar
+      {if_else {is_leader_local}
+         ((confirm helpbar_select))
+         ()
+      }
+   )
+)
+{new BandScreen
+   lose_screen
+   (panels lose)
+   (focus lose)
+   LOSE_SCREEN_HANDLERS
+}
+{new BandScreen
+   challenge_lose_screen
+   (panels challenge_lose)
+   (focus challenge_lose)
+   LOSE_SCREEN_HANDLERS
+}
+#define COMMON_LOSE_QUIT_CONFIRM (
+   (focus dialog_panel)
+   (confirm_screen '')
+   (return_screen '')
+   (quitting FALSE)
+   (helpbar
+      {if_else {is_leader_local}
+         ((confirm helpbar_select))
+         ((cancel helpbar_back))
+      }
+   )
+   (enter
+      {dialog_panel set_yesno {localize confirm_quit} no.btn}
+      {$this set_up_buttons}
+   )
+   (exit)
+   QUIT_DIALOG_SET_UP_BUTTONS
+   (FOCUS_MSG DO_FOCUSCLICK kDataUnhandled)
+   (SELECT_MSG
+      {switch $component
+         (yes.btn
+            {synth play button_select}
+            {post_game_loading_panel load TRUE}
+            {post_game_loading_panel set next_screen [confirm_screen]}
+            {ui pop_screen post_game_loading_screen}
+         )
+         (no.btn
+            {synth play button_back}
+            {ui goto_screen [return_screen]}
+         )
+      }
+   )
+)
+{new BandScreen
+   lose_confirm_quit_screen
+   (panels challenge_lose dialog_panel)
+   COMMON_LOSE_QUIT_CONFIRM
+}

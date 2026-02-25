@@ -1,0 +1,172 @@
+#define INSTRUMENT_BUTTONS ((1Guitar.btn 2Bass.btn))
+#define INSTRUMENT_LISTS ((guitar.lst bass.lst drum.lst mic.lst))
+#define INSTRUMENT_HANDLERS (
+   (file "shop_instruments.milo")
+   (outfit_char shop_char_panel)
+   (outfit_money shop_money_panel)
+   (show_outfit_text TRUE)
+   (single_screen TRUE)
+   OUTFIT_DEFAULTS
+   (enter
+      {$this setup}
+      OUTFIT_DEFAULT_ENTER
+      {$this set current_btn 1Guitar.btn}
+   )
+   (exit {[outfit_char] hide_instruments})
+   (setup
+      {guitar.grp set_showing FALSE}
+      {drum.grp set_showing FALSE}
+      {mic.grp set_showing FALSE}
+      {bass.grp set_showing FALSE}
+      {Guitar_Bass.grp set_showing FALSE}
+      {$this clear_outfit}
+      {$this set button_list none}
+      {$this set current_grp none}
+      {do
+         ($slot_num {[outfit_char] char_slot})
+         {switch $slot_num
+            (1
+               {drum.grp set_showing TRUE}
+               {$this set current_list drum.lst}
+               {$this set_focus [current_list]}
+               {$this refresh_lists}
+               {$this store_outfit}
+               {[outfit_char] hide_instruments_except drum}
+               {$this set single_screen TRUE}
+               {$this show_current_outfit}
+            )
+            (2
+               {mic.grp set_showing TRUE}
+               {$this set current_list mic.lst}
+               {$this set_focus [current_list]}
+               {$this refresh_lists}
+               {$this store_outfit}
+               {[outfit_char] hide_instruments_except mic}
+               {$this set single_screen TRUE}
+               {$this show_current_outfit}
+            )
+            (
+               (0 3)
+               {$this set button_list INSTRUMENT_BUTTONS}
+               {Guitar_Bass.grp set_showing TRUE}
+               {toggle_buttons INSTRUMENT_BUTTONS TRUE}
+               {if {! {exists [current_btn]}}
+                  {$this set current_btn 1Guitar.btn}
+               }
+               {$this set_focus [current_btn]}
+               {[outfit_char] hide_instruments}
+               {$this set single_screen FALSE}
+               {[outfit_char] select_cam "idle"}
+               {new.grp set_showing FALSE}
+            )
+         }
+      }
+      {$this update}
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {switch {$this focus_name}
+               (INSTRUMENT_LISTS
+                  {$this select_item}
+                  {synth play button_select}
+               )
+               (1Guitar.btn
+                  {guitar.grp set_showing TRUE}
+                  {$this set current_grp guitar.grp}
+                  {$this set current_btn 1Guitar.btn}
+                  {$this set current_list guitar.lst}
+                  {toggle_buttons INSTRUMENT_BUTTONS FALSE}
+                  {$this set_focus [current_list]}
+                  {$this refresh_lists}
+                  {$this store_outfit}
+                  {[outfit_char] hide_instruments_except guitar}
+                  {$this show_current_outfit}
+               )
+               (2Bass.btn
+                  {bass.grp set_showing TRUE}
+                  {$this set current_grp bass.grp}
+                  {$this set current_btn 2Bass.btn}
+                  {$this set current_list bass.lst}
+                  {toggle_buttons INSTRUMENT_BUTTONS FALSE}
+                  {$this set_focus [current_list]}
+                  {$this refresh_lists}
+                  {$this store_outfit}
+                  {[outfit_char] hide_instruments_except bass}
+                  {$this show_current_outfit}
+               )
+            }
+            kDataUnhandled
+         )
+         (kAction_Cancel
+            {switch {$this focus_name}
+               (INSTRUMENT_LISTS
+                  {if {!= {$this selected_outfit} ''}
+                     {$this undo_outfit}
+                  }
+                  {[outfit_char] hide_instruments}
+                  {if_else {== [single_screen] TRUE}
+                     {if_else {== [closet] TRUE}
+                        {ui goto_screen shop_mycloset}
+                        {ui goto_screen shop_screen}
+                     }
+                     {$this setup}
+                  }
+                  {new.grp set_showing FALSE}
+               )
+               (INSTRUMENT_BUTTONS
+                  {if_else {== [closet] TRUE}
+                     {ui goto_screen shop_mycloset}
+                     {ui goto_screen shop_screen}
+                  }
+               )
+            }
+            {synth play button_back}
+            kDataUnhandled
+         )
+         (kAction_ViewModify
+            {switch {$this focus_name}
+               (INSTRUMENT_LISTS
+                  {synth play button_toggle}
+                  {[outfit_char] select_next_cam}
+                  kDataUnhandled
+               )
+            }
+         )
+         CHANGE_MEMBER_ACTION
+      }
+   )
+)
+{new OutfitPanel shop_instruments_panel (closet FALSE) INSTRUMENT_HANDLERS}
+{new OutfitPanel
+   mycloset_instruments_panel
+   (closet TRUE)
+   INSTRUMENT_HANDLERS
+}
+{new MainScreen
+   shop_instruments
+   (panels
+      meta
+      hubentourage_panel
+      shop_char_panel
+      shop_money_panel
+      shop_instruments_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus shop_instruments_panel)
+}
+{new MainScreen
+   mycloset_instruments
+   (panels
+      meta
+      shop_char_panel
+      shop_money_panel
+      mycloset_instruments_panel
+      #ifndef DAN_FAST
+      jukebox_panel
+      #endif
+   )
+   (focus mycloset_instruments_panel)
+}

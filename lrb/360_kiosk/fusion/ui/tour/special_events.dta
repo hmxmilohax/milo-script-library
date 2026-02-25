@@ -1,0 +1,358 @@
+{new TexLoadPanel
+   special_event_panel
+   (file "../tour_world/hints/tour_world_info.milo")
+   (challenge_name '')
+   (have_challenge FALSE)
+   (special_gigs ())
+   (sg_name '')
+   (sg_index -1)
+   (confirm_exit '')
+   (decline_exit_screen '')
+   (load
+      {set $tex ''}
+      {if_else [have_challenge]
+         {do
+            {set $tex
+               "fusion/ui/textures/StandardHelp_Screenshots/H_ReadyForARockPowerChallenge_nomip_keep.png"
+            }
+         }
+         {if {>= [sg_index] 0}
+            {set $name {elem [special_gigs] [sg_index]}}
+            {do
+               ($gig {tour get_special_gig $name})
+               ($path {$gig get_img_path})
+               {set $tex $path}
+            }
+         }
+      }
+      {if {!= $tex ''}
+         {$this add_tex $tex "Image.mat"}
+      }
+   )
+   (enter
+      {challenge_mgr clear_current_challenge}
+      {if_else {$this has_waiting}
+         {$this setup}
+         {do
+            #ifndef HX_WII
+            {[decline_exit_screen] load TRUE}
+            #endif
+            {$this move_on [decline_exit_screen]}
+         }
+      }
+   )
+   (init
+      {do
+         ($band {tour band})
+         ($challenge {$band get_waiting_challenge})
+         ($num_specials {$band get_num_waiting_specials})
+         {resize [special_gigs] $num_specials}
+         {if_else {'||' {!= $challenge ''} {> $num_specials 0}}
+            {do
+               {$this set challenge_name $challenge}
+               {$this set have_challenge {!= $challenge ''}}
+               {foreach_int $i 0 $num_specials
+                  {set_elem [special_gigs] $i {$band get_waiting_special $i}}
+               }
+               {$this set sg_index {- $num_specials 1}}
+               TRUE
+            }
+            FALSE
+         }
+      }
+   )
+   (has_waiting {'||' [have_challenge] {>= [sg_index] 0}})
+   (setup
+      {if_else [have_challenge]
+         {do
+            {do
+               ($challenge {tour get_challenge_gig [challenge_name]})
+               {if_else {== [challenge_name] challenge_wrecknroll}
+                  {title.lbl set text_token wreck_n_roll_offer}
+                  {title.lbl set text_token stop_the_rock_offer}
+               }
+               {main_info.lbl set text_token {$challenge get_offer_text}}
+            }
+            {Modifier_Text.grp set_showing FALSE}
+            {$this set have_challenge FALSE}
+            {$this set confirm_exit {quote {$this exit_to_challenge}}}
+            {{tour band} clear_waiting_challenge}
+         }
+         {if {>= [sg_index] 0}
+            {$this set sg_name {elem [special_gigs] [sg_index]}}
+            {Modifier_Text.grp set_showing TRUE}
+            {do
+               ($gig {tour get_special_gig [sg_name]})
+               ($instruction {$gig get_intro_instruction})
+               {title.lbl set text_token {$instruction get_title}}
+               {main_info.lbl set text_token {$instruction get_text}}
+               {mod_text_a.lbl set text_token {$instruction get_extra_a}}
+               {mod_text_b.lbl set text_token {$instruction get_extra_b}}
+            }
+            {-- [sg_index]}
+            {{tour band} pop_waiting_special}
+            {$this set confirm_exit {quote {$this exit_to_special}}}
+         }
+      }
+   )
+   (on_return_vehicle
+      {if {{tour band} vehicle}
+         {do
+            ($old_vehicle {garage_vehiclepanel get focus_on_enter})
+            {garage_vehiclepanel set
+               focus_on_enter
+               {switch {{tour band} vehicle_name}
+                  (veh_camper_van BandButton_01.btn)
+                  (veh_minibus BandButton_02.btn)
+                  (veh_boat BandButton_03.btn)
+                  (veh_helicopter BandButton_04.btn)
+                  (veh_tourbus BandButton_05.btn)
+                  (veh_hovercraft BandButton_06.btn)
+                  (veh_submarine BandButton_07.btn)
+                  (veh_private_jet BandButton_08.btn)
+                  (veh_teleporter BandButton_09.btn)
+               }
+            }
+            {if {!= $old_vehicle {garage_vehiclepanel get focus_on_enter}}
+               {do
+                  ($button
+                     {find_exists
+                        {garage_vehiclepanel get mapping}
+                        {garage_vehiclepanel get focus_on_enter}
+                     }
+                  )
+                  ($camera {elem $button 2})
+                  {garage_gigmenu set focus_on_enter $camera}
+                  {garage_venuepanel set focus_on_enter $camera}
+               }
+            }
+         }
+      }
+   )
+   (exit_to_challenge
+      {challenge_mgr set_current_challenge [challenge_name]}
+      {challenge_mgr set_in_player FALSE}
+      {challenge_panel set quick TRUE}
+      {tour set_venue {{tour get_challenge_gig [challenge_name]} get_venue}}
+      {$this on_return_vehicle}
+      {qp_difficulty_screen set cancel_screen special_event_loop_screen}
+      {$this move_on challenge_screen}
+   )
+   (exit_to_special
+      {gamemode set is_challenge FALSE}
+      {gamemode set lego_mode TRUE}
+      {gamemode set max_stars 5}
+      {gamemode set can_fail_individually TRUE}
+      {gamemode set allow_overdrive_phrases TRUE}
+      {cutscene clear_current_cutscene}
+      {tour set_gig [sg_name]}
+      {$this on_return_vehicle}
+      {meta_performer finalize_setlist}
+      {set $game.play_mode coop}
+      {if_else {== {{tour band} next_any_index} -1}
+         {do
+            {qp_difficulty_screen set cancel_screen special_event_loop_screen}
+            {$this move_on qp_difficulty_screen}
+         }
+         {cond
+            ({==
+                  {{{tour band}
+                        venue}
+                     get_album_gig}
+                  {{tour band}
+                     special_gig}}
+               {do
+                  ($album_gig {{{tour band} special_gig} name})
+                  {{tour band} reset_album_setlist $album_gig}
+                  {album_edit_panel set
+                     current_album
+                     {{tour band} get_index_from_album $album_gig}
+                  }
+                  {album_edit_menu_panel set is_recordable FALSE}
+                  {$this move_on special_event_album_edit_screen}
+               }
+            )
+            ({==
+                  {{{tour band}
+                        venue}
+                     get_album_promo_gig}
+                  {{tour band}
+                     special_gig}}
+               {$this move_on special_event_album_select_screen}
+            )
+            (TRUE {$this move_on song_select_tour_screen})
+         }
+      }
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {synth play button_select}
+            {eval [confirm_exit]}
+         )
+         (kAction_Cancel
+            {synth play button_back}
+            {if_else {$this has_waiting}
+               {do
+                  {ui goto_screen special_event_loop_screen}
+               }
+               {do
+                  #ifndef HX_WII
+                  {[decline_exit_screen] load TRUE}
+                  #endif
+                  {$this move_on [decline_exit_screen]}
+               }
+            }
+         )
+      }
+   )
+   (move_on
+      ($dest_screen)
+      {post_game_loading_panel load TRUE}
+      {if_else {== $dest_screen ''}
+         {post_game_loading_panel set next_screen garage_gigscreen}
+         {post_game_loading_panel set next_screen $dest_screen}
+      }
+      {if_else {== {ui current_screen} {ui bottom_screen}}
+         {ui goto_screen post_game_loading_screen}
+         {ui reset_screen post_game_loading_screen}
+      }
+   )
+}
+{new UIScreen
+   special_event_screen
+   (helpbar
+      (
+         (confirm helpbar_play_gig)
+         (cancel helpbar_return_garage)
+      )
+   )
+   (panels special_event_panel)
+}
+{new UIScreen
+   special_event_loop_screen
+   (enter {ui goto_screen special_event_screen})
+}
+{new TexLoadPanel
+   challenge_info_panel
+   (file "../tour_world/hints/tour_world_info.milo")
+   (challenge '')
+   (load
+      {do
+         {$this add_tex
+            "fusion/ui/textures/StandardHelp_Screenshots/H_ReadyForARockPowerChallenge_nomip_keep.png"
+            "Image.mat"
+         }
+      }
+   )
+   (enter
+      {do
+         {if_else {== {[challenge] get_name} challenge_wrecknroll}
+            {title.lbl set text_token wreck_n_roll_offer}
+            {title.lbl set text_token stop_the_rock_offer}
+         }
+         {main_info.lbl set text_token {[challenge] get_offer_text}}
+         {Modifier_Text.grp set_showing FALSE}
+      }
+   )
+}
+{new UIScreen
+   challenge_info_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      challenge_info_panel
+   )
+   (exit_screen '')
+   (helpbar
+      (
+         (confirm helpbar_continue)
+         (cancel helpbar_back)
+      )
+   )
+   (setup
+      ($es $cs $challenge)
+      {$this set exit_screen $es}
+      {$this set cancel_screen $cs}
+      {challenge_info_panel set challenge $challenge}
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {synth play button_select}
+            {ui goto_screen [exit_screen]}
+            {$this set exit_screen ''}
+            {$this set cancel_screen ''}
+         )
+         (kAction_Cancel
+            {synth play button_back}
+            {ui goto_screen [cancel_screen]}
+            {$this set exit_screen ''}
+            {$this set cancel_screen ''}
+         )
+      }
+   )
+}
+{new TexLoadPanel
+   special_event_info_panel
+   (file "../tour_world/hints/tour_world_info.milo")
+   (gig '')
+   (load
+      {do
+         ($path {[gig] get_img_path})
+         {$this add_tex $path "Image.mat"}
+      }
+   )
+   (enter
+      {do
+         ($instruction {[gig] get_intro_instruction})
+         {title.lbl set text_token {$instruction get_title}}
+         {main_info.lbl set text_token {$instruction get_text}}
+         {mod_text_a.lbl set text_token {$instruction get_extra_a}}
+         {mod_text_b.lbl set text_token {$instruction get_extra_b}}
+      }
+   )
+}
+{new UIScreen
+   special_event_info_screen
+   (panels
+      meta
+      #ifndef DAN_FAST
+      mixergarage_panel
+      hubentourage_panel
+      #endif
+      special_event_info_panel
+   )
+   (exit_screen '')
+   (helpbar
+      (
+         (confirm helpbar_continue)
+         (cancel helpbar_back)
+      )
+   )
+   (setup
+      ($es $cs $gig)
+      {$this set exit_screen $es}
+      {$this set cancel_screen $cs}
+      {special_event_info_panel set gig $gig}
+   )
+   (BUTTON_DOWN_MSG
+      {switch $action
+         (kAction_Confirm
+            {synth play button_select}
+            {ui goto_screen [exit_screen]}
+            {$this set exit_screen ''}
+            {$this set cancel_screen ''}
+         )
+         (kAction_Cancel
+            {synth play button_back}
+            {ui goto_screen [cancel_screen]}
+            {$this set exit_screen ''}
+            {$this set cancel_screen ''}
+         )
+      }
+   )
+}

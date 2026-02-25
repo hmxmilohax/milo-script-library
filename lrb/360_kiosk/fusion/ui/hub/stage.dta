@@ -1,0 +1,142 @@
+{new UIPanel
+   stage_panel
+   (file "stage.milo")
+   (training_user '')
+   (enter
+      {gamemode set_practice 1}
+      {quickplay_venuepanel set quickplay_exit_screen stage_screen}
+      {$this set_focus Practice.btn}
+      {synth play button_select}
+      {input_mgr set_user [training_user]}
+   )
+   (BUTTON_DOWN_MSG
+      {if {== $action kAction_Cancel}
+         {synth play button_back}
+         {user_mgr load_slots}
+         {ui goto_screen hub_screen}
+      }
+      {if {'||' {== $action kAction_Up} {== $action kAction_Down}}
+         {synth play button_focus}
+      }
+      kDataUnhandled
+   )
+   (goto_tutorials
+      {if_else
+         {&&
+            {player_on_instrument $player_num kControllerVocals}
+            {gamecfg is_missing_mic $player_num FALSE}
+         }
+         {do
+            {vocalist_must_have_mic_screen set message tutorial_vocalist_needs_mic}
+            {ui push_screen vocalist_must_have_mic_screen}
+         }
+         {do
+            {set [slot] 0}
+            {set [player_num] $player_num}
+            {do
+               ($controller_type kControllerNone)
+               ($mode "")
+               ($slot 0)
+               {if {player_on_instrument $player_num kControllerDrum}
+                  {set $controller_type kControllerDrum}
+               }
+               {if {player_on_instrument $player_num kControllerGuitar}
+                  {set $controller_type kControllerGuitar}
+               }
+               {if {player_on_instrument $player_num kControllerVocals}
+                  {set $controller_type kControllerVocals}
+               }
+               {switch $controller_type
+                  (kControllerDrum
+                     {set $mode tutorial_drums}
+                     {set $slot kGameCoopSlotDrum}
+                  )
+                  (kControllerGuitar
+                     {set $mode tutorial_guitar}
+                     {set $slot kGameCoopSlotGuitar0}
+                  )
+                  (kControllerVocals
+                     {set $mode tutorial_vocals}
+                     {set $slot kGameCoopSlotVocals}
+                  )
+                  (TRUE
+                     {notify "player selected a tutorial with an unknown controller type!"}
+                  )
+               }
+               {challenge_mgr clear_current_challenge}
+               {game set_player_slot_num [player_num] [slot]}
+               {game foreach_user $pcfg
+                  {$pcfg set_track_type {$pcfg get_controller_sym}}
+               }
+               {gamecfg set_user_active [slot] TRUE}
+               {game set_venue blank/blank_01/blank_01.milo}
+               {gamemode set_mode $mode}
+               {{gamemode get main_panel} set_tutorial_player $player_num}
+               {ui goto_screen {gamemode get first_screen}}
+            }
+         }
+      }
+   )
+   (SELECT_MSG
+      {user_mgr reset_slots}
+      {session_mgr set_leader_num $player_num}
+      {switch $component
+         (Practice.btn
+            {synth play button_select}
+            {if_else
+               {&&
+                  {player_on_instrument $player_num kControllerVocals}
+                  {gamecfg is_missing_mic $player_num FALSE}
+               }
+               {do
+                  {vocalist_must_have_mic_screen set message solo_vocalist_needs_mic}
+                  {ui push_screen vocalist_must_have_mic_screen}
+               }
+               {do
+                  {gamemode set_mode practice}
+                  {set [player_num] $player_num}
+                  {if {player_on_instrument $player_num kControllerDrum}
+                     {set $controller_type kControllerDrum}
+                  }
+                  {if {player_on_instrument $player_num kControllerGuitar}
+                     {set $controller_type kControllerGuitar}
+                  }
+                  {if {player_on_instrument $player_num kControllerVocals}
+                     {set $controller_type kControllerVocals}
+                  }
+                  {switch $controller_type
+                     (kControllerDrum {set [slot] kGameCoopSlotDrum})
+                     (kControllerGuitar {set [slot] kGameCoopSlotGuitar0})
+                     (kControllerVocals {set [slot] kGameCoopSlotVocals})
+                     (TRUE
+                        {notify "player selected a tutorial with an unknown controller type!"}
+                     )
+                  }
+                  {challenge_mgr clear_current_challenge}
+                  {game set_player_slot_num [player_num] [slot]}
+                  {game foreach_user $pcfg
+                     {$pcfg set_track_type {$pcfg get_controller_sym}}
+                  }
+                  {input_mgr set_limit kLimitSession}
+                  {ui goto_screen {gamemode get first_screen}}
+               }
+            }
+         )
+         (DrumTrainer.btn
+            {synth play button_select}
+            {if_else {player_on_instrument $player_num kControllerDrum}
+               {do
+                  {drum_trainer_menu_panel set tour_practice TRUE}
+                  {gamemode set_mode drum_trainer_mode}
+                  {ui goto_screen {gamemode get first_screen}}
+               }
+               {ui push_screen drum_trainer_non_drum_warning_screen}
+            }
+         )
+         (Mini.btn
+            {synth play button_select}
+            {$this goto_tutorials}
+         )
+      }
+   )
+}
